@@ -1,0 +1,7 @@
+<launch>
+  <arg name="robot_name" default="hyqreal"/>
+
+  <!-- Load robot -->
+  <param name="hyqreal/robot_description" command="$(find xacro)/xacro --inorder '$(find hyqreal_description)/robots/hyqreal.urdf.xacro'"/>
+
+</launch>

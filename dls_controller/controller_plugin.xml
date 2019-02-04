@@ -1,0 +1,9 @@
+<library path="libdls_controller">
+        <class name="dls_controller/Controller"
+                   type="dls_controller::Controller"
+		   base_class_type="controller_interface::ControllerBase">
+		<description>
+                        This is the controller!
+		</description>
+	</class>
+</library>

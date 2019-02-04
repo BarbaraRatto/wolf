@@ -1,0 +1,27 @@
+actions: []
+authors: Carlos Mastalli
+brief: ''
+bugtracker: ''
+depends:
+- hardware_interface
+- gazebo_ros_control
+- catkin
+- roscpp
+- controller_manager
+- pluginlib
+- transmission_interface
+- urdf
+- force_controller
+- hydraulic_actuator
+- realtime_tools
+- dls_hardware_interface
+- dls_msgs
+- gazebo_ros
+description: This package contains the gazebo related files.
+license: BSD
+maintainers: Carlos Mastalli <carlos.mastalli@iit.it>
+msgs: []
+package_type: package
+repo_url: ''
+srvs: []
+url: ''

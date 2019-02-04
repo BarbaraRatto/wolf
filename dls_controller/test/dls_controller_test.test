@@ -1,0 +1,26 @@
+<launch>
+     <arg name="robot_name" default="hyqreal"/>
+
+     <!-- Load the robot stuff -->
+     <include file="$(find dls_controller)/test/dls_controller_test.launch" />
+
+     <!-- Load the controller stuff -->
+     <include file="$(find dls_controller)/launch/dls_controller.launch">
+            <arg name="robot_name" value="$(arg robot_name)" />
+     </include>
+
+     <group ns="$(arg robot_name)">
+      <!-- Start the dummy robot -->
+      <node name="hyq_dummy"
+            pkg="dls_controller"
+            output="screen"
+            type="hyq_dummy"/>
+
+      <!-- Controller test -->
+      <test test-name="dls_controller_test"
+           pkg="dls_controller"
+           type="dls_controller_test"
+           time-limit="80.0">
+     </test>
+    </group>
+</launch>
