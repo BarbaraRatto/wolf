@@ -299,7 +299,7 @@ namespace dls_gazebo_interface
     void DlsRobotHwSim::readSim(ros::Time time, ros::Duration period)
     {
 
-        simulationInterface();
+        //simulationInterface();
 
         if(remove_motor_torque_offsets_ == true) {
             std::cout << "Trying to remove offsets" << std::endl;
@@ -432,6 +432,10 @@ namespace dls_gazebo_interface
             ufb[i] += (joint_velocity_command_[i] - joint_velocity_[i]) * joint_d_gain_command_[i];
             u_des[i] = ufb[i] + joint_effort_command_[i];
         }
+
+
+
+
         // FROM SL
         //  case PDFF:
         //    for (i=1; i<=n_dofs; ++i) {

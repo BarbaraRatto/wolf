@@ -11,6 +11,9 @@
 
 #include <dls_controller/controller.h>
 
+using namespace XBot;
+using namespace Cartesian;
+
 namespace dls_controller {
 
 Controller::Controller()
@@ -19,13 +22,14 @@ Controller::Controller()
 
 Controller::~Controller()
 {
+    if(realtime_pub_)
+        delete realtime_pub_;
 }
 
 bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
                       ros::NodeHandle& root_nh,
                       ros::NodeHandle& controller_nh)
 {
-    // TODO Init not called?
     // getting the names of the joints from the ROS parameter server
     ROS_DEBUG("Initialize DLS Controller");
 
@@ -50,32 +54,244 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
         }
         catch(...)
         {
-          ROS_ERROR("Error loading joint_states_");
-          return false;
+            ROS_ERROR("Error loading joint_states_");
+            return false;
         }
-   }
+    }
 
-   assert(joint_states_.size()>0);
+    assert(joint_states_.size()>0);
 
-   return true;
+    desired_joint_p_gain_.resize(joint_states_.size());
+    desired_joint_i_gain_.resize(joint_states_.size());
+    desired_joint_d_gain_.resize(joint_states_.size());
+    for (unsigned int i = 0; i < joint_states_.size(); i++)
+    {
+        // Getting PID gains
+        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/p", desired_joint_p_gain_[i]))
+        {
+            ROS_ERROR("No P gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            return false;
+        }
+        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/i", desired_joint_i_gain_[i]))
+        {
+            ROS_ERROR("No D gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            return false;
+        }
+        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/d", desired_joint_d_gain_[i]))
+        {
+            ROS_ERROR("No I gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            return false;
+        }
+        // Check if the values are positive
+        if(desired_joint_p_gain_[i]<0.0 || desired_joint_i_gain_[i]<0.0 || desired_joint_d_gain_[i]<0.0)
+        {
+            ROS_ERROR("PID gains must be positive!");
+            return false;
+        }
+        ROS_DEBUG("P value for joint %i is: %d",i,desired_joint_p_gain_[i]);
+        ROS_DEBUG("I value for joint %i is: %d",i,desired_joint_i_gain_[i]);
+        ROS_DEBUG("D value for joint %i is: %d",i,desired_joint_d_gain_[i]);
+    }
+
+    // Create the ModelInterface from XBot
+    XBot::ConfigOptions opt;
+    std::string urdf, srdf, problem;
+    if(!controller_nh.getParam("robot_description",urdf))
+    {
+        ROS_ERROR("No robot_description given");
+        return false;
+    }
+    if(!controller_nh.getParam("robot_description_semantic",srdf))
+    {
+        ROS_ERROR("No robot_description_semantic given");
+        return false;
+    }
+    if(!opt.set_urdf_path("/home/graiola/ros_ws/src/hyq-distro/dls_controller/robots/hyqreal/hyqreal.urdf"))
+    {
+        ROS_ERROR("Unable to load urdf path");
+        return false;
+    }
+    if(!opt.set_srdf_path("/home/graiola/ros_ws/src/hyq-distro/dls_controller/robots/hyqreal/hyqreal.srdf"))
+    {
+        ROS_ERROR("Unable to load srdf path");
+        return false;
+    }
+    /*if(!opt.set_urdf(urdf))
+   {
+       ROS_ERROR("Unable to load urdf");
+       return false;
+   }*/
+    /*if(!opt.set_srdf(srdf))
+   {
+       ROS_ERROR("Unable to load srdf");
+       return false;
+   }*/
+    if(!opt.generate_jidmap())
+    {
+        ROS_ERROR("Unable to load jidmap");
+        return false;
+    }
+    opt.set_parameter("is_model_floating_base", true);
+    opt.set_parameter<std::string>("model_type", "RBDL");
+    xbot_model_ = XBot::ModelInterface::getModel(opt);
+
+    // Set home position defined in the srdf
+    Eigen::VectorXd qhome;
+    xbot_model_->getRobotState("home", qhome);
+    xbot_model_->setJointPosition(qhome);
+
+    // Create the kinematics problem
+    //YAML::Node config = YAML::LoadFile("PATH TO FILE"); // FIXME use the ros param server
+    if(!controller_nh.getParam("problem_description",problem))
+    {
+        ROS_ERROR("No problem_description given");
+        return false;
+    }
+    YAML::Node config = YAML::Load(problem);
+    ProblemDescription ik_problem(config, xbot_model_);
+
+    // Create the CartesianInterfaceImpl from XBot::Cartesian
+    ci_.reset(new XBot::Cartesian::CartesianInterfaceImpl(xbot_model_,ik_problem));
+
+    ci_->enableOtg(0.004); // FIXME
+    ci_->update(0,0);
+
+    // Resize the variables
+    joint_positions_.resize(joint_states_.size()+6);
+    joint_velocities_.resize(joint_states_.size()+6);
+    joint_accellerations_.resize(joint_states_.size()+6);
+    joint_efforts_.resize(joint_states_.size()+6);
+
+    // Create the realtime publishers
+    realtime_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
+    realtime_pub_->msg_.name.resize(joint_states_.size()+6);
+    realtime_pub_->msg_.position.resize(joint_states_.size()+6);
+    realtime_pub_->msg_.velocity.resize(joint_states_.size()+6);
+    realtime_pub_->msg_.effort.resize(joint_states_.size()+6);
+    realtime_pub_->msg_.name[0] = "x"; //FIXME
+    realtime_pub_->msg_.name[1] = "y";
+    realtime_pub_->msg_.name[2] = "z";
+    realtime_pub_->msg_.name[3] = "r";
+    realtime_pub_->msg_.name[4] = "p";
+    realtime_pub_->msg_.name[5] = "y";
+    for (unsigned int i = 0; i < joint_names_.size(); i++)
+        realtime_pub_->msg_.name[i+6] = joint_names_[i];
+
+    // Reference for the com
+    com_ref_sub_ = controller_nh.subscribe("com_ref", 1, &Controller::setComReference, this);
+
+    return true;
 }
 
 void Controller::starting(const ros::Time& time)
 {
     ROS_DEBUG("Starting DLS Controller");
+
+    for (unsigned int i = 0; i < joint_states_.size(); i++)
+    {
+        joint_positions_(i+6) = joint_states_[i].getPosition();
+        joint_velocities_(i+6) = joint_states_[i].getVelocity();
+        joint_accellerations_(i+6) = 0.0; // FIXME
+        joint_efforts_(i+6) = joint_states_[i].getEffort();
+    }
+
+    xbot_model_->setJointPosition(joint_positions_);
+    xbot_model_->setJointVelocity(joint_velocities_);
+    //xbot_model_->setJointAcceleration(joint_accellerations_);
+    xbot_model_->update();
+    ci_->reset(time.toSec());
+
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
+    // Read from the hardware interface
+    // This is for the closed loop
+    /*for (unsigned int i = 0; i < joint_states_.size(); i++)
+    {
+        joint_positions_(i) = joint_states_[i].getPosition();
+        joint_velocities_(i) = joint_states_[i].getVelocity();
+        joint_accellerations_(i) = 0.0; // FIXME
+        joint_efforts_(i) = joint_states_[i].getEffort();
+    }*/
 
+    xbot_model_->setJointPosition(joint_positions_);
+    xbot_model_->setJointVelocity(joint_velocities_);
+    //xbot_model_->setJointAcceleration(joint_accellerations_);
+    xbot_model_->update();
+
+    // Solve IK
+    if(!ci_->update(time.toSec(),period.toSec()))
+    {
+        ROS_ERROR("CartesianInterface: unable to solve");
+        return;
+    }
+
+    // Integrate solution
+    xbot_model_->getJointPosition(joint_positions_);
+    xbot_model_->getJointVelocity(joint_velocities_);
+    joint_positions_ += period.toSec() * joint_velocities_;
+    xbot_model_->setJointPosition(joint_positions_);
+    xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->update();
+
+
+    // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
-        // spline out the trunk_ctrl_tau
+        // use tau to compensate the gravity
         joint_states_[i].setCommandEffort(0.0);
-        joint_states_[i].setCommandPosition(1000);
+        joint_states_[i].setCommandPosition(joint_positions_(i+6));
         joint_states_[i].setCommandVelocity(0.0);
-        joint_states_[i].setCommandGains(1.0, 0.0, 0.0); //Set Gains P I D
+        joint_states_[i].setCommandGains(desired_joint_p_gain_[i], desired_joint_i_gain_[i], desired_joint_d_gain_[i]); //Set Gains P I D
     }
+
+    // Publish
+    if(realtime_pub_->trylock())
+    {
+        for(unsigned int i = 0; i < joint_positions_.size(); i++)
+        {
+            realtime_pub_->msg_.position[i] = joint_positions_(i);
+            realtime_pub_->msg_.velocity[i] = joint_velocities_(i);
+            realtime_pub_->msg_.effort[i] = joint_efforts_(i);
+            realtime_pub_->msg_.header.stamp = time;
+            realtime_pub_->unlockAndPublish();
+        }
+    }
+
+    odomPublisher(); // FIXME move it to a separate thread
+}
+
+void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
+{
+    Eigen::Vector3d ref(msg->x,msg->y,msg->z);
+    ci_->setComPositionReference(ref); // FIXME Is it thread safe?
+}
+
+void Controller::odomPublisher()
+{
+    // Get floating base
+    Eigen::Affine3d base_pose, world_pose;
+    Eigen::Vector3d position;
+    Eigen::Quaterniond quaternion;
+    xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
+    // Do the inverse of it
+    world_pose = base_pose.inverse();
+    // Publish as tf transform from /ci/world_odom -> /ci/base_link
+    position = world_pose.translation();
+    quaternion = world_pose.linear();
+
+    // Create the tf transform
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin(tf::Vector3(position(0),position(1),position(2)));
+    tf::Quaternion q;
+    q.setX(quaternion.x());
+    q.setY(quaternion.y());
+    q.setZ(quaternion.z());
+    q.setW(quaternion.w());
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/ci/world_odom"));
 }
 
 void Controller::stopping(const ros::Time& time)

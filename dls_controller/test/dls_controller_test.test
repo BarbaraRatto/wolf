@@ -5,7 +5,7 @@
      <include file="$(find dls_controller)/test/dls_controller_test.launch" />
 
      <!-- Load the controller stuff -->
-     <include file="$(find dls_controller)/launch/dls_controller.launch">
+     <include file="$(find dls_controller)/launch/dls_controller_spawn.launch">
             <arg name="robot_name" value="$(arg robot_name)" />
      </include>
 

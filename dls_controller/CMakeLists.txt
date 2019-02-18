@@ -1,8 +1,24 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(dls_controller)
 
-find_package(catkin REQUIRED controller_interface dls_hardware_interface)
+# C++11
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
+check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+if(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(COMPILER_SUPPORTS_CXX0X)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+endif()
 
+# ROS
+find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools sensor_msgs geometry_msgs)
+# ADVR Packages
+find_package(OpenSoT REQUIRED) #FIXME Do I really need it?
+find_package(XCM REQUIRED) #FIXME Do I really need it?
+find_package(cartesian_interface REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -18,10 +34,13 @@ catkin_package(
 include_directories(
     include
     ${catkin_INCLUDE_DIRS}
+    ${OpenSoT_INCLUDE_DIRS}
+    ${XCM_INCLUDE_DIRS}
+    ${cartesian_interface_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})

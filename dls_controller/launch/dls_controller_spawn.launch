@@ -8,5 +8,5 @@
   <node name="controller_spawner"
         ns="$(arg robot_name)"
         pkg="controller_manager" type="spawner" output="screen"
-        args="dls_controller" />
+        args="dls_controller joint_state_publisher" />
 </launch>
