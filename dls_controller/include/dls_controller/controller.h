@@ -79,6 +79,10 @@ private:
     Eigen::VectorXd joint_accellerations_;
     /** @brief joint efforts */
     Eigen::VectorXd joint_efforts_;
+    /** @brief desired joint positions */
+    Eigen::VectorXd des_joint_positions_;
+    /** @brief desired joint velocities */
+    Eigen::VectorXd des_joint_velocities_;
     /** @brief Xbot robot model */
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Cartesian Interface Pointer */

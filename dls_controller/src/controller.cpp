@@ -171,6 +171,15 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     joint_velocities_.resize(joint_states_.size()+6);
     joint_accellerations_.resize(joint_states_.size()+6);
     joint_efforts_.resize(joint_states_.size()+6);
+    des_joint_positions_.resize(joint_states_.size()+6);
+    des_joint_velocities_.resize(joint_states_.size()+6);
+
+    joint_positions_.fill(0.0);
+    joint_velocities_.fill(0.0);
+    joint_accellerations_.fill(0.0);
+    joint_efforts_.fill(0.0);
+    des_joint_positions_.fill(0.0);
+    des_joint_velocities_.fill(0.0);
 
     // Create the realtime publishers
     realtime_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
@@ -207,6 +216,9 @@ void Controller::starting(const ros::Time& time)
         joint_efforts_(i+6) = joint_states_[i].getEffort();
     }
 
+    des_joint_positions_ = joint_positions_;
+    des_joint_velocities_ = joint_velocities_;
+
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setJointVelocity(joint_velocities_);
     //xbot_model_->setJointAcceleration(joint_accellerations_);
@@ -227,8 +239,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         joint_efforts_(i) = joint_states_[i].getEffort();
     }*/
 
-    xbot_model_->setJointPosition(joint_positions_);
-    xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->setJointPosition(des_joint_positions_);
+    xbot_model_->setJointVelocity(des_joint_velocities_);
     //xbot_model_->setJointAcceleration(joint_accellerations_);
     xbot_model_->update();
 
@@ -240,12 +252,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     // Integrate solution
-    xbot_model_->getJointPosition(joint_positions_);
-    xbot_model_->getJointVelocity(joint_velocities_);
-    joint_positions_ += period.toSec() * joint_velocities_;
-    xbot_model_->setJointPosition(joint_positions_);
+    //xbot_model_->getJointPosition(joint_positions_);
+    xbot_model_->getJointVelocity(des_joint_velocities_);
+    des_joint_positions_ += period.toSec() * des_joint_velocities_;
+    //xbot_model_->setJointPosition(des_joint_positions_);
     //xbot_model_->setJointVelocity(joint_velocities_);
-    xbot_model_->update();
+    //xbot_model_->update();
 
 
     // Write to the hardware interface
@@ -253,7 +265,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         // use tau to compensate the gravity
         joint_states_[i].setCommandEffort(0.0);
-        //joint_states_[i].setCommandPosition(joint_positions_(i+6));
+        joint_states_[i].setCommandPosition(des_joint_positions_(i+6));
         joint_states_[i].setCommandVelocity(0.0);
         joint_states_[i].setCommandGains(desired_joint_p_gain_[i], desired_joint_i_gain_[i], desired_joint_d_gain_[i]); //Set Gains P I D
     }
@@ -263,9 +275,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         for(unsigned int i = 0; i < joint_positions_.size(); i++)
         {
-            realtime_pub_->msg_.position[i] = joint_positions_(i);
-            realtime_pub_->msg_.velocity[i] = joint_velocities_(i);
-            realtime_pub_->msg_.effort[i] = joint_efforts_(i);
+            realtime_pub_->msg_.position[i] = des_joint_positions_(i);
+            realtime_pub_->msg_.velocity[i] = des_joint_velocities_(i);
+            //realtime_pub_->msg_.effort[i] = joint_efforts_(i);
             realtime_pub_->msg_.header.stamp = time;
             realtime_pub_->unlockAndPublish();
         }
