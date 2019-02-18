@@ -85,8 +85,10 @@ private:
     XBot::Cartesian::CartesianInterfaceImpl::Ptr ci_;
     /** @brief Real time publisher */
     realtime_tools::RealtimePublisher<sensor_msgs::JointState>* realtime_pub_;
-    /** @brief Ros subscriber for the com reference */
+    /** @brief Ros subscriber for the com position reference */
     ros::Subscriber com_ref_sub_;
+    /** @brief Ros publisher for the com position */
+    ros::Publisher com_pub_;
     /** @brief P value for the joints PID controller */
     std::vector<double> desired_joint_p_gain_;
     /** @brief I value for the joints PID controller */

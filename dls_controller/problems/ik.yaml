@@ -5,6 +5,7 @@ solver_options:
 stack:
     - ["FLLeg", "FRLeg", "BLLeg", "BRLeg"]
     - ["CoM", "TrunkRPY"]
+    - ["Postural"]
 
 
 constraints: ["JointLimits", "VelocityLimits"]
@@ -48,3 +49,6 @@ TrunkRPY:
     distal_link: "trunk"
     lambda: 0.1
     indices: [3,4,5]
+
+Postural:
+    type: "Postural"

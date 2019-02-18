@@ -14,7 +14,16 @@ server = None
 menu_handler = MenuHandler()
 br = None
 counter = 0
+first_value = True
 pub = rospy.Publisher('/hyqreal/dls_controller/com_ref', Point, queue_size=10)
+first_com_position = Point(0,0,0)
+
+def comCallback( msg ):
+    global first_value
+    if first_value:
+	rospy.loginfo("com.x="+str(msg.x)+","+"com.y="+str(msg.y)+","+"com.z="+str(msg.z))
+	first_value = False
+	first_com_position = msg
 
 def processFeedback( feedback ):
     s = "Feedback from marker '" + feedback.marker_name
@@ -87,12 +96,12 @@ def saveMarker( int_marker ):
 
 def make6DofMarker( fixed, interaction_mode, position, show_6dof = False):
     int_marker = InteractiveMarker()
-    int_marker.header.frame_id = "base_link"
+    int_marker.header.frame_id = "ci/world_odom"
     int_marker.pose.position = position
-    int_marker.scale = 1
+    int_marker.scale = 0.5
 
-    int_marker.name = "simple_6dof"
-    int_marker.description = "Simple 6-DOF Control"
+    int_marker.name = "com"
+    int_marker.description = "com position reference"
 
     # insert a box
     makeBoxControl(int_marker)
@@ -195,13 +204,13 @@ if __name__=="__main__":
     menu_handler.insert( "Second Entry", parent=sub_menu_handle, callback=processFeedback )
   
     # wait for robot topic
-    rospy.wait_for_message("/hyqreal/ci/joint_states", JointState)
-    print("Start!")
+    rospy.wait_for_message("/hyqreal/dls_controller/com", Point)
+    rospy.loginfo( "Start!" )
 
     # set marker to the com
+    rospy.Subscriber('/hyqreal/dls_controller/com', Point, comCallback)
     
-    
-    position = Point(-3, 3, 0)
+    position = first_com_position
     make6DofMarker( False, InteractiveMarkerControl.NONE, position, True)
     
 

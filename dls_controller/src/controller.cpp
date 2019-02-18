@@ -151,9 +151,19 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     ProblemDescription ik_problem(config, xbot_model_);
 
     // Create the CartesianInterfaceImpl from XBot::Cartesian
-    ci_.reset(new XBot::Cartesian::CartesianInterfaceImpl(xbot_model_,ik_problem));
+    //ci_.reset(new XBot::Cartesian::CartesianInterfaceImpl(xbot_model_,ik_problem));
+    std::string impl_name = "OpenSot";
+    std::string path_to_shared_lib = XBot::Utils::FindLib("libCartesian" + impl_name + ".so", "LD_LIBRARY_PATH");
+    if (path_to_shared_lib == "")
+    {
+        ROS_ERROR_STREAM("libCartesian" + impl_name + ".so must be listed inside LD_LIBRARY_PATH");
+        return false;
+    }
 
-    ci_->enableOtg(0.004); // FIXME
+    ci_ = SoLib::getFactoryWithArgs<CartesianInterfaceImpl>(path_to_shared_lib,
+                                                             impl_name + "Impl",
+                                                             xbot_model_, ik_problem);
+    ci_->enableOtg(0.004); // FIXME Load correct loop period
     ci_->update(0,0);
 
     // Resize the variables
@@ -179,6 +189,8 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
 
     // Reference for the com
     com_ref_sub_ = controller_nh.subscribe("com_ref", 1, &Controller::setComReference, this);
+    // Position of the com
+    com_pub_ = controller_nh.advertise<geometry_msgs::Point>("com", 1000);
 
     return true;
 }
@@ -221,7 +233,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     xbot_model_->update();
 
     // Solve IK
-    if(!ci_->update(time.toSec(),period.toSec()))
+    if(!ci_->update(time.toSec(),0.004))
     {
         ROS_ERROR("CartesianInterface: unable to solve");
         return;
@@ -232,7 +244,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     xbot_model_->getJointVelocity(joint_velocities_);
     joint_positions_ += period.toSec() * joint_velocities_;
     xbot_model_->setJointPosition(joint_positions_);
-    xbot_model_->setJointVelocity(joint_velocities_);
+    //xbot_model_->setJointVelocity(joint_velocities_);
     xbot_model_->update();
 
 
@@ -241,7 +253,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         // use tau to compensate the gravity
         joint_states_[i].setCommandEffort(0.0);
-        joint_states_[i].setCommandPosition(joint_positions_(i+6));
+        //joint_states_[i].setCommandPosition(joint_positions_(i+6));
         joint_states_[i].setCommandVelocity(0.0);
         joint_states_[i].setCommandGains(desired_joint_p_gain_[i], desired_joint_i_gain_[i], desired_joint_d_gain_[i]); //Set Gains P I D
     }
@@ -275,13 +287,14 @@ void Controller::odomPublisher()
     Eigen::Vector3d position;
     Eigen::Quaterniond quaternion;
     xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
+
     // Do the inverse of it
     world_pose = base_pose.inverse();
-    // Publish as tf transform from /ci/world_odom -> /ci/base_link
     position = world_pose.translation();
     quaternion = world_pose.linear();
+    quaternion.normalize();
 
-    // Create the tf transform
+    // Create the tf transform between /ci/base_link and /ci/world_odom
     static tf::TransformBroadcaster br;
     tf::Transform transform;
     transform.setOrigin(tf::Vector3(position(0),position(1),position(2)));
@@ -291,7 +304,25 @@ void Controller::odomPublisher()
     q.setZ(quaternion.z());
     q.setW(quaternion.w());
     transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/ci/world_odom"));
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link" , "/ci/world_odom" ));
+
+    // Create the tf transform between /ci/base_link and /base_link
+    transform.setOrigin(tf::Vector3(0,0,0));
+    q.setX(0);
+    q.setY(0);
+    q.setZ(0);
+    q.setW(1);
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/base_link"));
+
+    // Publish the com position
+    Eigen::Vector3d com;
+    geometry_msgs::Point msg;
+    ci_->getModel()->getCOM(com); // FIXME Is it thread safe?
+    msg.x = com(0);
+    msg.y = com(1);
+    msg.z = com(2);
+    com_pub_.publish(msg);
 }
 
 void Controller::stopping(const ros::Time& time)
