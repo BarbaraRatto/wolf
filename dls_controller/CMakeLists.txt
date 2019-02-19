@@ -14,15 +14,22 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools sensor_msgs geometry_msgs)
+find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools sensor_msgs geometry_msgs message_generation)
 # ADVR Packages
 find_package(OpenSoT REQUIRED) #FIXME Do I really need it?
 find_package(XCM REQUIRED) #FIXME Do I really need it?
 find_package(cartesian_interface REQUIRED)
 
+
+add_service_files(FILES
+  DlsControllerServices.srv)
+
+generate_messages()
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
+  CATKIN_DEPENDS message_runtime
 )
 
 ###########
@@ -40,6 +47,7 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp)
+add_dependencies(${PROJECT_NAME} ${dls_controller_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/
@@ -52,7 +60,7 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 if (CATKIN_ENABLE_TESTING)
-  find_package(catkin REQUIRED COMPONENTS rostest urdf controller_manager hardware_interface dls_hardware_interface hyqreal_description)
+  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface hyqreal_description)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
   add_executable(hyq_dummy test/hyq_dummy.cpp)

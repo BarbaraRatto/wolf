@@ -2,11 +2,12 @@
 #define DLS_CONTROLLER_H
 
 // Ros
-#include <ros/node_handle.h>
+#include <ros/ros.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <tf/transform_broadcaster.h>
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/Point.h>
+#include <dls_controller/DlsControllerServices.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // Hardware interface
@@ -16,6 +17,8 @@
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
+// STD
+#include <atomic>
 
 namespace dls_controller
 {
@@ -63,6 +66,17 @@ public:
          */
     void setComReference(const geometry_msgs::Point::ConstPtr& msg);
 
+    /**
+         * @brief Manage the ros services
+         */
+    bool servicesManager(dls_controller::DlsControllerServices::Request &req,
+                         dls_controller::DlsControllerServices::Response &res);
+
+    /**
+         * @brief Start/Stop solver integration
+         */
+    void toggleSolver();
+
 private:
 
     /** @brief number of joints */
@@ -99,10 +113,12 @@ private:
     std::vector<double> desired_joint_i_gain_;
     /** @brief D value for the joints PID controller */
     std::vector<double> desired_joint_d_gain_;
-
+    /** @brief Integrate the solver solution and apply it to the desired joints state */
+    std::atomic<bool> solver_started_;
+    /** @brief ROS service server */
+    ros::ServiceServer ss_;
 
     void odomPublisher();
-
 };
 
 

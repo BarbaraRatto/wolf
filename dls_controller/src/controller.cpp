@@ -17,6 +17,7 @@ using namespace Cartesian;
 namespace dls_controller {
 
 Controller::Controller()
+    :solver_started_(false)
 {
 }
 
@@ -161,8 +162,8 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     }
 
     ci_ = SoLib::getFactoryWithArgs<CartesianInterfaceImpl>(path_to_shared_lib,
-                                                             impl_name + "Impl",
-                                                             xbot_model_, ik_problem);
+                                                            impl_name + "Impl",
+                                                            xbot_model_, ik_problem);
     ci_->enableOtg(0.004); // FIXME Load correct loop period
     ci_->update(0,0);
 
@@ -201,7 +202,32 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     // Position of the com
     com_pub_ = controller_nh.advertise<geometry_msgs::Point>("com", 1000);
 
+    // Rosservice
+    ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
+
     return true;
+}
+
+bool Controller::servicesManager(dls_controller::DlsControllerServices::Request &req,
+                                 dls_controller::DlsControllerServices::Response &res) // FIXME automatize that function with a list
+{
+    if(std::strcmp(req.command.c_str(), "toggleSolver") == 0)
+    {
+        toggleSolver();
+        res.response = true;
+    }
+
+    return true;
+}
+
+void Controller::toggleSolver()
+{
+    solver_started_=!solver_started_;
+
+    if(solver_started_)
+        ROS_INFO("Start the solver");
+    else
+        ROS_INFO("Stop the solver");
 }
 
 void Controller::starting(const ros::Time& time)
@@ -219,12 +245,11 @@ void Controller::starting(const ros::Time& time)
     des_joint_positions_ = joint_positions_;
     des_joint_velocities_ = joint_velocities_;
 
-    xbot_model_->setJointPosition(joint_positions_);
-    xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->setJointPosition(des_joint_positions_);
+    xbot_model_->setJointVelocity(des_joint_velocities_);
     //xbot_model_->setJointAcceleration(joint_accellerations_);
     xbot_model_->update();
     ci_->reset(time.toSec());
-
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
@@ -239,26 +264,29 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         joint_efforts_(i) = joint_states_[i].getEffort();
     }*/
 
-    xbot_model_->setJointPosition(des_joint_positions_);
-    xbot_model_->setJointVelocity(des_joint_velocities_);
-    //xbot_model_->setJointAcceleration(joint_accellerations_);
-    xbot_model_->update();
-
-    // Solve IK
-    if(!ci_->update(time.toSec(),0.004))
+    if(solver_started_)
     {
-        ROS_ERROR("CartesianInterface: unable to solve");
-        return;
+        xbot_model_->setJointPosition(des_joint_positions_);
+        xbot_model_->setJointVelocity(des_joint_velocities_);
+        //xbot_model_->setJointAcceleration(joint_accellerations_);
+        xbot_model_->update();
+
+        // Solve IK
+        if(!ci_->update(time.toSec(),period.toSec()))
+        {
+            ROS_ERROR("CartesianInterface: unable to solve");
+            return;
+        }
+
+        // Integrate solution
+        xbot_model_->getJointVelocity(des_joint_velocities_);
+        des_joint_positions_ += period.toSec() * des_joint_velocities_;
     }
-
-    // Integrate solution
-    //xbot_model_->getJointPosition(joint_positions_);
-    xbot_model_->getJointVelocity(des_joint_velocities_);
-    des_joint_positions_ += period.toSec() * des_joint_velocities_;
-    //xbot_model_->setJointPosition(des_joint_positions_);
-    //xbot_model_->setJointVelocity(joint_velocities_);
-    //xbot_model_->update();
-
+    else
+    {
+        des_joint_positions_ = joint_positions_;
+        des_joint_velocities_ = joint_velocities_;
+    }
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
