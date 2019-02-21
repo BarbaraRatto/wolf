@@ -70,8 +70,8 @@ bool DlsRobotHwInterface::init()
     registerInterface(&joint_state_adv_interface_);
     registerInterface(&joint_state_interface_);
     registerInterface(&joint_interface_);
-    /*registerInterface(&imu_sensor_interface_);
-    registerInterface(&ground_truth_interface_);
+    registerInterface(&imu_sensor_interface_);
+    /*registerInterface(&ground_truth_interface_);
     registerInterface(&force_sensor_interface_);
     registerInterface(&contact_sensor_interface_);
     registerInterface(&shin_sensor_interface_);
