@@ -14,20 +14,21 @@ dls_controller:
   - rh_haa_joint
   - rh_hfe_joint
   - rh_kfe_joint
-
+  imu_sensors:
+  - trunk_imu
   gains:
-    lf_haa_joint: {p: 500.0, i: 0.0, d: 6.0}
-    lf_hfe_joint: {p: 500.0, i: 0.0, d: 6.0}
-    lf_kfe_joint: {p: 500.0, i: 0.0, d: 6.0}
+      lf_haa_joint: {p: 500.0, i: 0.0, d: 10.0}
+      lf_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      lf_kfe_joint: {p: 500.0, i: 0.0, d: 6.0}
 
-    rf_haa_joint: {p: 500.0, i: 0.0, d: 6.0}
-    rf_hfe_joint: {p: 500.0, i: 0.0, d: 6.0}
-    rf_kfe_joint: {p: 500.0, i: 0.0, d: 6.0}
+      rf_haa_joint: {p: 500.0, i: 0.0, d: 6.0}
+      rf_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      rf_kfe_joint: {p: 500.0, i: 0.0, d: 6.0}
 
-    lh_haa_joint: {p: 500.0, i: 0.0, d: 6.0}
-    lh_hfe_joint: {p: 500.0, i: 0.0, d: 6.0}
-    lh_kfe_joint: {p: 500.0, i: 0.0, d: 6.0}
+      lh_haa_joint: {p: 500.0, i: 0.0, d: 10.0}
+      lh_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      lh_kfe_joint: {p: 500.0, i: 0.0, d: 6.0}
 
-    rh_haa_joint: {p: 500.0, i: 0.0, d: 6.0}
-    rh_hfe_joint: {p: 500.0, i: 0.0, d: 6.0}
-    rh_kfe_joint: {p: 500.0, i: 0.0, d: 6.0}
+      rh_haa_joint: {p: 500.0, i: 0.0, d: 10.0}
+      rh_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      rh_kfe_joint: {p: 500.0, i: 0.0, d: 10.0}

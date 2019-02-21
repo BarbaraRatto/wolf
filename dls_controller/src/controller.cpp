@@ -16,8 +16,12 @@ using namespace Cartesian;
 
 namespace dls_controller {
 
+#define FLOATING_BASE_DOFS 6
+
 Controller::Controller()
     :solver_started_(false)
+    ,gravity_compensation_(false)
+    ,pid_active_(true)
 {
 }
 
@@ -27,20 +31,38 @@ Controller::~Controller()
         delete realtime_pub_;
 }
 
-bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
+bool Controller::init(hardware_interface::RobotHW* robot_hw,
                       ros::NodeHandle& root_nh,
                       ros::NodeHandle& controller_nh)
 {
     // getting the names of the joints from the ROS parameter server
     ROS_DEBUG("Initialize DLS Controller");
 
-    assert(hw);
+    assert(robot_hw);
 
-    //hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
+    hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
+    hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
+
+    if(!jt_hw)
+    {
+        ROS_ERROR("hardware_interface::JointCommandAdvInterface not found");
+        return false;
+    }
+    if(!imu_hw)
+    {
+        ROS_ERROR("hardware_interface::ImuSensorInterface not found");
+        return false;
+    }
 
     if (!controller_nh.getParam("joints", joint_names_))
     {
         ROS_ERROR("No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        return false;
+    }
+
+    if (!controller_nh.getParam("imu_sensors", imu_names_))
+    {
+        ROS_ERROR("No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
 
@@ -51,7 +73,7 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
         try
         {
             ROS_DEBUG_STREAM("Found joint: "<<joint_names_[i]);
-            joint_states_.push_back(hw->getHandle(joint_names_[i]));
+            joint_states_.push_back(jt_hw->getHandle(joint_names_[i]));
         }
         catch(...)
         {
@@ -59,39 +81,60 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
             return false;
         }
     }
-
     assert(joint_states_.size()>0);
 
-    desired_joint_p_gain_.resize(joint_states_.size());
-    desired_joint_i_gain_.resize(joint_states_.size());
-    desired_joint_d_gain_.resize(joint_states_.size());
+    for (unsigned int i = 0; i < imu_names_.size(); i++)
+    {
+        try
+        {
+            ROS_DEBUG_STREAM("Found imu sensor: "<<imu_names_[i]);
+            imu_sensors_.push_back(imu_hw->getHandle(imu_names_[i]));
+        }
+        catch(...)
+        {
+            ROS_ERROR("Error loading imu_sensors_");
+            return false;
+        }
+    }
+    assert(imu_sensors_.size()>0);
+
+    des_joint_p_gain_.resize(joint_states_.size());
+    des_joint_i_gain_.resize(joint_states_.size());
+    des_joint_d_gain_.resize(joint_states_.size());
+    joint_p_gain_.resize(joint_states_.size());
+    joint_i_gain_.resize(joint_states_.size());
+    joint_d_gain_.resize(joint_states_.size());
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
         // Getting PID gains
-        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/p", desired_joint_p_gain_[i]))
+        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/p", joint_p_gain_[i]))
         {
             ROS_ERROR("No P gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
-        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/i", desired_joint_i_gain_[i]))
+        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/i", joint_i_gain_[i]))
         {
             ROS_ERROR("No D gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
-        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/d", desired_joint_d_gain_[i]))
+        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/d", joint_d_gain_[i]))
         {
             ROS_ERROR("No I gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
         // Check if the values are positive
-        if(desired_joint_p_gain_[i]<0.0 || desired_joint_i_gain_[i]<0.0 || desired_joint_d_gain_[i]<0.0)
+        if(joint_p_gain_[i]<0.0 || joint_i_gain_[i]<0.0 || joint_d_gain_[i]<0.0)
         {
             ROS_ERROR("PID gains must be positive!");
             return false;
         }
-        ROS_DEBUG("P value for joint %i is: %d",i,desired_joint_p_gain_[i]);
-        ROS_DEBUG("I value for joint %i is: %d",i,desired_joint_i_gain_[i]);
-        ROS_DEBUG("D value for joint %i is: %d",i,desired_joint_d_gain_[i]);
+        ROS_DEBUG("P value for joint %i is: %d",i,joint_p_gain_[i]);
+        ROS_DEBUG("I value for joint %i is: %d",i,joint_i_gain_[i]);
+        ROS_DEBUG("D value for joint %i is: %d",i,joint_d_gain_[i]);
+
+        // Set the gain value when the error is 0 and the gain value when the error reach x [m]
+        //double x = 0.1;
+        //adaptive_joint_p_gain_.push_back(new AdaptiveGain(des_joint_p_gain_[i],des_joint_p_gain_[i]/2.0,x));
     }
 
     // Create the ModelInterface from XBot
@@ -117,6 +160,7 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
         ROS_ERROR("Unable to load srdf path");
         return false;
     }
+    // FIXME hardcoded paths
     /*if(!opt.set_urdf(urdf))
    {
        ROS_ERROR("Unable to load urdf");
@@ -137,12 +181,10 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     xbot_model_ = XBot::ModelInterface::getModel(opt);
 
     // Set home position defined in the srdf
-    Eigen::VectorXd qhome;
-    xbot_model_->getRobotState("home", qhome);
-    xbot_model_->setJointPosition(qhome);
+    xbot_model_->getRobotState("home", qhome_);
+    xbot_model_->setJointPosition(qhome_);
 
     // Create the kinematics problem
-    //YAML::Node config = YAML::LoadFile("PATH TO FILE"); // FIXME use the ros param server
     if(!controller_nh.getParam("problem_description",problem))
     {
         ROS_ERROR("No problem_description given");
@@ -152,7 +194,6 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     ProblemDescription ik_problem(config, xbot_model_);
 
     // Create the CartesianInterfaceImpl from XBot::Cartesian
-    //ci_.reset(new XBot::Cartesian::CartesianInterfaceImpl(xbot_model_,ik_problem));
     std::string impl_name = "OpenSot";
     std::string path_to_shared_lib = XBot::Utils::FindLib("libCartesian" + impl_name + ".so", "LD_LIBRARY_PATH");
     if (path_to_shared_lib == "")
@@ -167,27 +208,41 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     ci_->enableOtg(0.004); // FIXME Load correct loop period
     ci_->update(0,0);
 
+    // Create the force optimization to compute the gravity compensation terms
+    std::vector<std::string> contact_links;
+
+    // Those are associated to the SRDF model
+    contact_links.push_back("rh_foot");
+    contact_links.push_back("rf_foot");
+    contact_links.push_back("lh_foot");
+    contact_links.push_back("lf_foot");
+    fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links,false));
+
     // Resize the variables
-    joint_positions_.resize(joint_states_.size()+6);
-    joint_velocities_.resize(joint_states_.size()+6);
-    joint_accellerations_.resize(joint_states_.size()+6);
-    joint_efforts_.resize(joint_states_.size()+6);
-    des_joint_positions_.resize(joint_states_.size()+6);
-    des_joint_velocities_.resize(joint_states_.size()+6);
+    joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    joint_accellerations_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    des_joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    des_joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    des_joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
 
     joint_positions_.fill(0.0);
     joint_velocities_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
+    com_position_.fill(0.0);
     des_joint_positions_.fill(0.0);
     des_joint_velocities_.fill(0.0);
+    des_joint_efforts_.fill(0.0);
+    des_com_position_.fill(0.0);
 
     // Create the realtime publishers
     realtime_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
-    realtime_pub_->msg_.name.resize(joint_states_.size()+6);
-    realtime_pub_->msg_.position.resize(joint_states_.size()+6);
-    realtime_pub_->msg_.velocity.resize(joint_states_.size()+6);
-    realtime_pub_->msg_.effort.resize(joint_states_.size()+6);
+    realtime_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    realtime_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    realtime_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    realtime_pub_->msg_.effort.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     realtime_pub_->msg_.name[0] = "x"; //FIXME
     realtime_pub_->msg_.name[1] = "y";
     realtime_pub_->msg_.name[2] = "z";
@@ -195,7 +250,7 @@ bool Controller::init(hardware_interface::JointCommandAdvInterface* hw,
     realtime_pub_->msg_.name[4] = "p";
     realtime_pub_->msg_.name[5] = "y";
     for (unsigned int i = 0; i < joint_names_.size(); i++)
-        realtime_pub_->msg_.name[i+6] = joint_names_[i];
+        realtime_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
     // Reference for the com
     com_ref_sub_ = controller_nh.subscribe("com_ref", 1, &Controller::setComReference, this);
@@ -216,8 +271,28 @@ bool Controller::servicesManager(dls_controller::DlsControllerServices::Request 
         toggleSolver();
         res.response = true;
     }
+    if(std::strcmp(req.command.c_str(), "toggleGravityCompensation") == 0)
+    {
+        toggleGravityCompensation();
+        res.response = true;
+    }
+    if(std::strcmp(req.command.c_str(), "togglePid") == 0)
+    {
+        togglePid();
+        res.response = true;
+    }
 
     return true;
+}
+
+void Controller::togglePid()
+{
+    pid_active_=!pid_active_;
+
+    if(pid_active_)
+        ROS_INFO("PIDs are ON");
+    else
+        ROS_INFO("PIDs are OFF");
 }
 
 void Controller::toggleSolver()
@@ -225,25 +300,58 @@ void Controller::toggleSolver()
     solver_started_=!solver_started_;
 
     if(solver_started_)
-        ROS_INFO("Start the solver");
+        ROS_INFO("Solver integration is ON");
     else
-        ROS_INFO("Stop the solver");
+        ROS_INFO("Solver integration is OFF");
+}
+
+void Controller::toggleGravityCompensation()
+{
+    gravity_compensation_=!gravity_compensation_;
+
+    if(gravity_compensation_)
+        ROS_INFO("Gravity compensation is ON");
+    else
+        ROS_INFO("Gravity compensation is OFF");
+}
+
+void Controller::readImu()
+{
+    // FIXME For now we select the first imu
+    unsigned int selected_imu = 0;
+    imu_accelerometer_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getLinearAcceleration());
+    imu_gyroscope_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getAngularVelocity());
+    imu_orientation_.w() = imu_sensors_[selected_imu].getOrientation()[0];
+    imu_orientation_.x() = imu_sensors_[selected_imu].getOrientation()[1];
+    imu_orientation_.y() = imu_sensors_[selected_imu].getOrientation()[2];
+    imu_orientation_.z() = imu_sensors_[selected_imu].getOrientation()[3];
+}
+
+void Controller::readJoints()
+{
+    for (unsigned int i = 0; i < joint_states_.size(); i++)
+    {
+        joint_positions_(i+FLOATING_BASE_DOFS) = joint_states_[i].getPosition();
+        joint_velocities_(i+FLOATING_BASE_DOFS) = joint_states_[i].getVelocity();
+        joint_accellerations_(i+FLOATING_BASE_DOFS) = 0.0; // FIXME
+        joint_efforts_(i+FLOATING_BASE_DOFS) = joint_states_[i].getEffort();
+    }
 }
 
 void Controller::starting(const ros::Time& time)
 {
     ROS_DEBUG("Starting DLS Controller");
 
-    for (unsigned int i = 0; i < joint_states_.size(); i++)
-    {
-        joint_positions_(i+6) = joint_states_[i].getPosition();
-        joint_velocities_(i+6) = joint_states_[i].getVelocity();
-        joint_accellerations_(i+6) = 0.0; // FIXME
-        joint_efforts_(i+6) = joint_states_[i].getEffort();
-    }
+    // Read from the hardware interfaces:
+    // 1) Joints
+    readJoints();
+    // 2) IMU
+    readImu();
 
     des_joint_positions_ = joint_positions_;
     des_joint_velocities_ = joint_velocities_;
+    des_joint_efforts_.fill(0.0);
+    xbot_model_->getCOM(com_position_);
 
     xbot_model_->setJointPosition(des_joint_positions_);
     xbot_model_->setJointVelocity(des_joint_velocities_);
@@ -254,15 +362,48 @@ void Controller::starting(const ros::Time& time)
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
-    // Read from the hardware interface
-    // This is for the closed loop
-    /*for (unsigned int i = 0; i < joint_states_.size(); i++)
+    // Read from the hardware interfaces:
+    // 1) Joints
+    // readJoints(); // FIXME For the moment we don't close the loop
+    // 2) IMU
+    readImu();
+
+    xbot_model_->setFloatingBaseOrientation(imu_orientation_.matrix());
+    xbot_model_->update();
+
+    if(gravity_compensation_)
     {
-        joint_positions_(i) = joint_states_[i].getPosition();
-        joint_velocities_(i) = joint_states_[i].getVelocity();
-        joint_accellerations_(i) = 0.0; // FIXME
-        joint_efforts_(i) = joint_states_[i].getEffort();
-    }*/
+        xbot_model_->computeGravityCompensation(des_joint_efforts_); // Compute the g term for the legs and the virtual force applied to the base
+        Eigen::VectorXd tau;
+        std::vector<Eigen::Vector6d> Fc; // FIXME NO RT!
+        if(!fo_->compute(des_joint_efforts_,Fc,tau))
+        {
+            ROS_ERROR("ForceOptimization: unable to solve");
+            return;
+        }
+        des_joint_efforts_ = tau;
+    }
+    else
+        des_joint_efforts_.fill(0.0);
+
+    if(pid_active_) // FIXME abrupt
+    {
+        for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
+        {
+            des_joint_p_gain_[i] = joint_p_gain_[i];
+            des_joint_i_gain_[i] = joint_i_gain_[i];
+            des_joint_d_gain_[i] = joint_d_gain_[i];
+        }
+    }
+    else
+    {
+        for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
+        {
+            des_joint_p_gain_[i] = 0.0;
+            des_joint_i_gain_[i] = 0.0;
+            des_joint_d_gain_[i] = 0.0;
+        }
+    }
 
     if(solver_started_)
     {
@@ -284,18 +425,20 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
     else
     {
-        des_joint_positions_ = joint_positions_;
-        des_joint_velocities_ = joint_velocities_;
+        des_joint_positions_ = qhome_;
+        des_joint_velocities_.setZero();
     }
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
         // use tau to compensate the gravity
-        joint_states_[i].setCommandEffort(0.0);
-        joint_states_[i].setCommandPosition(des_joint_positions_(i+6));
+        joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
+        joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandVelocity(0.0);
-        joint_states_[i].setCommandGains(desired_joint_p_gain_[i], desired_joint_i_gain_[i], desired_joint_d_gain_[i]); //Set Gains P I D
+        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i], des_joint_d_gain_[i]); //Set Gains P I D
+        //joint_states_[i].setCommandGains(adaptive_joint_p_gain_[i]->ComputeGain(des_joint_efforts_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS))
+        //                                 ,des_joint_i_gain_[i], des_joint_d_gain_[i]); //Set Gains P I D
     }
 
     // Publish
@@ -305,7 +448,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             realtime_pub_->msg_.position[i] = des_joint_positions_(i);
             realtime_pub_->msg_.velocity[i] = des_joint_velocities_(i);
-            //realtime_pub_->msg_.effort[i] = joint_efforts_(i);
+            realtime_pub_->msg_.effort[i] = des_joint_efforts_(i);
             realtime_pub_->msg_.header.stamp = time;
             realtime_pub_->unlockAndPublish();
         }
@@ -316,8 +459,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
 void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
 {
-    Eigen::Vector3d ref(msg->x,msg->y,msg->z);
-    ci_->setComPositionReference(ref); // FIXME Is it thread safe?
+    des_com_position_(0) = msg->x;
+    des_com_position_(1) = msg->y;
+    des_com_position_(2) = msg->z;
+    ci_->setComPositionReference(des_com_position_); // FIXME Is it thread safe?
 }
 
 void Controller::odomPublisher()
@@ -356,12 +501,11 @@ void Controller::odomPublisher()
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/base_link"));
 
     // Publish the com position
-    Eigen::Vector3d com;
     geometry_msgs::Point msg;
-    ci_->getModel()->getCOM(com); // FIXME Is it thread safe?
-    msg.x = com(0);
-    msg.y = com(1);
-    msg.z = com(2);
+    xbot_model_->getCOM(com_position_); // FIXME Is it thread safe?
+    msg.x = com_position_(0);
+    msg.y = com_position_(1);
+    msg.z = com_position_(2);
     com_pub_.publish(msg);
 }
 
