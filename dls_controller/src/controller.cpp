@@ -262,7 +262,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
 
     // Spawn the odom publisher thread
-    //odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     return true;
 }
@@ -455,7 +455,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
     }
 
-    odomPublisher(); // FIXME move it to a separate thread
+    //odomPublisher(); // FIXME move it to a separate thread
 }
 
 void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
@@ -469,9 +469,9 @@ void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
 void Controller::odomPublisher()
 {
 
-    /*ROS_INFO("Start the odomPublisher");
+    ROS_INFO("Start the odomPublisher");
     while(!stopping_)
-    {*/
+    {
         // Get floating base
         Eigen::Affine3d base_pose, world_pose;
         Eigen::Vector3d position;
@@ -515,8 +515,8 @@ void Controller::odomPublisher()
 
         std::this_thread::sleep_for( std::chrono::milliseconds(4) );
 
-    /*}
-    ROS_INFO("Stop the odomPublisher");*/
+    }
+    ROS_INFO("Stop the odomPublisher");
 }
 
 void Controller::stopping(const ros::Time& time)
