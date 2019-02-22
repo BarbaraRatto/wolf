@@ -20,7 +20,7 @@ namespace dls_controller {
 
 Controller::Controller()
     :solver_started_(false)
-    ,gravity_compensation_(false)
+    ,gravity_compensation_(true)
     ,pid_active_(true)
     ,stopping_(false)
 {
@@ -426,6 +426,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
     else
     {
+        des_com_position_ = com_position_;
         des_joint_positions_ = qhome_;
         des_joint_velocities_.setZero();
     }
