@@ -22,6 +22,7 @@ Controller::Controller()
     :solver_started_(false)
     ,gravity_compensation_(false)
     ,pid_active_(true)
+    ,stopping_(false)
 {
 }
 
@@ -260,6 +261,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Rosservice
     ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
 
+    // Spawn the odom publisher thread
+    //odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+
     return true;
 }
 
@@ -368,7 +372,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 2) IMU
     readImu();
 
-    xbot_model_->setFloatingBaseOrientation(imu_orientation_.matrix());
+    xbot_model_->setJointPosition(des_joint_positions_);
+    xbot_model_->setJointVelocity(des_joint_velocities_);
+    xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     xbot_model_->update();
 
     if(gravity_compensation_)
@@ -407,11 +413,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     if(solver_started_)
     {
-        xbot_model_->setJointPosition(des_joint_positions_);
-        xbot_model_->setJointVelocity(des_joint_velocities_);
-        //xbot_model_->setJointAcceleration(joint_accellerations_);
-        xbot_model_->update();
-
         // Solve IK
         if(!ci_->update(time.toSec(),period.toSec()))
         {
@@ -467,51 +468,64 @@ void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
 
 void Controller::odomPublisher()
 {
-    // Get floating base
-    Eigen::Affine3d base_pose, world_pose;
-    Eigen::Vector3d position;
-    Eigen::Quaterniond quaternion;
-    xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
 
-    // Do the inverse of it
-    world_pose = base_pose.inverse();
-    position = world_pose.translation();
-    quaternion = world_pose.linear();
-    quaternion.normalize();
+    /*ROS_INFO("Start the odomPublisher");
+    while(!stopping_)
+    {*/
+        // Get floating base
+        Eigen::Affine3d base_pose, world_pose;
+        Eigen::Vector3d position;
+        Eigen::Quaterniond quaternion;
+        xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
 
-    // Create the tf transform between /ci/base_link and /ci/world_odom
-    static tf::TransformBroadcaster br;
-    tf::Transform transform;
-    transform.setOrigin(tf::Vector3(position(0),position(1),position(2)));
-    tf::Quaternion q;
-    q.setX(quaternion.x());
-    q.setY(quaternion.y());
-    q.setZ(quaternion.z());
-    q.setW(quaternion.w());
-    transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link" , "/ci/world_odom" ));
+        // Do the inverse of it
+        world_pose = base_pose.inverse();
+        position = world_pose.translation();
+        quaternion = world_pose.linear();
+        quaternion.normalize();
 
-    // Create the tf transform between /ci/base_link and /base_link
-    transform.setOrigin(tf::Vector3(0,0,0));
-    q.setX(0);
-    q.setY(0);
-    q.setZ(0);
-    q.setW(1);
-    transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/base_link"));
+        // Create the tf transform between /ci/base_link and /ci/world_odom
+        static tf::TransformBroadcaster br;
+        tf::Transform transform;
+        transform.setOrigin(tf::Vector3(position(0),position(1),position(2)));
+        tf::Quaternion q;
+        q.setX(quaternion.x());
+        q.setY(quaternion.y());
+        q.setZ(quaternion.z());
+        q.setW(quaternion.w());
+        transform.setRotation(q);
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link" , "/ci/world_odom" ));
 
-    // Publish the com position
-    geometry_msgs::Point msg;
-    xbot_model_->getCOM(com_position_); // FIXME Is it thread safe?
-    msg.x = com_position_(0);
-    msg.y = com_position_(1);
-    msg.z = com_position_(2);
-    com_pub_.publish(msg);
+        // Create the tf transform between /ci/base_link and /base_link
+        transform.setOrigin(tf::Vector3(0,0,0));
+        q.setX(0);
+        q.setY(0);
+        q.setZ(0);
+        q.setW(1);
+        transform.setRotation(q);
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/base_link"));
+
+        // Publish the com position
+        geometry_msgs::Point msg;
+        xbot_model_->getCOM(com_position_); // FIXME Is it thread safe?
+        msg.x = com_position_(0);
+        msg.y = com_position_(1);
+        msg.z = com_position_(2);
+        com_pub_.publish(msg);
+
+        std::this_thread::sleep_for( std::chrono::milliseconds(4) );
+
+    /*}
+    ROS_INFO("Stop the odomPublisher");*/
 }
 
 void Controller::stopping(const ros::Time& time)
 {
     ROS_DEBUG("Stopping DLS Controller");
+
+    stopping_ = true;
+    odom_publisher_thread_->join();
+
 }
 
 } //namespace

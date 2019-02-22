@@ -22,6 +22,8 @@
 #include <dls_controller/ForceOptimization.h>
 // STD
 #include <atomic>
+#include <thread>
+#include <chrono>
 // Utils
 #include <dls_controller/utils.h>
 
@@ -151,6 +153,8 @@ private:
     std::atomic<bool> gravity_compensation_;
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
+    /** @brief Variable used to signal that the controller is stopping */
+    std::atomic<bool> stopping_;
     /** @brief ROS service server */
     ros::ServiceServer ss_;
     /** @brief Force Optimization Pointer */
@@ -163,6 +167,8 @@ private:
     Eigen::Quaterniond imu_orientation_;
     /** @brief Homing position, loaded from the srdf file */
     Eigen::VectorXd qhome_;
+
+    std::shared_ptr<std::thread> odom_publisher_thread_;
 
     void odomPublisher();
 
