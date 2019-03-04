@@ -46,7 +46,7 @@ include_directories(
     ${cartesian_interface_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/ForceOptimization.cpp src/controller.cpp)
+add_library(${PROJECT_NAME} src/ForceOptimization.cpp src/controller.cpp src/IDProblem.cpp)
 add_dependencies(${PROJECT_NAME} ${dls_controller_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
 

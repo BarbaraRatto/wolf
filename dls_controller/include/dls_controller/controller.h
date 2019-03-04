@@ -16,10 +16,12 @@
 // Hardware interfaces
 #include <dls_hardware_interface/joint_command_adv_interface.h> // custom hw
 #include <hardware_interface/imu_sensor_interface.h>
+#include <dls_hardware_interface/ground_truth_interface.h>
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
 #include <dls_controller/ForceOptimization.h>
+#include <dls_controller/IDProblem.h>
 // STD
 #include <atomic>
 #include <thread>
@@ -31,7 +33,8 @@ namespace dls_controller
 {
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
-                                                                         hardware_interface::ImuSensorInterface>
+        hardware_interface::ImuSensorInterface,
+        hardware_interface::GroundTruthInterface>
 {
 public:
     /** @brief Constructor function */
@@ -103,10 +106,14 @@ private:
     std::vector<std::string> joint_names_;
     /** @brief Imu sensor names */
     std::vector<std::string> imu_names_;
+    /** @brief State estimator names */
+    std::vector<std::string> state_estimator_names_;
     /** @brief Joint states for input and output */
     std::vector<hardware_interface::JointCommandAdvHandle> joint_states_;
     /** @brief IMU sensors */
     std::vector<hardware_interface::ImuSensorHandle> imu_sensors_;
+    /** @brief State Estimation */
+    std::vector<hardware_interface::GroundTruthHandle> state_estimators_; // FIXME We should use a state estimator handle no matter if the robot is simulated or no
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */
@@ -123,8 +130,8 @@ private:
     Eigen::VectorXd des_joint_efforts_;
     /** @brief Xbot robot model */
     XBot::ModelInterface::Ptr xbot_model_;
-    /** @brief Cartesian Interface Pointer */
-    XBot::Cartesian::CartesianInterfaceImpl::Ptr ci_;
+    /** @brief Dynamic problem formulation */
+    OpenSoT::IDProblem::Ptr id_prob_;
     /** @brief Real time publisher */
     realtime_tools::RealtimePublisher<sensor_msgs::JointState>* realtime_pub_;
     /** @brief Ros subscriber for the com position reference */
@@ -159,14 +166,26 @@ private:
     ros::ServiceServer ss_;
     /** @brief Force Optimization Pointer */
     OpenSoT::utils::ForceOptimization::Ptr fo_;
-    /** @brief Accelerometer */
+    /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
-    /** @brief Gyroscope */
+    /** @brief IMU Gyroscope */
     Eigen::Vector3d imu_gyroscope_;
-    /** @brief Orientation */
+    /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
     /** @brief Homing position, loaded from the srdf file */
     Eigen::VectorXd qhome_;
+    /** @brief Gravity compensation */
+    Eigen::VectorXd tau_gc_;
+    /** @brief Floating base position w.r.t the world frame, computed by the state estimator */
+    Eigen::Vector3d floating_base_position_;
+    /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator */
+    Eigen::Quaterniond floating_base_orientation_;
+    /** @brief Floating base velocity, computed by the state estimator */
+    Eigen::Vector6d floating_base_velocity_;
+    /** @brief Floating base accelleration, computed by the state estimator */
+    Eigen::Vector6d floating_base_accelleration_;
+    /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */
+    Eigen::Affine3d floating_base_pose_;
 
     std::shared_ptr<std::thread> odom_publisher_thread_;
 
@@ -175,6 +194,8 @@ private:
     void readJoints();
 
     void readImu();
+
+    void stateEstimation();
 };
 
 

@@ -43,6 +43,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
+    hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
 
     if(!jt_hw)
     {
@@ -64,6 +65,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     if (!controller_nh.getParam("imu_sensors", imu_names_))
     {
         ROS_ERROR("No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        return false;
+    }
+
+    if (!controller_nh.getParam("state_estimators", state_estimator_names_))
+    {
+        ROS_ERROR("No state_estimators given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
 
@@ -98,6 +105,20 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
     }
     assert(imu_sensors_.size()>0);
+
+    for (unsigned int i = 0; i < state_estimator_names_.size(); i++)
+    {
+        try
+        {
+            ROS_DEBUG_STREAM("Found state estimator: "<< state_estimator_names_[i]);
+            state_estimators_.push_back(gt_hw->getHandle(state_estimator_names_[i]));
+        }
+        catch(...)
+        {
+            ROS_ERROR("Error loading state_estimators_");
+            return false;
+        }
+    }
 
     des_joint_p_gain_.resize(joint_states_.size());
     des_joint_i_gain_.resize(joint_states_.size());
@@ -140,7 +161,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Create the ModelInterface from XBot
     XBot::ConfigOptions opt;
-    std::string urdf, srdf, problem;
+    std::string urdf, srdf;
     if(!controller_nh.getParam("robot_description",urdf))
     {
         ROS_ERROR("No robot_description given");
@@ -185,30 +206,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->getRobotState("home", qhome_);
     xbot_model_->setJointPosition(qhome_);
 
-    // Create the kinematics problem
-    if(!controller_nh.getParam("problem_description",problem))
-    {
-        ROS_ERROR("No problem_description given");
-        return false;
-    }
-    YAML::Node config = YAML::Load(problem);
-    ProblemDescription ik_problem(config, xbot_model_);
-
-    // Create the CartesianInterfaceImpl from XBot::Cartesian
-    std::string impl_name = "OpenSot";
-    std::string path_to_shared_lib = XBot::Utils::FindLib("libCartesian" + impl_name + ".so", "LD_LIBRARY_PATH");
-    if (path_to_shared_lib == "")
-    {
-        ROS_ERROR_STREAM("libCartesian" + impl_name + ".so must be listed inside LD_LIBRARY_PATH");
-        return false;
-    }
-
-    ci_ = SoLib::getFactoryWithArgs<CartesianInterfaceImpl>(path_to_shared_lib,
-                                                            impl_name + "Impl",
-                                                            xbot_model_, ik_problem);
-    ci_->enableOtg(0.004); // FIXME Load correct loop period
-    ci_->update(0,0);
-
     // Create the force optimization to compute the gravity compensation terms
     std::vector<std::string> contact_links;
 
@@ -217,6 +214,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links.push_back("rf_foot");
     contact_links.push_back("lh_foot");
     contact_links.push_back("lf_foot");
+
+    id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,0.004,contact_links));
+
     fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links,false));
 
     // Resize the variables
@@ -227,7 +227,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     des_joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     des_joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    tau_gc_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
 
+    // Initializations
     joint_positions_.fill(0.0);
     joint_velocities_.fill(0.0);
     joint_accellerations_.fill(0.0);
@@ -237,6 +239,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     des_com_position_.fill(0.0);
+    tau_gc_.fill(0.0);
+    floating_base_position_ = Eigen::Vector3d::Zero();
+    floating_base_orientation_.normalize();
+    floating_base_velocity_ = Eigen::Vector6d::Zero();
+    floating_base_accelleration_ = Eigen::Vector6d::Zero();
+    floating_base_pose_ = Eigen::Affine3d::Identity();
 
     // Create the realtime publishers
     realtime_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
@@ -342,6 +350,27 @@ void Controller::readJoints()
     }
 }
 
+void Controller::stateEstimation()
+{
+    // FIXME For now we select the first state estimator
+    unsigned int selected_se = 0;
+    floating_base_position_ = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearPosition());
+
+    floating_base_orientation_.w() = state_estimators_[selected_se].getOrientation()[0];
+    floating_base_orientation_.x() = state_estimators_[selected_se].getOrientation()[1];
+    floating_base_orientation_.y() = state_estimators_[selected_se].getOrientation()[2];
+    floating_base_orientation_.z() = state_estimators_[selected_se].getOrientation()[3];
+
+    floating_base_velocity_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearVelocity());
+    floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
+
+    floating_base_velocity_.segment(3,6) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularVelocity());
+    floating_base_accelleration_.segment(3,6) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularAcceleration());
+
+    floating_base_pose_.translation() = floating_base_position_;
+    floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
+}
+
 void Controller::starting(const ros::Time& time)
 {
     ROS_DEBUG("Starting DLS Controller");
@@ -351,48 +380,65 @@ void Controller::starting(const ros::Time& time)
     readJoints();
     // 2) IMU
     readImu();
+    // 3) State Estimation
+    stateEstimation();
 
-    des_joint_positions_ = joint_positions_;
-    des_joint_velocities_ = joint_velocities_;
     des_joint_efforts_.fill(0.0);
     xbot_model_->getCOM(com_position_);
 
-    xbot_model_->setJointPosition(des_joint_positions_);
-    xbot_model_->setJointVelocity(des_joint_velocities_);
-    //xbot_model_->setJointAcceleration(joint_accellerations_);
+    xbot_model_->setJointPosition(joint_positions_);
+    xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->setFloatingBasePose(floating_base_pose_);
+    //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     xbot_model_->update();
-    ci_->reset(time.toSec());
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
     // Read from the hardware interfaces:
     // 1) Joints
-    // readJoints(); // FIXME For the moment we don't close the loop
+    readJoints();
     // 2) IMU
     readImu();
+    // 3) State Estimation
+    stateEstimation();
 
-    xbot_model_->setJointPosition(des_joint_positions_);
-    xbot_model_->setJointVelocity(des_joint_velocities_);
-    xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
+    xbot_model_->setJointPosition(joint_positions_);
+    xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->setFloatingBasePose(floating_base_pose_);
+    //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     xbot_model_->update();
 
-    if(gravity_compensation_)
+    des_joint_positions_ = qhome_;
+
+
+    if(solver_started_) // Use the ID solver to calculate the torques
     {
+        id_prob_->update();
+        // Solve ID
+        if(!id_prob_->solve(des_joint_efforts_))
+        {
+            ROS_ERROR("OpenSoT::IDProblem: unable to solve");
+            return;
+        }
+        pid_active_ = false;
+    }
+    else // Use a position PID controller with gravity compensation
+    {
+        des_com_position_ = com_position_;
         xbot_model_->computeGravityCompensation(des_joint_efforts_); // Compute the g term for the legs and the virtual force applied to the base
-        Eigen::VectorXd tau;
         std::vector<Eigen::Vector6d> Fc; // FIXME NO RT!
-        if(!fo_->compute(des_joint_efforts_,Fc,tau))
+        if(!fo_->compute(des_joint_efforts_,Fc,tau_gc_))
         {
             ROS_ERROR("ForceOptimization: unable to solve");
             return;
         }
-        des_joint_efforts_ = tau;
-    }
-    else
-        des_joint_efforts_.fill(0.0);
 
-    if(pid_active_) // FIXME abrupt
+        pid_active_ = true;
+        des_joint_efforts_ = tau_gc_;
+    }
+
+    if(pid_active_)
     {
         for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
         {
@@ -411,26 +457,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
     }
 
-    if(solver_started_)
-    {
-        // Solve IK
-        if(!ci_->update(time.toSec(),period.toSec()))
-        {
-            ROS_ERROR("CartesianInterface: unable to solve");
-            return;
-        }
-
-        // Integrate solution
-        xbot_model_->getJointVelocity(des_joint_velocities_);
-        des_joint_positions_ += period.toSec() * des_joint_velocities_;
-    }
-    else
-    {
-        des_com_position_ = com_position_;
-        des_joint_positions_ = qhome_;
-        des_joint_velocities_.setZero();
-    }
-
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
@@ -438,9 +464,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandVelocity(0.0);
-        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i], des_joint_d_gain_[i]); //Set Gains P I D
-        //joint_states_[i].setCommandGains(adaptive_joint_p_gain_[i]->ComputeGain(des_joint_efforts_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS))
-        //                                 ,des_joint_i_gain_[i], des_joint_d_gain_[i]); //Set Gains P I D
+        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D
     }
 
     // Publish
@@ -464,12 +488,11 @@ void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
     des_com_position_(0) = msg->x;
     des_com_position_(1) = msg->y;
     des_com_position_(2) = msg->z;
-    ci_->setComPositionReference(des_com_position_); // FIXME Is it thread safe?
+    //ci_->setComPositionReference(des_com_position_); // FIXME Is it thread safe?
 }
 
 void Controller::odomPublisher()
 {
-
     ROS_INFO("Start the odomPublisher");
     while(!stopping_)
     {
