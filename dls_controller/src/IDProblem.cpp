@@ -23,14 +23,14 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     for(unsigned int i=0; i<links_in_contact.size(); i++)
     {
         _feet[i] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(links_in_contact[i], *_model, links_in_contact[i],
-            "world", _id->getJointsAccelerationAffine());
-         _feet[i]->setLambda(10.);
+                                                                               "world", _id->getJointsAccelerationAffine());
+        _feet[i]->setLambda(1.);
     }
 
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
-        "world", _id->getJointsAccelerationAffine());
+                                                                        "world", _id->getJointsAccelerationAffine());
     _waist->setLambda(10.);
-//   --------------------------        
+    //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
     _postural->setLambda(10.);
 
@@ -42,39 +42,40 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     // Here we create the constraints & bounds
     //
     _dynamics = boost::make_shared<OpenSoT::constraints::acceleration::DynamicFeasibility>("dynamics", *_model,
-        _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), links_in_contact);
+                                                                                           _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), links_in_contact);
 
     OpenSoT::constraints::force::FrictionCone::friction_cones mus;
+    Eigen::Matrix3d R; R.setIdentity();
     for(unsigned int i = 0; i < links_in_contact.size(); ++i)
-        mus.push_back(std::pair<std::string, double>(links_in_contact[i], 0.3));
+        mus.push_back(std::pair<Eigen::Matrix3d,double> (R,0.5));
     _friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCone>(_id->getContactsWrenchAffine(),*_model,mus);
 
 
     /// HERE WE SET SOME BOUNDS
     OpenSoT::AffineHelper I = OpenSoT::AffineHelper::Identity(_id->getSerializer()->getSize());
-    Eigen::VectorXd xmax = 20.*Eigen::VectorXd::Ones(_id->getSerializer()->getSize());
-    xmax[_model->getJointNum()] = xmax[_model->getJointNum()+6] = xmax[_model->getJointNum()+12] = xmax[_model->getJointNum()+18] = 1000;
-    xmax[_model->getJointNum()+1] = xmax[_model->getJointNum()+7] = xmax[_model->getJointNum()+13] = xmax[_model->getJointNum()+19] = 1000;
-    xmax[_model->getJointNum()+2] = xmax[_model->getJointNum()+8] = xmax[_model->getJointNum()+14]= xmax[_model->getJointNum()+20]= 1000;
+    Eigen::VectorXd xmax = 1000.*Eigen::VectorXd::Ones(_id->getSerializer()->getSize());
+    xmax[_model->getJointNum()] = xmax[_model->getJointNum()+6] = xmax[_model->getJointNum()+12] = xmax[_model->getJointNum()+18] = 2000;
+    xmax[_model->getJointNum()+1] = xmax[_model->getJointNum()+7] = xmax[_model->getJointNum()+13] = xmax[_model->getJointNum()+19] = 2000;
+    xmax[_model->getJointNum()+2] = xmax[_model->getJointNum()+8] = xmax[_model->getJointNum()+14]= xmax[_model->getJointNum()+20]= 2000;
 
     xmax[_model->getJointNum()+3] = xmax[_model->getJointNum()+9] = xmax[_model->getJointNum()+15]=xmax[_model->getJointNum()+21] =  0.0;
     xmax[_model->getJointNum()+4] = xmax[_model->getJointNum()+10]= xmax[_model->getJointNum()+16]=xmax[_model->getJointNum()+22] = 0.0;
     xmax[_model->getJointNum()+5] = xmax[_model->getJointNum()+11]= xmax[_model->getJointNum()+17]=xmax[_model->getJointNum()+23] = 0.0;
 
     Eigen::VectorXd xmin = -xmax;
-    xmin[_model->getJointNum()+2] = xmin[_model->getJointNum()+8]= 0; //FORCES CAN ONLY PUSH!
+    xmin[_model->getJointNum()+2] = xmin[_model->getJointNum()+8] = xmin[_model->getJointNum()+14] = xmin[_model->getJointNum()+20] = 0; //FORCES CAN ONLY PUSH!
 
     _x_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
                 "acc_wrench_lims", I, xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::BOUND);
 
     // Notice that we just control the orientation of the waist
-    std::list<unsigned int> idw = {2,3,4,5};
-    std::list<unsigned int> idc = {0,1};
+    std::list<unsigned int> idw = {3,4,5};
+    std::list<unsigned int> idc = {0,1,2};
     std::list<unsigned int> idf = {0,1,2};
     
     _id_problem = ((_feet[0]%idf + _feet[1]%idf + _feet[2]%idf + _feet[3]%idf)/
-                   (_com%idc + _waist%idw)/
-                   (_postural))<<_x_lims<<_dynamics<<_friction_cones;
+            (_com + _waist%idw)/
+            _postural)<<_x_lims<<_dynamics<<_friction_cones;
 
     _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);
 
