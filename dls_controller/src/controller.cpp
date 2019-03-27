@@ -391,6 +391,9 @@ void Controller::starting(const ros::Time& time)
     xbot_model_->setFloatingBasePose(floating_base_pose_);
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     xbot_model_->update();
+
+
+    ROS_DEBUG("Starting DLS Controller Completed");
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
@@ -494,12 +497,19 @@ void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
 void Controller::odomPublisher()
 {
     ROS_INFO("Start the odomPublisher");
+
+    Eigen::Affine3d base_pose, world_pose;
+    Eigen::Vector3d position;
+    Eigen::Quaterniond quaternion;
+
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    tf::Quaternion q;
+
     while(!stopping_)
     {
         // Get floating base
-        Eigen::Affine3d base_pose, world_pose;
-        Eigen::Vector3d position;
-        Eigen::Quaterniond quaternion;
+
         xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
 
         // Do the inverse of it
@@ -509,10 +519,8 @@ void Controller::odomPublisher()
         quaternion.normalize();
 
         // Create the tf transform between /ci/base_link and /ci/world_odom
-        static tf::TransformBroadcaster br;
-        tf::Transform transform;
         transform.setOrigin(tf::Vector3(position(0),position(1),position(2)));
-        tf::Quaternion q;
+
         q.setX(quaternion.x());
         q.setY(quaternion.y());
         q.setZ(quaternion.z());
@@ -549,6 +557,8 @@ void Controller::stopping(const ros::Time& time)
 
     stopping_ = true;
     odom_publisher_thread_->join();
+
+    ROS_DEBUG("Stopping DLS Controller Completed");
 
 }
 
