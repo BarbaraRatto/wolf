@@ -17,6 +17,7 @@ using namespace Cartesian;
 namespace dls_controller {
 
 #define FLOATING_BASE_DOFS 6
+#define DT 0.001 // FIXME
 
 Controller::Controller()
     :solver_started_(false)
@@ -206,18 +207,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->getRobotState("home", qhome_);
     xbot_model_->setJointPosition(qhome_);
 
-    // Create the force optimization to compute the gravity compensation terms
-    std::vector<std::string> contact_links;
-
     // Those are associated to the SRDF model
-    contact_links.push_back("rh_foot");
-    contact_links.push_back("rf_foot");
-    contact_links.push_back("lh_foot");
-    contact_links.push_back("lf_foot");
+    contact_links_.push_back("lf_foot");
+    contact_links_.push_back("rf_foot");
+    contact_links_.push_back("lh_foot");
+    contact_links_.push_back("rh_foot");
 
-    id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,0.004,contact_links));
-
-    fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links,false));
+    //double dt = 0.001;
+    //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,dt,contact_links_));
+    //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links_,false));
+    //id_prob_ = boost::make_shared<OpenSoT::IDProblem>(std::shared_ptr<XBot::ModelInterface>(xbot_model_, dt, contact_links_));
 
     // Resize the variables
     joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
@@ -271,6 +270,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+
+    solver_reset_done_ = false;
 
     return true;
 }
@@ -341,6 +342,11 @@ void Controller::readImu()
 
 void Controller::readJoints()
 {
+    joint_positions_.setZero(joint_positions_.size());
+    joint_velocities_.setZero(joint_positions_.size());
+    joint_accellerations_.setZero(joint_positions_.size());
+    joint_efforts_.setZero(joint_positions_.size());
+
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
         joint_positions_(i+FLOATING_BASE_DOFS) = joint_states_[i].getPosition();
@@ -371,6 +377,17 @@ void Controller::stateEstimation()
     floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 }
 
+void Controller::updateXBotModel()
+{
+
+    xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->setJointPosition(joint_positions_);
+    xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
+    //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
+    //xbot_model_->setFloatingBasePose(floating_base_pose_);
+    xbot_model_->getCOM(com_position_);
+}
+
 void Controller::starting(const ros::Time& time)
 {
     ROS_DEBUG("Starting DLS Controller");
@@ -382,16 +399,11 @@ void Controller::starting(const ros::Time& time)
     readImu();
     // 3) State Estimation
     stateEstimation();
+    // 4) Virtual Model Update
+    updateXBotModel();
 
+    // Set torques to 0 at the start
     des_joint_efforts_.fill(0.0);
-    xbot_model_->getCOM(com_position_);
-
-    xbot_model_->setJointPosition(joint_positions_);
-    xbot_model_->setJointVelocity(joint_velocities_);
-    xbot_model_->setFloatingBasePose(floating_base_pose_);
-    //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
-    xbot_model_->update();
-
 
     ROS_DEBUG("Starting DLS Controller Completed");
 }
@@ -405,40 +417,44 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     readImu();
     // 3) State Estimation
     stateEstimation();
-
-    xbot_model_->setJointPosition(joint_positions_);
-    xbot_model_->setJointVelocity(joint_velocities_);
-    xbot_model_->setFloatingBasePose(floating_base_pose_);
-    //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
-    xbot_model_->update();
+    // 4) Virtual Model Update
+    updateXBotModel();
 
     des_joint_positions_ = qhome_;
 
-
     if(solver_started_) // Use the ID solver to calculate the torques
     {
+        if(!solver_reset_done_)
+        {
+            ROS_INFO("Reset the solver");
+            id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
+            solver_reset_done_ = true;
+        }
+
         id_prob_->update();
+
         // Solve ID
         if(!id_prob_->solve(des_joint_efforts_))
         {
             ROS_ERROR("OpenSoT::IDProblem: unable to solve");
-            return;
+            //return;
         }
+
         pid_active_ = false;
     }
     else // Use a position PID controller with gravity compensation
     {
-        des_com_position_ = com_position_;
-        xbot_model_->computeGravityCompensation(des_joint_efforts_); // Compute the g term for the legs and the virtual force applied to the base
+        /*des_com_position_ = com_position_;
+        xbot_model_->computeGravityCompensation(tau_gc_); // Compute the g term for the legs and the virtual force applied to the base
         std::vector<Eigen::Vector6d> Fc; // FIXME NO RT!
-        if(!fo_->compute(des_joint_efforts_,Fc,tau_gc_))
+        if(!fo_->compute(tau_gc_,Fc,tau_gc_))
         {
             ROS_ERROR("ForceOptimization: unable to solve");
             return;
-        }
+        }*/
 
         pid_active_ = true;
-        des_joint_efforts_ = tau_gc_;
+        //des_joint_efforts_ = tau_gc_;
     }
 
     if(pid_active_)
@@ -460,16 +476,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
     }
 
-    // Write to the hardware interface
-    for (unsigned int i = 0; i < joint_states_.size(); i++)
-    {
-        // use tau to compensate the gravity
-        joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
-        joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
-        joint_states_[i].setCommandVelocity(0.0);
-        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D
-    }
-
     // Publish
     if(realtime_pub_->trylock())
     {
@@ -481,6 +487,19 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             realtime_pub_->msg_.header.stamp = time;
             realtime_pub_->unlockAndPublish();
         }
+    }
+
+    if(pid_active_)
+        des_joint_efforts_.fill(0.0);
+
+    // Write to the hardware interface
+    for (unsigned int i = 0; i < joint_states_.size(); i++)
+    {
+        // use tau to compensate the gravity
+        joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
+        joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
+        joint_states_[i].setCommandVelocity(0.0);
+        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D
     }
 
     //odomPublisher(); // FIXME move it to a separate thread
@@ -509,7 +528,6 @@ void Controller::odomPublisher()
     while(!stopping_)
     {
         // Get floating base
-
         xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
 
         // Do the inverse of it

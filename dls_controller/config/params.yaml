@@ -19,18 +19,18 @@ dls_controller:
   state_estimators:
   - ground_truth
   gains:
-      lf_haa_joint: {p: 500.0, i: 0.0, d: 20.0}
-      lf_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
-      lf_kfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      lf_haa_joint: {p: 700.0, i: 0.0, d: 20.0}
+      lf_hfe_joint: {p: 700.0, i: 0.0, d: 20.0}
+      lf_kfe_joint: {p: 700.0, i: 0.0, d: 20.0}
 
-      rf_haa_joint: {p: 500.0, i: 0.0, d: 20.0}
-      rf_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
-      rf_kfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      rf_haa_joint: {p: 700.0, i: 0.0, d: 20.0}
+      rf_hfe_joint: {p: 700.0, i: 0.0, d: 20.0}
+      rf_kfe_joint: {p: 700.0, i: 0.0, d: 20.0}
 
-      lh_haa_joint: {p: 500.0, i: 0.0, d: 20.0}
-      lh_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
-      lh_kfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      lh_haa_joint: {p: 700.0, i: 0.0, d: 20.0}
+      lh_hfe_joint: {p: 700.0, i: 0.0, d: 20.0}
+      lh_kfe_joint: {p: 700.0, i: 0.0, d: 20.0}
 
-      rh_haa_joint: {p: 500.0, i: 0.0, d: 20.0}
-      rh_hfe_joint: {p: 500.0, i: 0.0, d: 20.0}
-      rh_kfe_joint: {p: 500.0, i: 0.0, d: 20.0}
+      rh_haa_joint: {p: 700.0, i: 0.0, d: 20.0}
+      rh_hfe_joint: {p: 700.0, i: 0.0, d: 20.0}
+      rh_kfe_joint: {p: 700.0, i: 0.0, d: 20.0}

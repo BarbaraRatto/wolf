@@ -26,8 +26,6 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
-// Utils
-#include <dls_controller/utils.h>
 
 namespace dls_controller
 {
@@ -187,15 +185,36 @@ private:
     /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */
     Eigen::Affine3d floating_base_pose_;
 
+    std::vector<std::string> contact_links_;
+
+    bool solver_reset_done_;
+
     std::shared_ptr<std::thread> odom_publisher_thread_;
 
+    /**
+         * @brief thread body for the odometry publisher
+         */
     void odomPublisher();
 
+    /**
+         * @brief update the joints state
+         */
     void readJoints();
 
+    /**
+         * @brief update the imu reading from the imu interface
+         */
     void readImu();
 
+    /**
+         * @brief update floating base state
+         */
     void stateEstimation();
+
+    /**
+         * @brief update the virtual model
+         */
+    void updateXBotModel();
 };
 
 

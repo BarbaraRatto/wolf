@@ -24,7 +24,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     {
         _feet[i] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(links_in_contact[i], *_model, links_in_contact[i],
                                                                                "world", _id->getJointsAccelerationAffine());
-        _feet[i]->setLambda(1.);
+        _feet[i]->setLambda(10.);
     }
 
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
@@ -72,12 +72,12 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     std::list<unsigned int> idw = {3,4,5};
     std::list<unsigned int> idc = {0,1,2};
     std::list<unsigned int> idf = {0,1,2};
-    
+
     _id_problem = ((_feet[0]%idf + _feet[1]%idf + _feet[2]%idf + _feet[3]%idf)/
             (_com + _waist%idw)/
             _postural)<<_x_lims<<_dynamics<<_friction_cones;
 
-    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);
+    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);//, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 
     _x.setZero(_id->getSerializer()->getSize());
 
