@@ -73,16 +73,10 @@ public:
     void stopping(const ros::Time& time);
 
     /**
-         * @brief Set the com reference for the solver
-         * @param geometry_msgs::Point::ConstPtr& msg
+         * @brief Set the desired reference for the solver's tasks
+         * @param dls_controller::TasksPose::ConstPtr& msg
          */
-    void setComReference(const dls_controller::TasksPose::ConstPtr& msg);
-
-    /**
-         * @brief Set the limbs reference for the solver
-         * @param geometry_msgs::Pose::ConstPtr
-         */
-    //void setLimbsReference(const dls_controller::TasksPose::ConstPtr& msg);
+    void setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg);
 
     /**
          * @brief Manage the ros services
@@ -135,6 +129,11 @@ private:
     Eigen::VectorXd des_joint_velocities_;
     /** @brief Desired joint efforts */
     Eigen::VectorXd des_joint_efforts_;
+    /** @brief Desired feet poses: */
+    Eigen::Affine3d des_lf_foot_pose_;
+    Eigen::Affine3d des_lh_foot_pose_;
+    Eigen::Affine3d des_rh_foot_pose_;
+    Eigen::Affine3d des_rf_foot_pose_;
     /** @brief Xbot robot model */
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
@@ -145,8 +144,8 @@ private:
     realtime_tools::RealtimePublisher<nav_msgs::Odometry>* state_estimation_rt_pub_;
     /** @brief Real time publisher - tasks pose */
     realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_actual_pose_rt_pub_;
-    /** @brief Ros subscriber for the com position reference */
-    ros::Subscriber com_ref_sub_;
+    /** @brief Ros subscriber for the desired tasks reference */
+    ros::Subscriber tasks_desired_sub_;
     /** @brief Ros subscriber for the limbs pose reference */
     ros::Subscriber limbs_ref_sub_;
     /** @brief Desired P value for the joints PID controller */

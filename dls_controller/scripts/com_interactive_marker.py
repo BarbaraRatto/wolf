@@ -16,7 +16,7 @@ menu_handler = MenuHandler()
 br = None
 counter = 0
 first_value = True
-pub = rospy.Publisher('/hyqreal/dls_controller/com_ref', TasksPose, queue_size=10)
+pub = rospy.Publisher('/hyqreal/dls_controller/tasks_desired', TasksPose, queue_size=10)
 first_com_position = Point(0,0,0)
 
 def comCallback( msg ):

@@ -202,19 +202,20 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->setJointPosition(qhome_);
 
     // Those are associated to the SRDF model
-    contact_links_.push_back("lf_foot");
-    contact_links_.push_back("rf_foot");
-    contact_links_.push_back("lh_foot");
-    contact_links_.push_back("rh_foot");
+    // FIXME, modify IDProblem to contain a map
+    contact_links_.resize(4);
+    contact_links_[0] = "lf_foot";
+    contact_links_[1] = "rf_foot";
+    contact_links_[2] = "lh_foot";
+    contact_links_[3] = "rh_foot";
 
     tasks_pose_["com"] = Eigen::Affine3d::Identity();
+    des_lf_foot_pose_ = tasks_pose_["lf_foot"] = Eigen::Affine3d::Identity();
+    des_rf_foot_pose_ = tasks_pose_["rf_foot"] = Eigen::Affine3d::Identity();
+    des_lh_foot_pose_ = tasks_pose_["lh_foot"] = Eigen::Affine3d::Identity();
+    des_rh_foot_pose_ = tasks_pose_["rh_foot"] = Eigen::Affine3d::Identity();
 
     desired_tasks_pose_.initRT(tasks_pose_);
-
-    /*limbs_pose_["lf_foot"] = Eigen::Affine3d::Identity();
-    limbs_pose_["rf_foot"] = Eigen::Affine3d::Identity();
-    limbs_pose_["lh_foot"] = Eigen::Affine3d::Identity();
-    limbs_pose_["rh_foot"] = Eigen::Affine3d::Identity();*/
 
     //double dt = 0.001;
     //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,dt,contact_links_));
@@ -270,11 +271,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     tasks_actual_pose_rt_pub_->msg_.tasks_name.resize(tasks_pose_.size());
     tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses.resize(tasks_pose_.size());
 
-    // Reference for the com
-    com_ref_sub_ = controller_nh.subscribe("com_ref", 1, &Controller::setComReference, this);
-
-    // Reference for the limbs
-    //limbs_ref_sub_ = controller_nh.subscribe("limbs_ref", 1, &Controller::setLimbsReference, this);
+    // Reference for the tasks
+    tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
 
     // Rosservice
     ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
@@ -396,16 +394,14 @@ void Controller::updateXBotModel()
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
     xbot_model_->getCOM(com_position_);
-    /*if(id_prob_)
+    if(id_prob_)
     {
-         id_prob_->_com->getActualPose(com_position_);
-         //id_prob_->_feet[3]->getActualPose(limbs_pose_["lf_foot"]);
-         //id_prob_->_feet[2]->getActualPose(limbs_pose_["rf_foot"]);
-         //id_prob_->_feet[1]->getActualPose(limbs_pose_["lh_foot"]);
-         //id_prob_->_feet[0]->getActualPose(limbs_pose_["rh_foot"]);
-    }*/
-
-    // Update the tasks
+         //id_prob_->_com->getActualPose(com_position_);
+         id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
+         id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
+         id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
+         id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
+    }
     tasks_pose_["com"].translation() = com_position_;
 }
 
@@ -443,13 +439,18 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     if(traking_active_)
     {
-        des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation();
+        des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
+        des_lf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lf_foot");
+        des_rf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("rf_foot");
+        des_lh_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lh_foot");
+        des_rh_foot_pose_ = desired_tasks_pose_.readFromRT()->at("rh_foot");
     }
     else
     {
         // Set Default values
         des_joint_positions_ = qhome_;
         des_com_position_    = com_position_;
+        // FIXME feet?
     }
 
     if(solver_started_) // Use the ID solver to calculate the torques
@@ -463,12 +464,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Set the targets for the solver
         id_prob_->_com->setReference(des_com_position_);
-        // FIXME, modify IDProblem to contain a map
-        /*id_prob_->_feet[0]->setReference(des_limbs_pose_.readFromRT()->at("rf_foot"));
-        id_prob_->_feet[1]->setReference(des_limbs_pose_.readFromRT()->at("rf_foot"));
-        id_prob_->_feet[2]->setReference(des_limbs_pose_.readFromRT()->at("lh_foot"));
-        id_prob_->_feet[3]->setReference(des_limbs_pose_.readFromRT()->at("lf_foot"));*/
-
+        id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
+        id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
+        id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
+        id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
         id_prob_->update();
 
         // Solve ID
@@ -552,13 +551,14 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     if(tasks_actual_pose_rt_pub_->trylock())
     {
         TasksPoseMap::iterator it;
-        int idx = 0;
+        unsigned int idx = 0;
         for(it = tasks_pose_.begin(); it != tasks_pose_.end(); it++)
         {
             tasks_actual_pose_rt_pub_->msg_.tasks_name[idx] = it->first;
             tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.x = it->second.translation().x();
             tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.y = it->second.translation().y();
             tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.z = it->second.translation().z();
+            //FIXME Missing orientation
             idx++;
         }
         tasks_actual_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
@@ -566,7 +566,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 }
 
-void Controller::setComReference(const dls_controller::TasksPose::ConstPtr& msg)
+void Controller::setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg)
 {
     TasksPoseMap tmp_map;
     Eigen::Affine3d tmp_affine;
@@ -577,36 +577,18 @@ void Controller::setComReference(const dls_controller::TasksPose::ConstPtr& msg)
             tmp_affine.translation() = Eigen::Vector3d(msg->tasks_pose.poses[i].position.x,
                                                        msg->tasks_pose.poses[i].position.y,
                                                        msg->tasks_pose.poses[i].position.z);
-            //tmp_affine.linear() = Eigen::Quaterniond(msg->limbs_pose.poses[i].orientation.w)
+            tmp_affine.linear() = Eigen::Quaterniond(msg->tasks_pose.poses[i].orientation.w,
+                                                     msg->tasks_pose.poses[i].orientation.x,
+                                                     msg->tasks_pose.poses[i].orientation.y,
+                                                     msg->tasks_pose.poses[i].orientation.z).normalized().toRotationMatrix();
             tmp_map[msg->tasks_name[i]] = tmp_affine;
         }
 
     desired_tasks_pose_.writeFromNonRT(tmp_map);
     }
     else
-        ROS_WARN("Can not set the tasks reference, the name vector has a different size from the pose vector.");
+        ROS_WARN("Can not set the desired tasks reference, the name vector has a different size from the pose vector.");
 }
-
-/*void Controller::setLimbsReference(const dls_controller::LimbsReference::ConstPtr& msg)
-{
-    Eigen::Affine3d tmp_affine;
-    LimbsMap tmp_map;
-    if(msg->limbs_name.size() == msg->limbs_pose.poses.size())
-    {
-        for(unsigned int i=0;i<msg->limbs_name.size();i++)
-        {
-            tmp_affine.translation() = Eigen::Vector3d(msg->limbs_pose.poses[i].position.x,
-                                                       msg->limbs_pose.poses[i].position.y,
-                                                       msg->limbs_pose.poses[i].position.z);
-            //tmp.linear() = Eigen::Quaterniond(msg->limbs_pose.poses[i].orientation.w)
-            tmp_map[msg->limbs_name[i]] = tmp_affine;
-        }
-         des_limbs_pose_.writeFromNonRT(tmp_map);
-    }
-    else
-        ROS_WARN("Can not set the limbs reference, the name vector has a different size from the pose vector.");
-
-}*/
 
 void Controller::odomPublisher()
 {
