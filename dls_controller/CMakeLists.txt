@@ -14,7 +14,7 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools sensor_msgs geometry_msgs message_generation)
+find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools geometry_msgs sensor_msgs nav_msgs message_generation)
 # ADVR Packages
 find_package(OpenSoT REQUIRED) #FIXME Do I really need it?
 find_package(XCM REQUIRED) #FIXME Do I really need it?
@@ -24,7 +24,12 @@ find_package(cartesian_interface REQUIRED)
 add_service_files(FILES
   DlsControllerServices.srv)
 
-generate_messages()
+add_message_files(FILES
+  TasksPose.msg)
+
+generate_messages(
+    DEPENDENCIES
+    geometry_msgs)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -46,7 +51,7 @@ include_directories(
     ${cartesian_interface_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/ForceOptimization.cpp src/controller.cpp src/IDProblem.cpp)
+add_library(${PROJECT_NAME} src/controller.cpp src/IDProblem.cpp)
 add_dependencies(${PROJECT_NAME} ${dls_controller_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
 

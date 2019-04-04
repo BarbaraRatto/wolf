@@ -23,14 +23,19 @@ Controller::Controller()
     :solver_started_(false)
     ,gravity_compensation_(true)
     ,pid_active_(true)
+    ,traking_active_(false)
     ,stopping_(false)
 {
 }
 
 Controller::~Controller()
 {
-    if(realtime_pub_)
-        delete realtime_pub_;
+    if(ci_joint_states_rt_pub_)
+        delete ci_joint_states_rt_pub_;
+    if(state_estimation_rt_pub_)
+        delete state_estimation_rt_pub_;
+    if(tasks_actual_pose_rt_pub_)
+      delete tasks_actual_pose_rt_pub_;
 }
 
 bool Controller::init(hardware_interface::RobotHW* robot_hw,
@@ -173,27 +178,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR("No robot_description_semantic given");
         return false;
     }
-    if(!opt.set_urdf_path("/home/graiola/ros_ws/src/hyq-distro/dls_controller/robots/hyqreal/hyqreal.urdf"))
+    if(!opt.set_urdf(urdf))
     {
-        ROS_ERROR("Unable to load urdf path");
-        return false;
-    }
-    if(!opt.set_srdf_path("/home/graiola/ros_ws/src/hyq-distro/dls_controller/robots/hyqreal/hyqreal.srdf"))
-    {
-        ROS_ERROR("Unable to load srdf path");
-        return false;
-    }
-    // FIXME hardcoded paths
-    /*if(!opt.set_urdf(urdf))
-   {
        ROS_ERROR("Unable to load urdf");
        return false;
-   }*/
-    /*if(!opt.set_srdf(srdf))
-   {
+    }
+    if(!opt.set_srdf(srdf))
+    {
        ROS_ERROR("Unable to load srdf");
        return false;
-   }*/
+    }
     if(!opt.generate_jidmap())
     {
         ROS_ERROR("Unable to load jidmap");
@@ -213,6 +207,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_.push_back("lh_foot");
     contact_links_.push_back("rh_foot");
 
+    tasks_pose_["com"] = Eigen::Affine3d::Identity();
+
+    desired_tasks_pose_.initRT(tasks_pose_);
+
+    /*limbs_pose_["lf_foot"] = Eigen::Affine3d::Identity();
+    limbs_pose_["rf_foot"] = Eigen::Affine3d::Identity();
+    limbs_pose_["lh_foot"] = Eigen::Affine3d::Identity();
+    limbs_pose_["rh_foot"] = Eigen::Affine3d::Identity();*/
+
     //double dt = 0.001;
     //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,dt,contact_links_));
     //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links_,false));
@@ -226,7 +229,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     des_joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     des_joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    tau_gc_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -238,7 +240,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     des_com_position_.fill(0.0);
-    tau_gc_.fill(0.0);
     floating_base_position_ = Eigen::Vector3d::Zero();
     floating_base_orientation_.normalize();
     floating_base_velocity_ = Eigen::Vector6d::Zero();
@@ -246,24 +247,34 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
     // Create the realtime publishers
-    realtime_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
-    realtime_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    realtime_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    realtime_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    realtime_pub_->msg_.effort.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    realtime_pub_->msg_.name[0] = "x"; //FIXME
-    realtime_pub_->msg_.name[1] = "y";
-    realtime_pub_->msg_.name[2] = "z";
-    realtime_pub_->msg_.name[3] = "r";
-    realtime_pub_->msg_.name[4] = "p";
-    realtime_pub_->msg_.name[5] = "y";
+    ci_joint_states_rt_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
+    ci_joint_states_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.effort.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.name[0] = "x"; //FIXME
+    ci_joint_states_rt_pub_->msg_.name[1] = "y";
+    ci_joint_states_rt_pub_->msg_.name[2] = "z";
+    ci_joint_states_rt_pub_->msg_.name[3] = "r";
+    ci_joint_states_rt_pub_->msg_.name[4] = "p";
+    ci_joint_states_rt_pub_->msg_.name[5] = "y";
     for (unsigned int i = 0; i < joint_names_.size(); i++)
-        realtime_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
+        ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
+
+    state_estimation_rt_pub_ = new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation", 4);
+    state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
+    state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
+
+    tasks_actual_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TasksPose>(controller_nh, "/tasks_actual_pose", 4);
+    tasks_actual_pose_rt_pub_->msg_.reference_frame = "world";
+    tasks_actual_pose_rt_pub_->msg_.tasks_name.resize(tasks_pose_.size());
+    tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses.resize(tasks_pose_.size());
 
     // Reference for the com
     com_ref_sub_ = controller_nh.subscribe("com_ref", 1, &Controller::setComReference, this);
-    // Position of the com
-    com_pub_ = controller_nh.advertise<geometry_msgs::Point>("com", 1000);
+
+    // Reference for the limbs
+    //limbs_ref_sub_ = controller_nh.subscribe("limbs_ref", 1, &Controller::setLimbsReference, this);
 
     // Rosservice
     ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
@@ -284,14 +295,14 @@ bool Controller::servicesManager(dls_controller::DlsControllerServices::Request 
         toggleSolver();
         res.response = true;
     }
-    if(std::strcmp(req.command.c_str(), "toggleGravityCompensation") == 0)
-    {
-        toggleGravityCompensation();
-        res.response = true;
-    }
     if(std::strcmp(req.command.c_str(), "togglePid") == 0)
     {
         togglePid();
+        res.response = true;
+    }
+    if(std::strcmp(req.command.c_str(), "toggleTracking") == 0)
+    {
+        toggleTracking();
         res.response = true;
     }
 
@@ -318,14 +329,14 @@ void Controller::toggleSolver()
         ROS_INFO("Solver integration is OFF");
 }
 
-void Controller::toggleGravityCompensation()
+void Controller::toggleTracking()
 {
-    gravity_compensation_=!gravity_compensation_;
+    traking_active_=!traking_active_;
 
-    if(gravity_compensation_)
-        ROS_INFO("Gravity compensation is ON");
+    if(traking_active_)
+        ROS_INFO("Tracking is ON");
     else
-        ROS_INFO("Gravity compensation is OFF");
+        ROS_INFO("Tracking is OFF");
 }
 
 void Controller::readImu()
@@ -379,13 +390,23 @@ void Controller::stateEstimation()
 
 void Controller::updateXBotModel()
 {
-
     xbot_model_->setJointVelocity(joint_velocities_);
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
     xbot_model_->getCOM(com_position_);
+    /*if(id_prob_)
+    {
+         id_prob_->_com->getActualPose(com_position_);
+         //id_prob_->_feet[3]->getActualPose(limbs_pose_["lf_foot"]);
+         //id_prob_->_feet[2]->getActualPose(limbs_pose_["rf_foot"]);
+         //id_prob_->_feet[1]->getActualPose(limbs_pose_["lh_foot"]);
+         //id_prob_->_feet[0]->getActualPose(limbs_pose_["rh_foot"]);
+    }*/
+
+    // Update the tasks
+    tasks_pose_["com"].translation() = com_position_;
 }
 
 void Controller::starting(const ros::Time& time)
@@ -420,16 +441,33 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 4) Virtual Model Update
     updateXBotModel();
 
-    des_joint_positions_ = qhome_;
+    if(traking_active_)
+    {
+        des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation();
+    }
+    else
+    {
+        // Set Default values
+        des_joint_positions_ = qhome_;
+        des_com_position_    = com_position_;
+    }
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
         if(!solver_reset_done_)
         {
             ROS_INFO("Reset the solver");
-            id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
+            id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),contact_links_)); // FIXME NO-RT
             solver_reset_done_ = true;
         }
+
+        // Set the targets for the solver
+        id_prob_->_com->setReference(des_com_position_);
+        // FIXME, modify IDProblem to contain a map
+        /*id_prob_->_feet[0]->setReference(des_limbs_pose_.readFromRT()->at("rf_foot"));
+        id_prob_->_feet[1]->setReference(des_limbs_pose_.readFromRT()->at("rf_foot"));
+        id_prob_->_feet[2]->setReference(des_limbs_pose_.readFromRT()->at("lh_foot"));
+        id_prob_->_feet[3]->setReference(des_limbs_pose_.readFromRT()->at("lf_foot"));*/
 
         id_prob_->update();
 
@@ -437,24 +475,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(!id_prob_->solve(des_joint_efforts_))
         {
             ROS_ERROR("OpenSoT::IDProblem: unable to solve");
-            //return;
         }
 
         pid_active_ = false;
     }
-    else // Use a position PID controller with gravity compensation
+    else // Use a position PID controller
     {
-        /*des_com_position_ = com_position_;
-        xbot_model_->computeGravityCompensation(tau_gc_); // Compute the g term for the legs and the virtual force applied to the base
-        std::vector<Eigen::Vector6d> Fc; // FIXME NO RT!
-        if(!fo_->compute(tau_gc_,Fc,tau_gc_))
-        {
-            ROS_ERROR("ForceOptimization: unable to solve");
-            return;
-        }*/
-
         pid_active_ = true;
-        //des_joint_efforts_ = tau_gc_;
     }
 
     if(pid_active_)
@@ -476,19 +503,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
     }
 
-    // Publish
-    if(realtime_pub_->trylock())
-    {
-        for(unsigned int i = 0; i < joint_positions_.size(); i++)
-        {
-            realtime_pub_->msg_.position[i] = des_joint_positions_(i);
-            realtime_pub_->msg_.velocity[i] = des_joint_velocities_(i);
-            realtime_pub_->msg_.effort[i] = des_joint_efforts_(i);
-            realtime_pub_->msg_.header.stamp = time;
-            realtime_pub_->unlockAndPublish();
-        }
-    }
-
     if(pid_active_)
         des_joint_efforts_.fill(0.0);
 
@@ -502,16 +516,97 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D
     }
 
-    //odomPublisher(); // FIXME move it to a separate thread
+    // Publish
+    if(ci_joint_states_rt_pub_->trylock())
+    {
+        for(unsigned int i = 0; i < joint_positions_.size(); i++)
+        {
+            ci_joint_states_rt_pub_->msg_.position[i]  = des_joint_positions_(i);
+            ci_joint_states_rt_pub_->msg_.velocity[i]  = des_joint_velocities_(i);
+            ci_joint_states_rt_pub_->msg_.effort[i]    = des_joint_efforts_(i);
+            ci_joint_states_rt_pub_->msg_.header.stamp = time;
+            ci_joint_states_rt_pub_->unlockAndPublish();
+        }
+    }
+    if(state_estimation_rt_pub_->trylock())
+    {
+        state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
+        state_estimation_rt_pub_->msg_.pose.pose.position.y     = floating_base_position_(1);
+        state_estimation_rt_pub_->msg_.pose.pose.position.z     = floating_base_position_(2);
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.w  = floating_base_orientation_.w();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.x  = floating_base_orientation_.x();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.y  = floating_base_orientation_.y();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.z  = floating_base_orientation_.z();
+
+        state_estimation_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_(0);
+        state_estimation_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_(1);
+        state_estimation_rt_pub_->msg_.twist.twist.linear.z     = floating_base_velocity_(2);
+        state_estimation_rt_pub_->msg_.twist.twist.angular.x    = floating_base_velocity_(3);
+        state_estimation_rt_pub_->msg_.twist.twist.angular.y    = floating_base_velocity_(4);
+        state_estimation_rt_pub_->msg_.twist.twist.angular.z    = floating_base_velocity_(5);
+
+        state_estimation_rt_pub_->msg_.header.stamp = time;
+        state_estimation_rt_pub_->unlockAndPublish();
+    }
+
+    if(tasks_actual_pose_rt_pub_->trylock())
+    {
+        TasksPoseMap::iterator it;
+        int idx = 0;
+        for(it = tasks_pose_.begin(); it != tasks_pose_.end(); it++)
+        {
+            tasks_actual_pose_rt_pub_->msg_.tasks_name[idx] = it->first;
+            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.x = it->second.translation().x();
+            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.y = it->second.translation().y();
+            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.z = it->second.translation().z();
+            idx++;
+        }
+        tasks_actual_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
+        tasks_actual_pose_rt_pub_->unlockAndPublish();
+    }
 }
 
-void Controller::setComReference(const geometry_msgs::Point::ConstPtr& msg)
+void Controller::setComReference(const dls_controller::TasksPose::ConstPtr& msg)
 {
-    des_com_position_(0) = msg->x;
-    des_com_position_(1) = msg->y;
-    des_com_position_(2) = msg->z;
-    //ci_->setComPositionReference(des_com_position_); // FIXME Is it thread safe?
+    TasksPoseMap tmp_map;
+    Eigen::Affine3d tmp_affine;
+    if(msg->tasks_name.size() == msg->tasks_pose.poses.size())
+    {
+        for(unsigned int i = 0; i< msg->tasks_name.size(); i++)
+        {
+            tmp_affine.translation() = Eigen::Vector3d(msg->tasks_pose.poses[i].position.x,
+                                                       msg->tasks_pose.poses[i].position.y,
+                                                       msg->tasks_pose.poses[i].position.z);
+            //tmp_affine.linear() = Eigen::Quaterniond(msg->limbs_pose.poses[i].orientation.w)
+            tmp_map[msg->tasks_name[i]] = tmp_affine;
+        }
+
+    desired_tasks_pose_.writeFromNonRT(tmp_map);
+    }
+    else
+        ROS_WARN("Can not set the tasks reference, the name vector has a different size from the pose vector.");
 }
+
+/*void Controller::setLimbsReference(const dls_controller::LimbsReference::ConstPtr& msg)
+{
+    Eigen::Affine3d tmp_affine;
+    LimbsMap tmp_map;
+    if(msg->limbs_name.size() == msg->limbs_pose.poses.size())
+    {
+        for(unsigned int i=0;i<msg->limbs_name.size();i++)
+        {
+            tmp_affine.translation() = Eigen::Vector3d(msg->limbs_pose.poses[i].position.x,
+                                                       msg->limbs_pose.poses[i].position.y,
+                                                       msg->limbs_pose.poses[i].position.z);
+            //tmp.linear() = Eigen::Quaterniond(msg->limbs_pose.poses[i].orientation.w)
+            tmp_map[msg->limbs_name[i]] = tmp_affine;
+        }
+         des_limbs_pose_.writeFromNonRT(tmp_map);
+    }
+    else
+        ROS_WARN("Can not set the limbs reference, the name vector has a different size from the pose vector.");
+
+}*/
 
 void Controller::odomPublisher()
 {
@@ -555,14 +650,6 @@ void Controller::odomPublisher()
         transform.setRotation(q);
         br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/base_link"));
 
-        // Publish the com position
-        geometry_msgs::Point msg;
-        xbot_model_->getCOM(com_position_); // FIXME Is it thread safe?
-        msg.x = com_position_(0);
-        msg.y = com_position_(1);
-        msg.z = com_position_(2);
-        com_pub_.publish(msg);
-
         std::this_thread::sleep_for( std::chrono::milliseconds(4) );
 
     }
@@ -577,7 +664,6 @@ void Controller::stopping(const ros::Time& time)
     odom_publisher_thread_->join();
 
     ROS_DEBUG("Stopping DLS Controller Completed");
-
 }
 
 } //namespace

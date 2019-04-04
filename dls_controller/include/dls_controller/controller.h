@@ -6,8 +6,10 @@
 #include <realtime_tools/realtime_publisher.h>
 #include <tf/transform_broadcaster.h>
 #include <sensor_msgs/JointState.h>
-#include <geometry_msgs/Point.h>
+#include <nav_msgs/Odometry.h>
 #include <dls_controller/DlsControllerServices.h>
+#include <dls_controller/TasksPose.h>
+#include <realtime_tools/realtime_buffer.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // Ros control
@@ -20,7 +22,6 @@
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
-#include <dls_controller/ForceOptimization.h>
 #include <dls_controller/IDProblem.h>
 // STD
 #include <atomic>
@@ -29,6 +30,8 @@
 
 namespace dls_controller
 {
+
+typedef std::map<std::string,Eigen::Affine3d> TasksPoseMap;
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
         hardware_interface::ImuSensorInterface,
@@ -73,7 +76,13 @@ public:
          * @brief Set the com reference for the solver
          * @param geometry_msgs::Point::ConstPtr& msg
          */
-    void setComReference(const geometry_msgs::Point::ConstPtr& msg);
+    void setComReference(const dls_controller::TasksPose::ConstPtr& msg);
+
+    /**
+         * @brief Set the limbs reference for the solver
+         * @param geometry_msgs::Pose::ConstPtr
+         */
+    //void setLimbsReference(const dls_controller::TasksPose::ConstPtr& msg);
 
     /**
          * @brief Manage the ros services
@@ -87,14 +96,14 @@ public:
     void toggleSolver();
 
     /**
-         * @brief Start/Stop gravity compensation
-         */
-    void toggleGravityCompensation();
-
-    /**
          * @brief Start/Stop the PIDs
          */
     void togglePid();
+
+    /**
+         * @brief Start/Stop the tracking for the tasks
+         */
+    void toggleTracking();
 
 private:
 
@@ -130,12 +139,16 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
     OpenSoT::IDProblem::Ptr id_prob_;
-    /** @brief Real time publisher */
-    realtime_tools::RealtimePublisher<sensor_msgs::JointState>* realtime_pub_;
+    /** @brief Real time publisher - desired joint states */
+    realtime_tools::RealtimePublisher<sensor_msgs::JointState>* ci_joint_states_rt_pub_;
+    /** @brief Real time publisher - estimated pose */
+    realtime_tools::RealtimePublisher<nav_msgs::Odometry>* state_estimation_rt_pub_;
+    /** @brief Real time publisher - tasks pose */
+    realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_actual_pose_rt_pub_;
     /** @brief Ros subscriber for the com position reference */
     ros::Subscriber com_ref_sub_;
-    /** @brief Ros publisher for the com position */
-    ros::Publisher com_pub_;
+    /** @brief Ros subscriber for the limbs pose reference */
+    ros::Subscriber limbs_ref_sub_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */
@@ -148,22 +161,28 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
+    /** @brief Tasks running on the robot and respective actual poses */
+    TasksPoseMap tasks_pose_;
     /** @brief Actual com position w.r.t world frame */
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */
-    Eigen::Vector3d des_com_position_;
+    Eigen::Vector3d  des_com_position_;
+    /** @brief  RT buffer for the desired poses of the id tasks */
+    realtime_tools::RealtimeBuffer<TasksPoseMap> desired_tasks_pose_;
+    /** @brief Desired limbs pose w.r.t world frame */
+    //realtime_tools::RealtimeBuffer<LimbsMap> des_limbs_pose_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
     /** @brief Activate gravity compensation */
     std::atomic<bool> gravity_compensation_;
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
+    /** @brief Activate tracking */
+    std::atomic<bool> traking_active_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS service server */
     ros::ServiceServer ss_;
-    /** @brief Force Optimization Pointer */
-    OpenSoT::utils::ForceOptimization::Ptr fo_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
@@ -172,8 +191,6 @@ private:
     Eigen::Quaterniond imu_orientation_;
     /** @brief Homing position, loaded from the srdf file */
     Eigen::VectorXd qhome_;
-    /** @brief Gravity compensation */
-    Eigen::VectorXd tau_gc_;
     /** @brief Floating base position w.r.t the world frame, computed by the state estimator */
     Eigen::Vector3d floating_base_position_;
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator */

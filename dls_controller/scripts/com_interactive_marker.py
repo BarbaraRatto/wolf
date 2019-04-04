@@ -6,24 +6,30 @@ import copy
 from interactive_markers.interactive_marker_server import *
 from interactive_markers.menu_handler import *
 from visualization_msgs.msg import *
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose
 from sensor_msgs.msg import JointState
 from tf.broadcaster import TransformBroadcaster
+from dls_controller.msg import TasksPose
 
 server = None
 menu_handler = MenuHandler()
 br = None
 counter = 0
 first_value = True
-pub = rospy.Publisher('/hyqreal/dls_controller/com_ref', Point, queue_size=10)
+pub = rospy.Publisher('/hyqreal/dls_controller/com_ref', TasksPose, queue_size=10)
 first_com_position = Point(0,0,0)
 
 def comCallback( msg ):
     global first_value
-    if first_value:
-	rospy.loginfo("com.x="+str(msg.x)+","+"com.y="+str(msg.y)+","+"com.z="+str(msg.z))
-	first_value = False
-	first_com_position = msg
+    if first_value:     
+        if "com" in msg.tasks_name:
+            com_idx = msg.tasks_name.index("com")
+            com = Point(msg.tasks_pose.poses[com_idx].position.x,msg.tasks_pose.poses[com_idx].position.y,msg.tasks_pose.poses[com_idx].position.z)
+            rospy.loginfo("com.x="+str(com.x) \
+                     +","+"com.y="+str(com.y) \
+                     +","+"com.z="+str(com.z))
+            first_value = False
+            first_com_position = com
 
 def processFeedback( feedback ):
     s = "Feedback from marker '" + feedback.marker_name
@@ -61,8 +67,10 @@ def processFeedback( feedback ):
         rospy.loginfo( s + ": mouse up" + mp + "." )
 
     # Publish
-    position = Point(feedback.pose.position.x, feedback.pose.position.y, feedback.pose.position.z)
-    pub.publish(position)
+    task_pose_msg = TasksPose()
+    task_pose_msg.tasks_name.append("com")
+    task_pose_msg.tasks_pose.poses.append(feedback.pose)
+    pub.publish(task_pose_msg)
 
     server.applyChanges()
 
@@ -204,11 +212,12 @@ if __name__=="__main__":
     menu_handler.insert( "Second Entry", parent=sub_menu_handle, callback=processFeedback )
   
     # wait for robot topic
-    rospy.wait_for_message("/hyqreal/dls_controller/com", Point)
+    rospy.loginfo( "Waiting for the pose to be published..." )
+    rospy.wait_for_message("/tasks_actual_pose", TasksPose)
     rospy.loginfo( "Start!" )
 
     # set marker to the com
-    rospy.Subscriber('/hyqreal/dls_controller/com', Point, comCallback)
+    rospy.Subscriber('/tasks_actual_pose', TasksPose, comCallback)
     
     position = first_com_position
     make6DofMarker( False, InteractiveMarkerControl.NONE, position, True)
