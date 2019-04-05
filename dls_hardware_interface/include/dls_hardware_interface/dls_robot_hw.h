@@ -8,12 +8,11 @@
 #include <dls_hardware_interface/ground_truth_interface.h>
 #include <dls_hardware_interface/joint_command_adv_interface.h>
 #include <dls_hardware_interface/joint_state_adv_interface.h>
-#include <dls_hardware_interface/simulation_interface.h>
-#include <dls_hardware_interface/motor_interface.h>
 #include <dls_hardware_interface/shin_sensor_interface.h>
 #include <hardware_interface/force_torque_sensor_interface.h>
-#include <dls_hardware_interface/contact_switch_sensor_interface.h>
 #include <hardware_interface/robot_hw.h>
+#include <transmission_interface/transmission_info.h>
+#include <urdf/model.h>
 
 namespace hardware_interface
 {
@@ -21,47 +20,25 @@ namespace hardware_interface
 class DlsRobotHwInterface
 {
   public:
-    DlsRobotHwInterface(){}
-    ~DlsRobotHwInterface(){}
+    DlsRobotHwInterface(){};
+    virtual ~DlsRobotHwInterface() = 0;
 
-    //virtual void freezeBase(int flag) = 0;
+    bool init(std::vector<transmission_interface::TransmissionInfo> transmissions);
 
     std::string getRobotName() {return robot_name_;}
 
   protected:
 
-
-
     std::string robot_name_;
 
-    //hardware_interface::JointStateInterface test_;
     hardware_interface::JointStateAdvInterface joint_state_adv_interface_;
     hardware_interface::JointStateInterface joint_state_interface_;
     hardware_interface::JointCommandAdvInterface joint_interface_;
     hardware_interface::ImuSensorInterface imu_sensor_interface_;
     hardware_interface::GroundTruthInterface ground_truth_interface_;
-    hardware_interface::ForceTorqueSensorInterface force_sensor_interface_;
-    hardware_interface::ContactSwitchSensorInterface contact_sensor_interface_;
-    hardware_interface::ShinSensorInterface shin_sensor_interface_;
-    hardware_interface::SimulationInterface sim_interface_;
-    hardware_interface::MotorInterface motor_interface_;
-    //hardware_interface::PosVelJointInterface posvel_command_interface;
+    //hardware_interface::StateEstimation test_; // FIXME it would be cool
 
-    //Simulation interface variables:
-    int xenomai_switch_count_sim_;
-    bool is_robot_real_sim_;
-    bool freeze_base_sim_;
-    bool pause_sim_;
-    bool reset_sim_;
-    Eigen::Vector3d ext_force_sim_;
-    Eigen::Vector3d ext_torque_sim_;
-
-    //Motor interface variables:
-    bool remove_motor_torque_offsets_;
-    std::vector<double> misc_sensors_;
-    std::vector<std::string> misc_sensors_names_;
-    std::vector<std::string> leg_names_;
-
+    unsigned int n_dof_;
     std::vector<std::string> joint_names_;
     std::vector<int> joint_types_;
     std::vector<double> joint_lower_limits_;
@@ -98,9 +75,6 @@ class DlsRobotHwInterface
     std::vector<std::string> leg_name_;
     std::vector<std::vector<double> > force_;
     std::vector<std::vector<double> > torque_;
-    std::deque<bool> contact_;
-    std::deque<double> shin_contact_position_;
-
 };
 
 } //@namespace hardware_interface

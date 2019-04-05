@@ -16,7 +16,7 @@
 	<arg name="world_name" default="empty.world"/>
 
 
-	<arg if="$(arg dls_empty_world)" name="full_world_name" default="$(find dls_gazebo)/worlds/$(arg world_name)"/>
+        <arg if="$(arg dls_empty_world)" name="full_world_name" default="$(find dls_gazebo_resources)/worlds/$(arg world_name)"/>
 	<arg unless="$(arg dls_empty_world)" name="full_world_name" default="worlds/$(arg world_name)"/>
 
 	<!-- Set use_sim_time flag -->

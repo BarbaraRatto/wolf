@@ -6,7 +6,7 @@ add_definitions("-std=c++11")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   gazebo_ros
-  controller_manager 
+  controller_manager
   dls_hardware_interface
   transmission_interface
   pluginlib
@@ -15,28 +15,23 @@ find_package(catkin REQUIRED COMPONENTS
   realtime_tools
   urdf)
 
-# Depend on system install of Gazebo 
+# Depend on system install of Gazebo
 find_package(gazebo REQUIRED)
 
 catkin_package(
   LIBRARIES dls_hw_sim
-  CATKIN_DEPENDS
-    roscpp
-    gazebo_ros
-    controller_manager
-    pluginlib
-    transmission_interface
+  CATKIN_DEPENDS dls_hardware_interface
   INCLUDE_DIRS include)
 
 link_directories(${GAZEBO_LIBRARY_DIRS})
 include_directories(include
   ${catkin_INCLUDE_DIRS}
   ${GAZEBO_INCLUDE_DIRS})
-  
+
 ## Libraries
 add_library(dls_hw_sim src/dls_hw_sim.cpp)
-target_link_libraries(dls_hw_sim ${catkin_LIBRARIES} 
-                      ${GAZEBO_LIBRARIES}
+target_link_libraries(dls_hw_sim ${catkin_LIBRARIES}
+                                 ${GAZEBO_LIBRARIES}
                       )
 
 install(DIRECTORY include/${PROJECT_NAME}/
