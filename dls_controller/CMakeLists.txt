@@ -16,8 +16,8 @@ endif()
 # ROS
 find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools sensor_msgs geometry_msgs message_generation)
 # ADVR Packages
-find_package(OpenSoT REQUIRED) #FIXME Do I really need it?
-find_package(XCM REQUIRED) #FIXME Do I really need it?
+find_package(OpenSoT REQUIRED)
+find_package(XCM REQUIRED)
 find_package(cartesian_interface REQUIRED)
 
 
@@ -63,11 +63,11 @@ if (CATKIN_ENABLE_TESTING)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface hyqreal_description)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
-  add_executable(hyq_dummy test/hyq_dummy.cpp)
-  target_link_libraries(hyq_dummy ${catkin_LIBRARIES})
+  #add_executable(hyq_dummy test/hyq_dummy.cpp)
+  #target_link_libraries(hyq_dummy ${catkin_LIBRARIES})
 
-  add_rostest_gtest(dls_controller_test
-    test/dls_controller_test.test
-    test/dls_controller_test.cpp)
-  target_link_libraries(dls_controller_test ${catkin_LIBRARIES})
+  #add_rostest_gtest(dls_controller_test
+  #  test/dls_controller_test.test
+  #  test/dls_controller_test.cpp)
+  #target_link_libraries(dls_controller_test ${catkin_LIBRARIES})
 endif()

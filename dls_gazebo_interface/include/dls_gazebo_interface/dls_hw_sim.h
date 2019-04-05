@@ -69,8 +69,6 @@ public:
 
 private:
 
-  unsigned int n_dof_;
-
   std::shared_ptr<gazebo::sensors::ImuSensor> imu_sensor_;
   std::vector<std::shared_ptr<gazebo::sensors::ContactSensor> > foot_sensors_;
   std::vector<std::shared_ptr<gazebo::sensors::ContactSensor> > shin_sensor_;

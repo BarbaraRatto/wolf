@@ -1,8 +1,8 @@
 <package>
-  <name>dls_gazebo</name>
+  <name>dls_gazebo_resources</name>
   <version>0.0.1</version>
   <description>
-	This package contains gazebo environment such as models and worlds
+	This package contains gazebo resources such as models and worlds
   </description>
   <maintainer email="hyq@advr.iit.it">HyQ Group</maintainer>
   <license>TODO</license>

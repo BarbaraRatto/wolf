@@ -24,8 +24,6 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
-// Utils
-#include <dls_controller/utils.h>
 
 namespace dls_controller
 {
