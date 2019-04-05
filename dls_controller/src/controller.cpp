@@ -217,8 +217,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     desired_tasks_pose_.initRT(tasks_pose_);
 
-    //double dt = 0.001;
-    //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,dt,contact_links_));
+    id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
     //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links_,false));
     //id_prob_ = boost::make_shared<OpenSoT::IDProblem>(std::shared_ptr<XBot::ModelInterface>(xbot_model_, dt, contact_links_));
 
@@ -280,7 +279,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
-    solver_reset_done_ = false;
+    //solver_reset_done_ = false;
 
     return true;
 }
@@ -393,15 +392,15 @@ void Controller::updateXBotModel()
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
-    xbot_model_->getCOM(com_position_);
-    if(id_prob_)
-    {
-         //id_prob_->_com->getActualPose(com_position_);
+    //xbot_model_->getCOM(com_position_);
+    //if(id_prob_)
+    //{
+         id_prob_->_com->getActualPose(com_position_);
          id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
          id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
          id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
          id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
-    }
+    //}
     tasks_pose_["com"].translation() = com_position_;
 }
 
@@ -455,16 +454,27 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
-        if(!solver_reset_done_)
+        /*if(!solver_reset_done_)
         {
             ROS_INFO("Reset the solver");
             id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),contact_links_)); // FIXME NO-RT
             solver_reset_done_ = true;
-        }
+        }*/
 
         // Set the targets for the solver
         id_prob_->_com->setReference(des_com_position_);
         id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
+
+        // FIXME Brutal HACK
+        /*OpenSoT::constraints::force::FrictionCone::friction_cones mus;
+        mus.resize(contact_links_.size());
+        Eigen::Matrix3d R; R.setIdentity();
+        mus[0] = std::pair<Eigen::Matrix3d,double> (R,0.0);
+        mus[1] = std::pair<Eigen::Matrix3d,double> (R,0.0);
+        mus[2] = std::pair<Eigen::Matrix3d,double> (R,0.0);
+        mus[3] = std::pair<Eigen::Matrix3d,double> (R,0.0);
+        id_prob_->_friction_cones->setMu(mus);*/
+
         id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
         id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
         id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
@@ -568,23 +578,28 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
 void Controller::setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg)
 {
-    TasksPoseMap tmp_map;
+    TasksPoseMap* map_ptr = desired_tasks_pose_.readFromNonRT();
     Eigen::Affine3d tmp_affine;
-    if(msg->tasks_name.size() == msg->tasks_pose.poses.size())
+    if(msg->tasks_name.size() == msg->tasks_pose.poses.size()) // Check msg consistency
     {
         for(unsigned int i = 0; i< msg->tasks_name.size(); i++)
         {
-            tmp_affine.translation() = Eigen::Vector3d(msg->tasks_pose.poses[i].position.x,
-                                                       msg->tasks_pose.poses[i].position.y,
-                                                       msg->tasks_pose.poses[i].position.z);
-            tmp_affine.linear() = Eigen::Quaterniond(msg->tasks_pose.poses[i].orientation.w,
-                                                     msg->tasks_pose.poses[i].orientation.x,
-                                                     msg->tasks_pose.poses[i].orientation.y,
-                                                     msg->tasks_pose.poses[i].orientation.z).normalized().toRotationMatrix();
-            tmp_map[msg->tasks_name[i]] = tmp_affine;
-        }
+            if(map_ptr->find(msg->tasks_name[i]) == map_ptr->end()) // FIXME That's the reason why I should use a class
+                ROS_WARN_STREAM("Task "<< msg->tasks_name[i] << " not available.");
+            else
+            {
+                tmp_affine.translation() = Eigen::Vector3d(msg->tasks_pose.poses[i].position.x,
+                                                           msg->tasks_pose.poses[i].position.y,
+                                                           msg->tasks_pose.poses[i].position.z);
+                tmp_affine.linear() = Eigen::Quaterniond(msg->tasks_pose.poses[i].orientation.w,
+                                                         msg->tasks_pose.poses[i].orientation.x,
+                                                         msg->tasks_pose.poses[i].orientation.y,
+                                                         msg->tasks_pose.poses[i].orientation.z).normalized().toRotationMatrix();
 
-    desired_tasks_pose_.writeFromNonRT(tmp_map);
+                map_ptr->at(msg->tasks_name[i]) = tmp_affine;
+            }
+        }
+    desired_tasks_pose_.writeFromNonRT(*map_ptr);
     }
     else
         ROS_WARN("Can not set the desired tasks reference, the name vector has a different size from the pose vector.");

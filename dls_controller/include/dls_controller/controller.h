@@ -203,7 +203,7 @@ private:
 
     std::vector<std::string> contact_links_;
 
-    bool solver_reset_done_;
+    //bool solver_reset_done_;
 
     std::shared_ptr<std::thread> odom_publisher_thread_;
 
