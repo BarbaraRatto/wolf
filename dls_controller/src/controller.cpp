@@ -217,7 +217,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     desired_tasks_pose_.initRT(tasks_pose_);
 
-    id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
+    //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
     //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links_,false));
     //id_prob_ = boost::make_shared<OpenSoT::IDProblem>(std::shared_ptr<XBot::ModelInterface>(xbot_model_, dt, contact_links_));
 
@@ -277,11 +277,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
 
     // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+    //odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME It causes solver's failures, probably it is caused by the call to the robot model inside this thread.
 
     // Load the bounds, to be modified in order to swing the feet
-    lb_ = id_prob_->_x_lims->getLowerBound();
-    ub_ = id_prob_->_x_lims->getUpperBound();
+    //lb_ = id_prob_->_x_lims->getLowerBound();
+    //ub_ = id_prob_->_x_lims->getUpperBound();
+
+    solver_reset_done_ = false;
 
     return true;
 }
@@ -395,15 +397,16 @@ void Controller::updateXBotModel()
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
     //xbot_model_->getCOM(com_position_);
-    //if(id_prob_)
-    //{
-    id_prob_->_com->getActualPose(com_position_);
-    id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
-    id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
-    id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
-    id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
-    //}
-    tasks_pose_["com"].translation() = com_position_;
+    if(id_prob_)
+    {
+        id_prob_->_com->getActualPose(com_position_);
+        id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
+        id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
+        id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
+        id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
+        tasks_pose_["com"].translation() = com_position_;
+    }
+
 }
 
 void Controller::starting(const ros::Time& time)
@@ -438,12 +441,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 4) Virtual Model Update
     updateXBotModel();
 
-    des_joint_positions_ = qhome_;
-    des_com_position_ << 0.0, 0.0, 0.6; //w.r.t to the world
+    //des_joint_positions_ = qhome_;
+    //des_com_position_ << 0.0, 0.0, 0.6; //w.r.t to the world
 
-    /*if(traking_active_)
+    if(traking_active_)
     {
-        //des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
+        des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
         des_lf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lf_foot");
         des_rf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("rf_foot");
         des_lh_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lh_foot");
@@ -453,25 +456,23 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         // Set Default values
         des_joint_positions_ = qhome_;
-        des_com_position_    = com_position_;
-        // FIXME feet?
-    }*/
+        desired_tasks_pose_.initRT(tasks_pose_);
+    }
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
-        /*if(!solver_reset_done_)
+        if(!solver_reset_done_)
         {
             ROS_INFO("Reset the solver");
             id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),contact_links_)); // FIXME NO-RT
             solver_reset_done_ = true;
-        }*/
+        }
 
-        const double counts_per_wave = wave_period_ / period.toSec();
-        const double angle = 2.0 * M_PI * (static_cast<double>(count_++)/counts_per_wave);
+        //const double counts_per_wave = wave_period_ / period.toSec();
+        //const double angle = 2.0 * M_PI * (static_cast<double>(count_++)/counts_per_wave);
 
         // Set the targets for the solver
-        id_prob_->_com->setReference(des_com_position_);
-        ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector6d::Zero(); //LF
+        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector6d::Zero(); //LF
 
         //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+6,3) = Eigen::Vector6d::Zero(); // RF
 
@@ -479,22 +480,26 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+18,3) = Eigen::Vector6d::Zero(); // RH
 
-        lb_ = - ub_;
+        //lb_ = - ub_;
 
-        id_prob_->_x_lims->setBounds(ub_,lb_);
+        //id_prob_->_x_lims->setBounds(ub_,lb_);
 
-        des_lf_foot_pose_.translation().x() = 0.4435;
-        des_lf_foot_pose_.translation().y() = 0.256;
-        des_lf_foot_pose_.translation().z() = -0.02 + 0.6 * std::sin(angle);
+        //des_lf_foot_pose_.translation().x() = 0.4435;
+        //des_lf_foot_pose_.translation().y() = 0.256;
+        //des_lf_foot_pose_.translation().z() = -0.02 + 0.6 * std::sin(angle);
 
         /*des_rh_foot_pose_.translation().x() = -0.4435;
         des_rh_foot_pose_.translation().y() = -0.256;
         des_rh_foot_pose_.translation().z() = -0.02 + 0.6 * std::sin(angle);*/
 
-        id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
-        //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
-        //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
-        //id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+        if(traking_active_)
+        {
+            id_prob_->_com->setReference(des_com_position_);
+            //id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
+            //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
+            //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
+            //id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+        }
         id_prob_->update();
 
         // Solve ID

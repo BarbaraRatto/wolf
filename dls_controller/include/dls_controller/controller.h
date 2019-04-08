@@ -205,10 +205,12 @@ private:
 
     std::shared_ptr<std::thread> odom_publisher_thread_;
 
+    bool solver_reset_done_;
+
     // Hacky part
-    Eigen::VectorXd lb_, ub_;
-    unsigned long long count_ = 0;
-    double wave_period_ = 0.5; // In secs.
+    //Eigen::VectorXd lb_, ub_;
+    //unsigned long long count_ = 0;
+    //double wave_period_ = 0.5; // In secs.
 
 
 
