@@ -60,6 +60,11 @@ public:
      */
     tasks::acceleration::Postural::Ptr _postural;
 
+    /**
+     * @brief _x_lims some bounds
+     */
+    constraints::GenericConstraint::Ptr _x_lims;
+
 private:
     /**
      * @brief _dynamics constraint relates the floating base with the contact forces
@@ -70,11 +75,6 @@ private:
      * @brief _friction_cones constraints
      */
     constraints::force::FrictionCone::Ptr _friction_cones;
-
-    /**
-     * @brief _x_lims some bounds
-     */
-    constraints::GenericConstraint::Ptr _x_lims;
 
     /**
      * @brief _id_problem the final ID problem
