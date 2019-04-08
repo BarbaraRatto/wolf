@@ -16,7 +16,38 @@ namespace dls_gazebo_interface
                                 const urdf::Model *const urdf_model,
                                 std::vector<transmission_interface::TransmissionInfo> transmissions)
     {
-        if(!DlsRobotHwInterface::init(transmissions))
+
+        std::vector<std::string> joint_names(transmissions.size());
+        // Initialize values from the transmission interface i.e. by using actuated joints (no floating base).
+        for (unsigned int j=0; j < transmissions.size(); j++) {
+            // Check that this transmission has one joint
+            if (transmissions[j].joints_.size() == 0) {
+                    ROS_WARN_STREAM_NAMED("dls_hw_sim","Transmission " << transmissions[j].name_
+                                    << " has no associated joints.");
+                    continue;
+            } else if (transmissions[j].joints_.size() > 1) {
+                    ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
+                                    << " has more than one joint. Currently the default robot hardware simulation "
+                                    << " interface only supports one.");
+                    continue;
+            }
+
+            // Check that this transmission has one actuator
+            if (transmissions[j].actuators_.size() == 0) {
+                    ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
+                                    << " has no associated actuators.");
+                    continue;
+            } else if (transmissions[j].actuators_.size() > 1) {
+                    ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
+                                    << " has more than one actuator. Currently the default robot hardware simulation "
+                                    << " interface only supports one.");
+                    continue;
+            }
+
+            joint_names[j] = transmissions[j].joints_[0].name_;
+        }
+
+        if(!DlsRobotHwInterface::init(joint_names))
         {
             ROS_ERROR_NAMED("dls_hw_sim","Initialization of DlsRobotHwInterface failed.");
             return false;

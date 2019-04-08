@@ -2,15 +2,19 @@
 
 using namespace hardware_interface;
 
-bool DlsRobotHwInterface::init(std::vector<transmission_interface::TransmissionInfo> transmissions)
+DlsRobotHwInterface::DlsRobotHwInterface()
 {
-    // We want to use only the motor/joints, use the transmission interface to get them.
+    initialized_ = false;
+}
 
-    if(transmissions.size()<=0)
+bool DlsRobotHwInterface::init(std::vector<std::string> joint_names)
+{
+    // We want to use only the motor/joints.
+    if(joint_names.size()<=0)
         return false;
 
     // Resize vectors to our DOF
-    n_dof_ = transmissions.size();
+    n_dof_ = static_cast<unsigned int>(joint_names.size());
     joint_names_.resize(n_dof_);
     joint_types_.resize(n_dof_);
     joint_lower_limits_.resize(n_dof_);
@@ -29,34 +33,11 @@ bool DlsRobotHwInterface::init(std::vector<transmission_interface::TransmissionI
     joint_i_gain_command_.resize(n_dof_);
     joint_d_gain_command_.resize(n_dof_);
 
-    // Initialize values
-    for (unsigned int j=0; j < n_dof_; j++) {
-        // Check that this transmission has one joint
-        if (transmissions[j].joints_.size() == 0) {
-                ROS_WARN_STREAM_NAMED("dls_hw_sim","Transmission " << transmissions[j].name_
-                                << " has no associated joints.");
-                continue;
-        } else if (transmissions[j].joints_.size() > 1) {
-                ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
-                                << " has more than one joint. Currently the default robot hardware simulation "
-                                << " interface only supports one.");
-                continue;
-        }
+     for (unsigned int j=0; j < n_dof_; j++) {
 
-        // Check that this transmission has one actuator
-        if (transmissions[j].actuators_.size() == 0) {
-                ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
-                                << " has no associated actuators.");
-                continue;
-        } else if (transmissions[j].actuators_.size() > 1) {
-                ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
-                                << " has more than one actuator. Currently the default robot hardware simulation "
-                                << " interface only supports one.");
-                continue;
-        }
+        ROS_DEBUG_STREAM_NAMED("dls_robot_hw","Loading joint: "<< joint_names[j]);
 
-        // Add data from transmission
-        joint_names_[j] = transmissions[j].joints_[0].name_;
+        joint_names_[j] = joint_names[j];
         joint_position_[j] = 1.0;
         joint_velocity_[j] = 0.0;
         joint_effort_[j] = 1.0;  // N/m for continuous joints
@@ -115,6 +96,8 @@ bool DlsRobotHwInterface::init(std::vector<transmission_interface::TransmissionI
     gtData.linear_position = &base_lin_pos_[0];
     gtData.linear_velocity = &base_lin_vel_[0];
     ground_truth_interface_.registerHandle(hardware_interface::GroundTruthHandle(gtData));
+
+    initialized_ = true;
 
     return true;
 }
