@@ -8,32 +8,51 @@
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "hyq_dummy");
-  ros::NodeHandle nh;
+    ros::init(argc, argv, "hyq_dummy");
+    ros::NodeHandle nh;
 
-  HyqDummy robot;
-  std::string joints_param_name = "dls_controller/joints"; //FIXME
-  robot.init(joints_param_name);
-  ROS_DEBUG_STREAM("period: " << robot.getPeriod().toSec());
-  controller_manager::ControllerManager cm(&robot, nh);
-  ROS_DEBUG_STREAM("Controller Manager created!");
+    HyqDummy robot;
+    std::string joints_param_name = "dls_controller/joints";
+    std::vector<std::string> joint_names;
 
-  ros::Rate rate(1.0 / robot.getPeriod().toSec());
-  ros::AsyncSpinner spinner(1);
-  spinner.start();
-  while(ros::ok())
-  {
+    // Get joint names from the parameter server, using the controller config file
+    //using namespace XmlRpc;
+    //XmlRpcValue joint_names;
+    if (!nh.getParam(joints_param_name, joint_names))
+    {
+        ROS_ERROR_STREAM("No joints given (expected namespace: /" + joints_param_name + ").");
+        return 1;
+    }
+    if (joint_names.size()==0)
+    {
+        ROS_ERROR_STREAM("joints list empty.");
+        return 1;
+    }
 
-    ROS_DEBUG_STREAM("Running...");	
-    robot.read();
-    ROS_DEBUG_STREAM("Read complete...");	
-    cm.update(robot.getTime(), robot.getPeriod());
-    ROS_DEBUG_STREAM("Controller Manager update complete...");
-    robot.write();
-    ROS_DEBUG_STREAM("Write complete...");
-    rate.sleep();
-  }
-  spinner.stop();
+    if(!robot.initializeInterfaces(joint_names))
+        ROS_ERROR_NAMED("hyq_dummy","Can not initialize the hardware interfaces.");
+    if(!robot.registerInterfaces())
+        ROS_ERROR_NAMED("hyq_dummy","Can not register the hardware interfaces.");
 
-  return 0;
+    ROS_DEBUG_STREAM("period: " << robot.getPeriod().toSec());
+    controller_manager::ControllerManager cm(&robot, nh);
+    ROS_DEBUG_STREAM("Controller Manager created!");
+
+    ros::Rate rate(1.0 / robot.getPeriod().toSec());
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
+    while(ros::ok())
+    {
+        ROS_DEBUG_STREAM("Running...");
+        robot.read();
+        ROS_DEBUG_STREAM("Read complete...");
+        cm.update(robot.getTime(), robot.getPeriod());
+        ROS_DEBUG_STREAM("Controller Manager update complete...");
+        robot.write();
+        ROS_DEBUG_STREAM("Write complete...");
+        rate.sleep();
+    }
+    spinner.stop();
+
+    return 0;
 }

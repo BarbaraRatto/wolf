@@ -22,12 +22,15 @@ class DlsRobotHwInterface
 public:
 
     DlsRobotHwInterface();
-    virtual ~DlsRobotHwInterface() = 0;
+    virtual ~DlsRobotHwInterface();
 
-    bool init(std::vector<std::string> joint_names);
+    bool initializeInterfaces(const std::vector<std::string>& joint_names);
+
+    virtual bool registerInterfaces() = 0;
 
     std::string getRobotName() {return robot_name_;}
     unsigned int getNdof() {return n_dof_;}
+    bool isInitialized() {return initialized_;}
 
 protected:
 

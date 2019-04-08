@@ -47,7 +47,7 @@ namespace dls_gazebo_interface
             joint_names[j] = transmissions[j].joints_[0].name_;
         }
 
-        if(!DlsRobotHwInterface::init(joint_names))
+        if(!DlsRobotHwInterface::initializeInterfaces(joint_names))
         {
             ROS_ERROR_NAMED("dls_hw_sim","Initialization of DlsRobotHwInterface failed.");
             return false;
@@ -82,13 +82,23 @@ namespace dls_gazebo_interface
             ROS_ERROR_STREAM("Could not find base IMU sensor.");
         }
 
-        // Register interfaces
-        registerInterface(&joint_state_adv_interface_);
-        registerInterface(&joint_state_interface_);
-        registerInterface(&joint_interface_);
-        registerInterface(&imu_sensor_interface_);
-        registerInterface(&ground_truth_interface_);
 
+        registerInterfaces();
+
+        return true;
+    }
+
+    bool DlsRobotHwSim::registerInterfaces()
+    {
+        if(isInitialized())
+        {
+            // Register interfaces
+            registerInterface(&joint_state_adv_interface_);
+            registerInterface(&joint_state_interface_);
+            registerInterface(&joint_interface_);
+            registerInterface(&imu_sensor_interface_);
+            registerInterface(&ground_truth_interface_);
+        }
         return true;
     }
 

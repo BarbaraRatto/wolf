@@ -7,7 +7,11 @@ DlsRobotHwInterface::DlsRobotHwInterface()
     initialized_ = false;
 }
 
-bool DlsRobotHwInterface::init(std::vector<std::string> joint_names)
+DlsRobotHwInterface::~DlsRobotHwInterface()
+{
+}
+
+bool DlsRobotHwInterface::initializeInterfaces(const std::vector<std::string>& joint_names)
 {
     // We want to use only the motor/joints.
     if(joint_names.size()<=0)

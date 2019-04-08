@@ -66,6 +66,7 @@ public:
      */
   void simulationInterface(void);
 
+  virtual bool registerInterfaces();
 
 private:
 
