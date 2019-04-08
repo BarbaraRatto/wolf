@@ -266,7 +266,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
 
     tasks_actual_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TasksPose>(controller_nh, "/tasks_actual_pose", 4);
-    tasks_actual_pose_rt_pub_->msg_.reference_frame = "world";
+    tasks_actual_pose_rt_pub_->msg_.reference_frame = "base_link";
     tasks_actual_pose_rt_pub_->msg_.tasks_name.resize(tasks_pose_.size());
     tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses.resize(tasks_pose_.size());
 
@@ -279,7 +279,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
-    //solver_reset_done_ = false;
+    // Load the bounds, to be modified in order to swing the feet
+    lb_ = id_prob_->_x_lims->getLowerBound();
+    ub_ = id_prob_->_x_lims->getUpperBound();
 
     return true;
 }
@@ -395,11 +397,11 @@ void Controller::updateXBotModel()
     //xbot_model_->getCOM(com_position_);
     //if(id_prob_)
     //{
-         id_prob_->_com->getActualPose(com_position_);
-         id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
-         id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
-         id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
-         id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
+    id_prob_->_com->getActualPose(com_position_);
+    id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
+    id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
+    id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
+    id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
     //}
     tasks_pose_["com"].translation() = com_position_;
 }
@@ -436,9 +438,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 4) Virtual Model Update
     updateXBotModel();
 
-    if(traking_active_)
+    des_joint_positions_ = qhome_;
+    des_com_position_ << 0.0, 0.0, 0.6; //w.r.t to the world
+
+    /*if(traking_active_)
     {
-        des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
+        //des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
         des_lf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lf_foot");
         des_rf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("rf_foot");
         des_lh_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lh_foot");
@@ -450,7 +455,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         des_joint_positions_ = qhome_;
         des_com_position_    = com_position_;
         // FIXME feet?
-    }
+    }*/
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -461,23 +466,35 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             solver_reset_done_ = true;
         }*/
 
+        const double counts_per_wave = wave_period_ / period.toSec();
+        const double angle = 2.0 * M_PI * (static_cast<double>(count_++)/counts_per_wave);
+
         // Set the targets for the solver
         id_prob_->_com->setReference(des_com_position_);
+        ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector6d::Zero(); //LF
+
+        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+6,3) = Eigen::Vector6d::Zero(); // RF
+
+        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+12,3) = Eigen::Vector6d::Zero(); // LF
+
+        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+18,3) = Eigen::Vector6d::Zero(); // RH
+
+        lb_ = - ub_;
+
+        id_prob_->_x_lims->setBounds(ub_,lb_);
+
+        des_lf_foot_pose_.translation().x() = 0.4435;
+        des_lf_foot_pose_.translation().y() = 0.256;
+        des_lf_foot_pose_.translation().z() = -0.02 + 0.6 * std::sin(angle);
+
+        /*des_rh_foot_pose_.translation().x() = -0.4435;
+        des_rh_foot_pose_.translation().y() = -0.256;
+        des_rh_foot_pose_.translation().z() = -0.02 + 0.6 * std::sin(angle);*/
+
         id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
-
-        // FIXME Brutal HACK
-        /*OpenSoT::constraints::force::FrictionCone::friction_cones mus;
-        mus.resize(contact_links_.size());
-        Eigen::Matrix3d R; R.setIdentity();
-        mus[0] = std::pair<Eigen::Matrix3d,double> (R,0.0);
-        mus[1] = std::pair<Eigen::Matrix3d,double> (R,0.0);
-        mus[2] = std::pair<Eigen::Matrix3d,double> (R,0.0);
-        mus[3] = std::pair<Eigen::Matrix3d,double> (R,0.0);
-        id_prob_->_friction_cones->setMu(mus);*/
-
-        id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
-        id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
-        id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+        //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
+        //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
+        //id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
         id_prob_->update();
 
         // Solve ID
@@ -518,7 +535,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
-        // use tau to compensate the gravity
         joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandVelocity(0.0);

@@ -203,9 +203,14 @@ private:
 
     std::vector<std::string> contact_links_;
 
-    //bool solver_reset_done_;
-
     std::shared_ptr<std::thread> odom_publisher_thread_;
+
+    // Hacky part
+    Eigen::VectorXd lb_, ub_;
+    unsigned long long count_ = 0;
+    double wave_period_ = 0.5; // In secs.
+
+
 
     /**
          * @brief thread body for the odometry publisher
