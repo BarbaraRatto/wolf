@@ -4,7 +4,10 @@
 bool isControllerAlive()
 {
   // Check if there is a publisher/subscriber in the controller.
-  return true;
+  if(ros::service::waitForService("dls_controller/servicesManager",1.0)) // Wait 1 sec
+    return true;
+  else
+    return false;
 }
 
 // TEST CASES
@@ -16,8 +19,6 @@ TEST(DlsControllerTest, test)
     ros::Duration(0.1).sleep();
   }
 
-  ROS_INFO("Press a key to continue...");
-  getchar();
 }
 
 int main(int argc, char** argv)

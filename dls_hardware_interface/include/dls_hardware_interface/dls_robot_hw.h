@@ -19,15 +19,20 @@ namespace hardware_interface
 
 class DlsRobotHwInterface
 {
-  public:
-    DlsRobotHwInterface(){};
-    virtual ~DlsRobotHwInterface() = 0;
+public:
 
-    bool init(std::vector<transmission_interface::TransmissionInfo> transmissions);
+    DlsRobotHwInterface();
+    virtual ~DlsRobotHwInterface();
+
+    bool initializeInterfaces(const std::vector<std::string>& joint_names);
+
+    virtual bool registerInterfaces() = 0;
 
     std::string getRobotName() {return robot_name_;}
+    unsigned int getNdof() {return n_dof_;}
+    bool isInitialized() {return initialized_;}
 
-  protected:
+protected:
 
     std::string robot_name_;
 
@@ -75,6 +80,10 @@ class DlsRobotHwInterface
     std::vector<std::string> leg_name_;
     std::vector<std::vector<double> > force_;
     std::vector<std::vector<double> > torque_;
+
+private:
+
+    bool initialized_;
 };
 
 } //@namespace hardware_interface
