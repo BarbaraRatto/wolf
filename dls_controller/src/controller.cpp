@@ -151,27 +151,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR("No robot_description_semantic given");
         return false;
     }
-    if(!opt.set_urdf_path("/home/graiola/ros_ws/src/hyq-distro/dls_controller/robots/hyqreal/hyqreal.urdf"))
+    if(!opt.set_urdf(urdf))
     {
-        ROS_ERROR("Unable to load urdf path");
+        ROS_ERROR("Unable to load urdf");
         return false;
     }
-    if(!opt.set_srdf_path("/home/graiola/ros_ws/src/hyq-distro/dls_controller/robots/hyqreal/hyqreal.srdf"))
+    if(!opt.set_srdf(srdf))
     {
-        ROS_ERROR("Unable to load srdf path");
+        ROS_ERROR("Unable to load srdf");
         return false;
     }
-    // FIXME hardcoded paths
-    /*if(!opt.set_urdf(urdf))
-   {
-       ROS_ERROR("Unable to load urdf");
-       return false;
-   }*/
-    /*if(!opt.set_srdf(srdf))
-   {
-       ROS_ERROR("Unable to load srdf");
-       return false;
-   }*/
     if(!opt.generate_jidmap())
     {
         ROS_ERROR("Unable to load jidmap");

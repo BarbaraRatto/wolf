@@ -50,11 +50,11 @@ public:
   void read()
   {
     std::ostringstream os;
-    for (unsigned int i = 0; i < n_dofs_ - 1; ++i)
+    for (unsigned int i = 0; i < n_dof_ - 1; ++i)
     {
       os << joint_effort_command_[i] << ", ";
     }
-    os << joint_effort_command_[n_dofs_ - 1];
+    os << joint_effort_command_[n_dof_ - 1];
 
     ROS_DEBUG_STREAM("Effort commands for joints: " << os.str());
   }
@@ -63,13 +63,8 @@ public:
   {
     if (running_)
     {
-      for (unsigned int i = 0; i < n_dofs_; ++i)
+      for (unsigned int i = 0; i < n_dof_; ++i)
       {
-        // Note that pos_[i] will be NaN for one more cycle after we start(),
-        // but that is consistent with the knowledge we have about the state
-        // of the robot.
-
-
         // Do some amazing stuff
       }
     }
@@ -80,8 +75,6 @@ public:
       //std::fill_n(joint_effort_, n_dofs_, std::numeric_limits<double>::quiet_NaN());
     }
   }
-
-  void freezeBase(int flag){}
 
   bool start_callback(std_srvs::Empty::Request& /*req*/, std_srvs::Empty::Response& /*res*/)
   {
@@ -98,11 +91,9 @@ public:
 private:
 
   bool running_;
-
   ros::NodeHandle nh_;
   ros::ServiceServer start_srv_;
   ros::ServiceServer stop_srv_;
-  int n_dofs_;
 };
 
 #endif

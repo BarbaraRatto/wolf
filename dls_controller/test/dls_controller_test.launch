@@ -1,7 +1,8 @@
 <launch>
-  <arg name="robot_name" default="hyqreal"/>
+    <arg name="robot_name" default="hyqreal"/>
 
-  <!-- Load robot -->
-  <param name="hyqreal/robot_description" command="$(find xacro)/xacro --inorder '$(find hyqreal_description)/robots/hyqreal.urdf.xacro'"/>
+    <param name="$(arg robot_name)/dls_controller/robot_description" textfile="$(find dls_controller)/robots/$(arg robot_name)/hyqreal.urdf"/> <!-- FIXME: use the description -->
+    <param name="$(arg robot_name)/dls_controller/robot_description_semantic" textfile="$(find dls_controller)/robots/$(arg robot_name)/hyqreal.srdf"/>
+    <param name="$(arg robot_name)/dls_controller/problem_description" textfile="$(find dls_controller)/problems/ik.yaml"/>
 
 </launch>
