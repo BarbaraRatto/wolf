@@ -4,6 +4,7 @@
 // ROS includes
 #include <ros/ros.h>
 #include <angles/angles.h>
+#include <std_srvs/Empty.h>
 #include <pluginlib/class_list_macros.h>
 
 // Gazebo includes
@@ -62,9 +63,9 @@ public:
   void writeSim(ros::Time time, ros::Duration period);
 
   /**
-     * @brief Handles the user commands to control the simulation environment
+     * @brief Freeze!
      */
-  void simulationInterface(void);
+  bool freezeBase(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 
 
 private:
@@ -78,6 +79,9 @@ private:
   std::vector<gazebo::physics::JointPtr> sim_joints_;
   gazebo::physics::ModelPtr sim_model_;
   gazebo::math::Pose inital_pose;
+
+  ros::ServiceServer ss_;
+  bool freeze_base_sim_;
 
   std::vector<double> torque_offsets;
   bool useTorqueOffsets;

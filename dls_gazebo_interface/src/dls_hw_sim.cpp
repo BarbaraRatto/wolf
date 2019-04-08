@@ -51,12 +51,32 @@ namespace dls_gazebo_interface
             ROS_ERROR_STREAM("Could not find base IMU sensor.");
         }
 
+
+        ss_ = model_nh.advertiseService("freeze_base", &DlsRobotHwSim::freezeBase, this); //FIXME it should be moved to a dedicated interface
+        freeze_base_sim_ = false;
+
         // Register interfaces
         registerInterface(&joint_state_adv_interface_);
         registerInterface(&joint_state_interface_);
         registerInterface(&joint_interface_);
         registerInterface(&imu_sensor_interface_);
         registerInterface(&ground_truth_interface_);
+
+        return true;
+    }
+
+    bool DlsRobotHwSim::freezeBase(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+    {
+        //Freeze_base control
+        freeze_base_sim_ = !freeze_base_sim_;
+        if(freeze_base_sim_)
+        {
+                ROS_INFO("Freeze Base on!");
+                sim_model_->SetWorldPose(inital_pose);
+        }else{
+                ROS_INFO("Freeze Base off!");
+        }
+        sim_model_->SetGravityMode(!freeze_base_sim_);
 
         return true;
     }
@@ -141,6 +161,20 @@ namespace dls_gazebo_interface
 
     void DlsRobotHwSim::writeSim(ros::Time time, ros::Duration period)
     {
+
+        if(freeze_base_sim_)
+        {
+            sim_model_->SetWorldPose(inital_pose);
+            gazebo::physics::LinkPtr base_link = sim_model_->GetLink("base_link");
+            if(base_link != NULL){
+                    //Set velocities and accelerations only for the base link:
+                    base_link->SetLinearVel(gazebo::math::Vector3::Zero);
+                    base_link->SetLinearAccel(gazebo::math::Vector3::Zero);
+                    base_link->SetAngularVel(gazebo::math::Vector3::Zero);
+                    base_link->SetAngularAccel(gazebo::math::Vector3::Zero);
+            }
+        }
+
         //PDFF
         std::vector<double> ufb(n_dof_,0.0);
         std::vector<double> upd(n_dof_,0.0);
