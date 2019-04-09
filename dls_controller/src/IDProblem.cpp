@@ -24,18 +24,18 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     {
         _feet[i] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(links_in_contact[i], *_model, links_in_contact[i],
                                                                                "world", _id->getJointsAccelerationAffine());
-        _feet[i]->setLambda(2000.);
+        _feet[i]->setLambda(1000.);
     }
-
+    //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
                                                                         "world", _id->getJointsAccelerationAffine());
     _waist->setLambda(100.);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
     _postural->setLambda(100.);
-
+    //   --------------------------
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
-    _com->setLambda(1000.);
+    _com->setLambda(100.);
 
 
     //
@@ -52,21 +52,17 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
 
     /// HERE WE SET SOME BOUNDS
-    OpenSoT::AffineHelper I = OpenSoT::AffineHelper::Identity(_id->getSerializer()->getSize());
-    Eigen::VectorXd xmax = 1000.*Eigen::VectorXd::Ones(_id->getSerializer()->getSize());
-    xmax[_model->getJointNum()] = xmax[_model->getJointNum()+6] = xmax[_model->getJointNum()+12] = xmax[_model->getJointNum()+18] = 2000;
-    xmax[_model->getJointNum()+1] = xmax[_model->getJointNum()+7] = xmax[_model->getJointNum()+13] = xmax[_model->getJointNum()+19] = 2000;
-    xmax[_model->getJointNum()+2] = xmax[_model->getJointNum()+8] = xmax[_model->getJointNum()+14]= xmax[_model->getJointNum()+20]= 2000;
-
-    xmax[_model->getJointNum()+3] = xmax[_model->getJointNum()+9] = xmax[_model->getJointNum()+15]=xmax[_model->getJointNum()+21] =  0.0;
-    xmax[_model->getJointNum()+4] = xmax[_model->getJointNum()+10]= xmax[_model->getJointNum()+16]=xmax[_model->getJointNum()+22] = 0.0;
-    xmax[_model->getJointNum()+5] = xmax[_model->getJointNum()+11]= xmax[_model->getJointNum()+17]=xmax[_model->getJointNum()+23] = 0.0;
-
+    Eigen::VectorXd xmax = 1000.*Eigen::VectorXd::Ones(_model->getJointNum());
     Eigen::VectorXd xmin = -xmax;
-    xmin[_model->getJointNum()+2] = xmin[_model->getJointNum()+8] = xmin[_model->getJointNum()+14] = xmin[_model->getJointNum()+20] = 0; //FORCES CAN ONLY PUSH!
 
-    _x_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
-                "acc_wrench_lims", I, xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::BOUND);
+    _qddot_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
+                "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
+
+    Eigen::Vector6d wrench_upper_lims; wrench_upper_lims<<1000,1000,1000,Eigen::Vector3d::Zero();
+    Eigen::Vector6d wrench_lower_lims; wrench_lower_lims<<-1000, -1000, 0.0 ,Eigen::Vector3d::Zero();
+    std::vector<AffineHelper> tmp = _id->getContactsWrenchAffine();
+    _wrenches_lims = boost::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
+                links_in_contact, wrench_lower_lims, wrench_upper_lims,tmp);
 
     // Notice that we just control the orientation of the waist
     std::list<unsigned int> idw = {3,4,5};
@@ -75,7 +71,9 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
     _id_problem = ((_feet[0]%idf + _feet[1]%idf + _feet[2]%idf + _feet[3]%idf)/
             (_com%idc  + _waist%idw)/
-            _postural)<<_x_lims<<_dynamics<<_friction_cones;
+            _postural)<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+
+    _id_problem->update(Eigen::VectorXd(0));
 
     _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);//, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 

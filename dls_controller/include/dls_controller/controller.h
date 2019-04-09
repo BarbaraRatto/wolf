@@ -142,8 +142,10 @@ private:
     realtime_tools::RealtimePublisher<sensor_msgs::JointState>* ci_joint_states_rt_pub_;
     /** @brief Real time publisher - estimated pose */
     realtime_tools::RealtimePublisher<nav_msgs::Odometry>* state_estimation_rt_pub_;
-    /** @brief Real time publisher - tasks pose */
+    /** @brief Real time publisher - actual tasks pose */
     realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_actual_pose_rt_pub_;
+    /** @brief Real time publisher - desired tasks pose */
+    realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_desired_pose_rt_pub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
     /** @brief Ros subscriber for the limbs pose reference */
@@ -160,16 +162,16 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-    /** @brief Tasks running on the robot and respective actual poses */
+    /** @brief Actual tasks poses */
     TasksPoseMap tasks_pose_;
+    /** @brief Desired tasks poses */
+    TasksPoseMap desired_tasks_pose_;
     /** @brief Actual com position w.r.t world frame */
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */
     Eigen::Vector3d  des_com_position_;
     /** @brief  RT buffer for the desired poses of the id tasks */
-    realtime_tools::RealtimeBuffer<TasksPoseMap> desired_tasks_pose_;
-    /** @brief Desired limbs pose w.r.t world frame */
-    //realtime_tools::RealtimeBuffer<LimbsMap> des_limbs_pose_;
+    //realtime_tools::RealtimeBuffer<TasksPoseMap> desired_tasks_pose_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
     /** @brief Activate gravity compensation */
@@ -208,9 +210,6 @@ private:
     bool solver_reset_done_;
 
     // Hacky part
-    Eigen::VectorXd lb_, ub_;
-    unsigned long long count_ = 0;
-    double wave_period_ = 0.5; // In secs.
     Eigen::Affine3d init_lf_foot_pose_;
     Eigen::Affine3d init_rf_foot_pose_;
     Eigen::Affine3d init_lh_foot_pose_;

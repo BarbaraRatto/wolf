@@ -212,12 +212,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[3] = "rh_foot";
 
     tasks_pose_["com"] = Eigen::Affine3d::Identity();
-    des_lf_foot_pose_ = tasks_pose_["lf_foot"] = Eigen::Affine3d::Identity();
-    des_rf_foot_pose_ = tasks_pose_["rf_foot"] = Eigen::Affine3d::Identity();
-    des_lh_foot_pose_ = tasks_pose_["lh_foot"] = Eigen::Affine3d::Identity();
-    des_rh_foot_pose_ = tasks_pose_["rh_foot"] = Eigen::Affine3d::Identity();
+    des_lf_foot_pose_ = tasks_pose_["lf_foot"] = desired_tasks_pose_["lf_foot"] = Eigen::Affine3d::Identity();
+    des_rf_foot_pose_ = tasks_pose_["rf_foot"] = desired_tasks_pose_["rf_foot"] = Eigen::Affine3d::Identity();
+    des_lh_foot_pose_ = tasks_pose_["lh_foot"] = desired_tasks_pose_["lh_foot"] = Eigen::Affine3d::Identity();
+    des_rh_foot_pose_ = tasks_pose_["rh_foot"] = desired_tasks_pose_["rh_foot"] = Eigen::Affine3d::Identity();
 
-    desired_tasks_pose_.initRT(tasks_pose_);
+    //desired_tasks_pose_.initRT(tasks_pose_);
 
     //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
     //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links_,false));
@@ -272,8 +272,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     tasks_actual_pose_rt_pub_->msg_.tasks_name.resize(tasks_pose_.size());
     tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses.resize(tasks_pose_.size());
 
+    tasks_desired_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TasksPose>(controller_nh, "/tasks_desired_pose", 4);
+    tasks_desired_pose_rt_pub_->msg_.reference_frame = "world";
+    tasks_desired_pose_rt_pub_->msg_.tasks_name.resize(desired_tasks_pose_.size());
+    tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses.resize(desired_tasks_pose_.size());
+
     // Reference for the tasks
-    tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
+    //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
 
     // Rosservice
     ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
@@ -394,15 +399,21 @@ void Controller::updateXBotModel()
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
-    //xbot_model_->getCOM(com_position_);
     if(id_prob_)
     {
-        id_prob_->_com->getActualPose(com_position_);
+        id_prob_->_com->getActualPose(com_position_); // Note: we use com_position_ as a tmp object!
+        tasks_pose_["com"].translation() = com_position_;
         id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
         id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
         id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
         id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
-        tasks_pose_["com"].translation() = com_position_;
+
+        id_prob_->_com->getReference(com_position_);
+        desired_tasks_pose_["com"].translation() = com_position_;
+        id_prob_->_feet[0]->getReference(desired_tasks_pose_["lf_foot"]);
+        id_prob_->_feet[1]->getReference(desired_tasks_pose_["rf_foot"]);
+        id_prob_->_feet[2]->getReference(desired_tasks_pose_["lh_foot"]);
+        id_prob_->_feet[3]->getReference(desired_tasks_pose_["rh_foot"]);
     }
 
 }
@@ -439,25 +450,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 4) Virtual Model Update
     updateXBotModel();
 
-    //des_joint_positions_ = qhome_;
+    // Set Default values
     //des_com_position_ << -0.05, -0.02, 0.5; //w.r.t to the world
     des_com_position_ << 0.0, 0.0, 0.5; //w.r.t to the world
-
-
-    if(traking_active_) // FIXME External references
-    {
-        //des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
-        des_lf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lf_foot");
-        des_rf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("rf_foot");
-        des_lh_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lh_foot");
-        des_rh_foot_pose_ = desired_tasks_pose_.readFromRT()->at("rh_foot");
-    }
-    else
-    {
-        // Set Default values
-        des_joint_positions_ = qhome_;
-        desired_tasks_pose_.initRT(tasks_pose_);
-    }
+    des_joint_positions_ = qhome_;
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -467,61 +463,55 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),contact_links_)); // FIXME NO-RT
             solver_reset_done_ = true;
 
-            // Load the bounds, to be modified in order to swing the feet
-            lb_ = id_prob_->_x_lims->getLowerBound();
-            ub_ = id_prob_->_x_lims->getUpperBound();
             // Set the initial feet poses
-            id_prob_->_feet[0]->getActualPose(            init_lf_foot_pose_ );
-            id_prob_->_feet[1]->getActualPose(            init_rf_foot_pose_ );
-            id_prob_->_feet[2]->getActualPose(            init_lh_foot_pose_ );
-            id_prob_->_feet[3]->getActualPose(            init_rh_foot_pose_ );
-            id_prob_->_com->getActualPose(                init_com_position_);
+            id_prob_->_feet[0]->getActualPose(init_lf_foot_pose_ );
+            id_prob_->_feet[1]->getActualPose(init_rf_foot_pose_ );
+            id_prob_->_feet[2]->getActualPose(init_lh_foot_pose_ );
+            id_prob_->_feet[3]->getActualPose(init_rh_foot_pose_ );
+            id_prob_->_com->getActualPose(    init_com_position_);
 
         }
 
+        // Always track the com position
         id_prob_->_com->setReference(des_com_position_);
 
-        const double counts_per_wave = wave_period_ / period.toSec();
-        //const double angle = 2.0 * M_PI * (static_cast<double>(count_++)/counts_per_wave);
-        const double angle = 2.0 * M_PI * (2.0 * time_);
-        const double amp = 0.1;
-        const double z = amp/2.0 * (1 - std::cos(angle));
-
-        count_++;
-        if(count_ >= 5000)
+        if(traking_active_)
         {
-            // Set the targets for the solver
-            if(z >= (amp/10.0))
+            // Compute the periodic swing
+            const double angle = 2.0 * M_PI * (2.0 * time_);
+            const double amp = 0.1;
+            const double z = amp/2.0 * (1 - std::cos(angle));
+
+            // Set the contacts for the solver
+            if(z >= (amp/30.0))
             {
-                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector3d::Zero(); //LF
-                //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+6,3) = Eigen::Vector6d::Zero(); // RF
-                //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+12,3) = Eigen::Vector6d::Zero(); // LF
-                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+18,3) = Eigen::Vector3d::Zero(); // RH
+                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
+                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
             }
             else
             {
-                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector3d::Ones() * 2000; //LF
-                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+18,3) = Eigen::Vector3d::Ones() * 2000; // RH
+                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
+                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
             }
 
-            lb_ = - ub_;
-
-            id_prob_->_x_lims->setBounds(ub_,lb_);
-
+            // Fix the feet to an initial pose
             des_lf_foot_pose_ = init_lf_foot_pose_;
-            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z;
-
+            des_rf_foot_pose_ = init_rf_foot_pose_;
+            des_lh_foot_pose_ = init_lh_foot_pose_;
             des_rh_foot_pose_ = init_rh_foot_pose_;
+
+            // We swing only with two feet at time
+            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z;
             des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z;
 
-            if(traking_active_)
-            {
-                id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
-                //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
-                //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
-                id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
-            }
+            // Set the targets
+            id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
+            //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
+            //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
+            id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+
         }
+        // Solver Update
         id_prob_->update();
 
         // Solve ID
@@ -617,9 +607,26 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         tasks_actual_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
         tasks_actual_pose_rt_pub_->unlockAndPublish();
     }
+
+    if(tasks_desired_pose_rt_pub_->trylock())
+    {
+        TasksPoseMap::iterator it;
+        unsigned int idx = 0;
+        for(it = desired_tasks_pose_.begin(); it != desired_tasks_pose_.end(); it++)
+        {
+            tasks_actual_pose_rt_pub_->msg_.tasks_name[idx] = it->first;
+            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.x = it->second.translation().x();
+            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.y = it->second.translation().y();
+            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.z = it->second.translation().z();
+            //FIXME Missing orientation
+            idx++;
+        }
+        tasks_actual_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
+        tasks_actual_pose_rt_pub_->unlockAndPublish();
+    }
 }
 
-void Controller::setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg)
+/*void Controller::setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg)
 {
     TasksPoseMap* map_ptr = desired_tasks_pose_.readFromNonRT();
     Eigen::Affine3d tmp_affine;
@@ -646,7 +653,7 @@ void Controller::setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg)
     }
     else
         ROS_WARN("Can not set the desired tasks reference, the name vector has a different size from the pose vector.");
-}
+}*/
 
 void Controller::odomPublisher()
 {

@@ -10,6 +10,7 @@
 #include <OpenSoT/solvers/iHQP.h>
 #include <OpenSoT/utils/InverseDynamics.h>
 #include <OpenSoT/constraints/force/FrictionCone.h>
+#include <OpenSoT/constraints/force/WrenchLimits.h>
 
 namespace OpenSoT{
 
@@ -63,7 +64,9 @@ public:
     /**
      * @brief _x_lims some bounds
      */
-    constraints::GenericConstraint::Ptr _x_lims;
+    constraints::GenericConstraint::Ptr _qddot_lims;
+
+    constraints::force::WrenchesLimits::Ptr _wrenches_lims;
 
 private:
     /**
