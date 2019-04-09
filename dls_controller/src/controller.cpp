@@ -410,15 +410,12 @@ void Controller::updateXBotModel()
         id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
         id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
 
-        //if(tracking_active_)
-        //{
-            id_prob_->_com->getReference(com_position_);
-            desired_tasks_pose_["com"].translation() = com_position_;
-            id_prob_->_feet[0]->getReference(desired_tasks_pose_["lf_foot"]);
-            id_prob_->_feet[1]->getReference(desired_tasks_pose_["rf_foot"]);
-            id_prob_->_feet[2]->getReference(desired_tasks_pose_["lh_foot"]);
-            id_prob_->_feet[3]->getReference(desired_tasks_pose_["rh_foot"]);
-        //}
+        id_prob_->_com->getReference(com_position_);
+        desired_tasks_pose_["com"].translation() = com_position_;
+        id_prob_->_feet[0]->getReference(desired_tasks_pose_["lf_foot"]);
+        id_prob_->_feet[1]->getReference(desired_tasks_pose_["rf_foot"]);
+        id_prob_->_feet[2]->getReference(desired_tasks_pose_["lh_foot"]);
+        id_prob_->_feet[3]->getReference(desired_tasks_pose_["rh_foot"]);
     }
 
 }
@@ -489,16 +486,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             const double z = amp/2.0 * (1 - std::cos(angle));
 
             // Set the contacts for the solver
-            //if(z >= (amp/50.0))
-            //{
+            if(z >= (amp/50.0))
+            {
                 id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
                 //id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
-            //}
-            //else
-            //{
-            //    id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
+            }
+            else
+            {
+                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
                 //id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
-            //}
+            }
 
             // Fix the feet to an initial pose
             des_lf_foot_pose_ = init_lf_foot_pose_;
