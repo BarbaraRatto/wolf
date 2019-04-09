@@ -24,7 +24,7 @@ Controller::Controller()
     :solver_started_(false)
     ,gravity_compensation_(true)
     ,pid_active_(true)
-    ,traking_active_(false)
+    ,tracking_active_(false)
     ,stopping_(false)
 {
 }
@@ -212,6 +212,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[3] = "rh_foot";
 
     tasks_pose_["com"] = Eigen::Affine3d::Identity();
+    desired_tasks_pose_["com"] = Eigen::Affine3d::Identity();
     des_lf_foot_pose_ = tasks_pose_["lf_foot"] = desired_tasks_pose_["lf_foot"] = Eigen::Affine3d::Identity();
     des_rf_foot_pose_ = tasks_pose_["rf_foot"] = desired_tasks_pose_["rf_foot"] = Eigen::Affine3d::Identity();
     des_lh_foot_pose_ = tasks_pose_["lh_foot"] = desired_tasks_pose_["lh_foot"] = Eigen::Affine3d::Identity();
@@ -310,6 +311,7 @@ bool Controller::servicesManager(dls_controller::DlsControllerServices::Request 
         res.response = true;
     }
 
+
     return true;
 }
 
@@ -335,9 +337,9 @@ void Controller::toggleSolver()
 
 void Controller::toggleTracking()
 {
-    traking_active_=!traking_active_;
+    tracking_active_=!tracking_active_;
 
-    if(traking_active_)
+    if(tracking_active_)
         ROS_INFO("Tracking is ON");
     else
         ROS_INFO("Tracking is OFF");
@@ -408,12 +410,15 @@ void Controller::updateXBotModel()
         id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
         id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
 
-        id_prob_->_com->getReference(com_position_);
-        desired_tasks_pose_["com"].translation() = com_position_;
-        id_prob_->_feet[0]->getReference(desired_tasks_pose_["lf_foot"]);
-        id_prob_->_feet[1]->getReference(desired_tasks_pose_["rf_foot"]);
-        id_prob_->_feet[2]->getReference(desired_tasks_pose_["lh_foot"]);
-        id_prob_->_feet[3]->getReference(desired_tasks_pose_["rh_foot"]);
+        //if(tracking_active_)
+        //{
+            id_prob_->_com->getReference(com_position_);
+            desired_tasks_pose_["com"].translation() = com_position_;
+            id_prob_->_feet[0]->getReference(desired_tasks_pose_["lf_foot"]);
+            id_prob_->_feet[1]->getReference(desired_tasks_pose_["rf_foot"]);
+            id_prob_->_feet[2]->getReference(desired_tasks_pose_["lh_foot"]);
+            id_prob_->_feet[3]->getReference(desired_tasks_pose_["rh_foot"]);
+        //}
     }
 
 }
@@ -473,9 +478,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
 
         // Always track the com position
+        //des_com_position_ = init_com_position_;
         id_prob_->_com->setReference(des_com_position_);
 
-        if(traking_active_)
+        if(tracking_active_)
         {
             // Compute the periodic swing
             const double angle = 2.0 * M_PI * (2.0 * time_);
@@ -483,16 +489,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             const double z = amp/2.0 * (1 - std::cos(angle));
 
             // Set the contacts for the solver
-            if(z >= (amp/30.0))
-            {
+            //if(z >= (amp/50.0))
+            //{
                 id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
-                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
-            }
-            else
-            {
-                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
-                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
-            }
+                //id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
+            //}
+            //else
+            //{
+            //    id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
+                //id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
+            //}
 
             // Fix the feet to an initial pose
             des_lf_foot_pose_ = init_lf_foot_pose_;
@@ -508,9 +514,18 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
             //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
             //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
-            id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+            //id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
 
         }
+        else
+        {
+            id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
+            //id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
+
+            id_prob_->_feet[0]->setReference(init_lf_foot_pose_);
+            //id_prob_->_feet[3]->setReference(init_rh_foot_pose_);
+        }
+
         // Solver Update
         id_prob_->update();
 
@@ -614,15 +629,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         unsigned int idx = 0;
         for(it = desired_tasks_pose_.begin(); it != desired_tasks_pose_.end(); it++)
         {
-            tasks_actual_pose_rt_pub_->msg_.tasks_name[idx] = it->first;
-            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.x = it->second.translation().x();
-            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.y = it->second.translation().y();
-            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.z = it->second.translation().z();
+            tasks_desired_pose_rt_pub_->msg_.tasks_name[idx] = it->first;
+            tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.x = it->second.translation().x();
+            tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.y = it->second.translation().y();
+            tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.z = it->second.translation().z();
             //FIXME Missing orientation
             idx++;
         }
-        tasks_actual_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
-        tasks_actual_pose_rt_pub_->unlockAndPublish();
+        tasks_desired_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
+        tasks_desired_pose_rt_pub_->unlockAndPublish();
     }
 }
 

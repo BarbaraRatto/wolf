@@ -179,7 +179,7 @@ private:
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
     /** @brief Activate tracking */
-    std::atomic<bool> traking_active_;
+    std::atomic<bool> tracking_active_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS service server */
