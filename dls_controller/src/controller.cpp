@@ -17,6 +17,7 @@ using namespace Cartesian;
 namespace dls_controller {
 
 #define FLOATING_BASE_DOFS 6
+#define CONTROLLER_NAME "dls_controller"
 
 Controller::Controller()
     :solver_started_(false)
@@ -141,14 +142,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Create the ModelInterface from XBot
     XBot::ConfigOptions opt;
     std::string urdf, srdf, problem;
-    if(!controller_nh.getParam("robot_description",urdf))
+
+    if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
     {
-        ROS_ERROR("No robot_description given");
+        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"No robot_description given in namespace /");
         return false;
     }
-    if(!controller_nh.getParam("robot_description_semantic",srdf))
+    if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
     {
-        ROS_ERROR("No robot_description_semantic given");
+        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"No robot_semantic_description given in namespace /");
         return false;
     }
     if(!opt.set_urdf(urdf))
