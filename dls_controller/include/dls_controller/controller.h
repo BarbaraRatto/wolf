@@ -208,9 +208,15 @@ private:
     bool solver_reset_done_;
 
     // Hacky part
-    //Eigen::VectorXd lb_, ub_;
-    //unsigned long long count_ = 0;
-    //double wave_period_ = 0.5; // In secs.
+    Eigen::VectorXd lb_, ub_;
+    unsigned long long count_ = 0;
+    double wave_period_ = 0.5; // In secs.
+    Eigen::Affine3d init_lf_foot_pose_;
+    Eigen::Affine3d init_rf_foot_pose_;
+    Eigen::Affine3d init_lh_foot_pose_;
+    Eigen::Affine3d init_rh_foot_pose_;
+    Eigen::Vector3d init_com_position_;
+    double time_ = 0.0;
 
 
 

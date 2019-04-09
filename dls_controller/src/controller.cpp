@@ -277,11 +277,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
 
     // Spawn the odom publisher thread
-    //odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME It causes solver's failures, probably it is caused by the call to the robot model inside this thread.
-
-    // Load the bounds, to be modified in order to swing the feet
-    //lb_ = id_prob_->_x_lims->getLowerBound();
-    //ub_ = id_prob_->_x_lims->getUpperBound();
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     solver_reset_done_ = false;
 
@@ -423,14 +419,14 @@ void Controller::starting(const ros::Time& time)
     // 4) Virtual Model Update
     updateXBotModel();
 
-    // Set torques to 0 at the start
-    des_joint_efforts_.fill(0.0);
-
     ROS_DEBUG("Starting DLS Controller Completed");
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
+
+    time_ += period.toSec();
+
     // Read from the hardware interfaces:
     // 1) Joints
     readJoints();
@@ -442,11 +438,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     updateXBotModel();
 
     //des_joint_positions_ = qhome_;
-    //des_com_position_ << 0.0, 0.0, 0.6; //w.r.t to the world
+    //des_com_position_ << -0.05, -0.02, 0.5; //w.r.t to the world
+    des_com_position_ << 0.0, 0.0, 0.5; //w.r.t to the world
 
-    if(traking_active_)
+
+    if(traking_active_) // FIXME External references
     {
-        des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
+        //des_com_position_ = desired_tasks_pose_.readFromRT()->at("com").translation(); // Only translation needed
         des_lf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lf_foot");
         des_rf_foot_pose_ = desired_tasks_pose_.readFromRT()->at("rf_foot");
         des_lh_foot_pose_ = desired_tasks_pose_.readFromRT()->at("lh_foot");
@@ -466,39 +464,61 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             ROS_INFO("Reset the solver");
             id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),contact_links_)); // FIXME NO-RT
             solver_reset_done_ = true;
+
+            // Load the bounds, to be modified in order to swing the feet
+            lb_ = id_prob_->_x_lims->getLowerBound();
+            ub_ = id_prob_->_x_lims->getUpperBound();
+            // Set the initial feet poses
+            id_prob_->_feet[0]->getActualPose(            init_lf_foot_pose_ );
+            id_prob_->_feet[1]->getActualPose(            init_rf_foot_pose_ );
+            id_prob_->_feet[2]->getActualPose(            init_lh_foot_pose_ );
+            id_prob_->_feet[3]->getActualPose(            init_rh_foot_pose_ );
+            id_prob_->_com->getActualPose(                init_com_position_);
+
         }
 
-        //const double counts_per_wave = wave_period_ / period.toSec();
+        id_prob_->_com->setReference(des_com_position_);
+
+        const double counts_per_wave = wave_period_ / period.toSec();
         //const double angle = 2.0 * M_PI * (static_cast<double>(count_++)/counts_per_wave);
+        const double angle = 2.0 * M_PI * (2.0 * time_);
+        const double amp = 0.1;
+        const double z = amp/2.0 * (1 - std::cos(angle));
 
-        // Set the targets for the solver
-        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector6d::Zero(); //LF
-
-        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+6,3) = Eigen::Vector6d::Zero(); // RF
-
-        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+12,3) = Eigen::Vector6d::Zero(); // LF
-
-        //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+18,3) = Eigen::Vector6d::Zero(); // RH
-
-        //lb_ = - ub_;
-
-        //id_prob_->_x_lims->setBounds(ub_,lb_);
-
-        //des_lf_foot_pose_.translation().x() = 0.4435;
-        //des_lf_foot_pose_.translation().y() = 0.256;
-        //des_lf_foot_pose_.translation().z() = -0.02 + 0.6 * std::sin(angle);
-
-        /*des_rh_foot_pose_.translation().x() = -0.4435;
-        des_rh_foot_pose_.translation().y() = -0.256;
-        des_rh_foot_pose_.translation().z() = -0.02 + 0.6 * std::sin(angle);*/
-
-        if(traking_active_)
+        count_++;
+        if(count_ >= 5000)
         {
-            id_prob_->_com->setReference(des_com_position_);
-            //id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
-            //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
-            //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
-            //id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+            // Set the targets for the solver
+            if(z >= (amp/10.0))
+            {
+                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector3d::Zero(); //LF
+                //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+6,3) = Eigen::Vector6d::Zero(); // RF
+                //ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+12,3) = Eigen::Vector6d::Zero(); // LF
+                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+18,3) = Eigen::Vector3d::Zero(); // RH
+            }
+            else
+            {
+                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS,3) = Eigen::Vector3d::Ones() * 2000; //LF
+                ub_.segment(joint_states_.size()+FLOATING_BASE_DOFS+18,3) = Eigen::Vector3d::Ones() * 2000; // RH
+            }
+
+            lb_ = - ub_;
+
+            id_prob_->_x_lims->setBounds(ub_,lb_);
+
+            des_lf_foot_pose_ = init_lf_foot_pose_;
+            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z;
+
+            des_rh_foot_pose_ = init_rh_foot_pose_;
+            des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z;
+
+            if(traking_active_)
+            {
+                id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
+                //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
+                //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
+                id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+            }
         }
         id_prob_->update();
 
@@ -641,7 +661,9 @@ void Controller::odomPublisher()
     while(!stopping_)
     {
         // Get floating base
-        xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
+        // FIXME It causes solver's failures, probably it is caused by the call to the robot model inside this thread.
+        //xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
+        base_pose = floating_base_pose_; //FIXME No Thread safe
 
         // Do the inverse of it
         world_pose = base_pose.inverse();

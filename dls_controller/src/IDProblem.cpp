@@ -24,18 +24,18 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     {
         _feet[i] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(links_in_contact[i], *_model, links_in_contact[i],
                                                                                "world", _id->getJointsAccelerationAffine());
-        _feet[i]->setLambda(10.);
+        _feet[i]->setLambda(2000.);
     }
 
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
                                                                         "world", _id->getJointsAccelerationAffine());
-    _waist->setLambda(10.);
+    _waist->setLambda(100.);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
-    _postural->setLambda(10.);
+    _postural->setLambda(100.);
 
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
-    _com->setLambda(10.);
+    _com->setLambda(1000.);
 
 
     //
@@ -74,7 +74,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     std::list<unsigned int> idf = {0,1,2};
 
     _id_problem = ((_feet[0]%idf + _feet[1]%idf + _feet[2]%idf + _feet[3]%idf)/
-            (_com + _waist%idw)/
+            (_com%idc  + _waist%idw)/
             _postural)<<_x_lims<<_dynamics<<_friction_cones;
 
     _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);//, OpenSoT::solvers::solver_back_ends::eiQuadProg);
