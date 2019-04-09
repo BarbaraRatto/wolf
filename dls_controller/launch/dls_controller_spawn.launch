@@ -3,7 +3,7 @@
   <arg name="extra_controllers" default=""/>
 
   <!-- Load controller config -->
-  <rosparam command="load" file="$(find dls_controller)/config/params.yaml" ns="$(arg robot_name)"/>
+  <rosparam command="load" file="$(find dls_controller)/config/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
 
   <!-- Spawn controllers -->
   <node name="controller_spawner"
