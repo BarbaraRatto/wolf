@@ -1,12 +1,13 @@
 <launch>
   <arg name="robot_name" default="hyqreal"/>
+  <arg name="extra_controllers" default=""/>
 
   <!-- Load controller config -->
-  <rosparam command="load" file="$(find dls_controller)/config/params.yaml" ns="$(arg robot_name)"/>
+  <rosparam command="load" file="$(find dls_controller)/config/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
 
-  <!-- Spawn controller -->
+  <!-- Spawn controllers -->
   <node name="controller_spawner"
         ns="$(arg robot_name)"
         pkg="controller_manager" type="spawner" output="screen"
-        args="dls_controller joint_state_publisher" />
+        args="dls_controller $(arg extra_controllers)" />
 </launch>

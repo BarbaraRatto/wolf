@@ -1,0 +1,42 @@
+<launch>
+    <arg name="robot_name" default="hyqreal"/>
+    <arg name="problem" default="ik"/>
+    <arg name="sensors" default="false" />
+    <arg name="internal_wrench" default="false" />
+    <arg name="world_name" default="empty.world" />
+    <arg name="task_period" default="0.03" />
+
+    <!-- <param name="$(arg robot_name)/dls_controller/robot_description" textfile="$(find dls_controller)/robots/$(arg robot_name)/hyqreal.urdf"/> -->
+    <!-- <param name="$(arg robot_name)/dls_controller/robot_description_semantic" textfile="$(find dls_controller)/robots/$(arg robot_name)/hyqreal.srdf"/> -->
+
+    <!-- Load the robot description -->
+    <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
+        <arg name="sensors" value="$(arg sensors)" />
+        <arg name="internal_wrench" value="$(arg internal_wrench)" />
+        <arg name="world_name" value="$(arg world_name)" />
+        <arg name="task_period" value="$(arg task_period)" />
+    </include>
+
+    <!-- Loading the problem description for the solver from YAML file to parameter server -->
+    <param name="$(arg robot_name)/dls_controller/problem_description" textfile="$(find dls_controller)/problems/$(arg problem).yaml"/>
+    <!-- Loading joint states publisher configurations from YAML file to parameter server -->
+    <rosparam file="$(find dls_controller)/config/joint_state_publisher.yaml" ns="/$(arg robot_name)" command="load"/>
+
+    <!-- Spawn our controller and its friends -->
+    <include file="$(find dls_controller)/launch/dls_controller_spawn.launch">
+            <arg name="robot_name" value="$(arg robot_name)" />
+            <arg name="extra_controllers" value="joint_state_publisher" />
+    </include>
+
+    <!-- Convert joint states to TF transforms for rviz, etc -->
+    <node name="$(arg robot_name)_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
+        <remap from="/joint_states" to="/$(arg robot_name)/joint_states"/>
+    </node>
+
+    <!-- Same as above, but this time create TF transforms for the solver state estimation -->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="ci_state_publisher" >
+        <param name="tf_prefix" value="ci" type="str"/>
+        <remap from="/joint_states" to="/$(arg robot_name)/ci/joint_states" />
+    </node>
+
+</launch>

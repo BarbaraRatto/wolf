@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+<launch>
+	<arg name="sensors" default="true"/>
+        <arg name="task_period" default="0.004"/>
+
+	<!-- Load the sensors that measured the internal wrench in the joints -->
+	<arg name="internal_wrench" default="false"/>
+
+        <!-- send hyq urdf to param server -->
+        <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find hyq_description)/robots/hyq.urdf.xacro'
+        sensors:=$(arg sensors) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period)"/>
+
+        <!-- send hyq semantic description srdf to param server -->
+        <param name="robot_semantic_description" command="$(find xacro)/xacro --inorder '$(find hyq_description)/robots/hyq.srdf.xacro'" />
+
+</launch>
+
