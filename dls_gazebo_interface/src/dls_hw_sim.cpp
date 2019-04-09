@@ -174,9 +174,9 @@ namespace dls_gazebo_interface
         base_lin_vel_[2] = gzLinearVel.z;
 
         //gazebo::math::Vector3  gzLinearAcc = sim_model_->GetLink("base_link")->GetLinearAccel(); //not working
-        base_lin_acc_[0] = (base_lin_vel_[0] - base_lin_vel_old_[0])/0.001;
-        base_lin_acc_[1] = (base_lin_vel_[1] - base_lin_vel_old_[1])/0.001;
-        base_lin_acc_[2] = (base_lin_vel_[2] - base_lin_vel_old_[2])/0.001;
+        base_lin_acc_[0] = (base_lin_vel_[0] - base_lin_vel_old_[0])/period.toSec();
+        base_lin_acc_[1] = (base_lin_vel_[1] - base_lin_vel_old_[1])/period.toSec();
+        base_lin_acc_[2] = (base_lin_vel_[2] - base_lin_vel_old_[2])/period.toSec();
         base_lin_vel_old_[0] = base_lin_vel_[0];
         base_lin_vel_old_[1] = base_lin_vel_[1];
         base_lin_vel_old_[2] = base_lin_vel_[2];
@@ -187,9 +187,9 @@ namespace dls_gazebo_interface
         base_ang_vel_[2] = gzAngularVel.z;
 
         //gazebo::math::Vector3  gzAngularAcc = sim_model_->GetWorldAngularAccel(); //not working
-        base_ang_acc_[0] = (base_ang_vel_[0] - base_ang_vel_old_[0])/0.001;
-        base_ang_acc_[1] = (base_ang_vel_[1] - base_ang_vel_old_[1])/0.001;
-        base_ang_acc_[2] = (base_ang_vel_[2] - base_ang_vel_old_[2])/0.001;
+        base_ang_acc_[0] = (base_ang_vel_[0] - base_ang_vel_old_[0])/period.toSec();
+        base_ang_acc_[1] = (base_ang_vel_[1] - base_ang_vel_old_[1])/period.toSec();
+        base_ang_acc_[2] = (base_ang_vel_[2] - base_ang_vel_old_[2])/period.toSec();
         base_ang_vel_old_[0] = base_lin_vel_[0];
         base_ang_vel_old_[1] = base_lin_vel_[1];
         base_ang_vel_old_[2] = base_lin_vel_[2];
