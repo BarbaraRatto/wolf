@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 
 <robot name="hyqreal" xmlns:xacro="http://ros.org/wiki/xacro">
+<xacro:arg name="task_period" default="0.004"/>
 
 	<!-- This argument allows us to load joint sensors that measure the internal wrenches -->
 	<xacro:arg name="load_force_sensors" default="false"/>
@@ -22,8 +23,11 @@
           <xacro:include filename="$(find sensors_description)/urdfs/sensors/asus_xtion.urdf.xacro"/>
         </xacro:if>
 
-	<!-- Generic simulator_gazebo plugins for starting mechanism control, ros time -->
-	<xacro:include filename="$(find hyqreal_description)/gazebo/gazebo.urdf.xacro"/>
+
+        <!-- generic simulator_gazebo plugins for starting mechanism control, ros time -->
+        <xacro:include filename="$(find hyqreal_description)/gazebo/gazebo.urdf.xacro">
+             <xacro:arg name="task_period" value="$(arg task_period)"/>
+        </xacro:include>
 
 	<!-- Now we can start using the macros included above to define the actual hyqreal -->
 
