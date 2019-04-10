@@ -24,18 +24,18 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     {
         _feet[i] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(links_in_contact[i], *_model, links_in_contact[i],
                                                                                "world", _id->getJointsAccelerationAffine());
-        _feet[i]->setLambda(2000.);
+        _feet[i]->setLambda(1000.);
     }
     //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
                                                                         "world", _id->getJointsAccelerationAffine());
-    _waist->setLambda(1000.);
+    _waist->setLambda(500.);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
-    _postural->setLambda(1000.);
+    _postural->setLambda(10.);
     //   --------------------------
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
-    _com->setLambda(4000.);
+    _com->setLambda(500.);
 
 
     //
@@ -70,12 +70,13 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     std::list<unsigned int> idf = {0,1,2};
 
     _id_problem = ((_feet[0]%idf + _feet[1]%idf + _feet[2]%idf + _feet[3]%idf)/
-            (_com  + _waist%idw)/
-            _postural)<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+                  (_com +_waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
 
     _id_problem->update(Eigen::VectorXd(0));
 
-    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);//, OpenSoT::solvers::solver_back_ends::eiQuadProg);
+    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);
+                                                         //, OpenSoT::solvers::solver_back_ends::OSQP);
+                                                         //, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 
     _x.setZero(_id->getSerializer()->getSize());
 

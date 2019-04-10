@@ -129,6 +129,8 @@ private:
     Eigen::VectorXd des_joint_velocities_;
     /** @brief Desired joint efforts */
     Eigen::VectorXd des_joint_efforts_;
+    /** @brief Solver's solution (i.e. efforts) */
+    Eigen::VectorXd x_;
     /** @brief Desired feet poses: */
     Eigen::Affine3d des_lf_foot_pose_;
     Eigen::Affine3d des_lh_foot_pose_;

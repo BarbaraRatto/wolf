@@ -232,6 +232,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     des_joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     des_joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    x_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -242,6 +243,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.fill(0.0);
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
+    x_.fill(0.0);
     des_com_position_.fill(0.0);
     floating_base_position_ = Eigen::Vector3d::Zero();
     floating_base_orientation_.normalize();
@@ -527,10 +529,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->update();
 
         // Solve ID
-        if(!id_prob_->solve(des_joint_efforts_))
+        x_ = des_joint_efforts_; // Store the old desired efforts, to apply in case the solver gets mad
+        if(!id_prob_->solve(x_))
         {
             ROS_ERROR("OpenSoT::IDProblem: unable to solve");
         }
+        else
+            des_joint_efforts_ = x_;
 
         pid_active_ = false;
     }
