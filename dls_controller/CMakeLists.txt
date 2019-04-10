@@ -14,12 +14,15 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools geometry_msgs sensor_msgs nav_msgs message_generation)
+find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(XCM REQUIRED)
 find_package(cartesian_interface REQUIRED)
 
+generate_dynamic_reconfigure_options(
+  cfg/dls_controller.cfg
+)
 
 add_service_files(FILES
   DlsControllerServices.srv)
@@ -52,7 +55,8 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/IDProblem.cpp)
-add_dependencies(${PROJECT_NAME} ${dls_controller_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME} ${dls_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
+
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/

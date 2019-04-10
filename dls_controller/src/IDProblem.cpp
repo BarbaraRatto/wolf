@@ -29,13 +29,13 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
                                                                         "world", _id->getJointsAccelerationAffine());
-    _waist->setLambda(500.);
+    _waist->setLambda(400.);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
     _postural->setLambda(10.);
     //   --------------------------
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
-    _com->setLambda(500.);
+    _com->setLambda(800.);
 
 
     //
@@ -74,7 +74,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
     _id_problem->update(Eigen::VectorXd(0));
 
-    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6);
+    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e4); //, 1e6);
                                                          //, OpenSoT::solvers::solver_back_ends::OSQP);
                                                          //, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 

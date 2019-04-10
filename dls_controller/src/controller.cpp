@@ -22,7 +22,6 @@ namespace dls_controller {
 
 Controller::Controller()
     :solver_started_(false)
-    ,gravity_compensation_(true)
     ,pid_active_(true)
     ,tracking_active_(false)
     ,stopping_(false)
@@ -37,6 +36,8 @@ Controller::~Controller()
         delete state_estimation_rt_pub_;
     if(tasks_actual_pose_rt_pub_)
       delete tasks_actual_pose_rt_pub_;
+    if(server_)
+      delete server_;
 }
 
 bool Controller::init(hardware_interface::RobotHW* robot_hw,
@@ -250,6 +251,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_velocity_ = Eigen::Vector6d::Zero();
     floating_base_accelleration_ = Eigen::Vector6d::Zero();
     floating_base_pose_ = Eigen::Affine3d::Identity();
+    contact_threshold_ = 0.03;
+    swing_frequency_ = 1.5;
 
     // Create the realtime publishers
     ci_joint_states_rt_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
@@ -283,91 +286,119 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Reference for the tasks
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
 
-    // Rosservice
-    ss_ = controller_nh.advertiseService("servicesManager", &Controller::servicesManager, this); //FIXME it should be moved to a dedicated interface
-
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     solver_reset_done_ = false;
 
-    return true;
-}
-
-bool Controller::servicesManager(dls_controller::DlsControllerServices::Request &req,
-                                 dls_controller::DlsControllerServices::Response &res) // FIXME automatize that function with a list
-{
-    if(std::strcmp(req.command.c_str(), "toggleSolver") == 0)
-    {
-        toggleSolver();
-        res.response = true;
-    }
-    if(std::strcmp(req.command.c_str(), "togglePid") == 0)
-    {
-        togglePid();
-        res.response = true;
-    }
-    if(std::strcmp(req.command.c_str(), "toggleTracking") == 0)
-    {
-        toggleTracking();
-        res.response = true;
-    }
-    if(std::strcmp(req.command.c_str(), "setLambda") == 0)
-    {
-        if(setLambda(req.data))
-            res.response = true;
-        else
-            res.response = false;
-    }
+    // Set the callback for the dynamic reconfigure server
+    server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
+    server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
     return true;
 }
 
-bool Controller::setLambda(const std::string& input)
+void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level)
 {
-    std::string delimiter = ":";
-    std::string task_name;
-    std::string gain_value;
-    if(input.empty())
+    switch(level)
     {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: no input given! Syntax: 'task_name:gain_value'");
+        case 0:
+            toggleSolver();
+            break;
+        case 1:
+            toggleTracking();
+            break;
+        case 2:
+            togglePid();
+            break;
+        case 3:
+            setSwingFreq(config.swing_frequency);
+            break;
+        case 4:
+            setContactThreshold(config.contact_threshold);
+            break;
+        case 5:
+            setLambda("lf_foot",config.lf_foot_lambda);
+            setLambda("rf_foot",config.rf_foot_lambda);
+            setLambda("lh_foot",config.lh_foot_lambda);
+            setLambda("rh_foot",config.rh_foot_lambda);
+            setLambda("com",config.com_lambda);
+            setLambda("waist",config.waist_lambda);
+            break;
+        default:
+            break;
+    }
+}
+
+bool Controller::setContactThreshold(const double contact_threshold)
+{
+
+     if(contact_threshold>=0.0)
+     {
+         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setContactThreshold: set the contact threshold to "<<contact_threshold);
+         contact_threshold_ = contact_threshold;
+         return true;
+     }
+     else
+     {
+         ROS_WARN_NAMED(CONTROLLER_NAME,"setContactThreshold: contact_threshold has to be positive or 0!");
+         return false;
+     }
+
+}
+
+bool Controller::setSwingFreq(const double swing_frequency)
+{
+
+     if(swing_frequency>=0.0)
+     {
+         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setSwingFreq: set the swing frequency to "<<swing_frequency);
+         swing_frequency_ = swing_frequency;
+         return true;
+     }
+     else
+     {
+         ROS_WARN_NAMED(CONTROLLER_NAME,"setSwingFreq: swing_frequency has to be positive or 0!");
+         return false;
+     }
+}
+
+bool Controller::setLambda(const std::string& task_name, const double lambda_value)
+{
+
+    if(task_name.empty())
+    {
+        ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: no task_name given!");
         return false;
     }
 
     if(id_prob_)
     {
-        size_t idx = input.find(delimiter);
-        task_name = input.substr(0,idx);
-        gain_value = input.substr(idx+delimiter.length());
-
-
-        double gain = std::stod(gain_value);
-
-        if(gain>0.0)
+        if(lambda_value>0.0)
         {
             // FIXME hardcoded like there is no tomorrow
             if(task_name == "com")
-                id_prob_->_com->setLambda(gain);
+                id_prob_->_com->setLambda(lambda_value);
             else if(task_name == "waist")
-                id_prob_->_waist->setLambda(gain);
+                id_prob_->_waist->setLambda(lambda_value);
             else if(task_name == "lf_foot")
-                id_prob_->_feet[0]->setLambda(gain);
+                id_prob_->_feet[0]->setLambda(lambda_value);
             else if(task_name == "rf_foot")
-                id_prob_->_feet[1]->setLambda(gain);
+                id_prob_->_feet[1]->setLambda(lambda_value);
             else if(task_name == "lh_foot")
-                id_prob_->_feet[2]->setLambda(gain);
+                id_prob_->_feet[2]->setLambda(lambda_value);
             else if(task_name == "rh_foot")
-                id_prob_->_feet[3]->setLambda(gain);
+                id_prob_->_feet[3]->setLambda(lambda_value);
             else
             {
                 ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: the selected task does not exist!");
                 return false;
             }
-            ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setLambda: set "<<task_name<<" to lambda "<<gain_value);
+            ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setLambda: set "<<task_name<<" to lambda "<<lambda_value);
         }
         else
         {
-            ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: gain_value has to be positive!");
+            ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: lambda_value has to be positive!");
             return false;
         }
     }
@@ -545,14 +576,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             // Compute the periodic swing
             time_ += period.toSec();
-            const double angle = 2.0 * M_PI * (1.5 * time_);
+            const double angle = 2.0 * M_PI * (swing_frequency_ * time_);
             const double amp = 0.1;
             const double z_lf_rh = amp/2.0 * (1 - std::cos(angle));
             const double z_rf_lh = amp/2.0 * (1 - std::cos(angle+M_PI));
-            const double touch_down_amp = amp/3.0;
 
             // Set the contacts for the solver
-            if(z_lf_rh >= touch_down_amp)
+            if(z_lf_rh >= contact_threshold_)
             {
                 id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
                 id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);

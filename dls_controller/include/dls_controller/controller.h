@@ -10,6 +10,8 @@
 #include <dls_controller/DlsControllerServices.h>
 #include <dls_controller/TasksPose.h>
 #include <realtime_tools/realtime_buffer.h>
+#include <dynamic_reconfigure/server.h>
+#include <dls_controller/DlsControllerConfig.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // Ros control
@@ -79,10 +81,9 @@ public:
     void setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg);
 
     /**
-         * @brief Manage the ros services
+         * @brief Ros dynamic reconfigure callback
          */
-    bool servicesManager(dls_controller::DlsControllerServices::Request &req,
-                         dls_controller::DlsControllerServices::Response &res);
+    void dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level);
 
     /**
          * @brief Start/Stop solver integration
@@ -101,9 +102,22 @@ public:
 
     /**
          * @brief Set the lambda gains of the tasks
-         * @param std::string& input 'task_name:value'
+         * @param const std::string& task_name
+         * @param const double lambda_value
          */
-    bool setLambda(const std::string& input);
+    bool setLambda(const std::string& task_name, const double lambda_value);
+
+    /**
+         * @brief Set the contact threshold for the feet
+         * @param const double contact_threshold
+         */
+    bool setContactThreshold(const double contact_threshold);
+
+    /**
+         * @brief Set the swing frequency for the feet
+         * @param const double swing_frequency
+         */
+    bool setSwingFreq(const double swing_frequency);
 
 private:
 
@@ -156,8 +170,6 @@ private:
     realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_desired_pose_rt_pub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
-    /** @brief Ros subscriber for the limbs pose reference */
-    ros::Subscriber limbs_ref_sub_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */
@@ -182,16 +194,14 @@ private:
     //realtime_tools::RealtimeBuffer<TasksPoseMap> desired_tasks_pose_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
-    /** @brief Activate gravity compensation */
-    std::atomic<bool> gravity_compensation_;
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
     /** @brief Activate tracking */
     std::atomic<bool> tracking_active_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
-    /** @brief ROS service server */
-    ros::ServiceServer ss_;
+    /** @brief ROS dynamic reconfigure */
+    dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>* server_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
@@ -217,15 +227,15 @@ private:
 
     bool solver_reset_done_;
 
-    // Hacky part
+    // Swing related part
     Eigen::Affine3d init_lf_foot_pose_;
     Eigen::Affine3d init_rf_foot_pose_;
     Eigen::Affine3d init_lh_foot_pose_;
     Eigen::Affine3d init_rh_foot_pose_;
     Eigen::Vector3d init_com_position_;
     double time_ = 0.0;
-
-
+    double contact_threshold_;
+    double swing_frequency_;
 
     /**
          * @brief thread body for the odometry publisher
