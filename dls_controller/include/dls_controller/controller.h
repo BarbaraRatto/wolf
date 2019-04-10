@@ -99,6 +99,12 @@ public:
          */
     void toggleTracking();
 
+    /**
+         * @brief Set the lambda gains of the tasks
+         * @param std::string& input 'task_name:value'
+         */
+    bool setLambda(const std::string& input);
+
 private:
 
     /** @brief Number of joints */

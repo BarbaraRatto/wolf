@@ -312,7 +312,70 @@ bool Controller::servicesManager(dls_controller::DlsControllerServices::Request 
         toggleTracking();
         res.response = true;
     }
+    if(std::strcmp(req.command.c_str(), "setLambda") == 0)
+    {
+        if(setLambda(req.data))
+            res.response = true;
+        else
+            res.response = false;
+    }
 
+    return true;
+}
+
+bool Controller::setLambda(const std::string& input)
+{
+    std::string delimiter = ":";
+    std::string task_name;
+    std::string gain_value;
+    if(input.empty())
+    {
+        ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: no input given! Syntax: 'task_name:gain_value'");
+        return false;
+    }
+
+    if(id_prob_)
+    {
+        size_t idx = input.find(delimiter);
+        task_name = input.substr(0,idx);
+        gain_value = input.substr(idx+delimiter.length());
+
+
+        double gain = std::stod(gain_value);
+
+        if(gain>0.0)
+        {
+            // FIXME hardcoded like there is no tomorrow
+            if(task_name == "com")
+                id_prob_->_com->setLambda(gain);
+            else if(task_name == "waist")
+                id_prob_->_waist->setLambda(gain);
+            else if(task_name == "lf_foot")
+                id_prob_->_feet[0]->setLambda(gain);
+            else if(task_name == "rf_foot")
+                id_prob_->_feet[1]->setLambda(gain);
+            else if(task_name == "lh_foot")
+                id_prob_->_feet[2]->setLambda(gain);
+            else if(task_name == "rh_foot")
+                id_prob_->_feet[3]->setLambda(gain);
+            else
+            {
+                ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: the selected task does not exist!");
+                return false;
+            }
+            ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setLambda: set "<<task_name<<" to lambda "<<gain_value);
+        }
+        else
+        {
+            ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: gain_value has to be positive!");
+            return false;
+        }
+    }
+    else
+    {
+        ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: problem not initialized yet! Did you toggleSolver first?");
+        return false;
+    }
 
     return true;
 }
