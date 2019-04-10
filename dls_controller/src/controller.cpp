@@ -505,8 +505,6 @@ void Controller::starting(const ros::Time& time)
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
 
-    time_ += period.toSec();
-
     // Read from the hardware interfaces:
     // 1) Joints
     readJoints();
@@ -546,20 +544,29 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(tracking_active_)
         {
             // Compute the periodic swing
-            const double angle = 2.0 * M_PI * (2.0 * time_);
+            time_ += period.toSec();
+            const double angle = 2.0 * M_PI * (1.5 * time_);
             const double amp = 0.1;
-            const double z = amp/2.0 * (1 - std::cos(angle));
+            const double z_lf_rh = amp/2.0 * (1 - std::cos(angle));
+            const double z_rf_lh = amp/2.0 * (1 - std::cos(angle+M_PI));
+            const double touch_down_amp = amp/3.0;
 
             // Set the contacts for the solver
-            if(z >= (amp/3.0)) //5.0
+            if(z_lf_rh >= touch_down_amp)
             {
                 id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
                 id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
+
+                id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
+                id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
             }
             else
             {
                 id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
                 id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
+
+                id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(true);
+                id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(true);
             }
 
             // Fix the feet to an initial pose
@@ -568,14 +575,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             des_lh_foot_pose_ = init_lh_foot_pose_;
             des_rh_foot_pose_ = init_rh_foot_pose_;
 
-            // We swing only with two feet at time
-            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z;
-            des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z;
+            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z_lf_rh;
+            des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z_lf_rh;
+            des_rf_foot_pose_.translation().z() = des_rf_foot_pose_.translation().z() + z_rf_lh;
+            des_lh_foot_pose_.translation().z() = des_lh_foot_pose_.translation().z() + z_rf_lh;
 
-            // Set the targets
+            // Set the targets for the feet
             id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
-            //id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
-            //id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
+            id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
+            id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
             id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
 
         }
