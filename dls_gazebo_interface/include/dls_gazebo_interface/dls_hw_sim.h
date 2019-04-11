@@ -72,10 +72,7 @@ public:
 private:
 
   std::shared_ptr<gazebo::sensors::ImuSensor> imu_sensor_;
-  std::vector<std::shared_ptr<gazebo::sensors::ContactSensor> > foot_sensors_;
-  std::vector<std::shared_ptr<gazebo::sensors::ContactSensor> > shin_sensor_;
-  //hardware_interface::ShinSensorInterface shin_sensor_interface_;
-  //std::deque<bool> shin_contact_position_;
+  std::vector<std::shared_ptr<gazebo::sensors::ContactSensor> > contact_sensors_;
 
   std::vector<gazebo::physics::JointPtr> sim_joints_;
   gazebo::physics::ModelPtr sim_model_;

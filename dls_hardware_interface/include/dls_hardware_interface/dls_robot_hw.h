@@ -8,7 +8,7 @@
 #include <dls_hardware_interface/ground_truth_interface.h>
 #include <dls_hardware_interface/joint_command_adv_interface.h>
 #include <dls_hardware_interface/joint_state_adv_interface.h>
-#include <dls_hardware_interface/shin_sensor_interface.h>
+#include <dls_hardware_interface/contact_switch_sensor_interface.h>
 #include <hardware_interface/force_torque_sensor_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <transmission_interface/transmission_info.h>
@@ -41,10 +41,12 @@ protected:
     hardware_interface::JointCommandAdvInterface joint_interface_;
     hardware_interface::ImuSensorInterface imu_sensor_interface_;
     hardware_interface::GroundTruthInterface ground_truth_interface_;
+    hardware_interface::ContactSwitchSensorInterface contact_sensor_interface_;
     //hardware_interface::StateEstimation test_; // FIXME it would be cool
 
     unsigned int n_dof_;
     std::vector<std::string> joint_names_;
+    std::vector<std::string> contact_sensor_names_;
     std::vector<int> joint_types_;
     std::vector<double> joint_lower_limits_;
     std::vector<double> joint_upper_limits_;
@@ -80,6 +82,9 @@ protected:
     std::vector<std::string> leg_name_;
     std::vector<std::vector<double> > force_;
     std::vector<std::vector<double> > torque_;
+    std::vector<std::vector<double> > normal_;
+    std::deque<bool> contact_;
+
 
 private:
 

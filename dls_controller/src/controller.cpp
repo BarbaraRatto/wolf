@@ -52,6 +52,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
     hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
+    hardware_interface::ContactSwitchSensorInterface* cont_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
 
     if(!jt_hw)
     {
@@ -63,25 +64,36 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR("hardware_interface::ImuSensorInterface not found");
         return false;
     }
-
+    if(!gt_hw)
+    {
+        ROS_ERROR("hardware_interface::GroundTruthInterface not found");
+        return false;
+    }
+    if(!cont_hw)
+    {
+        ROS_ERROR("hardware_interface::ContactSwitchSensorInterface not found");
+        return false;
+    }
     if (!controller_nh.getParam("joints", joint_names_))
     {
         ROS_ERROR("No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
-
     if (!controller_nh.getParam("imu_sensors", imu_names_))
     {
         ROS_ERROR("No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
-
     if (!controller_nh.getParam("state_estimators", state_estimator_names_))
     {
         ROS_ERROR("No state_estimators given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
-
+    if (!controller_nh.getParam("contact_sensors", contact_sensor_names_))
+    {
+        ROS_ERROR("No contact_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        return false;
+    }
     // Setting up handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
     {
@@ -127,6 +139,20 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
             return false;
         }
     }
+    for (unsigned int i = 0; i < contact_sensor_names_.size(); i++)
+    {
+        try
+        {
+            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[i]);
+            contact_sensors_.push_back(cont_hw->getHandle(contact_sensor_names_[i]));
+        }
+        catch(...)
+        {
+            ROS_ERROR("Error loading contact_sensors_");
+            return false;
+        }
+    }
+    assert(contact_sensors_.size()>0);
 
     des_joint_p_gain_.resize(joint_states_.size());
     des_joint_i_gain_.resize(joint_states_.size());
@@ -545,6 +571,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     stateEstimation();
     // 4) Virtual Model Update
     updateXBotModel();
+
+    /*int cnt = 0;
+    for(unsigned int i = 0; i < contact_sensors_.size(); i++)
+        if(!*contact_sensors_[i].getContactState())
+            cnt++;
+    if(cnt == 4)
+         ROS_INFO("I am Flying!");*/
 
     // Set Default values
     //des_com_position_ << -0.05, -0.02, 0.5; //w.r.t to the world

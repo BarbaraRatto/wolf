@@ -5,6 +5,8 @@
 
 PLUGINLIB_EXPORT_CLASS(dls_gazebo_interface::DlsRobotHwSim, gazebo_ros_control::RobotHWSim)
 
+#define HW_NAME "dls_hw_sim"
+
 namespace dls_gazebo_interface
 {
 
@@ -17,39 +19,46 @@ namespace dls_gazebo_interface
                                 std::vector<transmission_interface::TransmissionInfo> transmissions)
     {
 
+        const auto& sensor_manager  = gazebo::sensors::SensorManager::Instance();
+
         std::vector<std::string> joint_names(transmissions.size());
         // Initialize values from the transmission interface i.e. by using actuated joints (no floating base).
-        for (unsigned int j=0; j < transmissions.size(); j++) {
+        for (unsigned int j=0; j < transmissions.size(); j++)
+        {
             // Check that this transmission has one joint
-            if (transmissions[j].joints_.size() == 0) {
-                    ROS_WARN_STREAM_NAMED("dls_hw_sim","Transmission " << transmissions[j].name_
-                                    << " has no associated joints.");
-                    continue;
-            } else if (transmissions[j].joints_.size() > 1) {
-                    ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
-                                    << " has more than one joint. Currently the default robot hardware simulation "
-                                    << " interface only supports one.");
-                    continue;
+            if (transmissions[j].joints_.size() == 0)
+            {
+                ROS_WARN_STREAM_NAMED(HW_NAME,"Transmission " << transmissions[j].name_
+                                      << " has no associated joints.");
+                continue;
             }
-
+            else if (transmissions[j].joints_.size() > 1)
+            {
+                ROS_WARN_STREAM_NAMED(HW_NAME,"Transmission " << transmissions[j].name_
+                                      << " has more than one joint. Currently the default robot hardware simulation "
+                                      << " interface only supports one.");
+                continue;
+            }
             // Check that this transmission has one actuator
-            if (transmissions[j].actuators_.size() == 0) {
-                    ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
-                                    << " has no associated actuators.");
-                    continue;
-            } else if (transmissions[j].actuators_.size() > 1) {
-                    ROS_WARN_STREAM_NAMED("dls_robot_hw_sim","Transmission " << transmissions[j].name_
-                                    << " has more than one actuator. Currently the default robot hardware simulation "
-                                    << " interface only supports one.");
-                    continue;
+            if (transmissions[j].actuators_.size() == 0)
+            {
+                ROS_WARN_STREAM_NAMED(HW_NAME,"Transmission " << transmissions[j].name_
+                                      << " has no associated actuators.");
+                continue;
             }
-
+            else if (transmissions[j].actuators_.size() > 1)
+            {
+                ROS_WARN_STREAM_NAMED(HW_NAME,"Transmission " << transmissions[j].name_
+                                      << " has more than one actuator. Currently the default robot hardware simulation "
+                                      << " interface only supports one.");
+                continue;
+            }
             joint_names[j] = transmissions[j].joints_[0].name_;
         }
 
         if(!DlsRobotHwInterface::initializeInterfaces(joint_names))
         {
-            ROS_ERROR_NAMED("dls_hw_sim","Initialization of DlsRobotHwInterface failed.");
+            ROS_ERROR_NAMED(HW_NAME,"Initialization of DlsRobotHwInterface failed.");
             return false;
         }
 
@@ -58,9 +67,10 @@ namespace dls_gazebo_interface
         for (unsigned int j=0; j < n_dof_; j++) {
 
             gazebo::physics::JointPtr joint = parent_model->GetJoint(joint_names_[j]);
-            if (!joint) {
-                ROS_ERROR_STREAM("This robot has a joint named \"" << joint_names_[j]
-                                 << "\" which is not in the gazebo model.");
+            if (!joint)
+            {
+                ROS_ERROR_STREAM_NAMED(HW_NAME,"This robot has a joint named \"" << joint_names_[j]
+                                       << "\" which is not in the gazebo model.");
                 return false;
             }
 
@@ -76,21 +86,21 @@ namespace dls_gazebo_interface
         robot_name_ = sim_model_->GetName();
 
         // Hardware interfaces: Base IMU sensors
-        imu_sensor_ = std::dynamic_pointer_cast<gazebo::sensors::ImuSensor>
-                (gazebo::sensors::SensorManager::Instance()->GetSensor("trunk_imu"));
-        if (!this->imu_sensor_) 	{
-            ROS_ERROR_STREAM("Could not find base IMU sensor.");
+        imu_sensor_ = std::dynamic_pointer_cast<gazebo::sensors::ImuSensor>(sensor_manager->GetSensor("trunk_imu"));
+        if (!this->imu_sensor_)
+            ROS_ERROR_NAMED(HW_NAME,"Could not find base IMU sensor.");
+
+        // Hardware interfaces: Contact sensors
+        for(unsigned int i=0; i < contact_sensor_names_.size(); i++)
+        {
+            contact_sensors_.push_back(std::dynamic_pointer_cast<gazebo::sensors::ContactSensor>(sensor_manager->GetSensor(contact_sensor_names_[i])));
+            if(!this->contact_sensors_.back())
+                ROS_ERROR_STREAM_NAMED(HW_NAME,"Could not find "<< contact_sensor_names_[i] <<" .");
         }
 
+        // Freeze base service
         ss_ = model_nh.advertiseService("freeze_base", &DlsRobotHwSim::freezeBase, this); //FIXME it should be moved to a dedicated interface
         freeze_base_sim_ = false;
-
-        // Register interfaces
-        registerInterface(&joint_state_adv_interface_);
-        registerInterface(&joint_state_interface_);
-        registerInterface(&joint_interface_);
-        registerInterface(&imu_sensor_interface_);
-        registerInterface(&ground_truth_interface_);
 
         registerInterfaces();
 
@@ -107,6 +117,7 @@ namespace dls_gazebo_interface
             registerInterface(&joint_interface_);
             registerInterface(&imu_sensor_interface_);
             registerInterface(&ground_truth_interface_);
+            registerInterface(&contact_sensor_interface_);
         }
         return true;
     }
@@ -117,10 +128,10 @@ namespace dls_gazebo_interface
         freeze_base_sim_ = !freeze_base_sim_;
         if(freeze_base_sim_)
         {
-                ROS_INFO("Freeze Base on!");
-                sim_model_->SetWorldPose(inital_pose);
+            ROS_INFO("Freeze Base on!");
+            sim_model_->SetWorldPose(inital_pose);
         }else{
-                ROS_INFO("Freeze Base off!");
+            ROS_INFO("Freeze Base off!");
         }
         sim_model_->SetGravityMode(!freeze_base_sim_);
 
@@ -202,6 +213,58 @@ namespace dls_gazebo_interface
         base_orientation_[1] = gzPose.rot.x;
         base_orientation_[2] = gzPose.rot.y;
         base_orientation_[3] = gzPose.rot.z;
+
+        // FIXME We need the lowerleg links for the transfrom from the feet
+        if(contact_sensors_.size() == 4) // We assume we are working only with the feet
+        {
+            std::vector<gazebo::physics::LinkPtr> lowerleg_link(4);
+            lowerleg_link[0] = sim_model_->GetLink("lf_lowerleg");
+            lowerleg_link[1] = sim_model_->GetLink("rf_lowerleg");
+            lowerleg_link[2] = sim_model_->GetLink("lh_lowerleg");
+            lowerleg_link[3] = sim_model_->GetLink("rh_lowerleg");
+
+            // Fill the contact sensors reading
+            for (unsigned int i = 0; i < contact_sensors_.size(); i++)
+            {
+                gazebo::msgs::Contacts contacts;
+                contacts = contact_sensors_[i]->Contacts();
+
+                if (contacts.contact_size()>=1)
+                {
+                    contact_[i] = true;
+                    //FIXME the wrench is in the last link where the foot is lumped that is the lowerleg! so it is expressed in the lowerleg
+                    //map from lowerleg frame to world
+                    gazebo::math::Pose link_pose = lowerleg_link[i]->GetWorldPose();
+                    gazebo::math::Vector3 forceW = link_pose.rot.RotateVector(
+                    gazebo::math::Vector3(contacts.contact(0).wrench(0).body_1_wrench().force().x(),
+                                          contacts.contact(0).wrench(0).body_1_wrench().force().y(),
+                                          contacts.contact(0).wrench(0).body_1_wrench().force().z()));
+
+                    // These forces are in the world frame!
+                    force_[i][0] = forceW.x;
+                    force_[i][1] = forceW.y;
+                    force_[i][2] = forceW.z;
+                    // The normal is expressed in the world frame!
+                    normal_[i][0]  = contacts.contact(0).normal(0).x();
+                    normal_[i][1]  = contacts.contact(0).normal(0).y();
+                    normal_[i][2]  = contacts.contact(0).normal(0).z();
+                }
+                else
+                {
+                    contact_[i] = false;
+                    force_[i][0]=0.0;
+                    force_[i][1]=0.0;
+                    force_[i][2]=0.0;
+                    normal_[i][0]  = 0.0;
+                    normal_[i][1]  = 0.0;
+                    normal_[i][2]  = 0.0;
+                }
+
+
+            }
+
+        }
+
     }
 
 
@@ -213,11 +276,11 @@ namespace dls_gazebo_interface
             sim_model_->SetWorldPose(inital_pose);
             gazebo::physics::LinkPtr base_link = sim_model_->GetLink("base_link");
             if(base_link != NULL){
-                    //Set velocities and accelerations only for the base link:
-                    base_link->SetLinearVel(gazebo::math::Vector3::Zero);
-                    base_link->SetLinearAccel(gazebo::math::Vector3::Zero);
-                    base_link->SetAngularVel(gazebo::math::Vector3::Zero);
-                    base_link->SetAngularAccel(gazebo::math::Vector3::Zero);
+                //Set velocities and accelerations only for the base link:
+                base_link->SetLinearVel(gazebo::math::Vector3::Zero);
+                base_link->SetLinearAccel(gazebo::math::Vector3::Zero);
+                base_link->SetAngularVel(gazebo::math::Vector3::Zero);
+                base_link->SetAngularAccel(gazebo::math::Vector3::Zero);
             }
         }
 
