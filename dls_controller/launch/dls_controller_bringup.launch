@@ -28,6 +28,10 @@
             <arg name="extra_controllers" value="joint_state_publisher" />
     </include>
 
+    <!-- rqt_reconfigure gui -->
+    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="gui">
+    </node>
+
     <!-- Convert joint states to TF transforms for rviz, etc -->
     <node name="$(arg robot_name)_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
         <remap from="/joint_states" to="/$(arg robot_name)/joint_states"/>
