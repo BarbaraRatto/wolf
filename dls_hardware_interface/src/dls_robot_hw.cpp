@@ -101,6 +101,29 @@ bool DlsRobotHwInterface::initializeInterfaces(const std::vector<std::string>& j
     gtData.linear_velocity = &base_lin_vel_[0];
     ground_truth_interface_.registerHandle(hardware_interface::GroundTruthHandle(gtData));
 
+    contact_sensor_names_.resize(4); // TODO: Fetch from elsewhere?
+    contact_sensor_names_[0] = "lf_foot_contact_sensor";
+    contact_sensor_names_[1] = "rf_foot_contact_sensor";
+    contact_sensor_names_[2] = "lh_foot_contact_sensor";
+    contact_sensor_names_[3] = "rh_foot_contact_sensor";
+    /*contact_sensor_names_[4] = "lf_shin_contact_sensor";
+    contact_sensor_names_[5] = "rf_shin_contact_sensor";
+    contact_sensor_names_[6] = "lh_shin_contact_sensor";
+    contact_sensor_names_[7] = "rh_shin_contact_sensor";*/
+    // Create the handle for each contact sensor,
+    contact_.resize(contact_sensor_names_.size());
+    force_.resize(contact_sensor_names_.size());
+    torque_.resize(contact_sensor_names_.size());
+    normal_.resize(contact_sensor_names_.size());
+    for (unsigned int i = 0; i < contact_sensor_names_.size(); i++)
+    {
+        contact_[i] = false;
+        force_[i].resize(3,0);
+        torque_[i].resize(3,0);
+        normal_[i].resize(3,0);
+        contact_sensor_interface_.registerHandle(hardware_interface::ContactSwitchSensorHandle(contact_sensor_names_[i], &contact_[i], &force_[i][0], &torque_[i][0], &normal_[i][0]));
+    }
+
     initialized_ = true;
 
     return true;

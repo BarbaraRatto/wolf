@@ -572,12 +572,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 4) Virtual Model Update
     updateXBotModel();
 
-    /*int cnt = 0;
+    int cnt = 0;
     for(unsigned int i = 0; i < contact_sensors_.size(); i++)
         if(!*contact_sensors_[i].getContactState())
             cnt++;
     if(cnt == 4)
-         ROS_INFO("I am Flying!");*/
+         ROS_INFO("I am Flying!");
 
     // Set Default values
     //des_com_position_ << -0.05, -0.02, 0.5; //w.r.t to the world
@@ -654,8 +654,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
             id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
+            id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
+            id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
 
             id_prob_->_feet[0]->setReference(init_lf_foot_pose_);
+            id_prob_->_feet[1]->setReference(init_rf_foot_pose_);
+            id_prob_->_feet[2]->setReference(init_lh_foot_pose_);
             id_prob_->_feet[3]->setReference(init_rh_foot_pose_);
         }
 
