@@ -77,7 +77,7 @@ private:
     /**
      * @brief _friction_cones constraints
      */
-    constraints::force::FrictionCone::Ptr _friction_cones;
+    constraints::force::FrictionCones::Ptr _friction_cones;
 
     /**
      * @brief _id_problem the final ID problem
