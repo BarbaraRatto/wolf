@@ -335,15 +335,12 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
             toggleTracking();
             break;
         case 2:
-            togglePid();
-            break;
-        case 3:
             setSwingFreq(config.swing_frequency);
             break;
-        case 4:
+        case 3:
             setContactThreshold(config.contact_threshold);
             break;
-        case 5:
+        case 4:
             setLambda("lf_foot",config.lf_foot_lambda);
             setLambda("rf_foot",config.rf_foot_lambda);
             setLambda("lh_foot",config.lh_foot_lambda);
@@ -435,16 +432,6 @@ bool Controller::setLambda(const std::string& task_name, const double lambda_val
     }
 
     return true;
-}
-
-void Controller::togglePid()
-{
-    pid_active_=!pid_active_;
-
-    if(pid_active_)
-        ROS_INFO("PIDs are ON");
-    else
-        ROS_INFO("PIDs are OFF");
 }
 
 void Controller::toggleSolver()
