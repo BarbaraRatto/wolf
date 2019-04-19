@@ -4,6 +4,8 @@
 #include <ros/ros.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 
 namespace dls_controller
 {
@@ -80,12 +82,11 @@ private:
     boost::shared_ptr<rt_publisher_t > pub_ptr_;
 };
 
-
 class FootScheduler
 {
 public:
 
-    FootScheduler(double duty_cycle)
+    FootScheduler(const double& duty_cycle)
     {
         assert(duty_cycle > 0 && duty_cycle <=1);
         dc_ = duty_cycle;
@@ -128,7 +129,7 @@ public:
         dc_ = duty_cycle;
     }
 
-    void update(double period, bool contact, bool trigger_swing)
+    void update(const double& period, const bool& contact, const bool& trigger_swing)
     {
 
         switch (state_)
@@ -202,6 +203,125 @@ private:
         total_time_ = active_time_/dc_;
         wait_time_ = total_time_ - active_time_;
     }
+
+};
+
+class GaitScheduler
+{
+public:
+    GaitScheduler(const double& duty_cycle, const std::vector<std::string>& feet_names, const unsigned int& gait)
+    {
+        assert(feet_names.size==4);// We assume we are working with a dog
+        for(unsigned int i = 0; i<feet_names.size(); i++)
+        {
+            feet_[feet_names[i]].reference = Eigen::Affine3d::Identity();
+            feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
+            feet_[feet_names[i]].scheduler = FootScheduler(duty_cycle);
+            feet_[feet_names[i]].is_in_contact = true;
+
+
+            feet_[feet_names[i]].amp = 0.1;
+            feet_[feet_names[i]].swing_frequency = 1.5;
+            feet_[feet_names[i]].time = 0.0;
+        }
+
+        // FIXME
+        selected_gait_ = 0;
+
+    }
+
+    const Eigen::Affine3d& getReference(const std::string& foot_name)
+    {
+        return feet_[foot_name].reference;
+    }
+
+    bool isSwinging(const std::string& foot_name)
+    {
+        return feet_[foot_name].scheduler.isSwing();
+    }
+
+
+    void setContact(const std::string& foot_name, const bool& contact)
+    {
+        feet_[foot_name].is_in_contact = contact;
+    }
+
+    void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
+    {
+        feet_[foot_name].initial_pose = initial_pose;
+    }
+
+    void update(const double& period)
+    {
+
+        feet_["lf_foot"].reference = feet_["lf_foot"].initial_pose;
+        feet_["rf_foot"].reference = feet_["rf_foot"].initial_pose;
+        feet_["lh_foot"].reference = feet_["lh_foot"].initial_pose;
+        feet_["rh_foot"].reference = feet_["rh_foot"].initial_pose;
+
+        switch (selected_gait_)
+        {
+        case gaits::HALF_TROT:
+
+            // FIXME Use loops
+            bool start_swing = false;
+            if(feet_["lf_foot"].scheduler.isInit() && feet_["rh_foot"].scheduler.isInit()) // FIXME hardcoded names
+                start_swing = true;
+
+            feet_["lf_foot"].scheduler.update(period,feet_["lf_foot"].is_in_contact,start_swing);
+            feet_["rh_foot"].scheduler.update(period,feet_["rh_foot"].is_in_contact,start_swing);
+
+            if(feet_["lf_foot"].scheduler.isSwing())
+            {
+                // Compute the periodic swing
+                feet_["lf_foot"].reference.translation().z() +=
+                feet_["lf_foot"].amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (feet_["lf_foot"].swing_frequency * feet_["lf_foot"].time)));
+                feet_["lf_foot"].time += period;
+            }
+            else
+            {
+                 feet_["lf_foot"].time = 0.0;
+            }
+
+            if(feet_["rh_foot"].scheduler.isSwing())
+            {
+                // Compute the periodic swing
+                feet_["rh_foot"].reference.translation().z() +=
+                feet_["rh_foot"].amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (feet_["rh_foot"].swing_frequency * feet_["rh_foot"].time)));
+                feet_["rh_foot"].time += period;
+            }
+            else
+            {
+                 feet_["rh_foot"].time = 0.0;
+            }
+
+
+            break;
+
+        };
+
+
+    }
+
+private:
+    enum gaits {HALF_TROT=0,TROT};
+    unsigned int selected_gait_;
+
+    struct feet_status_t
+    {
+        FootScheduler scheduler;
+        Eigen::Affine3d reference;
+        Eigen::Affine3d initial_pose;
+        bool is_in_contact;
+
+
+        // The following should go in a different class
+        double amp;
+        double time;
+        double swing_frequency;
+    };
+
+    std::map<std::string,feet_status_t> feet_;
 
 };
 

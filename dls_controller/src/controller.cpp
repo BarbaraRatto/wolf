@@ -35,9 +35,11 @@ Controller::~Controller()
     if(state_estimation_rt_pub_)
         delete state_estimation_rt_pub_;
     if(tasks_actual_pose_rt_pub_)
-      delete tasks_actual_pose_rt_pub_;
+        delete tasks_actual_pose_rt_pub_;
     if(server_)
-      delete server_;
+        delete server_;
+    if(gait_scheduler_)
+        delete gait_scheduler_;
 }
 
 bool Controller::init(hardware_interface::RobotHW* robot_hw,
@@ -328,6 +330,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
+    gait_scheduler_ = new GaitScheduler(0.5,contact_links_,0);
+
     return true;
 }
 
@@ -607,15 +611,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->_feet[3]->getActualPose(init_rh_foot_pose_ );
             id_prob_->_com->getActualPose(    init_com_position_);
 
+
+             gait_scheduler_->setInitialPose("lf_foot",init_lf_foot_pose_);
+             gait_scheduler_->setInitialPose("rf_foot",init_rf_foot_pose_);
+             gait_scheduler_->setInitialPose("lh_foot",init_lh_foot_pose_);
+             gait_scheduler_->setInitialPose("rh_foot",init_rh_foot_pose_);
+
         }
 
         // Always track the com position
         //des_com_position_ = init_com_position_;
         id_prob_->_com->setReference(des_com_position_);
-
-        double amp = 0.1;
-        double z_lf, z_rh, z_rf, z_lh;
-        z_lf = z_rh = z_rf = z_lh = 0.0;
 
         if(tracking_active_)
         {
@@ -624,7 +630,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                  if(contacts_[i])
                      id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                      */
-            if(lf_scheduler_.isInit() && rh_scheduler_.isInit())
+            /*if(lf_scheduler_.isInit() && rh_scheduler_.isInit())
                 start_swing_ = true;
             else
                 start_swing_ = false;
@@ -658,11 +664,25 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             {
                 time_rh_ = 0.0;
                 id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
-            }
+            }*/
 
 
-            id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
-            id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
+            for(unsigned int i = 0; i<contact_links_.size(); i++)
+                gait_scheduler_->setContact(contact_links_[i],contacts_[i]);
+
+            gait_scheduler_->update(period.toSec());
+
+            for(unsigned int i = 0; i<contact_links_.size(); i++)
+                if(gait_scheduler_->isSwinging(contact_links_[i]))
+                {
+                    id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
+                    ROS_INFO_STREAM("Swing: "<< contact_links_[i]);
+                }
+                else
+                {
+                    id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
+                    ROS_INFO_STREAM("Not swing: "<< contact_links_[i]);
+                }
 
             // Set the contacts for the solver
             /*if(z_lf_rh >= contact_threshold_) // FIXME I should check the abs error between the current pose and the desired
@@ -683,7 +703,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             }*/
 
             // Fix the feet to an initial pose
-            des_lf_foot_pose_ = init_lf_foot_pose_;
+            /*des_lf_foot_pose_ = init_lf_foot_pose_;
             des_rf_foot_pose_ = init_rf_foot_pose_;
             des_lh_foot_pose_ = init_lh_foot_pose_;
             des_rh_foot_pose_ = init_rh_foot_pose_;
@@ -691,13 +711,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z_lf;
             des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z_rh;
             des_rf_foot_pose_.translation().z() = des_rf_foot_pose_.translation().z() + z_rf;
-            des_lh_foot_pose_.translation().z() = des_lh_foot_pose_.translation().z() + z_lh;
+            des_lh_foot_pose_.translation().z() = des_lh_foot_pose_.translation().z() + z_lh;*/
 
             // Set the targets for the feet
-            id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
+            /*id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
             id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
             id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
-            id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
+            id_prob_->_feet[3]->setReference(des_rh_foot_pose_);*/
+
+
+            for(unsigned int i = 0; i<contact_links_.size(); i++)
+                id_prob_->_feet[i]->setReference(gait_scheduler_->getReference(contact_links_[i]));
 
             /*if(id_prob_->_feet[0]->getError().norm() >= contact_threshold_)
                 id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
@@ -710,11 +734,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
             id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
             id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
-
-            id_prob_->_feet[0]->setReference(init_lf_foot_pose_);
-            id_prob_->_feet[1]->setReference(init_rf_foot_pose_);
-            id_prob_->_feet[2]->setReference(init_lh_foot_pose_);
-            id_prob_->_feet[3]->setReference(init_rh_foot_pose_);
         }
 
         // Solver Update

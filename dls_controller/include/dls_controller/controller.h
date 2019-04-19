@@ -250,14 +250,16 @@ private:
     Eigen::Affine3d init_lh_foot_pose_;
     Eigen::Affine3d init_rh_foot_pose_;
     Eigen::Vector3d init_com_position_;
-    double time_lf_ = 0.0;
-    double time_rh_ = 0.0;
     double contact_threshold_;
     double swing_frequency_;
-    bool start_swing_ = false;
 
-    FootScheduler lf_scheduler_;
-    FootScheduler rh_scheduler_;
+
+    GaitScheduler* gait_scheduler_;
+
+
+
+
+
 
     /**
          * @brief thread body for the odometry publisher
