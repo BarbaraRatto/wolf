@@ -7,6 +7,7 @@
 #include <tf/transform_broadcaster.h>
 #include <sensor_msgs/JointState.h>
 #include <nav_msgs/Odometry.h>
+#include <std_msgs/Int16MultiArray.h>
 #include <dls_controller/DlsControllerServices.h>
 #include <dls_controller/TasksPose.h>
 #include <realtime_tools/realtime_buffer.h>
@@ -30,6 +31,8 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
+// Controller
+#include <dls_controller/utils.h>
 
 namespace dls_controller
 {
@@ -174,6 +177,8 @@ private:
     realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_actual_pose_rt_pub_;
     /** @brief Real time publisher - desired tasks pose */
     realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_desired_pose_rt_pub_;
+    /** @brief Real time publisher - contacts */
+    realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>* contacts_rt_pub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */
@@ -225,7 +230,13 @@ private:
     /** @brief Floating base accelleration, computed by the state estimator */
     Eigen::Vector6d floating_base_accelleration_;
     /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */
-    Eigen::Affine3d floating_base_pose_;
+    Eigen::Affine3d floating_base_pose_;    
+    /** @brief GRF normals */
+    std::vector<Eigen::Vector3d> normals_;
+    /** @brief GRF contacts */
+    std::vector<bool> contacts_;
+    /** @brief GRF contact forces */
+    std::vector<Eigen::Vector3d> contact_forces_;
 
     std::vector<std::string> contact_links_;
 
@@ -239,9 +250,14 @@ private:
     Eigen::Affine3d init_lh_foot_pose_;
     Eigen::Affine3d init_rh_foot_pose_;
     Eigen::Vector3d init_com_position_;
-    double time_ = 0.0;
+    double time_lf_ = 0.0;
+    double time_rh_ = 0.0;
     double contact_threshold_;
     double swing_frequency_;
+    bool start_swing_ = false;
+
+    FootScheduler lf_scheduler_;
+    FootScheduler rh_scheduler_;
 
     /**
          * @brief thread body for the odometry publisher
@@ -267,6 +283,12 @@ private:
          * @brief update the virtual model
          */
     void updateXBotModel();
+
+    /**
+         * @brief update the contacts state
+         */
+    void readContactsState();
+
 };
 
 

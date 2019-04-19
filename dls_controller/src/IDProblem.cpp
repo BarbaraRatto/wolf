@@ -60,9 +60,8 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
     Eigen::Vector6d wrench_upper_lims; wrench_upper_lims<<1000,1000,1000,Eigen::Vector3d::Zero();
     Eigen::Vector6d wrench_lower_lims; wrench_lower_lims<<-1000, -1000, 0.0 ,Eigen::Vector3d::Zero();
-    std::vector<AffineHelper> tmp = _id->getContactsWrenchAffine();
     _wrenches_lims = boost::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
-                links_in_contact, wrench_lower_lims, wrench_upper_lims,tmp);
+                links_in_contact, wrench_lower_lims, wrench_upper_lims,_id->getContactsWrenchAffine());
 
     // Notice that we just control the orientation of the waist
     std::list<unsigned int> idw = {3,4,5};
@@ -74,7 +73,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
     _id_problem->update(Eigen::VectorXd(0));
 
-    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e4); //, 1e6);
+    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(), 1e6); //, 1e6);
                                                          //, OpenSoT::solvers::solver_back_ends::OSQP);
                                                          //, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 

@@ -231,7 +231,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->setJointPosition(qhome_);
 
     // Those are associated to the SRDF model
-    // FIXME, modify IDProblem to contain a map
+    // FIXME, modify IDProblem to contain a map   
+    // NOTE: do not confuse these with the contact_sensors
     contact_links_.resize(4);
     contact_links_[0] = "lf_foot";
     contact_links_[1] = "rf_foot";
@@ -260,6 +261,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     des_joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     x_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    normals_.resize(contact_sensors_.size());
+    contacts_.resize(contact_sensors_.size());
+    contact_forces_.resize(contact_sensors_.size());
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -308,6 +312,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     tasks_desired_pose_rt_pub_->msg_.reference_frame = "world";
     tasks_desired_pose_rt_pub_->msg_.tasks_name.resize(desired_tasks_pose_.size());
     tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses.resize(desired_tasks_pose_.size());
+
+    contacts_rt_pub_ = new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4);
+    contacts_rt_pub_->msg_.data.resize(4);
 
     // Reference for the tasks
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
@@ -529,6 +536,16 @@ void Controller::updateXBotModel()
 
 }
 
+void Controller::readContactsState()
+{
+    for(unsigned int i=0; i<contact_sensors_.size(); i++)
+    {
+        normals_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getNormal());
+        contacts_[i] = *contact_sensors_[i].getContactState();
+        contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());
+    }
+}
+
 void Controller::starting(const ros::Time& time)
 {
     ROS_DEBUG("Starting DLS Controller");
@@ -538,9 +555,11 @@ void Controller::starting(const ros::Time& time)
     readJoints();
     // 2) IMU
     readImu();
-    // 3) State Estimation
+    // 3) Read contacts state
+    readContactsState();
+    // 4) State Estimation
     stateEstimation();
-    // 4) Virtual Model Update
+    // 5) Virtual Model Update
     updateXBotModel();
 
     ROS_DEBUG("Starting DLS Controller Completed");
@@ -554,17 +573,19 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     readJoints();
     // 2) IMU
     readImu();
-    // 3) State Estimation
+    // 3) Read contacts state
+    readContactsState();
+    // 4) State Estimation
     stateEstimation();
-    // 4) Virtual Model Update
+    // 5) Virtual Model Update
     updateXBotModel();
 
-    int cnt = 0;
+    /*int cnt = 0;
     for(unsigned int i = 0; i < contact_sensors_.size(); i++)
         if(!*contact_sensors_[i].getContactState())
             cnt++;
     if(cnt == 4)
-         ROS_INFO("I am Flying!");
+         ROS_INFO("I am Flying!");*/
 
     // Set Default values
     //des_com_position_ << -0.05, -0.02, 0.5; //w.r.t to the world
@@ -592,32 +613,74 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         //des_com_position_ = init_com_position_;
         id_prob_->_com->setReference(des_com_position_);
 
+        double amp = 0.1;
+        double z_lf, z_rh, z_rf, z_lh;
+        z_lf = z_rh = z_rf = z_lh = 0.0;
+
         if(tracking_active_)
         {
-            // Compute the periodic swing
-            time_ += period.toSec();
-            const double angle = 2.0 * M_PI * (swing_frequency_ * time_);
-            const double amp = 0.1;
-            const double z_lf_rh = amp/2.0 * (1 - std::cos(angle));
-            const double z_rf_lh = amp/2.0 * (1 - std::cos(angle+M_PI));
+            // Check if there is contact
+            /*for(unsigned int i = 0; i < contacts_.size(); i++)
+                 if(contacts_[i])
+                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
+                     */
+            if(lf_scheduler_.isInit() && rh_scheduler_.isInit())
+                start_swing_ = true;
+            else
+                start_swing_ = false;
+
+            lf_scheduler_.update(period.toSec(),contacts_[0],start_swing_);
+            rh_scheduler_.update(period.toSec(),contacts_[3],start_swing_);
+
+            if(lf_scheduler_.isSwing())
+            {
+                // Compute the periodic swing
+                z_lf = amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_lf_)));
+                time_lf_ += period.toSec();
+                //z_rf = z_lh = amp/2.0 * (0.8 - std::cos(angle+M_PI));
+                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
+            }
+            else
+            {
+                time_lf_ = 0.0;
+                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
+            }
+
+            if(rh_scheduler_.isSwing())
+            {
+                // Compute the periodic swing
+                z_rh = amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_rh_)));
+                time_rh_ += period.toSec();
+                //z_rf = z_lh = amp/2.0 * (0.8 - std::cos(angle+M_PI));
+                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
+            }
+            else
+            {
+                time_rh_ = 0.0;
+                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
+            }
+
+
+            id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
+            id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
 
             // Set the contacts for the solver
-            if(z_lf_rh >= contact_threshold_)
+            /*if(z_lf_rh >= contact_threshold_) // FIXME I should check the abs error between the current pose and the desired
             {
                 id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
                 id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
 
-                id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
-                id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
-            }
-            else
+                //id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
+                //id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
+            }*/
+            /*else
             {
-                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
-                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
+                //id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
+                //id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
 
                 id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(true);
                 id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(true);
-            }
+            }*/
 
             // Fix the feet to an initial pose
             des_lf_foot_pose_ = init_lf_foot_pose_;
@@ -625,10 +688,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             des_lh_foot_pose_ = init_lh_foot_pose_;
             des_rh_foot_pose_ = init_rh_foot_pose_;
 
-            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z_lf_rh;
-            des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z_lf_rh;
-            des_rf_foot_pose_.translation().z() = des_rf_foot_pose_.translation().z() + z_rf_lh;
-            des_lh_foot_pose_.translation().z() = des_lh_foot_pose_.translation().z() + z_rf_lh;
+            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z_lf;
+            des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z_rh;
+            des_rf_foot_pose_.translation().z() = des_rf_foot_pose_.translation().z() + z_rf;
+            des_lh_foot_pose_.translation().z() = des_lh_foot_pose_.translation().z() + z_lh;
 
             // Set the targets for the feet
             id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
@@ -636,6 +699,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
             id_prob_->_feet[3]->setReference(des_rh_foot_pose_);
 
+            /*if(id_prob_->_feet[0]->getError().norm() >= contact_threshold_)
+                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
+            if(id_prob_->_feet[3]->getError().norm() >= contact_threshold_)
+                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);*/
         }
         else
         {
@@ -766,6 +833,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         tasks_desired_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
         tasks_desired_pose_rt_pub_->unlockAndPublish();
     }
+
+
+    if(contacts_rt_pub_->trylock())
+    {
+        for(unsigned int i=0; i<contacts_rt_pub_->msg_.data.size(); i++)
+            contacts_rt_pub_->msg_.data[i] = (*contact_sensors_[i].getContactState() ? 1 : 0);
+        contacts_rt_pub_->unlockAndPublish();
+    }
+
+    //getchar();
+
 }
 
 /*void Controller::setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg)
