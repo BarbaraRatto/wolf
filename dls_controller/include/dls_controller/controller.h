@@ -254,7 +254,7 @@ private:
     double swing_frequency_;
 
 
-    GaitScheduler* gait_scheduler_;
+    GaitGenerator* gait_generator_;
 
 
 

@@ -38,8 +38,8 @@ Controller::~Controller()
         delete tasks_actual_pose_rt_pub_;
     if(server_)
         delete server_;
-    if(gait_scheduler_)
-        delete gait_scheduler_;
+    if(gait_generator_)
+        delete gait_generator_;
 }
 
 bool Controller::init(hardware_interface::RobotHW* robot_hw,
@@ -330,7 +330,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_scheduler_ = new GaitScheduler(0.5,contact_links_,0);
+    gait_generator_ = new GaitGenerator(0.7,contact_links_,"trot"); //FIXME
 
     return true;
 }
@@ -612,10 +612,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->_com->getActualPose(    init_com_position_);
 
 
-             gait_scheduler_->setInitialPose("lf_foot",init_lf_foot_pose_);
-             gait_scheduler_->setInitialPose("rf_foot",init_rf_foot_pose_);
-             gait_scheduler_->setInitialPose("lh_foot",init_lh_foot_pose_);
-             gait_scheduler_->setInitialPose("rh_foot",init_rh_foot_pose_);
+             gait_generator_->setInitialPose("lf_foot",init_lf_foot_pose_);
+             gait_generator_->setInitialPose("rf_foot",init_rf_foot_pose_);
+             gait_generator_->setInitialPose("lh_foot",init_lh_foot_pose_);
+             gait_generator_->setInitialPose("rh_foot",init_rh_foot_pose_);
 
         }
 
@@ -625,115 +625,36 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(tracking_active_)
         {
-            // Check if there is contact
-            /*for(unsigned int i = 0; i < contacts_.size(); i++)
-                 if(contacts_[i])
-                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
-                     */
-            /*if(lf_scheduler_.isInit() && rh_scheduler_.isInit())
-                start_swing_ = true;
-            else
-                start_swing_ = false;
-
-            lf_scheduler_.update(period.toSec(),contacts_[0],start_swing_);
-            rh_scheduler_.update(period.toSec(),contacts_[3],start_swing_);
-
-            if(lf_scheduler_.isSwing())
-            {
-                // Compute the periodic swing
-                z_lf = amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_lf_)));
-                time_lf_ += period.toSec();
-                //z_rf = z_lh = amp/2.0 * (0.8 - std::cos(angle+M_PI));
-                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
-            }
-            else
-            {
-                time_lf_ = 0.0;
-                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
-            }
-
-            if(rh_scheduler_.isSwing())
-            {
-                // Compute the periodic swing
-                z_rh = amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_rh_)));
-                time_rh_ += period.toSec();
-                //z_rf = z_lh = amp/2.0 * (0.8 - std::cos(angle+M_PI));
-                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
-            }
-            else
-            {
-                time_rh_ = 0.0;
-                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
-            }*/
-
-
+            // Give to the gait_generator the contact status of the feet
             for(unsigned int i = 0; i<contact_links_.size(); i++)
-                gait_scheduler_->setContact(contact_links_[i],contacts_[i]);
+                gait_generator_->setContact(contact_links_[i],contacts_[i]);
 
-            gait_scheduler_->update(period.toSec());
+            // Update the gait_generator
+            gait_generator_->update(period.toSec());
 
+            // Set the wrench limits (i.e. the contacts for the solver) based on the gait_generator status
             for(unsigned int i = 0; i<contact_links_.size(); i++)
-                if(gait_scheduler_->isSwinging(contact_links_[i]))
+                if(gait_generator_->isSwinging(contact_links_[i]))
                 {
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
-                    ROS_INFO_STREAM("Swing: "<< contact_links_[i]);
+                    ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
                 else
                 {
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
-                    ROS_INFO_STREAM("Not swing: "<< contact_links_[i]);
+                    ROS_DEBUG_STREAM("Not swinging: "<< contact_links_[i]);
                 }
 
-            // Set the contacts for the solver
-            /*if(z_lf_rh >= contact_threshold_) // FIXME I should check the abs error between the current pose and the desired
-            {
-                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
-                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);
-
-                //id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
-                //id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
-            }*/
-            /*else
-            {
-                //id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
-                //id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
-
-                id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(true);
-                id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(true);
-            }*/
-
-            // Fix the feet to an initial pose
-            /*des_lf_foot_pose_ = init_lf_foot_pose_;
-            des_rf_foot_pose_ = init_rf_foot_pose_;
-            des_lh_foot_pose_ = init_lh_foot_pose_;
-            des_rh_foot_pose_ = init_rh_foot_pose_;
-
-            des_lf_foot_pose_.translation().z() = des_lf_foot_pose_.translation().z() + z_lf;
-            des_rh_foot_pose_.translation().z() = des_rh_foot_pose_.translation().z() + z_rh;
-            des_rf_foot_pose_.translation().z() = des_rf_foot_pose_.translation().z() + z_rf;
-            des_lh_foot_pose_.translation().z() = des_lh_foot_pose_.translation().z() + z_lh;*/
-
-            // Set the targets for the feet
-            /*id_prob_->_feet[0]->setReference(des_lf_foot_pose_);
-            id_prob_->_feet[1]->setReference(des_rf_foot_pose_);
-            id_prob_->_feet[2]->setReference(des_lh_foot_pose_);
-            id_prob_->_feet[3]->setReference(des_rh_foot_pose_);*/
-
-
+            // Set the references to each foot
             for(unsigned int i = 0; i<contact_links_.size(); i++)
-                id_prob_->_feet[i]->setReference(gait_scheduler_->getReference(contact_links_[i]));
-
-            /*if(id_prob_->_feet[0]->getError().norm() >= contact_threshold_)
-                id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(true);
-            if(id_prob_->_feet[3]->getError().norm() >= contact_threshold_)
-                id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(true);*/
+                id_prob_->_feet[i]->setReference(gait_generator_->getReference(contact_links_[i]));
         }
         else
         {
-            id_prob_->_wrenches_lims->getWrenchLimits("lf_foot")->releaseContact(false);
-            id_prob_->_wrenches_lims->getWrenchLimits("rh_foot")->releaseContact(false);
-            id_prob_->_wrenches_lims->getWrenchLimits("rf_foot")->releaseContact(false);
-            id_prob_->_wrenches_lims->getWrenchLimits("lh_foot")->releaseContact(false);
+            // Force the contact to each foot
+            for(unsigned int i = 0; i<contact_links_.size(); i++)
+                id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
+
         }
 
         // Solver Update

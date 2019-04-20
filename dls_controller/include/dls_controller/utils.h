@@ -206,10 +206,71 @@ private:
 
 };
 
-class GaitScheduler
+
+class Gait
+{
+
+public:
+    Gait(const std::vector<std::string>& feet_names, const std::string& gait_type)
+    {
+        if(std::strcmp(gait_type.c_str(),"half_trot")==0)
+        {
+            ROS_INFO("Selected half_trot gait");
+
+            schedule_.push_back(foot_priority_t("lf_foot",0));
+            schedule_.push_back(foot_priority_t("rh_foot",0));
+            next_feet_to_move_.resize(2);
+            max_priority_ = 0;
+        }
+        if(std::strcmp(gait_type.c_str(),"trot")==0)
+        {
+            ROS_INFO("Selected trot gait");
+
+            schedule_.push_back(foot_priority_t("lf_foot",0));
+            schedule_.push_back(foot_priority_t("rh_foot",0));
+
+            schedule_.push_back(foot_priority_t("rf_foot",1));
+            schedule_.push_back(foot_priority_t("lh_foot",1));
+            next_feet_to_move_.resize(2);
+            max_priority_ = 1;
+        }
+
+        current_priority_ = 0;
+    }
+
+    const std::vector<std::string>& getNextSchedule()
+    {
+
+        unsigned int idx = 0;
+        for(unsigned int i=0;i < schedule_.size(); i++)
+            if(schedule_[i].second == current_priority_)
+                next_feet_to_move_[idx++] = schedule_[i].first;
+
+        current_priority_++;
+        current_priority_ %= max_priority_+1;
+
+        return next_feet_to_move_;
+    }
+
+private:
+
+    typedef std::pair<std::string,unsigned int> foot_priority_t;
+    foot_priority_t foot_priority_;
+    std::vector<foot_priority_t> schedule_;
+
+    unsigned int current_priority_;
+    unsigned int max_priority_;
+
+    std::vector<std::string> next_feet_to_move_;
+
+
+};
+
+
+class GaitGenerator
 {
 public:
-    GaitScheduler(const double& duty_cycle, const std::vector<std::string>& feet_names, const unsigned int& gait)
+    GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::string& gait_type)
     {
         assert(feet_names.size==4);// We assume we are working with a dog
         for(unsigned int i = 0; i<feet_names.size(); i++)
@@ -219,14 +280,14 @@ public:
             feet_[feet_names[i]].scheduler = FootScheduler(duty_cycle);
             feet_[feet_names[i]].is_in_contact = true;
 
-
+            // FIXME
             feet_[feet_names[i]].amp = 0.1;
             feet_[feet_names[i]].swing_frequency = 1.5;
             feet_[feet_names[i]].time = 0.0;
         }
 
-        // FIXME
-        selected_gait_ = 0;
+        gait_.reset(new Gait(feet_names,gait_type));
+        selected_feet_ = gait_->getNextSchedule();
 
     }
 
@@ -254,58 +315,47 @@ public:
     void update(const double& period)
     {
 
-        feet_["lf_foot"].reference = feet_["lf_foot"].initial_pose;
-        feet_["rf_foot"].reference = feet_["rf_foot"].initial_pose;
-        feet_["lh_foot"].reference = feet_["lh_foot"].initial_pose;
-        feet_["rh_foot"].reference = feet_["rh_foot"].initial_pose;
+        bool start_swing = true;
 
-        switch (selected_gait_)
+        // Set the initial value to each foot
+        for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
+            it->second.reference = it->second.initial_pose;
+
+        for(unsigned int i=0; i<selected_feet_.size(); i++)
+            if(!feet_[selected_feet_[i]].scheduler.isInit())
+            {
+                start_swing = false;
+                break;
+            }
+
+        for(unsigned int i=0; i<selected_feet_.size(); i++)
         {
-        case gaits::HALF_TROT:
 
-            // FIXME Use loops
-            bool start_swing = false;
-            if(feet_["lf_foot"].scheduler.isInit() && feet_["rh_foot"].scheduler.isInit()) // FIXME hardcoded names
-                start_swing = true;
+            feet_[selected_feet_[i]].scheduler.update(period,feet_[selected_feet_[i]].is_in_contact,start_swing);
 
-            feet_["lf_foot"].scheduler.update(period,feet_["lf_foot"].is_in_contact,start_swing);
-            feet_["rh_foot"].scheduler.update(period,feet_["rh_foot"].is_in_contact,start_swing);
-
-            if(feet_["lf_foot"].scheduler.isSwing())
+            if(feet_[selected_feet_[i]].scheduler.isSwing())
             {
-                // Compute the periodic swing
-                feet_["lf_foot"].reference.translation().z() +=
-                feet_["lf_foot"].amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (feet_["lf_foot"].swing_frequency * feet_["lf_foot"].time)));
-                feet_["lf_foot"].time += period;
+                // Compute the periodic swing FIXME move it into the trajectory generator
+                feet_[selected_feet_[i]].reference.translation().z() +=
+                        feet_[selected_feet_[i]].amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (feet_[selected_feet_[i]].swing_frequency * feet_[selected_feet_[i]].time)));
+                feet_[selected_feet_[i]].time += period;
             }
             else
             {
-                 feet_["lf_foot"].time = 0.0;
+                feet_[selected_feet_[i]].time = 0.0;
             }
+        }
 
-            if(feet_["rh_foot"].scheduler.isSwing())
-            {
-                // Compute the periodic swing
-                feet_["rh_foot"].reference.translation().z() +=
-                feet_["rh_foot"].amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (feet_["rh_foot"].swing_frequency * feet_["rh_foot"].time)));
-                feet_["rh_foot"].time += period;
-            }
-            else
-            {
-                 feet_["rh_foot"].time = 0.0;
-            }
-
-
-            break;
-
-        };
-
+        unsigned int cnt=0;
+        for(unsigned int i=0; i<selected_feet_.size(); i++)
+            if(feet_[selected_feet_[i]].scheduler.isInit())
+                cnt++;
+        if(cnt == selected_feet_.size())
+            selected_feet_ = gait_->getNextSchedule();
 
     }
 
 private:
-    enum gaits {HALF_TROT=0,TROT};
-    unsigned int selected_gait_;
 
     struct feet_status_t
     {
@@ -314,14 +364,17 @@ private:
         Eigen::Affine3d initial_pose;
         bool is_in_contact;
 
-
         // The following should go in a different class
         double amp;
         double time;
         double swing_frequency;
     };
 
-    std::map<std::string,feet_status_t> feet_;
+    typedef std::map<std::string,feet_status_t> feet_t;
+    std::vector<std::string> selected_feet_;
+
+    feet_t feet_;
+    boost::shared_ptr<Gait> gait_;
 
 };
 
