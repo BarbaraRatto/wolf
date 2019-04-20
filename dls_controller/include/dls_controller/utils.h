@@ -312,6 +312,17 @@ public:
         feet_[foot_name].initial_pose = initial_pose;
     }
 
+    void setDutyCycle(const double& duty_cycle)
+    {
+         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+             it->second.scheduler.setDutyCycle(duty_cycle);
+    }
+
+    void setDutyCycle(const std::string& foot_name, const double& duty_cycle)
+    {
+         feet_[foot_name].scheduler.setDutyCycle(duty_cycle);
+    }
+
     void update(const double& period)
     {
 

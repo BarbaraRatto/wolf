@@ -283,8 +283,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_velocity_ = Eigen::Vector6d::Zero();
     floating_base_accelleration_ = Eigen::Vector6d::Zero();
     floating_base_pose_ = Eigen::Affine3d::Identity();
-    contact_threshold_ = 0.03;
-    swing_frequency_ = 1.5;
 
     // Create the realtime publishers
     ci_joint_states_rt_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
@@ -346,12 +344,9 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
             toggleTracking();
             break;
         case 2:
-            setSwingFreq(config.swing_frequency);
+            setDutyCycle(config.duty_cycle);
             break;
         case 3:
-            setContactThreshold(config.contact_threshold);
-            break;
-        case 4:
             setLambda("lf_foot",config.lf_foot_lambda);
             setLambda("rf_foot",config.rf_foot_lambda);
             setLambda("lh_foot",config.lh_foot_lambda);
@@ -364,35 +359,18 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
     }
 }
 
-bool Controller::setContactThreshold(const double contact_threshold)
+bool Controller::setDutyCycle(const double duty_cycle)
 {
 
-     if(contact_threshold>=0.0)
+     if(duty_cycle>=0.0 && duty_cycle<=1.0 && gait_generator_)
      {
-         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setContactThreshold: set the contact threshold to "<<contact_threshold);
-         contact_threshold_ = contact_threshold;
+         gait_generator_->setDutyCycle(duty_cycle);
+         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setDutyCycle: set the duty cycle to "<<duty_cycle);
          return true;
      }
      else
      {
-         ROS_WARN_NAMED(CONTROLLER_NAME,"setContactThreshold: contact_threshold has to be positive or 0!");
-         return false;
-     }
-
-}
-
-bool Controller::setSwingFreq(const double swing_frequency)
-{
-
-     if(swing_frequency>=0.0)
-     {
-         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setSwingFreq: set the swing frequency to "<<swing_frequency);
-         swing_frequency_ = swing_frequency;
-         return true;
-     }
-     else
-     {
-         ROS_WARN_NAMED(CONTROLLER_NAME,"setSwingFreq: swing_frequency has to be positive or 0!");
+         ROS_WARN_NAMED(CONTROLLER_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
          return false;
      }
 }

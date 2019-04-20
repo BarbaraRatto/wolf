@@ -113,16 +113,10 @@ public:
     bool setLambda(const std::string& task_name, const double lambda_value);
 
     /**
-         * @brief Set the contact threshold for the feet
-         * @param const double contact_threshold
+         * @brief Set the duty cycle for the feet
+         * @param const double duty_cycle
          */
-    bool setContactThreshold(const double contact_threshold);
-
-    /**
-         * @brief Set the swing frequency for the feet
-         * @param const double swing_frequency
-         */
-    bool setSwingFreq(const double swing_frequency);
+    bool setDutyCycle(const double duty_cycle);
 
 private:
 
@@ -250,8 +244,6 @@ private:
     Eigen::Affine3d init_lh_foot_pose_;
     Eigen::Affine3d init_rh_foot_pose_;
     Eigen::Vector3d init_com_position_;
-    double contact_threshold_;
-    double swing_frequency_;
 
 
     GaitGenerator* gait_generator_;
