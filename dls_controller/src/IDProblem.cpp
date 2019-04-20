@@ -3,7 +3,7 @@
 
 using namespace OpenSoT;
 
-IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string>& links_in_contact):
+IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string>& contact_links):
     _model(model)
 {
     //
@@ -14,17 +14,16 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     //  This utility internally creates the right variables which later we will use to
     //  create all the tasks and constraints
     //
-    _id = boost::make_shared<OpenSoT::utils::InverseDynamics>(links_in_contact, *_model);
+    _id = boost::make_shared<OpenSoT::utils::InverseDynamics>(contact_links, *_model);
 
     //
     // Here we create all the tasks: the feet has to be created wrt the world frame
     //
-    _feet.resize(links_in_contact.size());
-    for(unsigned int i=0; i<links_in_contact.size(); i++)
+    for(unsigned int i=0; i<contact_links.size(); i++)
     {
-        _feet[i] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(links_in_contact[i], *_model, links_in_contact[i],
+        _feet[contact_links[i]] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(contact_links[i], *_model, contact_links[i],
                                                                                "world", _id->getJointsAccelerationAffine());
-        _feet[i]->setLambda(1000.);
+        _feet[contact_links[i]]->setLambda(1000.);
     }
     //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
@@ -42,13 +41,13 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     // Here we create the constraints & bounds
     //
     _dynamics = boost::make_shared<OpenSoT::constraints::acceleration::DynamicFeasibility>("dynamics", *_model,
-                                                                                           _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), links_in_contact);
+                                                                                           _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), contact_links);
     OpenSoT::constraints::force::FrictionCones::friction_cones mus;
     Eigen::Matrix3d R; R.setIdentity();
-    for(unsigned int i = 0; i < links_in_contact.size(); ++i)
+    for(unsigned int i = 0; i < contact_links.size(); ++i)
         mus.push_back(std::pair<Eigen::Matrix3d,double> (R,0.5));
     //_friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCone>(_id->getContactsWrenchAffine(),*_model,mus);
-    _friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCones>(links_in_contact,_id->getContactsWrenchAffine(),*_model,mus);
+    _friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCones>(contact_links,_id->getContactsWrenchAffine(),*_model,mus);
 
 
     /// HERE WE SET SOME BOUNDS
@@ -61,14 +60,14 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     Eigen::Vector6d wrench_upper_lims; wrench_upper_lims<<1000,1000,1000,Eigen::Vector3d::Zero();
     Eigen::Vector6d wrench_lower_lims; wrench_lower_lims<<-1000, -1000, 0.0 ,Eigen::Vector3d::Zero();
     _wrenches_lims = boost::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
-                links_in_contact, wrench_lower_lims, wrench_upper_lims,_id->getContactsWrenchAffine());
+                contact_links, wrench_lower_lims, wrench_upper_lims,_id->getContactsWrenchAffine());
 
     // Notice that we just control the orientation of the waist
     std::list<unsigned int> idw = {3,4,5};
     std::list<unsigned int> idc = {0,1,2};
     std::list<unsigned int> idf = {0,1,2};
 
-    _id_problem = ((_feet[0]%idf + _feet[1]%idf + _feet[2]%idf + _feet[3]%idf)/
+    _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf)/
                   (_com +_waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
 
     _id_problem->update(Eigen::VectorXd(0));

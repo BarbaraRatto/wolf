@@ -365,7 +365,7 @@ public:
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
             feet_[feet_names[i]].scheduler = FootScheduler(duty_cycle);
-            feet_[feet_names[i]].trajectory.reset(new SwingOnPlace());
+            feet_[feet_names[i]].trajectory.reset(new SwingOnPlace()); // FIXME
             feet_[feet_names[i]].is_in_contact = true;
         }
 

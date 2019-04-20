@@ -27,7 +27,7 @@ public:
      * @param model pointer to external model
      * @param dT control loop
      */
-    IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string>& links_in_contact);
+    IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string>& contact_links);
     ~IDProblem();
 
     /**
@@ -52,7 +52,7 @@ public:
     /**
      * @brief _left_arm, _right_arm two Cartesian tasks
      */
-    std::vector<tasks::acceleration::Cartesian::Ptr> _feet;
+    std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
     tasks::acceleration::Cartesian::Ptr _waist;
     tasks::acceleration::CoM::Ptr _com;
 

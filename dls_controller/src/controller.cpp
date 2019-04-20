@@ -412,13 +412,13 @@ bool Controller::setLambda(const std::string& task_name, const double lambda_val
             else if(task_name == "waist")
                 id_prob_->_waist->setLambda(lambda_value);
             else if(task_name == "lf_foot")
-                id_prob_->_feet[0]->setLambda(lambda_value);
+                id_prob_->_feet[task_name]->setLambda(lambda_value);
             else if(task_name == "rf_foot")
-                id_prob_->_feet[1]->setLambda(lambda_value);
+                id_prob_->_feet[task_name]->setLambda(lambda_value);
             else if(task_name == "lh_foot")
-                id_prob_->_feet[2]->setLambda(lambda_value);
+                id_prob_->_feet[task_name]->setLambda(lambda_value);
             else if(task_name == "rh_foot")
-                id_prob_->_feet[3]->setLambda(lambda_value);
+                id_prob_->_feet[task_name]->setLambda(lambda_value);
             else
             {
                 ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: the selected task does not exist!");
@@ -521,19 +521,14 @@ void Controller::updateXBotModel()
     {
         id_prob_->_com->getActualPose(com_position_); // Note: we use com_position_ as a tmp object!
         tasks_pose_["com"].translation() = com_position_;
-        id_prob_->_feet[0]->getActualPose(tasks_pose_["lf_foot"]);
-        id_prob_->_feet[1]->getActualPose(tasks_pose_["rf_foot"]);
-        id_prob_->_feet[2]->getActualPose(tasks_pose_["lh_foot"]);
-        id_prob_->_feet[3]->getActualPose(tasks_pose_["rh_foot"]);
-
         id_prob_->_com->getReference(com_position_);
         desired_tasks_pose_["com"].translation() = com_position_;
-        id_prob_->_feet[0]->getReference(desired_tasks_pose_["lf_foot"]);
-        id_prob_->_feet[1]->getReference(desired_tasks_pose_["rf_foot"]);
-        id_prob_->_feet[2]->getReference(desired_tasks_pose_["lh_foot"]);
-        id_prob_->_feet[3]->getReference(desired_tasks_pose_["rh_foot"]);
+        for(unsigned int i=0; i<contact_links_.size(); i++)
+        {
+            id_prob_->_feet[contact_links_[i]]->getActualPose(tasks_pose_[contact_links_[i]]);
+            id_prob_->_feet[contact_links_[i]]->getReference(desired_tasks_pose_[contact_links_[i]]);
+        }
     }
-
 }
 
 void Controller::readContactsState()
@@ -580,13 +575,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 5) Virtual Model Update
     updateXBotModel();
 
-    /*int cnt = 0;
-    for(unsigned int i = 0; i < contact_sensors_.size(); i++)
-        if(!*contact_sensors_[i].getContactState())
-            cnt++;
-    if(cnt == 4)
-         ROS_INFO("I am Flying!");*/
-
     // Set Default values
     //des_com_position_ << -0.05, -0.02, 0.5; //w.r.t to the world
     des_com_position_ << 0.0, 0.0, 0.5; //w.r.t to the world
@@ -601,10 +589,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             solver_reset_done_ = true;
 
             // Set the initial feet poses
-            id_prob_->_feet[0]->getActualPose(init_lf_foot_pose_ );
-            id_prob_->_feet[1]->getActualPose(init_rf_foot_pose_ );
-            id_prob_->_feet[2]->getActualPose(init_lh_foot_pose_ );
-            id_prob_->_feet[3]->getActualPose(init_rh_foot_pose_ );
+            id_prob_->_feet["lf_foot"]->getActualPose(init_lf_foot_pose_ );
+            id_prob_->_feet["rf_foot"]->getActualPose(init_rf_foot_pose_ );
+            id_prob_->_feet["lh_foot"]->getActualPose(init_lh_foot_pose_ );
+            id_prob_->_feet["rh_foot"]->getActualPose(init_rh_foot_pose_ );
             id_prob_->_com->getActualPose(    init_com_position_);
 
 
@@ -643,7 +631,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             // Set the references to each foot
             for(unsigned int i = 0; i<contact_links_.size(); i++)
-                id_prob_->_feet[i]->setReference(gait_generator_->getReference(contact_links_[i]));
+                id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
         }
         else
         {
