@@ -235,6 +235,17 @@ public:
             next_feet_to_move_.resize(2);
             max_priority_ = 1;
         }
+        else if(std::strcmp(gait_type.c_str(),"crawl")==0)
+        {
+            ROS_INFO("Selected crawl gait");
+
+            schedule_.push_back(foot_priority_t("lf_foot",0));
+            schedule_.push_back(foot_priority_t("rh_foot",1));
+            schedule_.push_back(foot_priority_t("rf_foot",2));
+            schedule_.push_back(foot_priority_t("lh_foot",3));
+            next_feet_to_move_.resize(1);
+            max_priority_ = 3;
+        }
         else
         {
             throw std::runtime_error("Wrong Gait!");
@@ -271,6 +282,79 @@ private:
 
 };
 
+class TrajectoryInterface
+{
+
+public:
+
+    TrajectoryInterface()
+    {
+        reference_ = Eigen::Affine3d::Identity();
+        initial_pose_ = Eigen::Affine3d::Identity();
+        time_ = 0.0;
+    }
+
+    virtual void update(const double& period) = 0;
+
+    const Eigen::Affine3d& getReference()
+    {
+        return reference_;
+    }
+
+    const Eigen::Affine3d& getInitialPose()
+    {
+        return initial_pose_;
+    }
+
+    void setReferenceToInitialPose()
+    {
+        reference_ = initial_pose_;
+    }
+
+    void setInitialPose(const Eigen::Affine3d& initial_pose)
+    {
+        initial_pose_ = initial_pose;
+    }
+
+    void reset()
+    {
+         time_ = 0.0;
+    }
+
+protected:
+
+    Eigen::Affine3d reference_;
+    Eigen::Affine3d initial_pose_;
+    double time_;
+
+};
+
+class SwingOnPlace : public TrajectoryInterface
+{
+
+public:
+
+    SwingOnPlace()
+    {
+        // FIXME
+        amp_ = 0.1;
+        swing_frequency_ = 1.5;
+    }
+
+    void update(const double& period)
+    {
+        reference_.translation().z() +=
+                amp_/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
+        time_ += period;
+    }
+
+
+private:
+
+    double amp_;
+    double swing_frequency_;
+
+};
 
 class GaitGenerator
 {
@@ -280,15 +364,9 @@ public:
         assert(feet_names.size==4);// We assume we are working with a dog
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
-            feet_[feet_names[i]].reference = Eigen::Affine3d::Identity();
-            feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
             feet_[feet_names[i]].scheduler = FootScheduler(duty_cycle);
+            feet_[feet_names[i]].trajectory.reset(new SwingOnPlace());
             feet_[feet_names[i]].is_in_contact = true;
-
-            // FIXME
-            feet_[feet_names[i]].amp = 0.1;
-            feet_[feet_names[i]].swing_frequency = 1.5;
-            feet_[feet_names[i]].time = 0.0;
         }
 
         gait_buffer_.resize(2);
@@ -313,7 +391,7 @@ public:
 
     const Eigen::Affine3d& getReference(const std::string& foot_name)
     {
-        return feet_[foot_name].reference;
+        return feet_[foot_name].trajectory->getReference();
     }
 
     bool isSwinging(const std::string& foot_name)
@@ -328,7 +406,7 @@ public:
 
     void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
     {
-        feet_[foot_name].initial_pose = initial_pose;
+        feet_[foot_name].trajectory->setInitialPose(initial_pose);
     }
 
     void setDutyCycle(const double& duty_cycle)
@@ -351,7 +429,7 @@ public:
 
         // Set the initial value to each foot
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
-            it->second.reference = it->second.initial_pose;
+            it->second.trajectory->setReferenceToInitialPose();
 
         for(unsigned int i=0; i<selected_feet_.size(); i++)
             if(!feet_[selected_feet_[i]].scheduler.isInit())
@@ -367,14 +445,11 @@ public:
 
             if(feet_[selected_feet_[i]].scheduler.isSwing())
             {
-                // Compute the periodic swing FIXME move it into the trajectory generator
-                feet_[selected_feet_[i]].reference.translation().z() +=
-                        feet_[selected_feet_[i]].amp/2.0 * (0.8 - std::cos(2.0 * M_PI * (feet_[selected_feet_[i]].swing_frequency * feet_[selected_feet_[i]].time)));
-                feet_[selected_feet_[i]].time += period;
+                feet_[selected_feet_[i]].trajectory->update(period);
             }
             else
             {
-                feet_[selected_feet_[i]].time = 0.0;
+                feet_[selected_feet_[i]].trajectory->reset();
             }
         }
 
@@ -408,14 +483,9 @@ private:
     struct feet_status_t
     {
         FootScheduler scheduler;
-        Eigen::Affine3d reference;
-        Eigen::Affine3d initial_pose;
+        std::shared_ptr<TrajectoryInterface> trajectory;
         bool is_in_contact;
 
-        // The following should go in a different class
-        double amp;
-        double time;
-        double swing_frequency;
     };
 
     typedef std::map<std::string,feet_status_t> feet_t;
