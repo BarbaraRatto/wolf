@@ -6,6 +6,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <atomic>
 
 namespace dls_controller
 {
@@ -222,7 +223,7 @@ public:
             next_feet_to_move_.resize(2);
             max_priority_ = 0;
         }
-        if(std::strcmp(gait_type.c_str(),"trot")==0)
+        else if(std::strcmp(gait_type.c_str(),"trot")==0)
         {
             ROS_INFO("Selected trot gait");
 
@@ -233,6 +234,10 @@ public:
             schedule_.push_back(foot_priority_t("lh_foot",1));
             next_feet_to_move_.resize(2);
             max_priority_ = 1;
+        }
+        else
+        {
+            throw std::runtime_error("Wrong Gait!");
         }
 
         current_priority_ = 0;
@@ -286,9 +291,24 @@ public:
             feet_[feet_names[i]].time = 0.0;
         }
 
-        gait_.reset(new Gait(feet_names,gait_type));
-        selected_feet_ = gait_->getNextSchedule();
+        gait_buffer_.resize(2);
 
+        for(unsigned int i=0; i<gait_buffer_.size(); i++)
+            gait_buffer_[i].reset(new Gait(feet_names,gait_type));
+
+        current_gait_idx_ = 0;
+        next_gait_idx_ = 1;
+        selected_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
+
+        change_gait_ = false;
+
+    }
+
+    void setGaitType(const std::string& gait_type)
+    {
+        std::vector<std::string> feet_names; // FIXME
+        gait_buffer_[next_gait_idx_].reset(new Gait(feet_names,gait_type));
+        change_gait_ = true;
     }
 
     const Eigen::Affine3d& getReference(const std::string& foot_name)
@@ -300,7 +320,6 @@ public:
     {
         return feet_[foot_name].scheduler.isSwing();
     }
-
 
     void setContact(const std::string& foot_name, const bool& contact)
     {
@@ -325,6 +344,8 @@ public:
 
     void update(const double& period)
     {
+
+        //gait_ptr_t& gait_ = gait_buffer_[current_gait_idx_];
 
         bool start_swing = true;
 
@@ -362,11 +383,27 @@ public:
             if(feet_[selected_feet_[i]].scheduler.isInit())
                 cnt++;
         if(cnt == selected_feet_.size())
-            selected_feet_ = gait_->getNextSchedule();
+        {
+            if(change_gait_)
+                changeGait();
+            selected_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
+        }
+
+
 
     }
 
 private:
+
+    void changeGait()
+    {
+        current_gait_idx_ = current_gait_idx_ + 1;
+        current_gait_idx_ = current_gait_idx_ % 2;
+        next_gait_idx_    = next_gait_idx_    + 1;
+        next_gait_idx_    = next_gait_idx_    % 2;
+
+        change_gait_ = false;
+    }
 
     struct feet_status_t
     {
@@ -382,10 +419,15 @@ private:
     };
 
     typedef std::map<std::string,feet_status_t> feet_t;
+    typedef std::shared_ptr<Gait> gait_ptr_t;
+
     std::vector<std::string> selected_feet_;
 
     feet_t feet_;
-    boost::shared_ptr<Gait> gait_;
+    std::vector<gait_ptr_t > gait_buffer_;
+    std::atomic<unsigned int> current_gait_idx_; // atom
+    std::atomic<unsigned int> next_gait_idx_; // atom
+    std::atomic<bool> change_gait_;
 
 };
 

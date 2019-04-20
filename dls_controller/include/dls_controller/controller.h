@@ -118,6 +118,12 @@ public:
          */
     bool setDutyCycle(const double duty_cycle);
 
+    /**
+         * @brief Set the gait type
+         * @param const std::string gait_type
+         */
+    bool setGaitType(const std::string& gait_type);
+
 private:
 
     /** @brief Number of joints */

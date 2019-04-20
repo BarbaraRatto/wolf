@@ -354,9 +354,27 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
             setLambda("com",config.com_lambda);
             setLambda("waist",config.waist_lambda);
             break;
+        case 4:
+            setGaitType(config.Gaits);
+           break;
         default:
             break;
     }
+}
+
+bool Controller::setGaitType(const std::string& gait_type)
+{
+    try
+    {
+        if(gait_generator_)
+            gait_generator_->setGaitType(gait_type);
+    }
+    catch(...)
+    {
+        ROS_ERROR("Wrong gait!");
+        return false;
+    }
+    return true;
 }
 
 bool Controller::setDutyCycle(const double duty_cycle)
@@ -632,7 +650,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Force the contact to each foot
             for(unsigned int i = 0; i<contact_links_.size(); i++)
                 id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
-
         }
 
         // Solver Update
