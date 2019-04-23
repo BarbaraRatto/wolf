@@ -32,7 +32,8 @@
 #include <thread>
 #include <chrono>
 // Controller
-#include <dls_controller/utils.h>
+#include <dls_controller/publishers.h>
+#include <dls_controller/locomotion.h>
 
 namespace dls_controller
 {
