@@ -49,6 +49,14 @@ public:
             return false;
     }
 
+    bool isStateChanged()
+    {
+        if(prev_state_ != state_)
+            return true;
+        else
+            return false;
+    }
+
     void setDutyCycle(double duty_cycle)
     {
         assert(duty_cycle > 0 && duty_cycle <=1);
@@ -57,6 +65,8 @@ public:
 
     void update(const double& period, const bool& contact, const bool& trigger_swing)
     {
+
+        prev_state_ = state_;
 
         switch (state_)
         {
@@ -115,6 +125,7 @@ private:
 
     enum states {INIT=0,SWING,STANCE};
     unsigned int state_;
+    unsigned int prev_state_;
 
     void reset()
     {
@@ -268,8 +279,9 @@ public:
 
     void update(const double& period)
     {
+        reference_ = initial_pose_;
         reference_.translation().z() +=
-                amp_/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
+                 amp_/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
         time_ += period;
     }
 
@@ -334,6 +346,11 @@ public:
         return feet_[foot_name].scheduler.isInit();
     }
 
+    bool isStateChanged(const std::string& foot_name)
+    {
+        return feet_[foot_name].scheduler.isStateChanged();
+    }
+
     void setContact(const std::string& foot_name, const bool& contact)
     {
         feet_[foot_name].is_in_contact = contact;
@@ -363,8 +380,8 @@ public:
         bool start_swing = true;
 
         // Set the initial value to each foot
-        for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
-            it->second.trajectory->setReferenceToInitialPose();
+        //for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
+        //    it->second.trajectory->setReferenceToInitialPose();
 
         for(unsigned int i=0; i<selected_feet_.size(); i++)
             if(!feet_[selected_feet_[i]].scheduler.isInit())
