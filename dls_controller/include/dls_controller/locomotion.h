@@ -281,7 +281,7 @@ public:
     {
         reference_ = initial_pose_;
         reference_.translation().z() +=
-                 amp_/2.0 * (0.8 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
+                 amp_/2.0 * (0.7 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
         time_ += period;
     }
 

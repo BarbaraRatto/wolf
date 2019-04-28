@@ -328,7 +328,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_ = new GaitGenerator(0.7,contact_links_,"crawl"); //FIXME
+    gait_generator_ = new GaitGenerator(0.7,contact_links_,"half_trot"); //FIXME
 
     return true;
 }
@@ -618,36 +618,39 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             for(unsigned int i = 0; i<contact_links_.size(); i++)
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
-                    /*if(gait_generator_->isStateChanged(contact_links_[i]))
+                    if(gait_generator_->isStateChanged(contact_links_[i]))
                     {
-                        id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
                         Eigen::Affine3d init; //FIXME
+                        id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
+                        id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
                         id_prob_->_feet[contact_links_[i]]->getActualPose(init);
                         gait_generator_->setInitialPose(contact_links_[i],init);
-                        //ROS_INFO("State changed!");
-                        //getchar();
-                    }*/
+                    }
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
-                    ROS_INFO_STREAM("Swinging: "<< contact_links_[i]);
+                    ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
                 else
                 {
-                    for(unsigned int j = 0; j<contact_links_.size(); j++)
-                        if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[j])->isReleased() && j!=i)
+                    unsigned int idx = i;
+                    for(unsigned int j = 0; j<i+contact_links_.size(); j++)
+                    {
+                        idx++;
+                        if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[idx%contact_links_.size()])->isReleased())
                         {
                             Eigen::Affine3d init; //FIXME
-                            id_prob_->_feet[contact_links_[i]]->setBaseLink(contact_links_[j]);
+                            id_prob_->_feet[contact_links_[i]]->setBaseLink(contact_links_[idx%contact_links_.size()]);
                             id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
                             id_prob_->_feet[contact_links_[i]]->getActualPose(init);
                             gait_generator_->setInitialPose(contact_links_[i],init);
 
-                            ROS_INFO_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[j]);
+                            ROS_DEBUG_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
 
                             break;
                         }
+                    }
 
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
-                    ROS_INFO_STREAM("Stance: "<< contact_links_[i]);
+                    ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
                 }
             /* else if(gait_generator_->isInInit(contact_links_[i]))
                 {
@@ -672,7 +675,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         // Solver Update
         id_prob_->update();
 
-        getchar();
+        //getchar();
 
         // Solve ID
         x_ = des_joint_efforts_; // Store the old desired efforts, to apply in case the solver gets mad
