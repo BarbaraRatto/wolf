@@ -252,13 +252,7 @@ private:
     Eigen::Affine3d init_rh_foot_pose_;
     Eigen::Vector3d init_com_position_;
 
-
     GaitGenerator* gait_generator_;
-
-
-
-
-
 
     /**
          * @brief thread body for the odometry publisher

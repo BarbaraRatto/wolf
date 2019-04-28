@@ -66,7 +66,15 @@ public:
      */
     constraints::GenericConstraint::Ptr _qddot_lims;
 
+    /**
+     * @brief wrench bounds
+     */
     constraints::force::WrenchesLimits::Ptr _wrenches_lims;
+
+    /**
+     * @brief _model
+     */
+    XBot::ModelInterface::Ptr _model;
 
 private:
     /**
@@ -88,11 +96,6 @@ private:
      * @brief _solver iHQP solver
      */
     solvers::iHQP::Ptr _solver;
-
-    /**
-     * @brief _model
-     */
-    XBot::ModelInterface::Ptr _model;
 
     /**
      * @brief _id inverse dynamics computation & variable helper

@@ -211,13 +211,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     if(!opt.set_urdf(urdf))
     {
-       ROS_ERROR("Unable to load urdf");
-       return false;
+        ROS_ERROR("Unable to load urdf");
+        return false;
     }
     if(!opt.set_srdf(srdf))
     {
-       ROS_ERROR("Unable to load srdf");
-       return false;
+        ROS_ERROR("Unable to load srdf");
+        return false;
     }
     if(!opt.generate_jidmap())
     {
@@ -233,7 +233,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->setJointPosition(qhome_);
 
     // Those are associated to the SRDF model
-    // FIXME, modify IDProblem to contain a map   
+    // FIXME, modify IDProblem to contain a map
     // NOTE: do not confuse these with the contact_sensors
     contact_links_.resize(4);
     contact_links_[0] = "lf_foot";
@@ -328,7 +328,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_ = new GaitGenerator(0.7,contact_links_,"trot"); //FIXME
+    gait_generator_ = new GaitGenerator(0.7,contact_links_,"crawl"); //FIXME
 
     return true;
 }
@@ -337,28 +337,28 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
 {
     switch(level)
     {
-        case 0:
-            toggleSolver();
-            break;
-        case 1:
-            toggleTracking();
-            break;
-        case 2:
-            setDutyCycle(config.duty_cycle);
-            break;
-        case 3:
-            setLambda("lf_foot",config.lf_foot_lambda);
-            setLambda("rf_foot",config.rf_foot_lambda);
-            setLambda("lh_foot",config.lh_foot_lambda);
-            setLambda("rh_foot",config.rh_foot_lambda);
-            setLambda("com",config.com_lambda);
-            setLambda("waist",config.waist_lambda);
-            break;
-        case 4:
-            setGaitType(config.Gaits);
-           break;
-        default:
-            break;
+    case 0:
+        toggleSolver();
+        break;
+    case 1:
+        toggleTracking();
+        break;
+    case 2:
+        setDutyCycle(config.duty_cycle);
+        break;
+    case 3:
+        setLambda("lf_foot",config.lf_foot_lambda);
+        setLambda("rf_foot",config.rf_foot_lambda);
+        setLambda("lh_foot",config.lh_foot_lambda);
+        setLambda("rh_foot",config.rh_foot_lambda);
+        setLambda("com",config.com_lambda);
+        setLambda("waist",config.waist_lambda);
+        break;
+    case 4:
+        setGaitType(config.Gaits);
+        break;
+    default:
+        break;
     }
 }
 
@@ -380,17 +380,17 @@ bool Controller::setGaitType(const std::string& gait_type)
 bool Controller::setDutyCycle(const double duty_cycle)
 {
 
-     if(duty_cycle>=0.0 && duty_cycle<=1.0 && gait_generator_)
-     {
-         gait_generator_->setDutyCycle(duty_cycle);
-         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setDutyCycle: set the duty cycle to "<<duty_cycle);
-         return true;
-     }
-     else
-     {
-         ROS_WARN_NAMED(CONTROLLER_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
-         return false;
-     }
+    if(duty_cycle>=0.0 && duty_cycle<=1.0 && gait_generator_)
+    {
+        gait_generator_->setDutyCycle(duty_cycle);
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setDutyCycle: set the duty cycle to "<<duty_cycle);
+        return true;
+    }
+    else
+    {
+        ROS_WARN_NAMED(CONTROLLER_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
+        return false;
+    }
 }
 
 bool Controller::setLambda(const std::string& task_name, const double lambda_value)
@@ -595,12 +595,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->_feet["rh_foot"]->getActualPose(init_rh_foot_pose_ );
             id_prob_->_com->getActualPose(    init_com_position_);
 
-
-             gait_generator_->setInitialPose("lf_foot",init_lf_foot_pose_);
-             gait_generator_->setInitialPose("rf_foot",init_rf_foot_pose_);
-             gait_generator_->setInitialPose("lh_foot",init_lh_foot_pose_);
-             gait_generator_->setInitialPose("rh_foot",init_rh_foot_pose_);
-
+            gait_generator_->setInitialPose("lf_foot",init_lf_foot_pose_); //w.r.t to base_link
+            gait_generator_->setInitialPose("rf_foot",init_rf_foot_pose_);
+            gait_generator_->setInitialPose("lh_foot",init_lh_foot_pose_);
+            gait_generator_->setInitialPose("rh_foot",init_rh_foot_pose_);
         }
 
         // Always track the com position
@@ -620,14 +618,45 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             for(unsigned int i = 0; i<contact_links_.size(); i++)
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
+                    /*if(gait_generator_->isStateChanged(contact_links_[i]))
+                    {
+                        id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
+                        Eigen::Affine3d init; //FIXME
+                        id_prob_->_feet[contact_links_[i]]->getActualPose(init);
+                        gait_generator_->setInitialPose(contact_links_[i],init);
+                        //ROS_INFO("State changed!");
+                        //getchar();
+                    }*/
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
-                    ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
+                    ROS_INFO_STREAM("Swinging: "<< contact_links_[i]);
                 }
                 else
                 {
+                    for(unsigned int j = 0; j<contact_links_.size(); j++)
+                        if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[j])->isReleased() && j!=i)
+                        {
+                            Eigen::Affine3d init; //FIXME
+                            id_prob_->_feet[contact_links_[i]]->setBaseLink(contact_links_[j]);
+                            id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
+                            id_prob_->_feet[contact_links_[i]]->getActualPose(init);
+                            gait_generator_->setInitialPose(contact_links_[i],init);
+
+                            ROS_INFO_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[j]);
+
+                            break;
+                        }
+
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
-                    ROS_DEBUG_STREAM("Not swinging: "<< contact_links_[i]);
+                    ROS_INFO_STREAM("Stance: "<< contact_links_[i]);
                 }
+            /* else if(gait_generator_->isInInit(contact_links_[i]))
+                {
+                    id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
+                    Eigen::Affine3d init; // FIXME
+                    id_prob_->_feet[contact_links_[i]]->getActualPose(init);
+                    gait_generator_->setInitialPose(contact_links_[i],init);
+                    ROS_DEBUG_STREAM("Init: "<< contact_links_[i]);
+                }*/
 
             // Set the references to each foot
             for(unsigned int i = 0; i<contact_links_.size(); i++)
@@ -642,6 +671,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Solver Update
         id_prob_->update();
+
+        getchar();
 
         // Solve ID
         x_ = des_joint_efforts_; // Store the old desired efforts, to apply in case the solver gets mad
@@ -757,15 +788,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         tasks_desired_pose_rt_pub_->unlockAndPublish();
     }
 
-
     if(contacts_rt_pub_->trylock())
     {
         for(unsigned int i=0; i<contacts_rt_pub_->msg_.data.size(); i++)
             contacts_rt_pub_->msg_.data[i] = (*contact_sensors_[i].getContactState() ? 1 : 0);
         contacts_rt_pub_->unlockAndPublish();
     }
-
-    //getchar();
 
 }
 
