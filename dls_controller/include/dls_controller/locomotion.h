@@ -254,7 +254,7 @@ public:
 
     void reset()
     {
-         time_ = 0.0;
+        time_ = 0.0;
     }
 
 protected:
@@ -379,9 +379,9 @@ public:
 
         bool start_swing = true;
 
-        // Set the initial value to each foot
-        //for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
-        //    it->second.trajectory->setReferenceToInitialPose();
+        // Set the initial value to each foot (both the scheduled feet and not)
+        for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
+            it->second.trajectory->setReferenceToInitialPose();
 
         for(unsigned int i=0; i<selected_feet_.size(); i++)
             if(!feet_[selected_feet_[i]].scheduler.isInit())
