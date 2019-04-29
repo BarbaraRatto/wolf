@@ -273,15 +273,15 @@ public:
     SwingOnPlace()
     {
         // FIXME
-        amp_ = 0.1;
+        amp_ = 0.25;
         swing_frequency_ = 1.5;
     }
 
     void update(const double& period)
     {
         reference_ = initial_pose_;
-        reference_.translation().z() +=
-                 amp_/2.0 * (0.7 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
+        reference_.translation().z() -=
+                 amp_ * (0.5 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
         time_ += period;
     }
 
