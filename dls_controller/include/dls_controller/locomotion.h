@@ -298,7 +298,7 @@ class GaitGenerator
 public:
     GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::string& gait_type)
     {
-        assert(feet_names.size==4);// We assume we are working with a dog
+        assert(feet_names.size()==4);// We assume we are working with a dog
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
             feet_[feet_names[i]].scheduler = FootScheduler(duty_cycle);
