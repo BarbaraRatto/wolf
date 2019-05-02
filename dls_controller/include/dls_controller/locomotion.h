@@ -72,7 +72,7 @@ public:
         {
         case states::INIT:
 
-            ROS_DEBUG("INIT");
+            //ROS_DEBUG("INIT");
 
             if(trigger_swing)
                 state_ = states::SWING;
@@ -80,7 +80,7 @@ public:
 
         case states::SWING:
 
-            ROS_DEBUG("SWING");
+            //ROS_DEBUG("SWING");
 
             active_time_ += period;
 
@@ -96,7 +96,7 @@ public:
 
         case states::STANCE:
 
-            ROS_DEBUG("STANCE");
+            //ROS_DEBUG("STANCE");
 
             wait_time_-=period;
 
@@ -150,10 +150,10 @@ class Gait
 public:
     Gait(const std::vector<std::string>& feet_names, const std::string& gait_type)
     {
+        //ROS_INFO_STREAM("Selected " << gait_type << " gait");
+
         if(std::strcmp(gait_type.c_str(),"half_trot")==0)
         {
-            ROS_INFO("Selected half_trot gait");
-
             schedule_.push_back(foot_priority_t("lf_foot",0));
             schedule_.push_back(foot_priority_t("rh_foot",0));
             next_feet_to_move_.resize(2);
@@ -161,8 +161,6 @@ public:
         }
         else if(std::strcmp(gait_type.c_str(),"trot")==0)
         {
-            ROS_INFO("Selected trot gait");
-
             schedule_.push_back(foot_priority_t("lf_foot",0));
             schedule_.push_back(foot_priority_t("rh_foot",0));
 
@@ -173,8 +171,6 @@ public:
         }
         else if(std::strcmp(gait_type.c_str(),"crawl")==0)
         {
-            ROS_INFO("Selected crawl gait");
-
             schedule_.push_back(foot_priority_t("lf_foot",0));
             schedule_.push_back(foot_priority_t("rh_foot",1));
             schedule_.push_back(foot_priority_t("rf_foot",2));
@@ -184,7 +180,7 @@ public:
         }
         else
         {
-            throw std::runtime_error("Wrong Gait!");
+            throw std::runtime_error("Wrong gait type!");
         }
 
         current_priority_ = 0;
@@ -227,6 +223,7 @@ public:
     {
         reference_ = Eigen::Affine3d::Identity();
         initial_pose_ = Eigen::Affine3d::Identity();
+        swing_frequency_ = 1.5;
         time_ = 0.0;
     }
 
@@ -261,11 +258,42 @@ protected:
 
     Eigen::Affine3d reference_;
     Eigen::Affine3d initial_pose_;
+    double swing_frequency_;
     double time_;
+    double x_amp_;
+    double y_amp_;
+    double z_amp_;
 
 };
 
-class SwingOnPlace : public TrajectoryInterface
+class Ellipse : public TrajectoryInterface
+{
+
+public:
+
+    Ellipse()
+    {
+        // FIXME
+        z_amp_ = 0.1;
+        x_amp_ = 0.05;
+        swing_frequency_ = 2;
+    }
+
+    void update(const double& period)
+    {
+        reference_ = initial_pose_;
+
+        reference_.translation().x() -=
+                  x_amp_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time_))) - x_amp_/2;
+        reference_.translation().z() -=
+                  z_amp_ * std::sin(M_PI * (swing_frequency_ * time_)) - z_amp_/2;
+
+        time_ += period;
+    }
+
+};
+
+class SwingOnPlace : public TrajectoryInterface // FIXME Remove me!
 {
 
 public:
@@ -273,7 +301,7 @@ public:
     SwingOnPlace()
     {
         // FIXME
-        amp_ = 0.25;
+        z_amp_ = 0.25;
         swing_frequency_ = 1.5;
     }
 
@@ -281,28 +309,22 @@ public:
     {
         reference_ = initial_pose_;
         reference_.translation().z() -=
-                 amp_ * (0.5 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
+                z_amp_ * (0.5 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
         time_ += period;
     }
-
-
-private:
-
-    double amp_;
-    double swing_frequency_;
 
 };
 
 class GaitGenerator
 {
 public:
-    GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::string& gait_type)
+    GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::string& gait_type, const std::string& trajectory_type)
     {
         assert(feet_names.size()==4);// We assume we are working with a dog
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
             feet_[feet_names[i]].scheduler = FootScheduler(duty_cycle);
-            feet_[feet_names[i]].trajectory.reset(new SwingOnPlace()); // FIXME
+            feet_[feet_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
             feet_[feet_names[i]].is_in_contact = true;
         }
 
@@ -363,13 +385,13 @@ public:
 
     void setDutyCycle(const double& duty_cycle)
     {
-         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-             it->second.scheduler.setDutyCycle(duty_cycle);
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+            it->second.scheduler.setDutyCycle(duty_cycle);
     }
 
     void setDutyCycle(const std::string& foot_name, const double& duty_cycle)
     {
-         feet_[foot_name].scheduler.setDutyCycle(duty_cycle);
+        feet_[foot_name].scheduler.setDutyCycle(duty_cycle);
     }
 
     void update(const double& period)
@@ -416,8 +438,6 @@ public:
             selected_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
         }
 
-
-
     }
 
 private:
@@ -439,6 +459,24 @@ private:
         bool is_in_contact;
 
     };
+
+    TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
+    {
+        //ROS_INFO_STREAM("Selected " << trajectory_type << " trajectory");
+        if(std::strcmp(trajectory_type.c_str(),"swing_on_place")==0)
+        {
+            return new SwingOnPlace();
+        }
+        else if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
+        {
+            return new Ellipse();
+        }
+        else
+        {
+            throw std::runtime_error("Wrong trajectory type!");
+        }
+        return NULL;
+    }
 
     typedef std::map<std::string,feet_status_t> feet_t;
     typedef std::shared_ptr<Gait> gait_ptr_t;
