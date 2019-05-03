@@ -1,6 +1,7 @@
 #ifndef LOCOMOTION_H
 #define LOCOMOTION_H
 
+#include <ros/ros.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
@@ -225,6 +226,7 @@ public:
         initial_pose_ = Eigen::Affine3d::Identity();
         swing_frequency_ = 1.5;
         time_ = 0.0;
+        //trajectory_ended_ = false;
     }
 
     virtual void update(const double& period) = 0;
@@ -252,6 +254,31 @@ public:
     void reset()
     {
         time_ = 0.0;
+        //trajectory_ended_ = true;
+    }
+
+    void setAmpX(const double& x_amp)
+    {
+        x_amp_ = x_amp;
+    }
+
+    void setAmpY(const double& y_amp)
+    {
+        y_amp_ = y_amp;
+    }
+
+    void setAmpZ(const double& z_amp)
+    {
+        z_amp_ = z_amp;
+    }
+
+    void setSwingFrequency(const double& swing_frequency)
+    {
+        if(swing_frequency >= 0.0)
+            swing_frequency_ = swing_frequency;
+        else {
+            ROS_WARN("Swing frequency has to be positive definite!");
+        }
     }
 
 protected:
@@ -263,6 +290,7 @@ protected:
     double x_amp_;
     double y_amp_;
     double z_amp_;
+    //std::atomic<bool> trajectory_ended_;
 
 };
 
@@ -275,25 +303,28 @@ public:
     {
         // FIXME
         z_amp_ = 0.1;
-        x_amp_ = 0.05;
+        x_amp_ = 0.0;
         swing_frequency_ = 2;
     }
 
     void update(const double& period)
     {
+        //if(trajectory_ended_)
+        //    trajectory_ended_=!trajectory_ended_;
+
         reference_ = initial_pose_;
 
         reference_.translation().x() -=
-                  x_amp_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time_))) - x_amp_/2;
+                x_amp_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time_))) - x_amp_/2;
         reference_.translation().z() -=
-                  z_amp_ * std::sin(M_PI * (swing_frequency_ * time_)) - z_amp_/2;
+                z_amp_ * std::sin(M_PI * (swing_frequency_ * time_)) - z_amp_/2;
 
         time_ += period;
     }
 
 };
 
-class SwingOnPlace : public TrajectoryInterface // FIXME Remove me!
+/*class SwingOnPlace : public TrajectoryInterface // FIXME Remove me!
 {
 
 public:
@@ -313,7 +344,7 @@ public:
         time_ += period;
     }
 
-};
+};*/
 
 class GaitGenerator
 {
@@ -394,6 +425,30 @@ public:
         feet_[foot_name].scheduler.setDutyCycle(duty_cycle);
     }
 
+    void setSwingFrequency(const std::string& foot_name, const double& swing_frequency)
+    {
+        feet_[foot_name].trajectory->setSwingFrequency(swing_frequency);
+    }
+
+    void setTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id_xyz, const double& amp)
+    {
+        switch(id_xyz)
+        {
+        case 0:
+            feet_[foot_name].trajectory->setAmpX(amp);
+            break;
+        case 1:
+            feet_[foot_name].trajectory->setAmpY(amp);
+            break;
+        case 2:
+            feet_[foot_name].trajectory->setAmpZ(amp);
+            break;
+        default:
+            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are X=0,Y=1,Z=2");
+            break;
+        };
+    }
+
     void update(const double& period)
     {
 
@@ -463,11 +518,7 @@ private:
     TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
     {
         //ROS_INFO_STREAM("Selected " << trajectory_type << " trajectory");
-        if(std::strcmp(trajectory_type.c_str(),"swing_on_place")==0)
-        {
-            return new SwingOnPlace();
-        }
-        else if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
+        if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
         {
             return new Ellipse();
         }
@@ -485,8 +536,8 @@ private:
 
     feet_t feet_;
     std::vector<gait_ptr_t > gait_buffer_;
-    std::atomic<unsigned int> current_gait_idx_; // atom
-    std::atomic<unsigned int> next_gait_idx_; // atom
+    std::atomic<unsigned int> current_gait_idx_;
+    std::atomic<unsigned int> next_gait_idx_;
     std::atomic<bool> change_gait_;
 
 };

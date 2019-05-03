@@ -111,19 +111,32 @@ public:
          * @param const std::string& task_name
          * @param const double lambda_value
          */
-    bool setLambda(const std::string& task_name, const double lambda_value);
+    bool setLambda(const std::string& task_name, const double& lambda_value);
 
     /**
          * @brief Set the duty cycle for the feet
          * @param const double duty_cycle
          */
-    bool setDutyCycle(const double duty_cycle);
+    bool setDutyCycle(const double& duty_cycle);
 
     /**
          * @brief Set the gait type
-         * @param const std::string gait_type
+         * @param const std::string& gait_type
          */
     bool setGaitType(const std::string& gait_type);
+
+    /**
+         * @brief Set the swing frequency
+         * @param const double& swing_frequency
+         */
+    bool setSwingFrequency(const double& swing_frequency);
+
+    /**
+         * @brief Set the trajectory amplitude
+         * @param const unsigned int& id_xyz X=0,Y=1,Z=2
+         * @param const double& amp
+         */
+    bool setTrajectoryAmplitude(const unsigned int& id_xyz, const double& amp);
 
 private:
 

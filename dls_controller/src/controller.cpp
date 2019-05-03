@@ -328,7 +328,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_ = new GaitGenerator(0.7,contact_links_,"half_trot"); //FIXME
+    gait_generator_ = new GaitGenerator(0.7,contact_links_,"trot","ellipse"); //FIXME
 
     return true;
 }
@@ -357,9 +357,47 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
     case 4:
         setGaitType(config.Gaits);
         break;
+    case 5:
+        setSwingFrequency(config.swing_frequency);
+        break;
+    case 6:
+        setTrajectoryAmplitude(0,config.amp_x); // X
+        break;
+    case 7:
+        setTrajectoryAmplitude(1,config.amp_y); // Y
+        break;
+    case 8:
+        setTrajectoryAmplitude(2,config.amp_z); // Z
+        break;
     default:
         break;
     }
+}
+
+bool Controller::setSwingFrequency(const double& swing_frequency)
+{
+    if(gait_generator_)
+        for(unsigned int i=0; i < contact_links_.size(); i++)
+            gait_generator_->setSwingFrequency(contact_links_[i],swing_frequency);
+    else
+    {
+        ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
+        return false;
+    }
+    return true;
+}
+
+bool Controller::setTrajectoryAmplitude(const unsigned int& id_xyz, const double& amp)
+{
+    if(gait_generator_)
+        for(unsigned int i=0; i < contact_links_.size(); i++)
+            gait_generator_->setTrajectoryAmplitude(contact_links_[i],id_xyz,amp);
+    else
+    {
+        ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
+        return false;
+    }
+    return true;
 }
 
 bool Controller::setGaitType(const std::string& gait_type)
@@ -368,16 +406,21 @@ bool Controller::setGaitType(const std::string& gait_type)
     {
         if(gait_generator_)
             gait_generator_->setGaitType(gait_type);
+        else
+        {
+            ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
+            return false;
+        }
     }
     catch(...)
     {
-        ROS_ERROR("Wrong gait!");
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"Wrong gait!");
         return false;
     }
     return true;
 }
 
-bool Controller::setDutyCycle(const double duty_cycle)
+bool Controller::setDutyCycle(const double& duty_cycle)
 {
 
     if(duty_cycle>=0.0 && duty_cycle<=1.0 && gait_generator_)
@@ -393,7 +436,7 @@ bool Controller::setDutyCycle(const double duty_cycle)
     }
 }
 
-bool Controller::setLambda(const std::string& task_name, const double lambda_value)
+bool Controller::setLambda(const std::string& task_name, const double& lambda_value)
 {
 
     if(task_name.empty())
