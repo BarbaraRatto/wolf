@@ -174,11 +174,6 @@ private:
     Eigen::VectorXd des_joint_efforts_;
     /** @brief Solver's solution (i.e. efforts) */
     Eigen::VectorXd x_;
-    /** @brief Desired feet poses: */
-    Eigen::Affine3d des_lf_foot_pose_;
-    Eigen::Affine3d des_lh_foot_pose_;
-    Eigen::Affine3d des_rh_foot_pose_;
-    Eigen::Affine3d des_rf_foot_pose_;
     /** @brief Xbot robot model */
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
@@ -208,9 +203,9 @@ private:
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
     /** @brief Actual tasks poses */
-    TasksPoseMap tasks_pose_;
+    TasksPoseMap task_poses_;
     /** @brief Desired tasks poses */
-    TasksPoseMap desired_tasks_pose_;
+    TasksPoseMap desired_task_poses_;
     /** @brief Actual com position w.r.t world frame */
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */
@@ -251,20 +246,13 @@ private:
     std::vector<bool> contacts_;
     /** @brief GRF contact forces */
     std::vector<Eigen::Vector3d> contact_forces_;
-
+    /** @brief Feet names */
     std::vector<std::string> contact_links_;
-
+    /** @brief Thread for the odometry publisher */
     std::shared_ptr<std::thread> odom_publisher_thread_;
-
+    /** @brief Thread for the odometry publisher */
     bool solver_reset_done_;
-
-    // Swing related part
-    Eigen::Affine3d init_lf_foot_pose_;
-    Eigen::Affine3d init_rf_foot_pose_;
-    Eigen::Affine3d init_lh_foot_pose_;
-    Eigen::Affine3d init_rh_foot_pose_;
-    Eigen::Vector3d init_com_position_;
-
+    /** @brief Gait generator */
     GaitGenerator* gait_generator_;
 
     /**
@@ -296,6 +284,26 @@ private:
          * @brief update the contacts state
          */
     void readContactsState();
+
+    /**
+         * @brief publish on ROS
+         */
+    void publish(const ros::Time& time, const ros::Duration& period);
+
+    /**
+         * @brief set the initial poses for the gait generator for the specified foot w.r.t to base_frame
+         */
+    void setInitialPose(const std::string& base_frame, const std::string& contact_name);
+
+    /**
+         * @brief set the initial poses for the gait generator for each foot w.r.t to base_frame
+         */
+    void setInitialPose(const std::string& base_frame);
+
+    /**
+         * @brief set the initial poses for the gait generator for each foot w.r.t to the current frame
+         */
+    void setInitialPose();
 
 };
 

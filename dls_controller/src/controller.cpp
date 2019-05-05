@@ -189,10 +189,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_DEBUG("P value for joint %i is: %d",i,joint_p_gain_[i]);
         ROS_DEBUG("I value for joint %i is: %d",i,joint_i_gain_[i]);
         ROS_DEBUG("D value for joint %i is: %d",i,joint_d_gain_[i]);
-
-        // Set the gain value when the error is 0 and the gain value when the error reach x [m]
-        //double x = 0.1;
-        //adaptive_joint_p_gain_.push_back(new AdaptiveGain(des_joint_p_gain_[i],des_joint_p_gain_[i]/2.0,x));
     }
 
     // Create the ModelInterface from XBot
@@ -241,14 +237,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[2] = "lh_foot";
     contact_links_[3] = "rh_foot";
 
-    tasks_pose_["com"] = Eigen::Affine3d::Identity();
-    desired_tasks_pose_["com"] = Eigen::Affine3d::Identity();
-    des_lf_foot_pose_ = tasks_pose_["lf_foot"] = desired_tasks_pose_["lf_foot"] = Eigen::Affine3d::Identity();
-    des_rf_foot_pose_ = tasks_pose_["rf_foot"] = desired_tasks_pose_["rf_foot"] = Eigen::Affine3d::Identity();
-    des_lh_foot_pose_ = tasks_pose_["lh_foot"] = desired_tasks_pose_["lh_foot"] = Eigen::Affine3d::Identity();
-    des_rh_foot_pose_ = tasks_pose_["rh_foot"] = desired_tasks_pose_["rh_foot"] = Eigen::Affine3d::Identity();
+    task_poses_["com"] = Eigen::Affine3d::Identity();
+    desired_task_poses_["com"] = Eigen::Affine3d::Identity();
+    for(unsigned int i=0;i<contact_links_.size();i++)
+        task_poses_[contact_links_[i]] = desired_task_poses_[contact_links_[i]] = Eigen::Affine3d::Identity();
 
-    //desired_tasks_pose_.initRT(tasks_pose_);
+
+    //desired_task_poses_.initRT(task_poses_);
 
     //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
     //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links_,false));
@@ -304,14 +299,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
 
     tasks_actual_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TasksPose>(controller_nh, "/tasks_actual_pose", 4);
-    tasks_actual_pose_rt_pub_->msg_.reference_frame = "base_link";
-    tasks_actual_pose_rt_pub_->msg_.tasks_name.resize(tasks_pose_.size());
-    tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses.resize(tasks_pose_.size());
+    tasks_actual_pose_rt_pub_->msg_.reference_frames.resize(task_poses_.size());
+    tasks_actual_pose_rt_pub_->msg_.task_names.resize(task_poses_.size());
+    tasks_actual_pose_rt_pub_->msg_.task_poses.poses.resize(task_poses_.size());
 
     tasks_desired_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TasksPose>(controller_nh, "/tasks_desired_pose", 4);
-    tasks_desired_pose_rt_pub_->msg_.reference_frame = "world";
-    tasks_desired_pose_rt_pub_->msg_.tasks_name.resize(desired_tasks_pose_.size());
-    tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses.resize(desired_tasks_pose_.size());
+    tasks_desired_pose_rt_pub_->msg_.reference_frames.resize(desired_task_poses_.size());
+    tasks_desired_pose_rt_pub_->msg_.task_names.resize(desired_task_poses_.size());
+    tasks_desired_pose_rt_pub_->msg_.task_poses.poses.resize(desired_task_poses_.size());
 
     contacts_rt_pub_ = new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4);
     contacts_rt_pub_->msg_.data.resize(4);
@@ -422,7 +417,6 @@ bool Controller::setGaitType(const std::string& gait_type)
 
 bool Controller::setDutyCycle(const double& duty_cycle)
 {
-
     if(duty_cycle>=0.0 && duty_cycle<=1.0 && gait_generator_)
     {
         gait_generator_->setDutyCycle(duty_cycle);
@@ -563,13 +557,13 @@ void Controller::updateXBotModel()
     if(id_prob_)
     {
         id_prob_->_com->getActualPose(com_position_); // Note: we use com_position_ as a tmp object!
-        tasks_pose_["com"].translation() = com_position_;
+        task_poses_["com"].translation() = com_position_;
         id_prob_->_com->getReference(com_position_);
-        desired_tasks_pose_["com"].translation() = com_position_;
+        desired_task_poses_["com"].translation() = com_position_;
         for(unsigned int i=0; i<contact_links_.size(); i++)
         {
-            id_prob_->_feet[contact_links_[i]]->getActualPose(tasks_pose_[contact_links_[i]]);
-            id_prob_->_feet[contact_links_[i]]->getReference(desired_tasks_pose_[contact_links_[i]]);
+            id_prob_->_feet[contact_links_[i]]->getActualPose(task_poses_[contact_links_[i]]);
+            id_prob_->_feet[contact_links_[i]]->getReference(desired_task_poses_[contact_links_[i]]);
         }
     }
 }
@@ -603,9 +597,45 @@ void Controller::starting(const ros::Time& time)
     ROS_DEBUG("Starting DLS Controller Completed");
 }
 
+void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
+{
+    Eigen::Affine3d tmp; //FIXME NO-RT
+    if(id_prob_)
+    {
+        id_prob_->_feet[contact_name]->setBaseLink(base_frame);
+        id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
+        id_prob_->_feet[contact_name]->getActualPose(tmp);
+        if(gait_generator_)
+            gait_generator_->setInitialPose(contact_name,tmp);
+    }
+}
+
+void Controller::setInitialPose(const std::string& base_frame)
+{
+    for(unsigned int i = 0;i<contact_links_.size(); i++)
+    {
+        id_prob_->_feet[contact_links_[i]]->setBaseLink(base_frame);
+        id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
+    }
+    setInitialPose();
+}
+
+void Controller::setInitialPose()
+{
+    Eigen::Affine3d tmp; //FIXME NO-RT
+    if(id_prob_)
+    {
+        for(unsigned int i = 0;i<contact_links_.size(); i++)
+        {
+            id_prob_->_feet[contact_links_[i]]->getActualPose(tmp);
+            if(gait_generator_)
+                gait_generator_->setInitialPose(contact_links_[i],tmp);
+        }
+    }
+}
+
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
-
     // Read from the hardware interfaces:
     // 1) Joints
     readJoints();
@@ -619,7 +649,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     updateXBotModel();
 
     // Set Default values
-    //des_com_position_ << -0.05, -0.02, 0.5; //w.r.t to the world
     des_com_position_ << 0.0, 0.0, 0.5; //w.r.t to the world
     des_joint_positions_ = qhome_;
 
@@ -632,20 +661,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             solver_reset_done_ = true;
 
             // Set the initial feet poses
-            id_prob_->_feet["lf_foot"]->getActualPose(init_lf_foot_pose_ );
-            id_prob_->_feet["rf_foot"]->getActualPose(init_rf_foot_pose_ );
-            id_prob_->_feet["lh_foot"]->getActualPose(init_lh_foot_pose_ );
-            id_prob_->_feet["rh_foot"]->getActualPose(init_rh_foot_pose_ );
-            id_prob_->_com->getActualPose(    init_com_position_);
-
-            gait_generator_->setInitialPose("lf_foot",init_lf_foot_pose_); //w.r.t to base_link
-            gait_generator_->setInitialPose("rf_foot",init_rf_foot_pose_);
-            gait_generator_->setInitialPose("lh_foot",init_lh_foot_pose_);
-            gait_generator_->setInitialPose("rh_foot",init_rh_foot_pose_);
+            setInitialPose(); //w.r.t to the base_link
         }
 
-        // Always track the com position
-        //des_com_position_ = init_com_position_;
+        // Track the com position
         id_prob_->_com->setReference(des_com_position_);
 
         if(tracking_active_)
@@ -663,11 +682,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 {
                     if(gait_generator_->isStateChanged(contact_links_[i]))
                     {
-                        Eigen::Affine3d init; //FIXME
-                        id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
-                        id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
-                        id_prob_->_feet[contact_links_[i]]->getActualPose(init);
-                        gait_generator_->setInitialPose(contact_links_[i],init);
+                        setInitialPose("base_link",contact_links_[i]);
                     }
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
@@ -675,19 +690,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 else
                 {
                     unsigned int idx = i;
-                    for(unsigned int j = 0; j<i+contact_links_.size(); j++)
+                    for(unsigned int j = 0; j<contact_links_.size()-1; j++)
                     {
                         idx++;
-                        if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[idx%contact_links_.size()])->isReleased())
+                        if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[idx%contact_links_.size()])->isReleased()) // Another foot is in stance
                         {
-                            Eigen::Affine3d init; //FIXME
-                            id_prob_->_feet[contact_links_[i]]->setBaseLink(contact_links_[idx%contact_links_.size()]);
-                            id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
-                            id_prob_->_feet[contact_links_[i]]->getActualPose(init);
-                            gait_generator_->setInitialPose(contact_links_[i],init);
-
-                            ROS_DEBUG_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
-
+                            setInitialPose(contact_links_[idx%contact_links_.size()],contact_links_[i]);
+                            ROS_INFO_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
                             break;
                         }
                     }
@@ -695,6 +704,24 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
                 }
+
+            /*for(int i = static_cast<int>(contact_links_.size()-1); i>=0; i--)
+            {
+                 if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->isReleased())
+                 {
+                     Eigen::Affine3d init; //FIXME
+                     id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
+                     id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
+                     id_prob_->_feet[contact_links_[i]]->getActualPose(init);
+                     gait_generator_->setInitialPose(contact_links_[i],init);
+
+                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
+
+                     ROS_INFO_STREAM("Set "<< contact_links_[i] << " to respect to base");
+
+                     break;
+                 }
+            }*/
             /* else if(gait_generator_->isInInit(contact_links_[i]))
                 {
                     id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
@@ -707,6 +734,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the references to each foot
             for(unsigned int i = 0; i<contact_links_.size(); i++)
                 id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
+
+            if(id_prob_->_com->isActive())
+                id_prob_->_com->setLambda(0.0);
         }
         else
         {
@@ -717,8 +747,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Solver Update
         id_prob_->update();
-
-        //getchar();
 
         // Solve ID
         x_ = des_joint_efforts_; // Store the old desired efforts, to apply in case the solver gets mad
@@ -768,109 +796,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     // Publish
-    if(ci_joint_states_rt_pub_->trylock())
-    {
-        for(unsigned int i = 0; i < joint_positions_.size(); i++)
-        {
-            ci_joint_states_rt_pub_->msg_.position[i]  = des_joint_positions_(i);
-            ci_joint_states_rt_pub_->msg_.velocity[i]  = des_joint_velocities_(i);
-            ci_joint_states_rt_pub_->msg_.effort[i]    = des_joint_efforts_(i);
-            ci_joint_states_rt_pub_->msg_.header.stamp = time;
-            ci_joint_states_rt_pub_->unlockAndPublish();
-        }
-    }
-    if(state_estimation_rt_pub_->trylock())
-    {
-        state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
-        state_estimation_rt_pub_->msg_.pose.pose.position.y     = floating_base_position_(1);
-        state_estimation_rt_pub_->msg_.pose.pose.position.z     = floating_base_position_(2);
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.w  = floating_base_orientation_.w();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.x  = floating_base_orientation_.x();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.y  = floating_base_orientation_.y();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.z  = floating_base_orientation_.z();
-
-        state_estimation_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_(0);
-        state_estimation_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_(1);
-        state_estimation_rt_pub_->msg_.twist.twist.linear.z     = floating_base_velocity_(2);
-        state_estimation_rt_pub_->msg_.twist.twist.angular.x    = floating_base_velocity_(3);
-        state_estimation_rt_pub_->msg_.twist.twist.angular.y    = floating_base_velocity_(4);
-        state_estimation_rt_pub_->msg_.twist.twist.angular.z    = floating_base_velocity_(5);
-
-        state_estimation_rt_pub_->msg_.header.stamp = time;
-        state_estimation_rt_pub_->unlockAndPublish();
-    }
-
-    if(tasks_actual_pose_rt_pub_->trylock())
-    {
-        TasksPoseMap::iterator it;
-        unsigned int idx = 0;
-        for(it = tasks_pose_.begin(); it != tasks_pose_.end(); it++)
-        {
-            tasks_actual_pose_rt_pub_->msg_.tasks_name[idx] = it->first;
-            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.x = it->second.translation().x();
-            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.y = it->second.translation().y();
-            tasks_actual_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.z = it->second.translation().z();
-            //FIXME Missing orientation
-            idx++;
-        }
-        tasks_actual_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
-        tasks_actual_pose_rt_pub_->unlockAndPublish();
-    }
-
-    if(tasks_desired_pose_rt_pub_->trylock())
-    {
-        TasksPoseMap::iterator it;
-        unsigned int idx = 0;
-        for(it = desired_tasks_pose_.begin(); it != desired_tasks_pose_.end(); it++)
-        {
-            tasks_desired_pose_rt_pub_->msg_.tasks_name[idx] = it->first;
-            tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.x = it->second.translation().x();
-            tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.y = it->second.translation().y();
-            tasks_desired_pose_rt_pub_->msg_.tasks_pose.poses[idx].position.z = it->second.translation().z();
-            //FIXME Missing orientation
-            idx++;
-        }
-        tasks_desired_pose_rt_pub_->msg_.tasks_pose.header.stamp = time;
-        tasks_desired_pose_rt_pub_->unlockAndPublish();
-    }
-
-    if(contacts_rt_pub_->trylock())
-    {
-        for(unsigned int i=0; i<contacts_rt_pub_->msg_.data.size(); i++)
-            contacts_rt_pub_->msg_.data[i] = (*contact_sensors_[i].getContactState() ? 1 : 0);
-        contacts_rt_pub_->unlockAndPublish();
-    }
-
+    publish(time,period);
 }
-
-/*void Controller::setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg)
-{
-    TasksPoseMap* map_ptr = desired_tasks_pose_.readFromNonRT();
-    Eigen::Affine3d tmp_affine;
-    if(msg->tasks_name.size() == msg->tasks_pose.poses.size()) // Check msg consistency
-    {
-        for(unsigned int i = 0; i< msg->tasks_name.size(); i++)
-        {
-            if(map_ptr->find(msg->tasks_name[i]) == map_ptr->end()) // FIXME That's the reason why I should use a class
-                ROS_WARN_STREAM("Task "<< msg->tasks_name[i] << " not available.");
-            else
-            {
-                tmp_affine.translation() = Eigen::Vector3d(msg->tasks_pose.poses[i].position.x,
-                                                           msg->tasks_pose.poses[i].position.y,
-                                                           msg->tasks_pose.poses[i].position.z);
-                tmp_affine.linear() = Eigen::Quaterniond(msg->tasks_pose.poses[i].orientation.w,
-                                                         msg->tasks_pose.poses[i].orientation.x,
-                                                         msg->tasks_pose.poses[i].orientation.y,
-                                                         msg->tasks_pose.poses[i].orientation.z).normalized().toRotationMatrix();
-
-                map_ptr->at(msg->tasks_name[i]) = tmp_affine;
-            }
-        }
-    desired_tasks_pose_.writeFromNonRT(*map_ptr);
-    }
-    else
-        ROS_WARN("Can not set the desired tasks reference, the name vector has a different size from the pose vector.");
-}*/
 
 void Controller::odomPublisher()
 {
@@ -920,6 +847,84 @@ void Controller::odomPublisher()
 
     }
     ROS_INFO("Stop the odomPublisher");
+}
+
+void Controller::publish(const ros::Time& time, const ros::Duration& period)
+{
+
+    if(ci_joint_states_rt_pub_->trylock())
+    {
+        for(unsigned int i = 0; i < joint_positions_.size(); i++)
+        {
+            ci_joint_states_rt_pub_->msg_.position[i]  = des_joint_positions_(i);
+            ci_joint_states_rt_pub_->msg_.velocity[i]  = des_joint_velocities_(i);
+            ci_joint_states_rt_pub_->msg_.effort[i]    = des_joint_efforts_(i);
+            ci_joint_states_rt_pub_->msg_.header.stamp = time;
+            ci_joint_states_rt_pub_->unlockAndPublish();
+        }
+    }
+    if(state_estimation_rt_pub_->trylock())
+    {
+        state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
+        state_estimation_rt_pub_->msg_.pose.pose.position.y     = floating_base_position_(1);
+        state_estimation_rt_pub_->msg_.pose.pose.position.z     = floating_base_position_(2);
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.w  = floating_base_orientation_.w();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.x  = floating_base_orientation_.x();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.y  = floating_base_orientation_.y();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.z  = floating_base_orientation_.z();
+
+        state_estimation_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_(0);
+        state_estimation_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_(1);
+        state_estimation_rt_pub_->msg_.twist.twist.linear.z     = floating_base_velocity_(2);
+        state_estimation_rt_pub_->msg_.twist.twist.angular.x    = floating_base_velocity_(3);
+        state_estimation_rt_pub_->msg_.twist.twist.angular.y    = floating_base_velocity_(4);
+        state_estimation_rt_pub_->msg_.twist.twist.angular.z    = floating_base_velocity_(5);
+
+        state_estimation_rt_pub_->msg_.header.stamp = time;
+        state_estimation_rt_pub_->unlockAndPublish();
+    }
+
+    if(tasks_actual_pose_rt_pub_->trylock())
+    {
+        TasksPoseMap::iterator it;
+        unsigned int idx = 0;
+        for(it = task_poses_.begin(); it != task_poses_.end(); it++)
+        {
+            tasks_actual_pose_rt_pub_->msg_.task_names[idx] = it->first;
+            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.translation().x();
+            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.translation().y();
+            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.translation().z();
+            //FIXME Missing orientation
+            idx++;
+        }
+        tasks_actual_pose_rt_pub_->msg_.task_poses.header.stamp = time;
+        tasks_actual_pose_rt_pub_->unlockAndPublish();
+    }
+
+    if(tasks_desired_pose_rt_pub_->trylock())
+    {
+        TasksPoseMap::iterator it;
+        unsigned int idx = 0;
+        for(it = desired_task_poses_.begin(); it != desired_task_poses_.end(); it++)
+        {
+            tasks_desired_pose_rt_pub_->msg_.task_names[idx] = it->first;
+            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.translation().x();
+            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.translation().y();
+            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.translation().z();
+            //FIXME Missing orientation
+            idx++;
+        }
+        tasks_desired_pose_rt_pub_->msg_.task_poses.header.stamp = time;
+        tasks_desired_pose_rt_pub_->unlockAndPublish();
+    }
+
+    if(contacts_rt_pub_->trylock())
+    {
+        for(unsigned int i=0; i<contacts_rt_pub_->msg_.data.size(); i++)
+            contacts_rt_pub_->msg_.data[i] = (*contact_sensors_[i].getContactState() ? 1 : 0);
+        contacts_rt_pub_->unlockAndPublish();
+    }
+
 }
 
 void Controller::stopping(const ros::Time& time)
