@@ -19,6 +19,7 @@ public:
         dc_ = duty_cycle;
         reset();
         cnt_ = 0;
+        state_ = states::INIT;
     }
 
     FootScheduler()
