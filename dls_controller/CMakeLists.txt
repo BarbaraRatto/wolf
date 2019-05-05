@@ -28,7 +28,7 @@ add_service_files(FILES
   DlsControllerServices.srv)
 
 add_message_files(FILES
-  TasksPose.msg)
+  TaskPoses.msg)
 
 generate_messages(
     DEPENDENCIES

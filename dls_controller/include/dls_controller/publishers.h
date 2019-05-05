@@ -5,7 +5,7 @@
 #include <realtime_tools/realtime_publisher.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/JointState.h>
-#include <dls_controller/TasksPose.h>
+#include <dls_controller/TaskPoses.h>
 #include <Eigen/Core>
 
 namespace dls_controller
@@ -122,7 +122,7 @@ public:
 };
 
 template <>
-class RealTimePublisher<dls_controller::TasksPose> : public RealTimePublisherBase<dls_controller::TasksPose>
+class RealTimePublisher<dls_controller::TaskPoses> : public RealTimePublisherBase<dls_controller::TaskPoses>
 {
 public:
 

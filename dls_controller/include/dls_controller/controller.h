@@ -9,7 +9,7 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <dls_controller/DlsControllerServices.h>
-#include <dls_controller/TasksPose.h>
+#include <dls_controller/TaskPoses.h>
 #include <realtime_tools/realtime_buffer.h>
 #include <dynamic_reconfigure/server.h>
 #include <dls_controller/DlsControllerConfig.h>
@@ -38,7 +38,7 @@
 namespace dls_controller
 {
 
-typedef std::map<std::string,Eigen::Affine3d> TasksPoseMap;
+typedef std::map<std::string,Eigen::Affine3d> TaskPosesMap;
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
         hardware_interface::ImuSensorInterface,
@@ -82,9 +82,9 @@ public:
 
     /**
          * @brief Set the desired reference for the solver's tasks
-         * @param dls_controller::TasksPose::ConstPtr& msg
+         * @param dls_controller::TaskPoses::ConstPtr& msg
          */
-    void setTasksDesired(const dls_controller::TasksPose::ConstPtr& msg);
+    void setTasksDesired(const dls_controller::TaskPoses::ConstPtr& msg);
 
     /**
          * @brief Ros dynamic reconfigure callback
@@ -183,9 +183,9 @@ private:
     /** @brief Real time publisher - estimated pose */
     realtime_tools::RealtimePublisher<nav_msgs::Odometry>* state_estimation_rt_pub_;
     /** @brief Real time publisher - actual tasks pose */
-    realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_actual_pose_rt_pub_;
+    realtime_tools::RealtimePublisher<dls_controller::TaskPoses>* tasks_actual_pose_rt_pub_;
     /** @brief Real time publisher - desired tasks pose */
-    realtime_tools::RealtimePublisher<dls_controller::TasksPose>* tasks_desired_pose_rt_pub_;
+    realtime_tools::RealtimePublisher<dls_controller::TaskPoses>* tasks_desired_pose_rt_pub_;
     /** @brief Real time publisher - contacts */
     realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>* contacts_rt_pub_;
     /** @brief Ros subscriber for the desired tasks reference */
@@ -202,16 +202,16 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-    /** @brief Actual tasks poses */
-    TasksPoseMap task_poses_;
-    /** @brief Desired tasks poses */
-    TasksPoseMap desired_task_poses_;
+    /** @brief Actual task poses */
+    TaskPosesMap task_poses_;
+    /** @brief Desired task poses */
+    TaskPosesMap desired_task_poses_;
     /** @brief Actual com position w.r.t world frame */
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */
     Eigen::Vector3d  des_com_position_;
     /** @brief  RT buffer for the desired poses of the id tasks */
-    //realtime_tools::RealtimeBuffer<TasksPoseMap> desired_tasks_pose_;
+    //realtime_tools::RealtimeBuffer<TaskPosesMap> desired_tasks_pose_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
     /** @brief Activate pid gains */

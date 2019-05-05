@@ -298,12 +298,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
 
-    tasks_actual_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TasksPose>(controller_nh, "/tasks_actual_pose", 4);
+    tasks_actual_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_actual_pose", 4);
     tasks_actual_pose_rt_pub_->msg_.reference_frames.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_names.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_poses.poses.resize(task_poses_.size());
 
-    tasks_desired_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TasksPose>(controller_nh, "/tasks_desired_pose", 4);
+    tasks_desired_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_desired_pose", 4);
     tasks_desired_pose_rt_pub_->msg_.reference_frames.resize(desired_task_poses_.size());
     tasks_desired_pose_rt_pub_->msg_.task_names.resize(desired_task_poses_.size());
     tasks_desired_pose_rt_pub_->msg_.task_poses.poses.resize(desired_task_poses_.size());
@@ -886,7 +886,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
     if(tasks_actual_pose_rt_pub_->trylock())
     {
-        TasksPoseMap::iterator it;
+        TaskPosesMap::iterator it;
         unsigned int idx = 0;
         for(it = task_poses_.begin(); it != task_poses_.end(); it++)
         {
@@ -903,7 +903,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
     if(tasks_desired_pose_rt_pub_->trylock())
     {
-        TasksPoseMap::iterator it;
+        TaskPosesMap::iterator it;
         unsigned int idx = 0;
         for(it = desired_task_poses_.begin(); it != desired_task_poses_.end(); it++)
         {
