@@ -1,3 +1,3 @@
-string reference_frame
-string[] tasks_name
-geometry_msgs/PoseArray tasks_pose
+string[] reference_frames
+string[] task_names
+geometry_msgs/PoseArray task_poses
