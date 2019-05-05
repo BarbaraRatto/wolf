@@ -315,10 +315,10 @@ public:
 
         reference_ = initial_pose_;
 
-        reference_.translation().x() -=
-                x_amp_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time_))) - x_amp_/2;
-        reference_.translation().z() -=
-                z_amp_ * std::sin(M_PI * (swing_frequency_ * time_)) - z_amp_/2;
+        reference_.translation().x() +=
+                x_amp_/2 * (1 - std::cos(2* M_PI * (swing_frequency_ * time_)));
+        reference_.translation().z() +=
+                z_amp_ * std::sin(2* M_PI * (swing_frequency_ * time_));
 
         time_ += period;
     }
@@ -393,6 +393,11 @@ public:
     bool isInStance(const std::string& foot_name)
     {
         return feet_[foot_name].scheduler.isStance();
+    }
+
+    bool isInStanceOrInit(const std::string& foot_name)
+    {
+        return (feet_[foot_name].scheduler.isStance() || feet_[foot_name].scheduler.isInit());
     }
 
     bool isInInit(const std::string& foot_name)

@@ -237,11 +237,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[2] = "lh_foot";
     contact_links_[3] = "rh_foot";
 
-    task_poses_["com"] = Eigen::Affine3d::Identity();
-    desired_task_poses_["com"] = Eigen::Affine3d::Identity();
+    task_poses_["com"] = desired_task_poses_["com"]  = Eigen::Affine3d::Identity();
+    base_frames_["com"] = "world";
     for(unsigned int i=0;i<contact_links_.size();i++)
+    {
         task_poses_[contact_links_[i]] = desired_task_poses_[contact_links_[i]] = Eigen::Affine3d::Identity();
-
+        base_frames_[contact_links_[i]] = "base_link";
+    }
 
     //desired_task_poses_.initRT(task_poses_);
 
@@ -556,7 +558,7 @@ void Controller::updateXBotModel()
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
     if(id_prob_)
     {
-        id_prob_->_com->getActualPose(com_position_); // Note: we use com_position_ as a tmp object!
+        id_prob_->_com->getActualPose(com_position_); // FIXME Note: we use com_position_ as a tmp object!
         task_poses_["com"].translation() = com_position_;
         id_prob_->_com->getReference(com_position_);
         desired_task_poses_["com"].translation() = com_position_;
@@ -564,6 +566,7 @@ void Controller::updateXBotModel()
         {
             id_prob_->_feet[contact_links_[i]]->getActualPose(task_poses_[contact_links_[i]]);
             id_prob_->_feet[contact_links_[i]]->getReference(desired_task_poses_[contact_links_[i]]);
+            base_frames_[contact_links_[i]] = id_prob_->_feet[contact_links_[i]]->getBaseLink();
         }
     }
 }
@@ -602,11 +605,15 @@ void Controller::setInitialPose(const std::string& base_frame, const std::string
     Eigen::Affine3d tmp; //FIXME NO-RT
     if(id_prob_)
     {
-        id_prob_->_feet[contact_name]->setBaseLink(base_frame);
-        id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
-        id_prob_->_feet[contact_name]->getActualPose(tmp);
-        if(gait_generator_)
-            gait_generator_->setInitialPose(contact_name,tmp);
+        if(id_prob_->_feet[contact_name]->setBaseLink(base_frame))
+        {
+            id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
+            id_prob_->_feet[contact_name]->getActualPose(tmp);
+            if(gait_generator_)
+                gait_generator_->setInitialPose(contact_name,tmp);
+        }
+        else
+            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
     }
 }
 
@@ -614,8 +621,12 @@ void Controller::setInitialPose(const std::string& base_frame)
 {
     for(unsigned int i = 0;i<contact_links_.size(); i++)
     {
-        id_prob_->_feet[contact_links_[i]]->setBaseLink(base_frame);
-        id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
+        if(id_prob_->_feet[contact_links_[i]]->setBaseLink(base_frame))
+        {
+            id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
+        }
+        else
+             ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
     }
     setInitialPose();
 }
@@ -678,65 +689,50 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             // Set the wrench limits (i.e. the contacts for the solver) based on the gait_generator status
             for(unsigned int i = 0; i<contact_links_.size(); i++)
+            {
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
-                    if(gait_generator_->isStateChanged(contact_links_[i]))
+                    /*if(gait_generator_->isStateChanged(contact_links_[i]))
                     {
                         setInitialPose("base_link",contact_links_[i]);
-                    }
+                    }*/
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
                 else
                 {
-                    unsigned int idx = i;
+                    // FIXME, it looks like the z distance between the foot is wrong! It should be 0
+                    /*unsigned int idx = i;
                     for(unsigned int j = 0; j<contact_links_.size()-1; j++)
                     {
                         idx++;
-                        if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[idx%contact_links_.size()])->isReleased()) // Another foot is in stance
+                        if(gait_generator_->isInStanceOrInit(contact_links_[idx%contact_links_.size()]))// Another foot is in stance
                         {
                             setInitialPose(contact_links_[idx%contact_links_.size()],contact_links_[i]);
-                            ROS_INFO_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
+                            ROS_DEBUG_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
                             break;
                         }
-                    }
+                    }*/
 
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
                 }
 
-            /*for(int i = static_cast<int>(contact_links_.size()-1); i>=0; i--)
-            {
-                 if(!id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->isReleased())
-                 {
-                     Eigen::Affine3d init; //FIXME
-                     id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
-                     id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
-                     id_prob_->_feet[contact_links_[i]]->getActualPose(init);
-                     gait_generator_->setInitialPose(contact_links_[i],init);
-
-                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
-
-                     ROS_INFO_STREAM("Set "<< contact_links_[i] << " to respect to base");
-
-                     break;
-                 }
-            }*/
-            /* else if(gait_generator_->isInInit(contact_links_[i]))
+                /*for(int i = static_cast<int>(contact_links_.size()-1); i>=0; i--)
                 {
-                    id_prob_->_feet[contact_links_[i]]->setBaseLink("base_link");
-                    Eigen::Affine3d init; // FIXME
-                    id_prob_->_feet[contact_links_[i]]->getActualPose(init);
-                    gait_generator_->setInitialPose(contact_links_[i],init);
-                    ROS_DEBUG_STREAM("Init: "<< contact_links_[i]);
+                    if(gait_generator_->isInStanceOrInit(contact_links_[i]))
+                    {
+                        setInitialPose("base_link",contact_links_[i]);
+                        break;
+                    }
                 }*/
 
-            // Set the references to each foot
-            for(unsigned int i = 0; i<contact_links_.size(); i++)
+                // Set the references to each foot
                 id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
+            }
 
-            if(id_prob_->_com->isActive())
-                id_prob_->_com->setLambda(0.0);
+            //if(id_prob_->_com->isActive())
+            //    id_prob_->_com->setLambda(0.0);
         }
         else
         {
@@ -744,6 +740,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             for(unsigned int i = 0; i<contact_links_.size(); i++)
                 id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
         }
+
+        //getchar();
 
         // Solver Update
         id_prob_->update();
@@ -890,6 +888,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         unsigned int idx = 0;
         for(it = task_poses_.begin(); it != task_poses_.end(); it++)
         {
+            tasks_actual_pose_rt_pub_->msg_.reference_frames[idx] = base_frames_[it->first];
             tasks_actual_pose_rt_pub_->msg_.task_names[idx] = it->first;
             tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.translation().x();
             tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.translation().y();
@@ -907,6 +906,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         unsigned int idx = 0;
         for(it = desired_task_poses_.begin(); it != desired_task_poses_.end(); it++)
         {
+            tasks_desired_pose_rt_pub_->msg_.reference_frames[idx] = base_frames_[it->first];
             tasks_desired_pose_rt_pub_->msg_.task_names[idx] = it->first;
             tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.translation().x();
             tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.translation().y();

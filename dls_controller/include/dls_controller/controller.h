@@ -39,6 +39,7 @@ namespace dls_controller
 {
 
 typedef std::map<std::string,Eigen::Affine3d> TaskPosesMap;
+typedef std::map<std::string,std::string> BaseFramesMap;
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
         hardware_interface::ImuSensorInterface,
@@ -206,6 +207,8 @@ private:
     TaskPosesMap task_poses_;
     /** @brief Desired task poses */
     TaskPosesMap desired_task_poses_;
+    /** @brief Desired task poses */
+    BaseFramesMap base_frames_;
     /** @brief Actual com position w.r.t world frame */
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */
