@@ -68,7 +68,8 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     std::list<unsigned int> idf = {0,1,2};
 
     _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf)/
-            (_com%idc + _waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+            (_waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+            //(_com%idc + _waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
 
     _id_problem->update(Eigen::VectorXd(0));
 

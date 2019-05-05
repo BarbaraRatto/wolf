@@ -59,6 +59,22 @@ public:
             return false;
     }
 
+    bool isTouchDown()
+    {
+        if(prev_state_ == states::SWING && state_ == states::STANCE)
+            return true;
+        else
+            return false;
+    }
+
+    bool isLiftOff()
+    {
+        if(prev_state_ == states::INIT && state_ == states::SWING)
+            return true;
+        else
+            return false;
+    }
+
     void setDutyCycle(double duty_cycle)
     {
         assert(duty_cycle > 0 && duty_cycle <=1);
@@ -408,6 +424,16 @@ public:
     bool isStateChanged(const std::string& foot_name)
     {
         return feet_[foot_name].scheduler.isStateChanged();
+    }
+
+    bool isTouchDown(const std::string& foot_name)
+    {
+        return feet_[foot_name].scheduler.isTouchDown();
+    }
+
+    bool isLiftOff(const std::string& foot_name)
+    {
+        return feet_[foot_name].scheduler.isLiftOff();
     }
 
     void setContact(const std::string& foot_name, const bool& contact)

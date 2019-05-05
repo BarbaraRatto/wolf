@@ -23,7 +23,7 @@ namespace dls_controller {
 Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
-    ,tracking_active_(false)
+    ,tracking_active_(true)
     ,stopping_(false)
 {
 }
@@ -626,7 +626,7 @@ void Controller::setInitialPose(const std::string& base_frame)
             id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
         }
         else
-             ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
+            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
     }
     setInitialPose();
 }
@@ -692,40 +692,36 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             {
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
-                    /*if(gait_generator_->isStateChanged(contact_links_[i]))
+                    if(gait_generator_->isLiftOff(contact_links_[i]))
                     {
                         setInitialPose("base_link",contact_links_[i]);
-                    }*/
+                    }
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
-                else
+                else if(gait_generator_->isInStanceOrInit(contact_links_[i]))
                 {
-                    // FIXME, it looks like the z distance between the foot is wrong! It should be 0
-                    /*unsigned int idx = i;
-                    for(unsigned int j = 0; j<contact_links_.size()-1; j++)
+                    if(gait_generator_->isTouchDown(contact_links_[i]))
                     {
-                        idx++;
-                        if(gait_generator_->isInStanceOrInit(contact_links_[idx%contact_links_.size()]))// Another foot is in stance
+                        for(unsigned int j = 0; j<contact_links_.size(); j++)
                         {
-                            setInitialPose(contact_links_[idx%contact_links_.size()],contact_links_[i]);
-                            ROS_DEBUG_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
-                            break;
+                            if(j!=i)
+                            {
+                                if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
+                                {
+                                    setInitialPose(contact_links_[i],contact_links_[j]);
+                                    ROS_DEBUG_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
+                                }
+                            }
+                            else
+                                setInitialPose("base_link",contact_links_[j]);
                         }
-                    }*/
-
+                    }
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
                 }
 
-                /*for(int i = static_cast<int>(contact_links_.size()-1); i>=0; i--)
-                {
-                    if(gait_generator_->isInStanceOrInit(contact_links_[i]))
-                    {
-                        setInitialPose("base_link",contact_links_[i]);
-                        break;
-                    }
-                }*/
+
 
                 // Set the references to each foot
                 id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
