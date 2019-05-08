@@ -108,6 +108,11 @@ public:
     void toggleTracking();
 
     /**
+         * @brief Start/Stop the relative tasks
+         */
+    void toggleRelativeTasks();
+
+    /**
          * @brief Set the lambda gains of the tasks
          * @param const std::string& task_name
          * @param const double lambda_value
@@ -221,6 +226,8 @@ private:
     std::atomic<bool> pid_active_;
     /** @brief Activate tracking */
     std::atomic<bool> tracking_active_;
+    /** @brief Activate relative tasks */
+    std::atomic<bool> relative_tasks_active_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
@@ -307,6 +314,11 @@ private:
          * @brief set the initial poses for the gait generator for each foot w.r.t to the current frame
          */
     void setInitialPose();
+
+    /**
+         * @brief set the relative task for the i-th contact link, i.e. set the swinging foot relative to the base_link and the stance foot relative to the other feet in stance.
+         */
+    void setRelativeTask(const unsigned int& contact_link_idx);
 
 };
 

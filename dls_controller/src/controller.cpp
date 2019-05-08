@@ -23,7 +23,8 @@ namespace dls_controller {
 Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
-    ,tracking_active_(true)
+    ,tracking_active_(false)
+    ,relative_tasks_active_(false)
     ,stopping_(false)
 {
 }
@@ -338,12 +339,15 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         toggleSolver();
         break;
     case 1:
-        toggleTracking();
+        toggleRelativeTasks();
         break;
     case 2:
-        setDutyCycle(config.duty_cycle);
+        toggleTracking();
         break;
     case 3:
+        setDutyCycle(config.duty_cycle);
+        break;
+    case 4:
         setLambda("lf_foot",config.lf_foot_lambda);
         setLambda("rf_foot",config.rf_foot_lambda);
         setLambda("lh_foot",config.lh_foot_lambda);
@@ -351,19 +355,19 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setLambda("com",config.com_lambda);
         setLambda("waist",config.waist_lambda);
         break;
-    case 4:
+    case 5:
         setGaitType(config.Gaits);
         break;
-    case 5:
+    case 6:
         setSwingFrequency(config.swing_frequency);
         break;
-    case 6:
+    case 7:
         setTrajectoryAmplitude(0,config.amp_x); // X
         break;
-    case 7:
+    case 8:
         setTrajectoryAmplitude(1,config.amp_y); // Y
         break;
-    case 8:
+    case 9:
         setTrajectoryAmplitude(2,config.amp_z); // Z
         break;
     default:
@@ -478,6 +482,16 @@ bool Controller::setLambda(const std::string& task_name, const double& lambda_va
     }
 
     return true;
+}
+
+void Controller::toggleRelativeTasks()
+{
+    relative_tasks_active_=!relative_tasks_active_;
+
+    if(relative_tasks_active_)
+        ROS_INFO("Relative tasks are ON");
+    else
+        ROS_INFO("Relative tasks are OFF");
 }
 
 void Controller::toggleSolver()
@@ -672,7 +686,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             solver_reset_done_ = true;
 
             // Set the initial feet poses
-            setInitialPose(); //w.r.t to the base_link
+            setInitialPose(); //w.r.t to the frame selected in IDProblem
         }
 
         // Track the com position
@@ -687,41 +701,23 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Update the gait_generator
             gait_generator_->update(period.toSec());
 
-            // Set the wrench limits (i.e. the contacts for the solver) based on the gait_generator status
             for(unsigned int i = 0; i<contact_links_.size(); i++)
             {
+                // Use Relative tasks
+                if(relative_tasks_active_)
+                    setRelativeTask(i);
+
+                // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
-                    if(gait_generator_->isLiftOff(contact_links_[i]))
-                    {
-                        setInitialPose("base_link",contact_links_[i]);
-                    }
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
                 else if(gait_generator_->isInStanceOrInit(contact_links_[i]))
                 {
-                    if(gait_generator_->isTouchDown(contact_links_[i]))
-                    {
-                        for(unsigned int j = 0; j<contact_links_.size(); j++)
-                        {
-                            if(j!=i)
-                            {
-                                if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
-                                {
-                                    setInitialPose(contact_links_[i],contact_links_[j]);
-                                    ROS_DEBUG_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
-                                }
-                            }
-                            else
-                                setInitialPose("base_link",contact_links_[j]);
-                        }
-                    }
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
                 }
-
-
 
                 // Set the references to each foot
                 id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
@@ -791,6 +787,41 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Publish
     publish(time,period);
+}
+
+void Controller::setRelativeTask(const unsigned int& contact_link_idx)
+{
+    const unsigned int& i = contact_link_idx;
+    if(gait_generator_->isSwinging(contact_links_[i]))
+        // Set the base frame of the swinging feet w.r.t the base_link.
+    {
+        if(gait_generator_->isLiftOff(contact_links_[i]))
+        {
+            setInitialPose("base_link",contact_links_[i]);
+        }
+    }
+    else if(gait_generator_->isInStanceOrInit(contact_links_[i]))
+        // Set the base frame of the feet in stance w.r.t the foot in touchDown.
+        // Set the base frame of the foot in touchDown w.r.t the base_link.
+    {
+        if(gait_generator_->isTouchDown(contact_links_[i]))
+        {
+            for(unsigned int j = 0; j<contact_links_.size(); j++)
+            {
+                if(j!=i)
+                {
+                    if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
+                    {
+                        setInitialPose(contact_links_[i],contact_links_[j]);
+                        ROS_DEBUG_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
+                    }
+                }
+                else
+                    setInitialPose("base_link",contact_links_[j]);
+            }
+        }
+
+    }
 }
 
 void Controller::odomPublisher()

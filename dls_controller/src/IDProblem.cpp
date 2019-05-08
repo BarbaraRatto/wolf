@@ -22,7 +22,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     for(unsigned int i=0; i<contact_links.size(); i++)
     {
         _feet[contact_links[i]] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(contact_links[i], *_model, contact_links[i],
-                                                                               "base_link", _id->getJointsAccelerationAffine());
+                                                                               "world", _id->getJointsAccelerationAffine());
         _feet[contact_links[i]]->setLambda(1000.);
     }
     //   --------------------------
@@ -64,11 +64,11 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
     // Notice that we just control the orientation of the waist
     std::list<unsigned int> idw = {3,4,5};
-    std::list<unsigned int> idc = {2};
+    std::list<unsigned int> idc = {0,1,2};
     std::list<unsigned int> idf = {0,1,2};
 
     _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf)/
-            (_waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+            (_com%idc +_waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
             //(_com%idc + _waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
 
     _id_problem->update(Eigen::VectorXd(0));
