@@ -674,8 +674,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     updateXBotModel();
 
     // Set Default values
-    des_com_position_ << 0.0, 0.0, 0.5; //w.r.t to the world
     des_joint_positions_ = qhome_;
+    des_com_position_ << 0.0, 0.0, 0.5; // Keep the com position centered w.r.t the world
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -688,9 +688,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the initial feet poses
             setInitialPose(); //w.r.t to the frame selected in IDProblem
         }
-
-        // Track the com position
-        id_prob_->_com->setReference(des_com_position_);
 
         if(tracking_active_)
         {
@@ -706,6 +703,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 // Use Relative tasks
                 if(relative_tasks_active_)
                     setRelativeTask(i);
+                else
+                {
+                    if(gait_generator_->isTouchDown(contact_links_[i]))
+                    {
+                        setInitialPose("world",contact_links_[i]);
+                    }
+                }
 
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(contact_links_[i]))
@@ -722,9 +726,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 // Set the references to each foot
                 id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
             }
-
-            //if(id_prob_->_com->isActive())
-            //    id_prob_->_com->setLambda(0.0);
         }
         else
         {
@@ -733,7 +734,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
         }
 
-        //getchar();
+        // Always track the com position
+        id_prob_->_com->setReference(des_com_position_);
 
         // Solver Update
         id_prob_->update();
@@ -800,9 +802,10 @@ void Controller::setRelativeTask(const unsigned int& contact_link_idx)
             setInitialPose("base_link",contact_links_[i]);
         }
     }
-    else if(gait_generator_->isInStanceOrInit(contact_links_[i]))
-        // Set the base frame of the feet in stance w.r.t the foot in touchDown.
-        // Set the base frame of the foot in touchDown w.r.t the base_link.
+    else
+#ifdef LINK_TO_ONE_LEG
+    // Set the base frame of the feet in stance w.r.t the foot in touchDown.
+    // Set the base frame of the foot in touchDown w.r.t the base_link.
     {
         if(gait_generator_->isTouchDown(contact_links_[i]))
         {
@@ -817,11 +820,31 @@ void Controller::setRelativeTask(const unsigned int& contact_link_idx)
                     }
                 }
                 else
-                    setInitialPose("base_link",contact_links_[j]);
+                    setInitialPose("base_link",contact_links_[j]); // It is needed if the com is not available
             }
+            //setInitialPose("world",contact_links_[i]);
         }
 
     }
+#else
+    {
+        if(gait_generator_->isTouchDown(contact_links_[i]))
+        {
+            unsigned int idx = i;
+            for(unsigned int j = 0; j<contact_links_.size()-1; j++)
+            {
+                idx++;
+                if(gait_generator_->isInStanceOrInit(contact_links_[idx%contact_links_.size()]))
+                {
+                    setInitialPose(contact_links_[idx%contact_links_.size()],contact_links_[i]);
+                    ROS_DEBUG_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
+                    break;
+                }
+            }
+        }
+    }
+
+#endif
 }
 
 void Controller::odomPublisher()

@@ -241,7 +241,7 @@ public:
     {
         reference_ = Eigen::Affine3d::Identity();
         initial_pose_ = Eigen::Affine3d::Identity();
-        swing_frequency_ = 1.5;
+        swing_frequency_ = 2.0;
         time_ = 0.0;
         //trajectory_ended_ = false;
     }
@@ -319,9 +319,9 @@ public:
     Ellipse()
     {
         // FIXME
-        z_amp_ = 0.1;
+        z_amp_ = 0.05;
         x_amp_ = 0.0;
-        swing_frequency_ = 2;
+        swing_frequency_ = 3.0;
     }
 
     void update(const double& period)
@@ -329,39 +329,15 @@ public:
         //if(trajectory_ended_)
         //    trajectory_ended_=!trajectory_ended_;
 
-        reference_ = initial_pose_;
-
-        reference_.translation().x() +=
+        reference_.translation().x() = initial_pose_.translation().x() +
                 x_amp_/2 * (1 - std::cos(2* M_PI * (swing_frequency_ * time_)));
-        reference_.translation().z() +=
+        reference_.translation().z() = initial_pose_.translation().z() +
                 z_amp_ * std::sin(2* M_PI * (swing_frequency_ * time_));
 
         time_ += period;
     }
 
 };
-
-/*class SwingOnPlace : public TrajectoryInterface // FIXME Remove me!
-{
-
-public:
-
-    SwingOnPlace()
-    {
-        // FIXME
-        z_amp_ = 0.25;
-        swing_frequency_ = 1.5;
-    }
-
-    void update(const double& period)
-    {
-        reference_ = initial_pose_;
-        reference_.translation().z() -=
-                z_amp_ * (0.5 - std::cos(2.0 * M_PI * (swing_frequency_ * time_)));
-        time_ += period;
-    }
-
-};*/
 
 class GaitGenerator
 {
@@ -544,7 +520,6 @@ private:
         FootScheduler scheduler;
         std::shared_ptr<TrajectoryInterface> trajectory;
         bool is_in_contact;
-
     };
 
     TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
