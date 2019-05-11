@@ -412,6 +412,22 @@ public:
         return feet_[foot_name].scheduler.isLiftOff();
     }
 
+    bool isAnyFootInLiftOff()
+    {
+        bool result = false;
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+            result = result || it->second.scheduler.isLiftOff();
+        return result;
+    }
+
+    bool isAnyFootInTouchDown()
+    {
+        bool result = false;
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+            result = result || it->second.scheduler.isTouchDown();
+        return result;
+    }
+
     void setContact(const std::string& foot_name, const bool& contact)
     {
         feet_[foot_name].is_in_contact = contact;

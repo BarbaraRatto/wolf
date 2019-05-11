@@ -706,26 +706,20 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Update the gait_generator
             gait_generator_->update(period.toSec());
 
+            if(relative_tasks_active_)
+                setRelativeTasks();
+            else
+                setWorldTasks();
+
             for(unsigned int i = 0; i<contact_links_.size(); i++)
             {
-                // Use Relative tasks
-                if(relative_tasks_active_)
-                    setRelativeTask(i);
-                else
-                {
-                    if(gait_generator_->isTouchDown(contact_links_[i]))
-                    {
-                        setInitialPose("world",contact_links_[i]);
-                    }
-                }
-
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
-                else if(gait_generator_->isInStanceOrInit(contact_links_[i]))
+                else
                 {
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
@@ -799,61 +793,44 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     publish(time,period);
 }
 
-void Controller::setRelativeTask(const unsigned int& contact_link_idx)
+void Controller::setRelativeTasks()
 {
-    const unsigned int& i = contact_link_idx;
-    if(gait_generator_->isSwinging(contact_links_[i]))
-        // Set the base frame of the swinging feet w.r.t the base_link.
-    {
-        if(gait_generator_->isLiftOff(contact_links_[i]))
+    for(unsigned int i=0; i<contact_links_.size(); i++)
+        if(gait_generator_->isSwinging(contact_links_[i]))
+            // Set the base frame of the swinging feet w.r.t the base_link.
         {
-            setInitialPose("base_link",contact_links_[i]);
-        }
-    }
-    else
-#define LINK_TO_ONE_LEG
-#ifdef LINK_TO_ONE_LEG
-    // Set the base frame of the feet in stance w.r.t the foot in touchDown.
-    // Set the base frame of the foot in touchDown w.r.t the base_link.
-    {
-        if(gait_generator_->isTouchDown(contact_links_[i]))
-        {
-            for(unsigned int j = 0; j<contact_links_.size(); j++)
+            if(gait_generator_->isLiftOff(contact_links_[i]))
             {
-                if(j!=i)
-                {
-                    if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
-                    {
-                        setInitialPose(contact_links_[i],contact_links_[j]);
-                        ROS_DEBUG_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
-                    }
-                }
-                else
-                    setInitialPose("base_link",contact_links_[j]); // It is needed if the com is not available
-            }
-            //setInitialPose("world",contact_links_[i]);
-        }
-
-    }
-#else
-    {
-        if(gait_generator_->isTouchDown(contact_links_[i]))
-        {
-            unsigned int idx = i;
-            for(unsigned int j = 0; j<contact_links_.size()-1; j++)
-            {
-                idx++;
-                if(gait_generator_->isInStanceOrInit(contact_links_[idx%contact_links_.size()]))
-                {
-                    setInitialPose(contact_links_[idx%contact_links_.size()],contact_links_[i]);
-                    ROS_DEBUG_STREAM("Set "<< contact_links_[i] << " to respect to " << contact_links_[idx%contact_links_.size()]);
-                    break;
-                }
+                setInitialPose("base_link",contact_links_[i]);
             }
         }
+    if(gait_generator_->isAnyFootInLiftOff() || gait_generator_->isAnyFootInTouchDown())
+    {
+       for(unsigned int i=0;i<contact_links_.size();i++)
+           if(gait_generator_->isInStanceOrInit(contact_links_[i]))
+           {
+               unsigned int idx = i;
+               do
+               {
+                   idx++;
+                   idx=idx%contact_links_.size();
+                   if(gait_generator_->isInStanceOrInit(contact_links_[idx]) && idx!=i)
+                   {
+                        setInitialPose(contact_links_[i],contact_links_[idx]);
+                        ROS_DEBUG_STREAM("Set "<< contact_links_[idx] << " w.r.t "<< contact_links_[i]);
+                   }
+               }
+               while(idx!=0);
+               break;
+           }
     }
+}
 
-#endif
+void Controller::setWorldTasks()
+{
+    for(unsigned int i=0; i<contact_links_.size(); i++)
+        if(gait_generator_->isTouchDown(contact_links_[i]))
+            setInitialPose("world",contact_links_[i]);
 }
 
 
@@ -870,7 +847,7 @@ void Controller::rvizPublisher() // FIXME Not thread safe
     while(!stopping_ && visual_tools_)
     {
 
-        visual_tools_->publishArrow(pose, rviz_visual_tools::colors::RED_, rviz_visual_tools::scales::LARGE);
+        visual_tools_->publishArrow(pose, rviz_visual_tools::colors::RED, rviz_visual_tools::scales::LARGE);
 
         visual_tools_->trigger();
 

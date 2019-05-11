@@ -326,9 +326,14 @@ private:
     void setInitialPose();
 
     /**
-         * @brief set the relative task for the i-th contact link, i.e. set the swinging foot relative to the base_link and the stance foot relative to the other feet in stance.
+         * @brief set the relative tasks
          */
-    void setRelativeTask(const unsigned int& contact_link_idx);
+    void setRelativeTasks();
+
+    /**
+         * @brief set the world tasks
+         */
+    void setWorldTasks();
 
 };
 
