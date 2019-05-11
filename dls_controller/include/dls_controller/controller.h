@@ -12,6 +12,7 @@
 #include <dls_controller/TaskPoses.h>
 #include <realtime_tools/realtime_buffer.h>
 #include <dynamic_reconfigure/server.h>
+#include <rviz_visual_tools/rviz_visual_tools.h>
 #include <dls_controller/DlsControllerConfig.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
@@ -260,15 +261,24 @@ private:
     std::vector<std::string> contact_links_;
     /** @brief Thread for the odometry publisher */
     std::shared_ptr<std::thread> odom_publisher_thread_;
-    /** @brief Thread for the odometry publisher */
+    /** @brief Thread for the rviz publisher */
+    std::shared_ptr<std::thread> rviz_publisher_thread_;
+    /** @brief True if the solver has been resetted */
     bool solver_reset_done_;
     /** @brief Gait generator */
     GaitGenerator* gait_generator_;
+    /** @brief Visual tools */
+    rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
 
     /**
          * @brief thread body for the odometry publisher
          */
     void odomPublisher();
+
+    /**
+         * @brief thread body for the rviz tools publisher
+         */
+    void rvizPublisher();
 
     /**
          * @brief update the joints state

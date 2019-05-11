@@ -17,6 +17,7 @@ using namespace Cartesian;
 namespace dls_controller {
 
 #define FLOATING_BASE_DOFS 6
+#define THREADS_SLEEP_TIME_ms 4
 #define DT 0.001 // FIXME
 #define CONTROLLER_NAME "dls_controller"
 
@@ -317,8 +318,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Reference for the tasks
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
 
+    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("base_link","/rviz_visual_markers"));
+
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+    // Spawn the rviz publisher thread
+    rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
     solver_reset_done_ = false;
 
@@ -806,6 +811,7 @@ void Controller::setRelativeTask(const unsigned int& contact_link_idx)
         }
     }
     else
+#define LINK_TO_ONE_LEG
 #ifdef LINK_TO_ONE_LEG
     // Set the base frame of the feet in stance w.r.t the foot in touchDown.
     // Set the base frame of the foot in touchDown w.r.t the base_link.
@@ -848,6 +854,29 @@ void Controller::setRelativeTask(const unsigned int& contact_link_idx)
     }
 
 #endif
+}
+
+
+void Controller::rvizPublisher() // FIXME Not thread safe
+{
+    ROS_INFO("Start the rvizPublisher");
+
+    // Create pose
+    Eigen::Isometry3d pose;
+    pose = Eigen::AngleAxisd(M_PI/4, Eigen::Vector3d::UnitY()); // rotate along X axis by 45 degrees
+    pose.translation() = Eigen::Vector3d( 0.1, 0.1, 0.1 ); // translate x,y,z
+
+    // Publish using rviz visual tools
+    while(!stopping_ && visual_tools_)
+    {
+
+        visual_tools_->publishArrow(pose, rviz_visual_tools::colors::RED_, rviz_visual_tools::scales::LARGE);
+
+        visual_tools_->trigger();
+
+        std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+    }
+    ROS_INFO("Stop the rvizPublisher");
 }
 
 void Controller::odomPublisher()
@@ -894,7 +923,7 @@ void Controller::odomPublisher()
         transform.setRotation(q);
         br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/base_link"));
 
-        std::this_thread::sleep_for( std::chrono::milliseconds(4) );
+        std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
 
     }
     ROS_INFO("Stop the odomPublisher");
@@ -903,6 +932,7 @@ void Controller::odomPublisher()
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
 {
 
+    // Publish using rt-publishers
     if(ci_joint_states_rt_pub_->trylock())
     {
         for(unsigned int i = 0; i < joint_positions_.size(); i++)
@@ -977,7 +1007,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
             contacts_rt_pub_->msg_.data[i] = (*contact_sensors_[i].getContactState() ? 1 : 0);
         contacts_rt_pub_->unlockAndPublish();
     }
-
 }
 
 void Controller::stopping(const ros::Time& time)

@@ -14,7 +14,8 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface dls_hardware_interface realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation)
+find_package(catkin REQUIRED tf controller_interface dls_hardware_interface
+    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(XCM REQUIRED)
