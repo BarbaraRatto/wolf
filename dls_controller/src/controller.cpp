@@ -354,6 +354,7 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setLambda("rh_foot",config.rh_foot_lambda);
         setLambda("com",config.com_lambda);
         setLambda("waist",config.waist_lambda);
+        setLambda("postural",config.postural_lambda);
         break;
     case 5:
         setGaitType(config.Gaits);
@@ -452,6 +453,8 @@ bool Controller::setLambda(const std::string& task_name, const double& lambda_va
             // FIXME hardcoded like there is no tomorrow
             if(task_name == "com")
                 id_prob_->_com->setLambda(lambda_value);
+            else if(task_name == "postural")
+                id_prob_->_postural->setLambda(lambda_value);
             else if(task_name == "waist")
                 id_prob_->_waist->setLambda(lambda_value);
             else if(task_name == "lf_foot")
