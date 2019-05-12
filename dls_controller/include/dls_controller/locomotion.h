@@ -363,6 +363,7 @@ public:
         selected_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
 
         change_gait_ = false;
+        schedule_changed_ = true; // At the beginning is already changed no?
 
     }
 
@@ -411,6 +412,11 @@ public:
     bool isLiftOff(const std::string& foot_name)
     {
         return feet_[foot_name].scheduler.isLiftOff();
+    }
+
+    bool isScheduleChanged()
+    {
+        return schedule_changed_;
     }
 
     bool isAnyFootInLiftOff()
@@ -516,6 +522,11 @@ public:
             if(change_gait_)
                 changeGait();
             selected_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
+            schedule_changed_ = true;
+        }
+        else
+        {
+            schedule_changed_ = false;
         }
 
     }
@@ -563,6 +574,7 @@ private:
     std::atomic<unsigned int> current_gait_idx_;
     std::atomic<unsigned int> next_gait_idx_;
     std::atomic<bool> change_gait_;
+    std::atomic<bool> schedule_changed_;
 
 };
 
