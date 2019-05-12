@@ -334,7 +334,8 @@ public:
         reference_.translation().z() = initial_pose_.translation().z() +
                 z_amp_ * std::sin(2* M_PI * (swing_frequency_ * time_));
 
-        time_ += period;
+        if(swing_frequency_*time_<1.0)
+            time_ += period;
     }
 
 };
