@@ -7,6 +7,9 @@
     <arg name="task_period" default="0.001" />
     <arg name="gazebo_gui" default="true" />
 
+    <!-- export the task_period to the param server -->
+    <param name="task_period" value="$(arg task_period)"/>
+
     <!-- <param name="$(arg robot_name)/dls_controller/robot_description" textfile="$(find dls_controller)/robots/$(arg robot_name)/hyqreal.urdf"/> -->
     <!-- <param name="$(arg robot_name)/dls_controller/robot_description_semantic" textfile="$(find dls_controller)/robots/$(arg robot_name)/hyqreal.srdf"/> -->
 
@@ -32,6 +35,10 @@
 
     <!-- rqt_reconfigure gui -->
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="gui">
+    </node>
+
+    <!-- joy -->
+    <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/dls_controller">
     </node>
 
     <!-- Convert joint states to TF transforms for rviz, etc -->
