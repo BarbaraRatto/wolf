@@ -289,6 +289,21 @@ public:
         z_amp_ = z_amp;
     }
 
+    double getAmpX()
+    {
+        return x_amp_;
+    }
+
+    double getAmpY()
+    {
+        return y_amp_;
+    }
+
+    double getAmpZ()
+    {
+        return z_amp_;
+    }
+
     void setSwingFrequency(const double& swing_frequency)
     {
         if(swing_frequency >= 0.0)
