@@ -317,11 +317,11 @@ protected:
 
     Eigen::Affine3d reference_;
     Eigen::Affine3d initial_pose_;
-    double swing_frequency_;
     double time_;
-    double x_amp_;
-    double y_amp_;
-    double z_amp_;
+    std::atomic<double> swing_frequency_;
+    std::atomic<double> x_amp_;
+    std::atomic<double> y_amp_;
+    std::atomic<double> z_amp_;
     //std::atomic<bool> trajectory_ended_;
 
 };
