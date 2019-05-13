@@ -320,8 +320,10 @@ public:
     {
         // FIXME
         z_amp_ = 0.05;
-        x_amp_ = 0.0;
+        x_amp_ = 0.05;
+        y_amp_ = M_PI/4;
         swing_frequency_ = 3.0;
+        xyz = Eigen::Vector3d::Zero();
     }
 
     void update(const double& period)
@@ -329,14 +331,25 @@ public:
         //if(trajectory_ended_)
         //    trajectory_ended_=!trajectory_ended_;
 
-        reference_.translation().x() = initial_pose_.translation().x() +
-                x_amp_/2 * (1 - std::cos(2* M_PI * (swing_frequency_ * time_)));
-        reference_.translation().z() = initial_pose_.translation().z() +
-                z_amp_ * std::sin(2* M_PI * (swing_frequency_ * time_));
+        xyz(0) = x_amp_/2 * (1 - std::cos(2* M_PI * (swing_frequency_ * time_)));
+        xyz(1) = 0.0;
+        xyz(2) = z_amp_ * std::sin(2* M_PI * (swing_frequency_ * time_));
+
+        double c = std::cos(y_amp_);
+        double s = std::sin(y_amp_);
+
+        xyz(0) = c * xyz(0) - s * xyz(1);
+        xyz(1) = s * xyz(0) + c * xyz(1);
+        xyz(2) = xyz(2);
+
+        reference_.pretranslate(xyz);
 
         if(swing_frequency_*time_<1.0)
             time_ += period;
     }
+
+private:
+    Eigen::Vector3d xyz;
 
 };
 
