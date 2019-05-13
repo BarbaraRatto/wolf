@@ -241,8 +241,12 @@ public:
     {
         reference_ = Eigen::Affine3d::Identity();
         initial_pose_ = Eigen::Affine3d::Identity();
-        swing_frequency_ = 2.0;
+        swing_frequency_ = 3.0;
         time_ = 0.0;
+        x_amp_ = 0.0;
+        y_amp_ = 0.0;
+        z_amp_ = 0.0;
+
         //trajectory_ended_ = false;
     }
 
@@ -322,6 +326,7 @@ protected:
     std::atomic<double> x_amp_;
     std::atomic<double> y_amp_;
     std::atomic<double> z_amp_;
+
     //std::atomic<bool> trajectory_ended_;
 
 };
@@ -334,10 +339,6 @@ public:
     Ellipse()
     {
         // FIXME
-        z_amp_ = 0.05;
-        x_amp_ = 0.05;
-        y_amp_ = M_PI/4;
-        swing_frequency_ = 3.0;
         xyz = Eigen::Vector3d::Zero();
     }
 
