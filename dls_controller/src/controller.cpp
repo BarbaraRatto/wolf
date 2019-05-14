@@ -706,10 +706,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Update the gait_generator
             gait_generator_->update(period.toSec());
 
-            if(relative_tasks_active_)
+            /*if(relative_tasks_active_)
                 setRelativeTasks();
             else
-                setWorldTasks();
+                setWorldTasks();*/
 
             for(unsigned int i = 0; i<contact_links_.size(); i++)
             {
