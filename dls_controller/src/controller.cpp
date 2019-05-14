@@ -18,7 +18,6 @@ namespace dls_controller {
 
 #define FLOATING_BASE_DOFS 6
 #define THREADS_SLEEP_TIME_ms 4
-#define DT 0.001 // FIXME
 #define CONTROLLER_NAME "dls_controller"
 
 Controller::Controller()
@@ -244,7 +243,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     for(unsigned int i=0;i<contact_links_.size();i++)
     {
         task_poses_[contact_links_[i]] = desired_task_poses_[contact_links_[i]] = Eigen::Affine3d::Identity();
-        base_frames_[contact_links_[i]] = "base_link";
+        base_frames_[contact_links_[i]] = "world";
     }
 
     //desired_task_poses_.initRT(task_poses_);
@@ -317,6 +316,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Reference for the tasks
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
+    joy_sub_ = controller_nh.subscribe("joy", 1, &Controller::joyCallback, this);
 
     visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("base_link","/rviz_visual_markers"));
 
@@ -331,9 +331,24 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_ = new GaitGenerator(0.7,contact_links_,"trot","ellipse"); //FIXME
+    gait_generator_ = new GaitGenerator(0.8,contact_links_,"trot","ellipse"); //FIXME
+
+    trj_x_amp_ = 0.05;
+    trj_z_amp_ = 0.05;
+    trj_theta_ = 0.0;
+
+    joy_x_scale_     = 0.0;
+    joy_z_scale_     = 0.0;
+    joy_theta_scale_ = 0.0;
 
     return true;
+}
+
+void Controller::joyCallback(const sensor_msgs::Joy::ConstPtr& msg)
+{
+    joy_x_scale_     = msg->axes[1];
+    joy_z_scale_     = 1.0;
+    joy_theta_scale_ = 0.0;
 }
 
 void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level)
@@ -368,13 +383,16 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setSwingFrequency(config.swing_frequency);
         break;
     case 7:
-        setTrajectoryAmplitude(0,config.amp_x); // X
+        trj_x_amp_ = config.x; // X
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set x step length to "<< config.x);
         break;
     case 8:
-        setTrajectoryAmplitude(1,config.amp_y); // Y
+        trj_z_amp_ = config.z;  // Z
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set z step length to "<< config.z);
         break;
     case 9:
-        setTrajectoryAmplitude(2,config.amp_z); // Z
+        trj_theta_ = config.theta;  // theta
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set theta to "<< config.theta);
         break;
     default:
         break;
@@ -683,7 +701,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Set Default values
     des_joint_positions_ = qhome_;
-    des_com_position_ << 0.0, 0.0, 0.5; // Keep the com position centered w.r.t the world
+    //des_com_position_ << 0.0, 0.0, 0.5; // Keep the com position centered w.r.t the world
+
+    // Set the joypad commands
+    gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_*joy_x_scale_,trj_theta_,trj_z_amp_*joy_z_scale_);
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -737,7 +758,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
 
         // Always track the com position
-        id_prob_->_com->setReference(des_com_position_);
+        //id_prob_->_com->setReference(des_com_position_);
 
         // Solver Update
         id_prob_->update();
@@ -804,26 +825,29 @@ void Controller::setRelativeTasks()
                 setInitialPose("base_link",contact_links_[i]);
             }
         }
-    if(gait_generator_->isAnyFootInLiftOff() || gait_generator_->isAnyFootInTouchDown())
-    {
-       for(unsigned int i=0;i<contact_links_.size();i++)
-           if(gait_generator_->isInStanceOrInit(contact_links_[i]))
+
+       // Set the base frame of the feet in stance w.r.t the foot in touchDown.
+       // Set the base frame of the foot in touchDown w.r.t the base_link.
+       for(unsigned int i=0; i<contact_links_.size(); i++)
+           if(gait_generator_->isTouchDown(contact_links_[i]))
            {
-               unsigned int idx = i;
-               do
+               for(unsigned int j = 0; j<contact_links_.size(); j++)
                {
-                   idx++;
-                   idx=idx%contact_links_.size();
-                   if(gait_generator_->isInStanceOrInit(contact_links_[idx]) && idx!=i)
+                   if(j!=i)
                    {
-                        setInitialPose(contact_links_[i],contact_links_[idx]);
-                        ROS_DEBUG_STREAM("Set "<< contact_links_[idx] << " w.r.t "<< contact_links_[i]);
+                       if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
+                       {
+                           setInitialPose(contact_links_[i],contact_links_[j]);
+                           ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
+                       }
+                   }
+                   else
+                   {
+                       setInitialPose("base_link",contact_links_[j]);
+                       ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to base_link");
                    }
                }
-               while(idx!=0);
-               break;
            }
-    }
 }
 
 void Controller::setWorldTasks()

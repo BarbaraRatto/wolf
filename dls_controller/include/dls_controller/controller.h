@@ -8,6 +8,7 @@
 #include <sensor_msgs/JointState.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Int16MultiArray.h>
+#include <sensor_msgs/Joy.h>
 #include <dls_controller/DlsControllerServices.h>
 #include <dls_controller/TaskPoses.h>
 #include <realtime_tools/realtime_buffer.h>
@@ -87,6 +88,11 @@ public:
          * @param dls_controller::TaskPoses::ConstPtr& msg
          */
     void setTasksDesired(const dls_controller::TaskPoses::ConstPtr& msg);
+
+    /**
+         * @brief set the world tasks
+         */
+    void joyCallback(const sensor_msgs::Joy::ConstPtr& msg);
 
     /**
          * @brief Ros dynamic reconfigure callback
@@ -195,6 +201,8 @@ private:
     realtime_tools::RealtimePublisher<dls_controller::TaskPoses>* tasks_desired_pose_rt_pub_;
     /** @brief Real time publisher - contacts */
     realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>* contacts_rt_pub_;
+    /** @brief Ros subscriber for joypad */
+    ros::Subscriber joy_sub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */
@@ -270,6 +278,14 @@ private:
     /** @brief Visual tools */
     rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
 
+    std::atomic<double> trj_x_amp_;
+    std::atomic<double> trj_z_amp_;
+    std::atomic<double> trj_theta_;
+
+    std::atomic<double> joy_x_scale_;
+    std::atomic<double> joy_z_scale_;
+    std::atomic<double> joy_theta_scale_;
+
     /**
          * @brief thread body for the odometry publisher
          */
@@ -334,7 +350,6 @@ private:
          * @brief set the world tasks
          */
     void setWorldTasks();
-
 };
 
 

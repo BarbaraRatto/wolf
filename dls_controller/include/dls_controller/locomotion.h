@@ -275,7 +275,6 @@ public:
     void reset()
     {
         time_ = 0.0;
-        //trajectory_ended_ = true;
     }
 
     void setAmpX(const double& x_amp)
@@ -347,12 +346,14 @@ public:
         //if(trajectory_ended_)
         //    trajectory_ended_=!trajectory_ended_;
 
+        double theta = y_amp_;
+
         xyz(0) = x_amp_/2 * (1 - std::cos(2* M_PI * (swing_frequency_ * time_)));
         xyz(1) = 0.0;
         xyz(2) = z_amp_ * std::sin(2* M_PI * (swing_frequency_ * time_));
 
-        double c = std::cos(y_amp_);
-        double s = std::sin(y_amp_);
+        double c = std::cos(theta);
+        double s = std::sin(theta);
 
         xyz(0) = c * xyz(0) - s * xyz(1);
         xyz(1) = s * xyz(0) + c * xyz(1);
@@ -490,6 +491,16 @@ public:
         feet_[foot_name].trajectory->setSwingFrequency(swing_frequency);
     }
 
+    void setTrajectoriesAmplitudes(const double& x_amp, const double& y_amp, const double& z_amp)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+        {
+            it->second.trajectory->setAmpX(x_amp);
+            it->second.trajectory->setAmpY(y_amp);
+            it->second.trajectory->setAmpZ(z_amp);
+        }
+    }
+
     void setTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id_xyz, const double& amp)
     {
         switch(id_xyz)
@@ -507,6 +518,27 @@ public:
             ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are X=0,Y=1,Z=2");
             break;
         };
+    }
+
+    double getTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id_xyz)
+    {
+        double amp = 0.0;
+        switch(id_xyz)
+        {
+        case 0:
+            amp = feet_[foot_name].trajectory->getAmpX();
+            break;
+        case 1:
+            amp = feet_[foot_name].trajectory->getAmpY();
+            break;
+        case 2:
+            amp = feet_[foot_name].trajectory->getAmpZ();
+            break;
+        default:
+            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are X=0,Y=1,Z=2");
+            break;
+        };
+        return amp;
     }
 
     void update(const double& period)
