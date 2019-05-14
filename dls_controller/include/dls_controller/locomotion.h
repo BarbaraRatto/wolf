@@ -9,11 +9,11 @@
 namespace dls_controller
 {
 
-class FootScheduler
+class FootStateMachine
 {
 public:
 
-    FootScheduler(const double& duty_cycle)
+    FootStateMachine(const double& duty_cycle)
     {
         assert(duty_cycle > 0 && duty_cycle <=1);
         dc_ = duty_cycle;
@@ -22,8 +22,8 @@ public:
         state_ = states::INIT;
     }
 
-    FootScheduler()
-        :FootScheduler(0.5)
+    FootStateMachine()
+        :FootStateMachine(0.5)
     {
     }
 
@@ -75,13 +75,18 @@ public:
             return false;
     }
 
+    void triggerSwing()
+    {
+        trigger_swing_ = true;
+    }
+
     void setDutyCycle(double duty_cycle)
     {
         assert(duty_cycle > 0 && duty_cycle <=1);
         dc_ = duty_cycle;
     }
 
-    void update(const double& period, const bool& contact, const bool& trigger_swing)
+    void update(const double& period, const bool& contact)
     {
 
         prev_state_ = state_;
@@ -92,7 +97,7 @@ public:
 
             //ROS_DEBUG("INIT");
 
-            if(trigger_swing)
+            if(trigger_swing_)
                 state_ = states::SWING;
             break;
 
@@ -109,7 +114,6 @@ public:
             }
             else
                 state_ = states::SWING;
-
             break;
 
         case states::STANCE:
@@ -125,7 +129,6 @@ public:
             }
             else
                 state_ = states::STANCE;
-
             break;
 
         default:
@@ -140,6 +143,7 @@ private:
     double total_time_;
     double wait_time_;
     unsigned int cnt_;
+    bool trigger_swing_;
 
     enum states {INIT=0,SWING,STANCE};
     unsigned int state_;
@@ -151,6 +155,7 @@ private:
         active_time_ = 0.0;
         total_time_ = 0.0;
         cnt_ = 0;
+        trigger_swing_ = false;
     }
 
     void calculate_times()
@@ -229,7 +234,6 @@ private:
 
     std::vector<std::string> next_feet_to_move_;
 
-
 };
 
 class TrajectoryInterface
@@ -262,20 +266,24 @@ public:
         return initial_pose_;
     }
 
-    void setReferenceToInitialPose()
-    {
-        reference_ = initial_pose_;
-    }
-
     void setInitialPose(const Eigen::Affine3d& initial_pose)
     {
         initial_pose_ = initial_pose;
     }
 
-    void reset()
+    void start()
     {
         time_ = 0.0;
-        //trajectory_ended_ = true;
+    }
+
+    void stop()
+    {
+        initial_pose_ = reference_;
+    }
+
+    void standBy()
+    {
+        reference_ = initial_pose_;
     }
 
     void setAmpX(const double& x_amp)
@@ -312,9 +320,8 @@ public:
     {
         if(swing_frequency >= 0.0)
             swing_frequency_ = swing_frequency;
-        else {
+        else
             ROS_WARN("Swing frequency has to be positive definite!");
-        }
     }
 
 protected:
@@ -338,7 +345,6 @@ public:
 
     Ellipse()
     {
-        // FIXME
         xyz = Eigen::Vector3d::Zero();
     }
 
@@ -358,7 +364,9 @@ public:
         xyz(1) = s * xyz(0) + c * xyz(1);
         xyz(2) = xyz(2);
 
-        reference_.pretranslate(xyz);
+        reference_.translation().x() = initial_pose_.translation().x() + xyz(0);
+        reference_.translation().y() = initial_pose_.translation().y() + xyz(1);
+        reference_.translation().z() = initial_pose_.translation().z() + xyz(2);
 
         if(swing_frequency_*time_<1.0)
             time_ += period;
@@ -377,7 +385,7 @@ public:
         assert(feet_names.size()==4);// We assume we are working with a dog
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
-            feet_[feet_names[i]].scheduler = FootScheduler(duty_cycle);
+            feet_[feet_names[i]].state_machine = FootStateMachine(duty_cycle);
             feet_[feet_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
             feet_[feet_names[i]].is_in_contact = true;
         }
@@ -389,7 +397,7 @@ public:
 
         current_gait_idx_ = 0;
         next_gait_idx_ = 1;
-        selected_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
+        scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
 
         change_gait_ = false;
         schedule_changed_ = true; // At the beginning is already changed no?
@@ -398,7 +406,7 @@ public:
 
     void setGaitType(const std::string& gait_type)
     {
-        std::vector<std::string> feet_names; // FIXME
+        std::vector<std::string> feet_names; // FIXME NO-RT
         gait_buffer_[next_gait_idx_].reset(new Gait(feet_names,gait_type));
         change_gait_ = true;
     }
@@ -410,37 +418,37 @@ public:
 
     bool isSwinging(const std::string& foot_name)
     {
-        return feet_[foot_name].scheduler.isSwing();
+        return feet_[foot_name].state_machine.isSwing();
     }
 
     bool isInStance(const std::string& foot_name)
     {
-        return feet_[foot_name].scheduler.isStance();
+        return feet_[foot_name].state_machine.isStance();
     }
 
     bool isInStanceOrInit(const std::string& foot_name)
     {
-        return (feet_[foot_name].scheduler.isStance() || feet_[foot_name].scheduler.isInit());
+        return (feet_[foot_name].state_machine.isStance() || feet_[foot_name].state_machine.isInit());
     }
 
     bool isInInit(const std::string& foot_name)
     {
-        return feet_[foot_name].scheduler.isInit();
+        return feet_[foot_name].state_machine.isInit();
     }
 
     bool isStateChanged(const std::string& foot_name)
     {
-        return feet_[foot_name].scheduler.isStateChanged();
+        return feet_[foot_name].state_machine.isStateChanged();
     }
 
     bool isTouchDown(const std::string& foot_name)
     {
-        return feet_[foot_name].scheduler.isTouchDown();
+        return feet_[foot_name].state_machine.isTouchDown();
     }
 
     bool isLiftOff(const std::string& foot_name)
     {
-        return feet_[foot_name].scheduler.isLiftOff();
+        return feet_[foot_name].state_machine.isLiftOff();
     }
 
     bool isScheduleChanged()
@@ -452,7 +460,7 @@ public:
     {
         bool result = false;
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-            result = result || it->second.scheduler.isLiftOff();
+            result = result || it->second.state_machine.isLiftOff();
         return result;
     }
 
@@ -460,7 +468,7 @@ public:
     {
         bool result = false;
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-            result = result || it->second.scheduler.isTouchDown();
+            result = result || it->second.state_machine.isTouchDown();
         return result;
     }
 
@@ -477,12 +485,12 @@ public:
     void setDutyCycle(const double& duty_cycle)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-            it->second.scheduler.setDutyCycle(duty_cycle);
+            it->second.state_machine.setDutyCycle(duty_cycle);
     }
 
     void setDutyCycle(const std::string& foot_name, const double& duty_cycle)
     {
-        feet_[foot_name].scheduler.setDutyCycle(duty_cycle);
+        feet_[foot_name].state_machine.setDutyCycle(duty_cycle);
     }
 
     void setSwingFrequency(const std::string& foot_name, const double& swing_frequency)
@@ -511,53 +519,61 @@ public:
 
     void update(const double& period)
     {
-
-        //gait_ptr_t& gait_ = gait_buffer_[current_gait_idx_];
-
+        // 1) Check if the scheduled feet are all in Init and start the swing if this is the case.
         bool start_swing = true;
-
-        // Set the initial value to each foot (both the scheduled feet and not)
-        for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
-            it->second.trajectory->setReferenceToInitialPose();
-
-        for(unsigned int i=0; i<selected_feet_.size(); i++)
-            if(!feet_[selected_feet_[i]].scheduler.isInit())
+        for(unsigned int i=0; i<scheduled_feet_.size(); i++)
+            if(!feet_[scheduled_feet_[i]].state_machine.isInit())
             {
                 start_swing = false;
                 break;
             }
+        if(start_swing)
+            for(unsigned int i=0; i<scheduled_feet_.size(); i++)
+                feet_[scheduled_feet_[i]].state_machine.triggerSwing();
 
-        for(unsigned int i=0; i<selected_feet_.size(); i++)
+        // 2) Update the trajectories for each foot depending on the state machine status
+        for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
+            it->second.state_machine.update(period,it->second.is_in_contact);
 
-            feet_[selected_feet_[i]].scheduler.update(period,feet_[selected_feet_[i]].is_in_contact,start_swing);
-
-            if(feet_[selected_feet_[i]].scheduler.isSwing())
+            if (it->second.state_machine.isSwing())
             {
-                feet_[selected_feet_[i]].trajectory->update(period);
+                if (it->second.state_machine.isLiftOff())
+                {
+                    it->second.trajectory->start();
+                }
+                it->second.trajectory->update(period);
+
+                ROS_DEBUG_STREAM("Update trajectory for foot "<< it->first);
             }
             else
             {
-                feet_[selected_feet_[i]].trajectory->reset();
+                if (it->second.state_machine.isTouchDown())
+                {
+                    it->second.trajectory->stop();
+                }
+                it->second.trajectory->standBy();
+
+                ROS_DEBUG_STREAM("StandBy trajectory for foot "<< it->first);
             }
         }
 
-        unsigned int cnt=0;
-        for(unsigned int i=0; i<selected_feet_.size(); i++)
-            if(feet_[selected_feet_[i]].scheduler.isInit())
+        // 3) If the scheduled feet are all in Init, change the schedule to the next one (i.e. move to the next feet)
+        unsigned int cnt = 0;
+        for(unsigned int i=0; i<scheduled_feet_.size(); i++)
+            if(feet_[scheduled_feet_[i]].state_machine.isInit())
                 cnt++;
-        if(cnt == selected_feet_.size())
+        if(cnt == scheduled_feet_.size())
         {
             if(change_gait_)
                 changeGait();
-            selected_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
+            scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
             schedule_changed_ = true;
         }
         else
         {
             schedule_changed_ = false;
         }
-
     }
 
 private:
@@ -574,14 +590,14 @@ private:
 
     struct feet_status_t
     {
-        FootScheduler scheduler;
+        FootStateMachine state_machine;
         std::shared_ptr<TrajectoryInterface> trajectory;
         bool is_in_contact;
     };
 
     TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
     {
-        //ROS_INFO_STREAM("Selected " << trajectory_type << " trajectory");
+        ROS_INFO_STREAM("Selected " << trajectory_type << " trajectory");
         if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
         {
             return new Ellipse();
@@ -596,7 +612,7 @@ private:
     typedef std::map<std::string,feet_status_t> feet_t;
     typedef std::shared_ptr<Gait> gait_ptr_t;
 
-    std::vector<std::string> selected_feet_;
+    std::vector<std::string> scheduled_feet_;
 
     feet_t feet_;
     std::vector<gait_ptr_t > gait_buffer_;
