@@ -276,7 +276,7 @@ private:
     /** @brief Gait generator */
     GaitGenerator* gait_generator_;
     /** @brief Visual tools */
-    rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+    std::map<std::string,rviz_visual_tools::RvizVisualToolsPtr> visual_tools_;
 
     std::atomic<double> trj_x_amp_;
     std::atomic<double> trj_z_amp_;

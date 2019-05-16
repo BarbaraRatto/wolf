@@ -318,12 +318,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
     joy_sub_ = controller_nh.subscribe("joy", 1, &Controller::joyCallback, this);
 
-    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("base_link","/rviz_visual_markers"));
-
-    // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
-    // Spawn the rviz publisher thread
-    rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
+    for(unsigned int i=0;i<contact_links_.size();i++)
+        visual_tools_[contact_links_[i]].reset(new rviz_visual_tools::RvizVisualTools("ci/world_odom",contact_links_[i]+"_rviz_visual_marker"));
 
     solver_reset_done_ = false;
 
@@ -340,6 +336,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joy_x_scale_     = 0.0;
     joy_z_scale_     = 0.0;
     joy_theta_scale_ = 0.0;
+
+
+    // Spawn the odom publisher thread
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+    // Spawn the rviz publisher thread
+    rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
     return true;
 }
@@ -858,24 +860,48 @@ void Controller::setWorldTasks()
 }
 
 
-void Controller::rvizPublisher() // FIXME Not thread safe
+void Controller::rvizPublisher()
 {
     ROS_INFO("Start the rvizPublisher");
 
-    // Create pose
-    Eigen::Isometry3d pose;
-    pose = Eigen::AngleAxisd(M_PI/4, Eigen::Vector3d::UnitY()); // rotate along X axis by 45 degrees
-    pose.translation() = Eigen::Vector3d( 0.1, 0.1, 0.1 ); // translate x,y,z
+    unsigned int n_points = 5;
+    std::vector<Eigen::Affine3d> poses(n_points);
+    std::vector<geometry_msgs::Pose> path(n_points);
 
     // Publish using rviz visual tools
-    while(!stopping_ && visual_tools_)
+    while(!stopping_)
     {
+        if(id_prob_ && visual_tools_.size()>0)
+        {
+            for(unsigned int i=0; i<contact_links_.size();i++)
+            {
+                if(gait_generator_->isSwinging(contact_links_[i]))
+                {
+                    gait_generator_->getTrajectoryPreview(contact_links_[i],poses);
+                    //visual_tools_->setBaseFrame(id_prob_->_feet[contact_links_[i]]->getBaseLink());
 
-        visual_tools_->publishArrow(pose, rviz_visual_tools::colors::RED, rviz_visual_tools::scales::LARGE);
+                    //gait_generator_->getTrajectoryPtr(contact_links_[i])->preview(poses);
+                    for(unsigned int j=0; j<n_points; j++)
+                    {
+                        path[j].position.x = poses[j].translation().x();
+                        path[j].position.y = poses[j].translation().y();
+                        path[j].position.z = poses[j].translation().z();
+                        //colors[j] = rviz_visual_tools::RED;
+                    }
+                    visual_tools_[contact_links_[i]]->publishPath(path);
 
-        visual_tools_->trigger();
+                }
+                else
+                {
+                    visual_tools_[contact_links_[i]]->deleteAllMarkers();
+                }
+                visual_tools_[contact_links_[i]]->trigger();
+            }
 
-        std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+
+        }
+
+        std::this_thread::sleep_for( std::chrono::milliseconds(1000) );
     }
     ROS_INFO("Stop the rvizPublisher");
 }
