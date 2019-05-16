@@ -333,13 +333,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     trj_x_amp_ = 0.05;
     trj_z_amp_ = 0.05;
-    trj_theta_ = 0.0;
+    trj_theta_ = M_PI/2;
 
     joy_x_scale_     = 0.0;
     joy_z_scale_     = 0.0;
     joy_theta_scale_ = 0.0;
-    joy_idle_cnt_ = 2000;
-
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
@@ -351,10 +349,20 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
 void Controller::joyCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
-    joy_x_scale_     = msg->axes[1];
-    joy_z_scale_     = std::abs(msg->axes[1]);
-    joy_theta_scale_ = 0.0;
-    joy_idle_cnt_    = 0;
+    joy_theta_scale_ = static_cast<double>(msg->axes[0]);
+
+    if(std::abs(joy_theta_scale_)>0.0)
+    {
+        joy_x_scale_ = 1.0;
+        joy_z_scale_ = 1.0;
+    }
+    else
+    {
+        joy_x_scale_ = static_cast<double>(msg->axes[1]);
+        joy_z_scale_ = static_cast<double>(std::abs(msg->axes[1]));
+    }
+
+    joy_trigger_ = static_cast<bool>(msg->buttons[4]);
 }
 
 void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level)
@@ -717,9 +725,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     des_joint_positions_ = qhome_;
     //des_com_position_ << 0.0, 0.0, 0.5; // Keep the com position centered w.r.t the world
 
-    joy_idle_cnt_++;
-
-    if(joy_idle_cnt_>=2000)
+    if(!joy_trigger_)
     {
         gait_generator_->stopSwing();
     }
@@ -727,7 +733,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         gait_generator_->startSwing();
         // Set the joypad commands
-        gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_*joy_x_scale_,trj_theta_,trj_z_amp_*joy_z_scale_);
+        gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_*joy_x_scale_,trj_theta_*joy_theta_scale_,trj_z_amp_*joy_z_scale_);
     }
 
     // FIXME:

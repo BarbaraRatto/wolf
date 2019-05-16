@@ -108,7 +108,7 @@ public:
 
             active_time_ += period;
 
-            if(contact && cnt_++ > 100) // Use a cnt to keep swinging regardless of the contact info
+            if(contact && cnt_++ > 10) // Use a cnt to keep swinging regardless of the contact info
             {
                 calculate_times();
                 state_ = states::STANCE;
@@ -244,7 +244,7 @@ public:
         y_amp_ = 0.0;
         z_amp_ = 0.0;
 
-        //trajectory_ended_ = false;
+        trajectory_finished_ = false;
     }
 
     virtual void update(const double& period) = 0;
@@ -279,9 +279,15 @@ public:
         initial_pose_ = initial_pose;
     }
 
+    bool isFinished()
+    {
+        return trajectory_finished_;
+    }
+
     void start()
     {
         time_ = 0.0;
+        trajectory_finished_ = false;
     }
 
     void stop()
@@ -342,6 +348,7 @@ protected:
     std::atomic<double> x_amp_;
     std::atomic<double> y_amp_;
     std::atomic<double> z_amp_;
+    std::atomic<bool> trajectory_finished_;
 
     virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
 };
@@ -362,6 +369,8 @@ public:
 
         if(swing_frequency_*time_<1.0)
             time_ += period;
+        else
+            trajectory_finished_ = true;
     }
 
 protected:
@@ -377,19 +386,21 @@ protected:
         double c = std::cos(theta);
         double s = std::sin(theta);
 
-        xyz(0) = c * xyz(0) - s * xyz(1);
-        xyz(1) = s * xyz(0) + c * xyz(1);
-        xyz(2) = xyz(2);
+        xyz_rotated(0) = c * xyz(0) - s * xyz(1);
+        xyz_rotated(1) = s * xyz(0) + c * xyz(1);
+        xyz_rotated(2) = xyz(2);
 
-        state_.translation().x() = initial_pose_.translation().x() + xyz(0);
-        state_.translation().y() = initial_pose_.translation().y() + xyz(1);
-        state_.translation().z() = initial_pose_.translation().z() + xyz(2);
+        state_.translation().x() = initial_pose_.translation().x() + xyz_rotated(0);
+        state_.translation().y() = initial_pose_.translation().y() + xyz_rotated(1);
+        state_.translation().z() = initial_pose_.translation().z() + xyz_rotated(2);
+
 
         return state_;
     }
 
 private:
     Eigen::Vector3d xyz;
+    Eigen::Vector3d xyz_rotated;
 
 };
 
@@ -597,7 +608,8 @@ public:
         // 2) Update the trajectories for each foot depending on the state machine status
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
-            it->second.state_machine.update(period,it->second.is_in_contact);
+            //it->second.state_machine.update(period,it->second.is_in_contact); //ClosedLoop
+            it->second.state_machine.update(period,it->second.trajectory->isFinished()); // OpenLoop
 
             if (it->second.state_machine.isSwing())
             {

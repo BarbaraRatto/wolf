@@ -1,5 +1,6 @@
 #include <dls_controller/IDProblem.h>
 #include <OpenSoT/utils/Affine.h>
+#include <OpenSoT/tasks/MinimizeVariable.h>
 
 using namespace OpenSoT;
 
@@ -24,17 +25,20 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
         _feet[contact_links[i]] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(contact_links[i], *_model, contact_links[i],
                                                                                "world", _id->getJointsAccelerationAffine());
         _feet[contact_links[i]]->setLambda(2000.);
+        _feet[contact_links[i]]->setWeightIsDiagonalFlag(true);
     }
     //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
                                                                         "world", _id->getJointsAccelerationAffine());
-    _waist->setLambda(400.);
+    _waist->setLambda(2000.);
+    _waist->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
-    _postural->setLambda(400.);
+    _postural->setLambda(2000.);
+    _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
-    _com->setLambda(800.);
+    _com->setLambda(1000.);
 
     //
     // Here we create the constraints & bounds
@@ -61,18 +65,22 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     _wrenches_lims = boost::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
                 contact_links, wrench_lower_lims, wrench_upper_lims,_id->getContactsWrenchAffine());
 
+    std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> minfs;
+    for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
+        minfs.push_back(boost::make_shared<OpenSoT::tasks::MinimizeVariable>("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i]));
     // Notice that we just control the orientation of the waist
     std::list<unsigned int> idw = {2,3,4,5};
-    std::list<unsigned int> idc = {0,1,2};
+    std::list<unsigned int> idc = {1};
     std::list<unsigned int> idf = {0,1,2};
 
-    _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf)
-            /(_waist%idw)/_postural)<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+    _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf + _waist%idw)
+            /(_postural)
+            )<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
            // /(_com%idc + _waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
 
     _id_problem->update(Eigen::VectorXd(1));
 
-    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(),1e6); //, 1e6);
+    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(),1e4); //, 1e6);
                                                          //, OpenSoT::solvers::solver_back_ends::OSQP);
                                                          //, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 

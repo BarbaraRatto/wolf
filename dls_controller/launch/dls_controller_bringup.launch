@@ -39,6 +39,7 @@
 
     <!-- joy -->
     <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/dls_controller">
+       <param name="autorepeat_rate " value="500" />
     </node>
 
     <!-- Convert joint states to TF transforms for rviz, etc -->

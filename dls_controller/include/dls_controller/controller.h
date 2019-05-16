@@ -288,7 +288,7 @@ private:
     std::atomic<double> joy_x_scale_;
     std::atomic<double> joy_z_scale_;
     std::atomic<double> joy_theta_scale_;
-    std::atomic<unsigned int> joy_idle_cnt_;
+    std::atomic<bool> joy_trigger_;
 
     /**
          * @brief thread body for the odometry publisher
