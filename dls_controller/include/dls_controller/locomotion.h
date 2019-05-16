@@ -176,14 +176,7 @@ public:
     {
         //ROS_INFO_STREAM("Selected " << gait_type << " gait");
 
-        if(std::strcmp(gait_type.c_str(),"half_trot")==0)
-        {
-            schedule_.push_back(foot_priority_t("lf_foot",0));
-            schedule_.push_back(foot_priority_t("rh_foot",0));
-            next_feet_to_move_.resize(2);
-            max_priority_ = 0;
-        }
-        else if(std::strcmp(gait_type.c_str(),"trot")==0)
+        if(std::strcmp(gait_type.c_str(),"trot")==0)
         {
             schedule_.push_back(foot_priority_t("lf_foot",0));
             schedule_.push_back(foot_priority_t("rh_foot",0));
@@ -245,7 +238,7 @@ public:
     TrajectoryInterface()
     {
         reference_ = initial_pose_ = state_ = Eigen::Affine3d::Identity();
-        swing_frequency_ = 3.0;
+        swing_frequency_ = 5.0;
         time_ = 0.0;
         x_amp_ = 0.0;
         y_amp_ = 0.0;
@@ -261,7 +254,7 @@ public:
         assert(swing_frequency_ > 0.0);
         assert(poses.size() > 0);
 
-        double total_time = 1.0/swing_frequency_;
+        double total_time = 1.0/(swing_frequency_);
         double period = total_time/poses.size();
         double time = 0.0;
         for(unsigned int i=0; i<poses.size(); i++)
@@ -424,6 +417,7 @@ public:
 
         change_gait_ = false;
         schedule_changed_ = true; // At the beginning is already changed no?
+        start_swing_ = false;
 
     }
 
@@ -576,17 +570,27 @@ public:
         return amp;
     }
 
+    void startSwing()
+    {
+        start_swing_ = true;
+    }
+
+    void stopSwing()
+    {
+        start_swing_ = false;
+    }
+
     void update(const double& period)
     {
         // 1) Check if the scheduled feet are all in Init and start the swing if this is the case.
-        bool start_swing = true;
+        bool scheduled_feet_are_init = true;
         for(unsigned int i=0; i<scheduled_feet_.size(); i++)
             if(!feet_[scheduled_feet_[i]].state_machine.isInit())
             {
-                start_swing = false;
+                scheduled_feet_are_init = false;
                 break;
             }
-        if(start_swing)
+        if(scheduled_feet_are_init && start_swing_)
             for(unsigned int i=0; i<scheduled_feet_.size(); i++)
                 feet_[scheduled_feet_[i]].state_machine.triggerSwing();
 
@@ -679,6 +683,7 @@ private:
     std::atomic<unsigned int> next_gait_idx_;
     std::atomic<bool> change_gait_;
     std::atomic<bool> schedule_changed_;
+    std::atomic<bool> start_swing_;
 
 };
 

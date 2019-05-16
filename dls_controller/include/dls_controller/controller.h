@@ -201,8 +201,6 @@ private:
     realtime_tools::RealtimePublisher<dls_controller::TaskPoses>* tasks_desired_pose_rt_pub_;
     /** @brief Real time publisher - contacts */
     realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>* contacts_rt_pub_;
-    /** @brief Ros subscriber for joypad */
-    ros::Subscriber joy_sub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */
@@ -282,9 +280,15 @@ private:
     std::atomic<double> trj_z_amp_;
     std::atomic<double> trj_theta_;
 
+
+
+    // FIXME: To be moved to another class
+    /** @brief Ros subscriber for joypad */
+    ros::Subscriber joy_sub_;
     std::atomic<double> joy_x_scale_;
     std::atomic<double> joy_z_scale_;
     std::atomic<double> joy_theta_scale_;
+    std::atomic<unsigned int> joy_idle_cnt_;
 
     /**
          * @brief thread body for the odometry publisher

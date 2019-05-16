@@ -238,8 +238,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[2] = "lh_foot";
     contact_links_[3] = "rh_foot";
 
-    task_poses_["com"] = desired_task_poses_["com"]  = Eigen::Affine3d::Identity();
-    base_frames_["com"] = "world";
+    //task_poses_["com"] = desired_task_poses_["com"]  = Eigen::Affine3d::Identity();
+    //base_frames_["com"] = "world";
+    task_poses_["waist"] = desired_task_poses_["waist"]  = Eigen::Affine3d::Identity();
+    base_frames_["waist"] = "world";
     for(unsigned int i=0;i<contact_links_.size();i++)
     {
         task_poses_[contact_links_[i]] = desired_task_poses_[contact_links_[i]] = Eigen::Affine3d::Identity();
@@ -336,6 +338,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joy_x_scale_     = 0.0;
     joy_z_scale_     = 0.0;
     joy_theta_scale_ = 0.0;
+    joy_idle_cnt_ = 2000;
 
 
     // Spawn the odom publisher thread
@@ -349,8 +352,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 void Controller::joyCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
     joy_x_scale_     = msg->axes[1];
-    joy_z_scale_     = 1.0;
+    joy_z_scale_     = std::abs(msg->axes[1]);
     joy_theta_scale_ = 0.0;
+    joy_idle_cnt_    = 0;
 }
 
 void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level)
@@ -604,10 +608,14 @@ void Controller::updateXBotModel()
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
     if(id_prob_)
     {
-        id_prob_->_com->getActualPose(com_position_); // FIXME Note: we use com_position_ as a tmp object!
+        /*id_prob_->_com->getActualPose(com_position_); // FIXME Note: we use com_position_ as a tmp object!
         task_poses_["com"].translation() = com_position_;
         id_prob_->_com->getReference(com_position_);
-        desired_task_poses_["com"].translation() = com_position_;
+        desired_task_poses_["com"].translation() = com_position_;*/
+
+        id_prob_->_waist->getActualPose(task_poses_["waist"]);
+        id_prob_->_waist->getReference(desired_task_poses_["waist"]);
+        base_frames_["waist"] = id_prob_->_waist->getBaseLink();
         for(unsigned int i=0; i<contact_links_.size(); i++)
         {
             id_prob_->_feet[contact_links_[i]]->getActualPose(task_poses_[contact_links_[i]]);
@@ -709,8 +717,27 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     des_joint_positions_ = qhome_;
     //des_com_position_ << 0.0, 0.0, 0.5; // Keep the com position centered w.r.t the world
 
-    // Set the joypad commands
-    gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_*joy_x_scale_,trj_theta_,trj_z_amp_*joy_z_scale_);
+    joy_idle_cnt_++;
+
+    if(joy_idle_cnt_>=2000)
+    {
+        gait_generator_->stopSwing();
+    }
+    else
+    {
+        gait_generator_->startSwing();
+        // Set the joypad commands
+        gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_*joy_x_scale_,trj_theta_,trj_z_amp_*joy_z_scale_);
+    }
+
+    // FIXME:
+    static long long cnt = 0;
+    cnt++;
+    if(cnt>6000)
+    {
+        solver_started_ = true;
+        tracking_active_ = true;
+    }
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -733,10 +760,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Update the gait_generator
             gait_generator_->update(period.toSec());
 
-            if(relative_tasks_active_)
+            /*if(relative_tasks_active_)
                 setRelativeTasks();
             else
-                setWorldTasks();
+                setWorldTasks();*/
 
             for(unsigned int i = 0; i<contact_links_.size(); i++)
             {
@@ -868,9 +895,11 @@ void Controller::rvizPublisher()
 {
     ROS_INFO("Start the rvizPublisher");
 
-    unsigned int n_points = 5;
+    unsigned int n_points = 30;
     std::vector<Eigen::Affine3d> poses(n_points);
     std::vector<geometry_msgs::Pose> path(n_points);
+    geometry_msgs::Point arrow_start;
+    geometry_msgs::Point arrow_end;
 
     // Publish using rviz visual tools
     while(!stopping_)
@@ -899,6 +928,9 @@ void Controller::rvizPublisher()
                 {
                     visual_tools_[contact_links_[i]]->deleteAllMarkers();
                 }
+
+                //visual_tools_[contact_links_[i]]->publishArrow(arrow_start,arrow_end);
+
                 visual_tools_[contact_links_[i]]->trigger();
             }
 
