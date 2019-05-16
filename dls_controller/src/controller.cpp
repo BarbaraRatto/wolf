@@ -370,10 +370,7 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setDutyCycle(config.duty_cycle);
         break;
     case 4:
-        setLambda("lf_foot",config.lf_foot_lambda);
-        setLambda("rf_foot",config.rf_foot_lambda);
-        setLambda("lh_foot",config.lh_foot_lambda);
-        setLambda("rh_foot",config.rh_foot_lambda);
+        setLambda("feet",config.feet_lambda);
         setLambda("com",config.com_lambda);
         setLambda("waist",config.waist_lambda);
         setLambda("postural",config.postural_lambda);
@@ -482,6 +479,13 @@ bool Controller::setLambda(const std::string& task_name, const double& lambda_va
                 id_prob_->_postural->setLambda(lambda_value);
             else if(task_name == "waist")
                 id_prob_->_waist->setLambda(lambda_value);
+            else if(task_name == "feet")
+            {
+                id_prob_->_feet["lf_foot"]->setLambda(lambda_value);
+                id_prob_->_feet["rf_foot"]->setLambda(lambda_value);
+                id_prob_->_feet["lh_foot"]->setLambda(lambda_value);
+                id_prob_->_feet["rh_foot"]->setLambda(lambda_value);
+            }
             else if(task_name == "lf_foot")
                 id_prob_->_feet[task_name]->setLambda(lambda_value);
             else if(task_name == "rf_foot")
