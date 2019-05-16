@@ -4,6 +4,7 @@
 #include <ros/ros.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <Eigen/StdVector>
 #include <atomic>
 
 namespace dls_controller
@@ -243,8 +244,7 @@ public:
 
     TrajectoryInterface()
     {
-        reference_ = Eigen::Affine3d::Identity();
-        initial_pose_ = Eigen::Affine3d::Identity();
+        reference_ = initial_pose_ = state_ = Eigen::Affine3d::Identity();
         swing_frequency_ = 3.0;
         time_ = 0.0;
         x_amp_ = 0.0;
@@ -255,6 +255,21 @@ public:
     }
 
     virtual void update(const double& period) = 0;
+
+    void preview(std::vector<Eigen::Affine3d>& poses)
+    {
+        assert(swing_frequency_ > 0.0);
+        assert(poses.size() > 0);
+
+        double total_time = 1.0/swing_frequency_;
+        double period = total_time/poses.size();
+        double time = 0.0;
+        for(unsigned int i=0; i<poses.size(); i++)
+        {
+            poses[i] = trajectoryFunction(time);
+            time += period;
+        }
+    }
 
     const Eigen::Affine3d& getReference()
     {
@@ -328,14 +343,14 @@ protected:
 
     Eigen::Affine3d reference_;
     Eigen::Affine3d initial_pose_;
+    Eigen::Affine3d state_;
     double time_;
     std::atomic<double> swing_frequency_;
     std::atomic<double> x_amp_;
     std::atomic<double> y_amp_;
     std::atomic<double> z_amp_;
 
-    //std::atomic<bool> trajectory_ended_;
-
+    virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
 };
 
 class Ellipse : public TrajectoryInterface
@@ -350,14 +365,21 @@ public:
 
     void update(const double& period)
     {
-        //if(trajectory_ended_)
-        //    trajectory_ended_=!trajectory_ended_;
+        reference_ = trajectoryFunction(time_);
 
+        if(swing_frequency_*time_<1.0)
+            time_ += period;
+    }
+
+protected:
+
+    const Eigen::Affine3d& trajectoryFunction(const double& time)
+    {
         double theta = y_amp_;
 
-        xyz(0) = x_amp_/2 * (1 - std::cos(2* M_PI * (swing_frequency_ * time_)));
+        xyz(0) = x_amp_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
-        xyz(2) = z_amp_ * std::sin(2* M_PI * (swing_frequency_ * time_));
+        xyz(2) = z_amp_ * std::sin(M_PI * (swing_frequency_ * time));
 
         double c = std::cos(theta);
         double s = std::sin(theta);
@@ -366,12 +388,11 @@ public:
         xyz(1) = s * xyz(0) + c * xyz(1);
         xyz(2) = xyz(2);
 
-        reference_.translation().x() = initial_pose_.translation().x() + xyz(0);
-        reference_.translation().y() = initial_pose_.translation().y() + xyz(1);
-        reference_.translation().z() = initial_pose_.translation().z() + xyz(2);
+        state_.translation().x() = initial_pose_.translation().x() + xyz(0);
+        state_.translation().y() = initial_pose_.translation().y() + xyz(1);
+        state_.translation().z() = initial_pose_.translation().z() + xyz(2);
 
-        if(swing_frequency_*time_<1.0)
-            time_ += period;
+        return state_;
     }
 
 private:
@@ -411,6 +432,11 @@ public:
         std::vector<std::string> feet_names; // FIXME NO-RT
         gait_buffer_[next_gait_idx_].reset(new Gait(feet_names,gait_type));
         change_gait_ = true;
+    }
+
+    void getTrajectoryPreview(const std::string& foot_name, std::vector<Eigen::Affine3d>& poses)
+    {
+        feet_[foot_name].trajectory->preview(poses);
     }
 
     const Eigen::Affine3d& getReference(const std::string& foot_name)
