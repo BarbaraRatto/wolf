@@ -333,7 +333,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     trj_x_amp_ = 0.05;
     trj_z_amp_ = 0.05;
-    trj_theta_ = M_PI/2;
+    trj_theta_ = 0.0;
 
     joy_x_scale_     = 0.0;
     joy_z_scale_     = 0.0;
@@ -350,16 +350,18 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 void Controller::joyCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
     joy_theta_scale_ = static_cast<double>(msg->axes[0]);
+    joy_x_scale_     = static_cast<double>(msg->axes[1]);
+    joy_z_scale_     = static_cast<double>(std::abs(msg->axes[1]));
 
     if(std::abs(joy_theta_scale_)>0.0)
     {
-        joy_x_scale_ = 1.0;
-        joy_z_scale_ = 1.0;
+         trj_theta_ = std::atan2(joy_theta_scale_,joy_x_scale_);
+         joy_x_scale_ = 1.0;
+         joy_z_scale_ = 1.0;
     }
     else
     {
-        joy_x_scale_ = static_cast<double>(msg->axes[1]);
-        joy_z_scale_ = static_cast<double>(std::abs(msg->axes[1]));
+        trj_theta_ = 0.0;
     }
 
     joy_trigger_ = static_cast<bool>(msg->buttons[4]);
