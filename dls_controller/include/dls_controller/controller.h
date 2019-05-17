@@ -288,7 +288,11 @@ private:
     std::atomic<double> joy_x_scale_;
     std::atomic<double> joy_z_scale_;
     std::atomic<double> joy_theta_scale_;
-    std::atomic<bool> joy_trigger_;
+    std::atomic<bool>   joy_trigger_;
+
+    double yaw_dot_ = 0.0; //rad/sec
+    double yaw_ = 0.0;
+    double yaw_foot_ = 0.0;
 
     /**
          * @brief thread body for the odometry publisher

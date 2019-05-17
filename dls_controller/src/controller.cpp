@@ -355,9 +355,9 @@ void Controller::joyCallback(const sensor_msgs::Joy::ConstPtr& msg)
 
     if(std::abs(joy_theta_scale_)>0.0)
     {
-         trj_theta_ = std::atan2(joy_theta_scale_,joy_x_scale_);
-         joy_x_scale_ = 1.0;
-         joy_z_scale_ = 1.0;
+        trj_theta_ = std::atan2(joy_theta_scale_,joy_x_scale_);
+        joy_x_scale_ = 1.0;
+        joy_z_scale_ = 1.0;
     }
     else
     {
@@ -735,13 +735,92 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         gait_generator_->startSwing();
         // Set the joypad commands
-        gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_*joy_x_scale_,trj_theta_*joy_theta_scale_,trj_z_amp_*joy_z_scale_);
+        //gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_*joy_x_scale_,trj_theta_,trj_z_amp_*joy_z_scale_);
+
+        Eigen::Vector3d angular_vel;
+        Eigen::Vector3d delta_hip, delta_foot, delta_foot_world;
+        Eigen::Affine3d base_T_foot, base_T_hip, world_T_base;
+
+        Eigen::Matrix3d waist_rotation_reference;
+
+        yaw_dot_ = 0.1 * joy_theta_scale_; //rad/sec
+
+        yaw_ = yaw_dot_*period.toSec() + yaw_;
+
+        angular_vel << 0, 0, yaw_dot_;
+
+        waist_rotation_reference = Eigen::AngleAxisd(yaw_, Eigen::Vector3d::UnitZ());
+
+        id_prob_->_waist->getReference(world_T_base);
+
+        world_T_base.linear() = waist_rotation_reference;
+
+        id_prob_->_waist->setReference(world_T_base);
+
+        std::vector<std::string> hips(4);
+
+        hips[0] = "lf_hipassembly";
+        hips[1] = "rf_hipassembly";
+        hips[2] = "lh_hipassembly";
+        hips[3] = "rh_hipassembly";
+
+        xbot_model_->getPose("base_link",world_T_base);
+
+        for(unsigned int i=0; i<contact_links_.size(); i++)
+        {
+
+            xbot_model_->getPose(contact_links_[i],base_T_foot);
+            xbot_model_->getPose(hips[i],base_T_hip);
+
+            delta_hip = angular_vel.cross(base_T_hip.translation()); // It should be done in the world frame
+
+            delta_foot = delta_hip + (base_T_hip.translation() - base_T_foot.translation());
+
+            //delta_foot_world = world_T_base * delta_foot;
+            delta_foot_world = delta_foot;
+
+            yaw_foot_ = std::atan2(delta_foot_world(1),delta_foot_world(0));
+
+            double r = std::sqrt(delta_foot_world(0)*delta_foot_world(0) + delta_foot_world(1)*delta_foot_world(1));
+
+            gait_generator_->setTrajectoryAmplitude(contact_links_[i], 0, r*joy_x_scale_);
+            gait_generator_->setTrajectoryAmplitude(contact_links_[i], 1, yaw_foot_);
+            gait_generator_->setTrajectoryAmplitude(contact_links_[i], 2, trj_z_amp_*joy_z_scale_);
+
+
+        }
+
+
+        /*gait_generator_->setTrajectoryAmplitude("lf_foot", 0, trj_x_amp_*joy_x_scale_);
+        gait_generator_->setTrajectoryAmplitude("lf_foot", 1, trj_theta_);
+        gait_generator_->setTrajectoryAmplitude("lf_foot", 2, trj_z_amp_*joy_z_scale_);
+
+        gait_generator_->setTrajectoryAmplitude("rf_foot", 0, trj_x_amp_*joy_x_scale_);
+        gait_generator_->setTrajectoryAmplitude("rf_foot", 1, trj_theta_);
+        gait_generator_->setTrajectoryAmplitude("rf_foot", 2, trj_z_amp_*joy_z_scale_);
+
+        gait_generator_->setTrajectoryAmplitude("lh_foot", 0, trj_x_amp_*joy_x_scale_);
+        gait_generator_->setTrajectoryAmplitude("lh_foot", 1, -trj_theta_);
+        gait_generator_->setTrajectoryAmplitude("lh_foot", 2, trj_z_amp_*joy_z_scale_);
+
+        gait_generator_->setTrajectoryAmplitude("rh_foot", 0, trj_x_amp_*joy_x_scale_);
+        gait_generator_->setTrajectoryAmplitude("rh_foot", 1, -trj_theta_);
+        gait_generator_->setTrajectoryAmplitude("rh_foot", 2, trj_z_amp_*joy_z_scale_);*/
+
+        /*Eigen::Affine3d pose;
+        Eigen::Matrix3d m;
+        m = Eigen::AngleAxisd(trj_theta_, Eigen::Vector3d::UnitZ());
+
+        id_prob_->_waist->getReference(pose);
+
+        pose.rotate(m);
+        id_prob_->_waist->setReference(pose);*/
     }
 
     // FIXME:
     static long long cnt = 0;
     cnt++;
-    if(cnt>6000)
+    if(cnt>5000)
     {
         solver_started_ = true;
         tracking_active_ = true;
@@ -867,28 +946,28 @@ void Controller::setRelativeTasks()
             }
         }
 
-       // Set the base frame of the feet in stance w.r.t the foot in touchDown.
-       // Set the base frame of the foot in touchDown w.r.t the base_link.
-       for(unsigned int i=0; i<contact_links_.size(); i++)
-           if(gait_generator_->isTouchDown(contact_links_[i]))
-           {
-               for(unsigned int j = 0; j<contact_links_.size(); j++)
-               {
-                   if(j!=i)
-                   {
-                       if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
-                       {
-                           setInitialPose(contact_links_[i],contact_links_[j]);
-                           ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
-                       }
-                   }
-                   else
-                   {
-                       setInitialPose("base_link",contact_links_[j]);
-                       ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to base_link");
-                   }
-               }
-           }
+    // Set the base frame of the feet in stance w.r.t the foot in touchDown.
+    // Set the base frame of the foot in touchDown w.r.t the base_link.
+    for(unsigned int i=0; i<contact_links_.size(); i++)
+        if(gait_generator_->isTouchDown(contact_links_[i]))
+        {
+            for(unsigned int j = 0; j<contact_links_.size(); j++)
+            {
+                if(j!=i)
+                {
+                    if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
+                    {
+                        setInitialPose(contact_links_[i],contact_links_[j]);
+                        ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
+                    }
+                }
+                else
+                {
+                    setInitialPose("base_link",contact_links_[j]);
+                    ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to base_link");
+                }
+            }
+        }
 }
 
 void Controller::setWorldTasks()
