@@ -8,7 +8,6 @@
 #include <sensor_msgs/JointState.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Int16MultiArray.h>
-#include <sensor_msgs/Joy.h>
 #include <dls_controller/DlsControllerServices.h>
 #include <dls_controller/TaskPoses.h>
 #include <realtime_tools/realtime_buffer.h>
@@ -36,6 +35,7 @@
 // Controller
 #include <dls_controller/publishers.h>
 #include <dls_controller/locomotion.h>
+#include <dls_controller/joy.h>
 
 namespace dls_controller
 {
@@ -88,11 +88,6 @@ public:
          * @param dls_controller::TaskPoses::ConstPtr& msg
          */
     void setTasksDesired(const dls_controller::TaskPoses::ConstPtr& msg);
-
-    /**
-         * @brief set the world tasks
-         */
-    void joyCallback(const sensor_msgs::Joy::ConstPtr& msg);
 
     /**
          * @brief Ros dynamic reconfigure callback
@@ -276,23 +271,17 @@ private:
     /** @brief Visual tools */
     std::map<std::string,rviz_visual_tools::RvizVisualToolsPtr> visual_tools_;
 
-    std::atomic<double> trj_x_amp_;
-    std::atomic<double> trj_z_amp_;
-    std::atomic<double> trj_theta_;
 
-    // FIXME: To be moved to another class
-    /** @brief Ros subscriber for joypad */
-    ros::Subscriber joy_sub_;
-    std::atomic<double> joy_foot_forward_scale_;
-    std::atomic<double> joy_foot_lateral_scale_;
-    std::atomic<double> joy_base_yaw_scale_;
-    std::atomic<double> joy_base_pitch_scale_;
-    std::atomic<bool>   joy_start_;
+    std::shared_ptr<JoyHandler> joy_handler_;
 
+    std::atomic<double> base_roll_  ;
+    std::atomic<double> base_pitch_ ;
+    std::atomic<double> base_yaw_   ;
+    std::atomic<double> base_height_;
 
-    double yaw_dot_ = 0.0; //rad/sec
-    double yaw_ = 0.0;
-    double yaw_foot_ = 0.0;
+    std::map<std::string,std::atomic<double>> steps_length_;
+    std::map<std::string,std::atomic<double>> steps_rotation_;
+    std::map<std::string,std::atomic<double>> steps_height_;
 
     /**
          * @brief thread body for the odometry publisher
@@ -358,6 +347,14 @@ private:
          * @brief set the world tasks
          */
     void setWorldTasks();
+
+    /**
+         * @brief read joypad commands
+         */
+    void readJoyCommands();
+
+
+    void moveBase(const double& yaw, const double& height, const double& period);
 };
 
 

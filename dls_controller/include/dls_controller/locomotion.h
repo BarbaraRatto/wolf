@@ -195,6 +195,15 @@ public:
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
         }
+        else if(std::strcmp(gait_type.c_str(),"bound")==0)
+        {
+            schedule_.push_back(foot_priority_t("lf_foot",0));
+            schedule_.push_back(foot_priority_t("rh_foot",1));
+            schedule_.push_back(foot_priority_t("rf_foot",0));
+            schedule_.push_back(foot_priority_t("lh_foot",1));
+            next_feet_to_move_.resize(2);
+            max_priority_ = 1;
+        }
         else
         {
             throw std::runtime_error("Wrong gait type!");
@@ -377,14 +386,14 @@ protected:
 
     const Eigen::Affine3d& trajectoryFunction(const double& time)
     {
-        double theta = y_amp_;
+        double psi = y_amp_;
 
         xyz(0) = x_amp_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
         xyz(2) = z_amp_ * std::sin(M_PI * (swing_frequency_ * time));
 
-        double c = std::cos(theta);
-        double s = std::sin(theta);
+        double c = std::cos(psi);
+        double s = std::sin(psi);
 
         xyz_rotated(0) = c * xyz(0) - s * xyz(1);
         xyz_rotated(1) = s * xyz(0) + c * xyz(1);
@@ -428,7 +437,7 @@ public:
 
         change_gait_ = false;
         schedule_changed_ = true; // At the beginning is already changed no?
-        start_swing_ = false;
+        activate_swing_ = false;
 
     }
 
@@ -531,7 +540,7 @@ public:
         feet_[foot_name].trajectory->setSwingFrequency(swing_frequency);
     }
 
-    void setTrajectoriesAmplitudes(const double& x_amp, const double& y_amp, const double& z_amp)
+    void setTrajectoryAmplitudes(const double& x_amp, const double& y_amp, const double& z_amp)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
         {
@@ -581,14 +590,14 @@ public:
         return amp;
     }
 
-    void startSwing()
+    void activateSwing()
     {
-        start_swing_ = true;
+        activate_swing_ = true;
     }
 
-    void stopSwing()
+    void deactivateSwing()
     {
-        start_swing_ = false;
+        activate_swing_ = false;
     }
 
     void update(const double& period)
@@ -601,7 +610,7 @@ public:
                 scheduled_feet_are_init = false;
                 break;
             }
-        if(scheduled_feet_are_init && start_swing_)
+        if(scheduled_feet_are_init && activate_swing_)
             for(unsigned int i=0; i<scheduled_feet_.size(); i++)
                 feet_[scheduled_feet_[i]].state_machine.triggerSwing();
 
@@ -695,7 +704,7 @@ private:
     std::atomic<unsigned int> next_gait_idx_;
     std::atomic<bool> change_gait_;
     std::atomic<bool> schedule_changed_;
-    std::atomic<bool> start_swing_;
+    std::atomic<bool> activate_swing_;
 
 };
 
