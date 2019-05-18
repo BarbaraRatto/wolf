@@ -280,15 +280,15 @@ private:
     std::atomic<double> trj_z_amp_;
     std::atomic<double> trj_theta_;
 
-
-
     // FIXME: To be moved to another class
     /** @brief Ros subscriber for joypad */
     ros::Subscriber joy_sub_;
-    std::atomic<double> joy_x_scale_;
-    std::atomic<double> joy_z_scale_;
-    std::atomic<double> joy_theta_scale_;
-    std::atomic<bool>   joy_trigger_;
+    std::atomic<double> joy_foot_forward_scale_;
+    std::atomic<double> joy_foot_lateral_scale_;
+    std::atomic<double> joy_base_yaw_scale_;
+    std::atomic<double> joy_base_pitch_scale_;
+    std::atomic<bool>   joy_start_;
+
 
     double yaw_dot_ = 0.0; //rad/sec
     double yaw_ = 0.0;
