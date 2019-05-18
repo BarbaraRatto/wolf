@@ -238,14 +238,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[2] = "lh_foot";
     contact_links_[3] = "rh_foot";
 
-    //task_poses_["com"] = desired_task_poses_["com"]  = Eigen::Affine3d::Identity();
-    //base_frames_["com"] = "world";
     task_poses_["waist"] = desired_task_poses_["waist"]  = Eigen::Affine3d::Identity();
     base_frames_["waist"] = "world";
     for(unsigned int i=0;i<contact_links_.size();i++)
     {
         task_poses_[contact_links_[i]] = desired_task_poses_[contact_links_[i]] = Eigen::Affine3d::Identity();
         base_frames_[contact_links_[i]] = "world";
+
+        steps_height_[contact_links_[i]]       = 0.05;
+        steps_length_[contact_links_[i]]       = 0.05;
+        steps_rotation_[contact_links_[i]]     = 0.0;
     }
 
     //desired_task_poses_.initRT(task_poses_);
@@ -318,7 +320,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Reference for the tasks
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
-    joy_sub_ = controller_nh.subscribe("joy", 1, &Controller::joyCallback, this);
 
     for(unsigned int i=0;i<contact_links_.size();i++)
         visual_tools_[contact_links_[i]].reset(new rviz_visual_tools::RvizVisualTools("ci/world_odom",contact_links_[i]+"_rviz_visual_marker"));
@@ -331,33 +332,19 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     gait_generator_ = new GaitGenerator(0.8,contact_links_,"trot","ellipse"); //FIXME
 
-    trj_x_amp_ = 0.05;
-    trj_z_amp_ = 0.05;
-    trj_theta_ = 0.0;
-
-    joy_foot_forward_scale_     = 0.0;
-    joy_foot_lateral_scale_     = 0.0;
-    joy_base_yaw_scale_         = 0.0;
-    joy_base_pitch_scale_       = 0.0;
-    joy_start_                  = false;
-
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
     // Spawn the rviz publisher thread
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
+    joy_handler_.reset(new JoyHandler(controller_nh));
+
+    base_roll_   = 0.0;
+    base_pitch_  = 0.0;
+    base_yaw_    = 0.0;
+    base_height_ = 0.0;
+
     return true;
-}
-
-void Controller::joyCallback(const sensor_msgs::Joy::ConstPtr& msg)
-{
-    joy_foot_lateral_scale_     = static_cast<double>(msg->axes[0]);
-    joy_foot_forward_scale_     = static_cast<double>(msg->axes[1]);
-
-    joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
-    joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
-
-    joy_start_ = static_cast<bool>(msg->buttons[4]);
 }
 
 void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level)
@@ -388,18 +375,18 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
     case 6:
         setSwingFrequency(config.swing_frequency);
         break;
-    case 7:
-        trj_x_amp_ = config.x; // X
+    /*case 7:
+        steps_length_[contact_links_[i]] = config.x;
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set x step length to "<< config.x);
         break;
     case 8:
-        trj_z_amp_ = config.z;  // Z
+        trj_z_amp_ = config.z;
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set z step length to "<< config.z);
         break;
     case 9:
-        trj_theta_ = config.theta;  // theta
+        trj_yaw_ = config.rotation;
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set theta to "<< config.theta);
-        break;
+        break;*/
     default:
         break;
     }
@@ -653,6 +640,8 @@ void Controller::starting(const ros::Time& time)
     stateEstimation();
     // 5) Virtual Model Update
     updateXBotModel();
+    // 6) Read joypad commands
+    readJoyCommands();
 
     ROS_DEBUG("Starting DLS Controller Completed");
 }
@@ -702,6 +691,73 @@ void Controller::setInitialPose()
     }
 }
 
+void Controller::readJoyCommands()
+{
+    if(joy_handler_->start())
+        tracking_active_ = true;
+    else
+        tracking_active_ = false;
+
+
+    for(unsigned int i=0; i<contact_links_.size();i++)
+        steps_rotation_[contact_links_[i]] = joy_handler_->getFeetRotation();
+
+}
+
+void Controller::moveBase(const double& yaw_rate, const double& height, const double& period)
+{
+    // FIXME
+    Eigen::Vector3d angular_vel;
+    Eigen::Vector3d delta_hip, delta_foot, delta_foot_world;
+    Eigen::Affine3d world_T_foot, world_T_hip, world_T_base;
+    Eigen::Matrix3d waist_rotation_reference;
+
+    //double yaw_rate = 0.05; //* joy_base_yaw_scale_; //rad/sec
+
+    base_yaw_ = yaw_rate * period + base_yaw_;
+
+    angular_vel << 0, 0, yaw_rate;
+
+    waist_rotation_reference = Eigen::AngleAxisd(base_yaw_, Eigen::Vector3d::UnitZ());
+
+    id_prob_->_waist->getReference(world_T_base);
+
+    world_T_base.linear() = waist_rotation_reference;
+
+    id_prob_->_waist->setReference(world_T_base);
+
+    std::vector<std::string> hips(4);
+
+    hips[0] = "lf_hipassembly";
+    hips[1] = "rf_hipassembly";
+    hips[2] = "lh_hipassembly";
+    hips[3] = "rh_hipassembly";
+
+    xbot_model_->getPose("base_link",world_T_base);
+
+    for(unsigned int i=0; i<contact_links_.size(); i++)
+    {
+
+        xbot_model_->getPose(contact_links_[i],world_T_foot);
+        xbot_model_->getPose(hips[i],world_T_hip);
+
+        delta_hip = angular_vel.cross(world_T_hip.translation()); // It should be done in the world frame
+
+        delta_foot = delta_hip + (world_T_hip.translation() - world_T_foot.translation());
+
+        //delta_foot_world = world_T_base * delta_foot;
+        delta_foot_world = delta_foot;
+
+        double yaw_foot_ = std::atan2(delta_foot_world(1),delta_foot_world(0));
+
+        double r = std::sqrt(delta_foot_world(0)*delta_foot_world(0) + delta_foot_world(1)*delta_foot_world(1));
+
+        steps_length_[contact_links_[i]] = r;
+        steps_rotation_[contact_links_[i]] = yaw_foot_;
+    }
+
+}
+
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
     // Read from the hardware interfaces:
@@ -715,101 +771,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     stateEstimation();
     // 5) Virtual Model Update
     updateXBotModel();
+    // 6) Read joypad commands
+    readJoyCommands();
 
     // Set Default values
     des_joint_positions_ = qhome_;
-    //des_com_position_ << 0.0, 0.0, 0.5; // Keep the com position centered w.r.t the world
-
-    if(!joy_start_)
-    {
-        gait_generator_->stopSwing();
-    }
-    else
-    {
-        // Set the joypad commands
-        if(std::abs(joy_foot_forward_scale_)>0 || std::abs(joy_foot_lateral_scale_)>0) // Move the feet
-        {
-            trj_theta_ = std::atan2(joy_foot_lateral_scale_,joy_foot_forward_scale_);
-
-            gait_generator_->setTrajectoriesAmplitudes(trj_x_amp_,
-                                                       trj_theta_,
-                                                       trj_z_amp_);
-        }
-        else if(std::abs(joy_base_yaw_scale_)>0)
-        {
-
-            Eigen::Vector3d angular_vel;
-            Eigen::Vector3d delta_hip, delta_foot, delta_foot_world;
-            Eigen::Affine3d world_T_foot, world_T_hip, world_T_base;
-            Eigen::Matrix3d waist_rotation_reference;
-
-            yaw_dot_ = 0.05 * joy_base_yaw_scale_; //rad/sec
-
-            yaw_ = yaw_dot_*period.toSec() + yaw_;
-
-            angular_vel << 0, 0, yaw_dot_;
-
-            waist_rotation_reference = Eigen::AngleAxisd(yaw_, Eigen::Vector3d::UnitZ());
-
-            id_prob_->_waist->getReference(world_T_base);
-
-            world_T_base.linear() = waist_rotation_reference;
-
-            id_prob_->_waist->setReference(world_T_base);
-
-            std::vector<std::string> hips(4);
-
-            hips[0] = "lf_hipassembly";
-            hips[1] = "rf_hipassembly";
-            hips[2] = "lh_hipassembly";
-            hips[3] = "rh_hipassembly";
-
-            xbot_model_->getPose("base_link",world_T_base);
-
-            for(unsigned int i=0; i<contact_links_.size(); i++)
-            {
-
-                xbot_model_->getPose(contact_links_[i],world_T_foot);
-                xbot_model_->getPose(hips[i],world_T_hip);
-
-                delta_hip = angular_vel.cross(world_T_hip.translation()); // It should be done in the world frame
-
-                delta_foot = delta_hip + (world_T_hip.translation() - world_T_foot.translation());
-
-                //delta_foot_world = world_T_base * delta_foot;
-                delta_foot_world = delta_foot;
-
-                yaw_foot_ = std::atan2(delta_foot_world(1),delta_foot_world(0));
-
-                double r = std::sqrt(delta_foot_world(0)*delta_foot_world(0) + delta_foot_world(1)*delta_foot_world(1));
-
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i], 0, r);
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i], 1, yaw_foot_);
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i], 2, trj_z_amp_);
-            }
-
-        }
-        else
-        {
-            gait_generator_->setTrajectoriesAmplitudes(0.0,
-                                                       0.0,
-                                                       trj_z_amp_);
-        }
-
-         gait_generator_->startSwing();
-
-    }
-
-
-
-    // FIXME:
-    static long long cnt = 0;
-    cnt++;
-    if(cnt>5000)
-    {
-        solver_started_ = true;
-        tracking_active_ = true;
-    }
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -825,9 +791,19 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(tracking_active_)
         {
-            // Give to the gait_generator the contact status of the feet
+            moveBase(0.05,0.5,period.toSec());
+
+            gait_generator_->activateSwing();
+
+            // Give to the gait_generator the contact status of the feet and the steps length
             for(unsigned int i = 0; i<contact_links_.size(); i++)
+            {
                 gait_generator_->setContact(contact_links_[i],contacts_[i]);
+
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],0, steps_length_[contact_links_[i]]);
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],1, steps_rotation_[contact_links_[i]]);
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],2, steps_height_[contact_links_[i]]);
+            }
 
             // Update the gait_generator
             gait_generator_->update(period.toSec());
@@ -857,13 +833,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
         else
         {
+
+            gait_generator_->deactivateSwing();
+
             // Force the contact to each foot
             for(unsigned int i = 0; i<contact_links_.size(); i++)
                 id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
         }
-
-        // Always track the com position
-        //id_prob_->_com->setReference(des_com_position_);
 
         // Solver Update
         id_prob_->update();
