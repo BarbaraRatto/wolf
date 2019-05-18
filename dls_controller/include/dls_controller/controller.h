@@ -278,7 +278,6 @@ private:
     std::atomic<double> base_pitch_ ;
     std::atomic<double> base_yaw_   ;
     std::atomic<double> base_height_;
-
     std::map<std::string,std::atomic<double>> steps_length_;
     std::map<std::string,std::atomic<double>> steps_rotation_;
     std::map<std::string,std::atomic<double>> steps_height_;
@@ -354,7 +353,7 @@ private:
     void readJoyCommands();
 
 
-    void moveBase(const double& yaw, const double& height, const double& period);
+    void rotateBase(const double& yaw, const double& period);
 };
 
 

@@ -640,8 +640,6 @@ void Controller::starting(const ros::Time& time)
     stateEstimation();
     // 5) Virtual Model Update
     updateXBotModel();
-    // 6) Read joypad commands
-    readJoyCommands();
 
     ROS_DEBUG("Starting DLS Controller Completed");
 }
@@ -691,20 +689,7 @@ void Controller::setInitialPose()
     }
 }
 
-void Controller::readJoyCommands()
-{
-    if(joy_handler_->start())
-        tracking_active_ = true;
-    else
-        tracking_active_ = false;
-
-
-    for(unsigned int i=0; i<contact_links_.size();i++)
-        steps_rotation_[contact_links_[i]] = joy_handler_->getFeetRotation();
-
-}
-
-void Controller::moveBase(const double& yaw_rate, const double& height, const double& period)
+void Controller::rotateBase(const double& yaw_rate, const double& period)
 {
     // FIXME
     Eigen::Vector3d angular_vel;
@@ -714,7 +699,7 @@ void Controller::moveBase(const double& yaw_rate, const double& height, const do
 
     //double yaw_rate = 0.05; //* joy_base_yaw_scale_; //rad/sec
 
-    base_yaw_ = yaw_rate * period + base_yaw_;
+    base_yaw_ = yaw_rate * joy_handler_->getBaseYawScale() * period + base_yaw_;
 
     angular_vel << 0, 0, yaw_rate;
 
@@ -741,7 +726,7 @@ void Controller::moveBase(const double& yaw_rate, const double& height, const do
         xbot_model_->getPose(contact_links_[i],world_T_foot);
         xbot_model_->getPose(hips[i],world_T_hip);
 
-        delta_hip = angular_vel.cross(world_T_hip.translation()); // It should be done in the world frame
+        delta_hip = angular_vel.cross(world_T_hip.translation()) * 1.0/gait_generator_->getSwingFrequency(contact_links_[i]); // It should be done in the world frame
 
         delta_foot = delta_hip + (world_T_hip.translation() - world_T_foot.translation());
 
@@ -755,7 +740,6 @@ void Controller::moveBase(const double& yaw_rate, const double& height, const do
         steps_length_[contact_links_[i]] = r;
         steps_rotation_[contact_links_[i]] = yaw_foot_;
     }
-
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
@@ -771,11 +755,22 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     stateEstimation();
     // 5) Virtual Model Update
     updateXBotModel();
-    // 6) Read joypad commands
-    readJoyCommands();
 
     // Set Default values
     des_joint_positions_ = qhome_;
+
+    //FIXME
+    if(joy_handler_->start())
+        tracking_active_ = true;
+    else
+        tracking_active_ = false;
+
+    for(unsigned int i=0; i<contact_links_.size();i++)
+        steps_rotation_[contact_links_[i]] = joy_handler_->getFeetRotation();
+
+    if(std::abs(joy_handler_->getBaseYawScale())>0)
+        rotateBase(0.05,period.toSec());
+
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -791,7 +786,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(tracking_active_)
         {
-            moveBase(0.05,0.5,period.toSec());
+
+            /*if(gait_generator_->isScheduleChanged()) // Reset world
+            {
+
+            }*/
 
             gait_generator_->activateSwing();
 

@@ -347,6 +347,11 @@ public:
             ROS_WARN("Swing frequency has to be positive definite!");
     }
 
+    double getSwingFrequency()
+    {
+        return swing_frequency_;
+    }
+
 protected:
 
     Eigen::Affine3d reference_;
@@ -538,6 +543,11 @@ public:
     void setSwingFrequency(const std::string& foot_name, const double& swing_frequency)
     {
         feet_[foot_name].trajectory->setSwingFrequency(swing_frequency);
+    }
+
+    double getSwingFrequency(const std::string& foot_name)
+    {
+        return feet_[foot_name].trajectory->getSwingFrequency();
     }
 
     void setTrajectoryAmplitudes(const double& x_amp, const double& y_amp, const double& z_amp)
