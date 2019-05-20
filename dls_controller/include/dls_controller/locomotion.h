@@ -719,6 +719,87 @@ private:
 };
 
 
+class RobotCmds
+{
+
+public:
+
+    enum cmds {HOLD=0,MOVE_FEET,ROTATE_BASE_YAW};
+
+    RobotCmds(const std::vector<std::string>& feet, const double & default_length = 0.0, const double & default_height = 0.0)
+    {
+        assert(feet.size() > 0);
+        for(unsigned int i=0;i<feet.size();i++)
+        {
+            steps_length_[feet[i]] = default_length;
+            steps_rotation_[feet[i]] = 0.0;
+            steps_height_[feet[i]] = default_height;
+        }
+    }
+
+    void update()
+    {
+
+
+
+
+    }
+
+    bool trackingActive() {return tracking_active_;}
+    void startTracking()  {tracking_active_ = true;}
+    void stopTracking()   {tracking_active_ = false;}
+    // Command type
+    unsigned int getCmd()   {return cmd_;}
+    void setCmd(const unsigned int& cmd)   {cmd_ = cmd;}
+    // Base commands
+    void setBaseRollAngle(const double& roll)   {base_roll_   = roll;}
+    void setBasePitchAngle(const double& pitch) {base_pitch_  = pitch;}
+    void setBaseYawAngle(const double& yaw)     {base_yaw_    = yaw;}
+    void setBaseHeight(const double& height)    {base_height_ = height;}
+    //Feet commands
+    void setStepLength(const std::string& foot_name, const double& length) {steps_length_[foot_name]   = length;}
+    void setStepRotation(const std::string& foot_name, const double& rot)  {steps_rotation_[foot_name] = rot;}
+    void setStepHeight(const std::string& foot_name, const double& height) {steps_height_[foot_name]   = height;}
+    void setStepLength(const double& length)
+    {
+        for(map_t::iterator it = steps_length_.begin(); it!=steps_length_.end(); ++it)
+            it->second = length;
+    }
+    void setStepRotation(const double& rot)
+    {
+        for(map_t::iterator it = steps_rotation_.begin(); it!=steps_rotation_.end(); ++it)
+            it->second = rot;
+    }
+    void setStepHeight(const double& height)
+    {
+        for(map_t::iterator it = steps_height_.begin(); it!=steps_height_.end(); ++it)
+            it->second = height;
+    }
+    // Gets
+    double getBaseRollAngle()  {return base_roll_  ;}
+    double getBasePitchAngle() {return base_pitch_ ;}
+    double getBaseYawAngle()   {return base_yaw_   ;}
+    double getBaseHeight()     {return base_height_;}
+    double getStepLength(const std::string& foot_name)     {return steps_length_[foot_name]   ;}
+    double getStepRotation(const std::string& foot_name)   {return steps_rotation_[foot_name] ;}
+    double getStepHeight(const std::string& foot_name)     {return steps_height_[foot_name]   ;}
+
+private:
+
+    typedef std::map<std::string,std::atomic<double>> map_t;
+
+    std::atomic<unsigned int> cmd_;
+    std::atomic<bool>   tracking_active_;
+    std::atomic<double> base_roll_  ;
+    std::atomic<double> base_pitch_ ;
+    std::atomic<double> base_yaw_   ;
+    std::atomic<double> base_height_;
+    map_t steps_length_;
+    map_t steps_rotation_;
+    map_t steps_height_;
+
+};
+
 } // namespace
 
 

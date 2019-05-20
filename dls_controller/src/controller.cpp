@@ -244,10 +244,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     {
         task_poses_[contact_links_[i]] = desired_task_poses_[contact_links_[i]] = Eigen::Affine3d::Identity();
         base_frames_[contact_links_[i]] = "world";
-
-        steps_height_[contact_links_[i]]       = 0.05;
-        steps_length_[contact_links_[i]]       = 0.05;
-        steps_rotation_[contact_links_[i]]     = 0.0;
     }
 
     //desired_task_poses_.initRT(task_poses_);
@@ -337,12 +333,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the rviz publisher thread
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
-    joy_handler_.reset(new JoyHandler(controller_nh));
-
-    base_roll_   = 0.0;
-    base_pitch_  = 0.0;
-    base_yaw_    = 0.0;
-    base_height_ = 0.0;
+    cmds_.reset(new RobotCmds(contact_links_,0.05,0.05));
+    joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
     return true;
 }
@@ -375,18 +367,14 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
     case 6:
         setSwingFrequency(config.swing_frequency);
         break;
-    /*case 7:
-        steps_length_[contact_links_[i]] = config.x;
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set x step length to "<< config.x);
+    case 7:
+        cmds_->setStepLength(config.step_length);
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set step length to "<< config.step_length);
         break;
     case 8:
-        trj_z_amp_ = config.z;
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set z step length to "<< config.z);
+        cmds_->setStepHeight(config.step_height);
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set step height to "<< config.step_height);
         break;
-    case 9:
-        trj_yaw_ = config.rotation;
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set theta to "<< config.theta);
-        break;*/
     default:
         break;
     }
@@ -697,8 +685,6 @@ void Controller::rotateBase(const double& yaw_rate, const double& period)
     Eigen::Affine3d world_T_foot, world_T_hip, world_T_base;
     Eigen::Matrix3d waist_rotation_reference;
 
-    //double yaw_rate = 0.05; //* joy_base_yaw_scale_; //rad/sec
-
     base_yaw_ = yaw_rate * joy_handler_->getBaseYawScale() * period + base_yaw_;
 
     angular_vel << 0, 0, yaw_rate;
@@ -737,8 +723,8 @@ void Controller::rotateBase(const double& yaw_rate, const double& period)
 
         double r = std::sqrt(delta_foot_world(0)*delta_foot_world(0) + delta_foot_world(1)*delta_foot_world(1));
 
-        steps_length_[contact_links_[i]] = r;
-        steps_rotation_[contact_links_[i]] = yaw_foot_;
+        cmds_->setStepLength(contact_links_[i],r);
+        cmds_->setStepRotation(contact_links_[i],yaw_foot_);
     }
 }
 
@@ -759,18 +745,20 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set Default values
     des_joint_positions_ = qhome_;
 
-    //FIXME
-    if(joy_handler_->start())
+    if(cmds_->getCmd() != RobotCmds::HOLD)
         tracking_active_ = true;
     else
         tracking_active_ = false;
 
-    for(unsigned int i=0; i<contact_links_.size();i++)
-        steps_rotation_[contact_links_[i]] = joy_handler_->getFeetRotation();
+    switch(cmds_->getCmd())
+    {
+        case RobotCmds::MOVE_FEET:
+            break;
 
-    if(std::abs(joy_handler_->getBaseYawScale())>0)
-        rotateBase(0.05,period.toSec());
-
+        case RobotCmds::ROTATE_BASE_YAW:
+            rotateBase(0.05,period.toSec());
+            break;
+    };
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -799,9 +787,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             {
                 gait_generator_->setContact(contact_links_[i],contacts_[i]);
 
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],0, steps_length_[contact_links_[i]]);
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],1, steps_rotation_[contact_links_[i]]);
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],2, steps_height_[contact_links_[i]]);
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],0, cmds_->getStepLength(contact_links_[i]));
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],1, cmds_->getStepRotation(contact_links_[i]));
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],2, cmds_->getStepHeight(contact_links_[i]));
             }
 
             // Update the gait_generator

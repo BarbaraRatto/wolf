@@ -273,14 +273,17 @@ private:
 
 
     std::shared_ptr<JoyHandler> joy_handler_;
+    std::shared_ptr<RobotCmds>  cmds_;
 
-    std::atomic<double> base_roll_  ;
+    double base_yaw_  = 0.0;
+
+    /*std::atomic<double> base_roll_  ;
     std::atomic<double> base_pitch_ ;
     std::atomic<double> base_yaw_   ;
     std::atomic<double> base_height_;
     std::map<std::string,std::atomic<double>> steps_length_;
     std::map<std::string,std::atomic<double>> steps_rotation_;
-    std::map<std::string,std::atomic<double>> steps_height_;
+    std::map<std::string,std::atomic<double>> steps_height_;*/
 
     /**
          * @brief thread body for the odometry publisher
@@ -346,11 +349,6 @@ private:
          * @brief set the world tasks
          */
     void setWorldTasks();
-
-    /**
-         * @brief read joypad commands
-         */
-    void readJoyCommands();
 
 
     void rotateBase(const double& yaw, const double& period);
