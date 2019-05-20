@@ -39,8 +39,6 @@ Controller::~Controller()
         delete tasks_actual_pose_rt_pub_;
     if(server_)
         delete server_;
-    if(gait_generator_)
-        delete gait_generator_;
 }
 
 bool Controller::init(hardware_interface::RobotHW* robot_hw,
@@ -326,14 +324,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_ = new GaitGenerator(0.8,contact_links_,"trot","ellipse"); //FIXME
+    gait_generator_.reset(new GaitGenerator(0.8,contact_links_,"trot","ellipse"));
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
     // Spawn the rviz publisher thread
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
-    cmds_.reset(new RobotCmdsInterface(contact_links_,0.05,0.05));
+    cmds_.reset(new CommandsInterface(gait_generator_,0.05,0.05));
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
     return true;
@@ -747,7 +745,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     cmds_->update(period.toSec());
 
-    if(cmds_->getCmd() != RobotCmdsInterface::HOLD)
+    if(cmds_->getCmd() != CommandsInterface::HOLD)
         tracking_active_ = true;
     else
         tracking_active_ = false;

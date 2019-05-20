@@ -267,13 +267,13 @@ private:
     /** @brief True if the solver has been resetted */
     bool solver_reset_done_;
     /** @brief Gait generator */
-    GaitGenerator* gait_generator_;
+    std::shared_ptr<GaitGenerator> gait_generator_;
     /** @brief Visual tools */
     std::map<std::string,rviz_visual_tools::RvizVisualToolsPtr> visual_tools_;
 
 
     std::shared_ptr<JoyHandler> joy_handler_;
-    std::shared_ptr<RobotCmdsInterface> cmds_;
+    std::shared_ptr<CommandsInterface> cmds_;
 
     double base_yaw_  = 0.0;
 

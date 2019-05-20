@@ -431,6 +431,7 @@ public:
     GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::string& gait_type, const std::string& trajectory_type)
     {
         assert(feet_names.size()==4);// We assume we are working with a dog
+        feet_names_ = feet_names;
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
             feet_[feet_names[i]].state_machine = FootStateMachine(duty_cycle);
@@ -561,6 +562,11 @@ public:
     double getSwingFrequency(const std::string& foot_name)
     {
         return feet_[foot_name].trajectory->getSwingFrequency();
+    }
+
+    const std::vector<std::string>& getFeetNames()
+    {
+        return feet_names_;
     }
 
     void setTrajectoryAmplitude(const double& length, const double& rotation, const double& height)
@@ -729,32 +735,34 @@ private:
     std::atomic<bool> schedule_changed_;
     std::atomic<bool> activate_swing_;
 
+    std::vector<std::string> feet_names_;
+
 };
 
-class RobotCmdsInterface
+class CommandsInterface
 {
 
 public:
 
-    enum cmd_t {HOLD=0,TRANSLATE_BASE,ROTATE_BASE};
+    enum cmd_t {HOLD=0,BASE_VELOCITY};
 
-    RobotCmdsInterface(const std::vector<std::string>& feet_names, const double & default_length = 0.0, const double & default_height = 0.0)
+    CommandsInterface(std::shared_ptr<GaitGenerator> gait_generator, const double & default_length = 0.0, const double & default_height = 0.0)
     {
-        assert(feet_names.size() > 0);
-        feet_names_ = feet_names;
-        for(unsigned int i=0;i<feet_names_.size();i++)
+        assert(gait_generator);
+        gait_generator_ = gait_generator;
+        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+        for(unsigned int i=0;i<feet_names.size();i++)
         {
-            steps_length_[feet_names_[i]] = default_length;
-            steps_rotation_[feet_names_[i]] = 0.0;
-            steps_height_[feet_names_[i]] = default_height;
+            steps_length_[feet_names[i]] = default_length;
+            steps_rotation_[feet_names[i]] = 0.0;
+            steps_height_[feet_names[i]] = default_height;
         }
-
-        base_linear_velocity_(0) = 0.1;
-        base_linear_velocity_(1) = 0.1;
 
         base_linear_velocity_scale_x_ = 0.0;
         base_linear_velocity_scale_y_ = 0.0;
         base_linear_velocity_scale_z_ = 0.0;
+
+        base_linear_velocity_max_ << 0.1, 0.1, 0.0;
 
         base_position_ = Eigen::Vector3d::Zero();
 
@@ -763,50 +771,33 @@ public:
 
     void update(const double& period)
     {
-        double r;
-        double yaw_foot;
 
         unsigned int cmd = cmd_;
+        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
         switch(cmd)
         {
 
         case cmd_t::HOLD:
-
             break;
 
-        case cmd_t::TRANSLATE_BASE:
+        case cmd_t::BASE_VELOCITY:
 
-            std::cout << "***********"<< std::endl;
-            std::cout << base_linear_velocity_scale_x_<< std::endl;
-            std::cout << base_linear_velocity_scale_y_<< std::endl;
-            std::cout << base_linear_velocity_scale_z_<< std::endl;
+            base_linear_velocity_(0) = base_linear_velocity_max_(0) * base_linear_velocity_scale_x_;
+            base_linear_velocity_(1) = base_linear_velocity_max_(1) * base_linear_velocity_scale_y_;
+            base_linear_velocity_(2) = base_linear_velocity_max_(2) * base_linear_velocity_scale_z_;
 
-            base_linear_velocity_(0) = base_linear_velocity_(0) * base_linear_velocity_scale_x_;
-            base_linear_velocity_(1) = base_linear_velocity_(1) * base_linear_velocity_scale_y_;
-            base_linear_velocity_(2) = base_linear_velocity_(2) * base_linear_velocity_scale_z_;
+            base_position_ = base_linear_velocity_ * period + base_position_;
 
-            base_position_ = base_linear_velocity_ * period + base_position_; // FIXME where is the swing freq? also, where is base_position initialized
-
-            std::cout << "**** base pos ****"<< std::endl;
-            std::cout << base_position_ << std::endl;
-
-            r = std::sqrt(base_position_(0)*base_position_(0) + base_position_(1)*base_position_(1));
-            yaw_foot = std::atan2(base_position_(1),base_position_(0));
-
-            std::cout << yaw_foot << std::endl;
-
-            for(unsigned int i=0; i<feet_names_.size();i++)
+            for(unsigned int i=0; i<feet_names.size();i++)
             {
-                steps_length_[feet_names_[i]] = r;
-                steps_rotation_[feet_names_[i]] = yaw_foot;
+                delta_foot_ = base_linear_velocity_ * 1.0/gait_generator_->getSwingFrequency(feet_names[i]);
+                steps_length_[feet_names[i]] = std::sqrt(delta_foot_(0)*delta_foot_(0) + delta_foot_(1)*delta_foot_(1));
+                steps_rotation_[feet_names[i]] = std::atan2(delta_foot_(1),delta_foot_(0));
             }
 
             base_height_ = base_position_(2);
 
-            break;
-
-        case cmd_t::ROTATE_BASE:
             break;
 
         };
@@ -818,14 +809,20 @@ public:
     void stopTracking()   {tracking_active_ = false;}
     // Command type
     unsigned int getCmd()                  {return cmd_;}
-    void setCmd(const unsigned int& cmd)   {cmd_ = cmd;}
+    void setCmd(const unsigned int cmd)   {cmd_ = cmd;}
 
     // Velocity commands
-    void setBaseVelocityScale(const double& x_scale,const double& y_scale,const double& z_scale)
+    void setBaseVelocityScaleX(const double scale)
     {
-        base_linear_velocity_scale_x_ = x_scale;
-        base_linear_velocity_scale_y_ = y_scale;
-        base_linear_velocity_scale_z_ = z_scale;
+        base_linear_velocity_scale_x_ = scale;
+    }
+    void setBaseVelocityScaleY(const double scale)
+    {
+        base_linear_velocity_scale_y_ = scale;
+    }
+    void setBaseVelocityScaleZ(const double scale)
+    {
+        base_linear_velocity_scale_z_ = scale;
     }
 
 
@@ -876,18 +873,21 @@ private:
     std::atomic<double>  base_linear_velocity_scale_y_;
     std::atomic<double>  base_linear_velocity_scale_z_;
 
+    Eigen::Vector3d base_linear_velocity_max_;
     Eigen::Vector3d base_angular_velocity_;
     Eigen::Vector3d base_linear_velocity_;
 
     Eigen::Vector3d base_position_;
     Eigen::Vector3d base_orientation_;
 
-    std::vector<std::string> feet_names_;
+    Eigen::Vector3d delta_foot_;
 
     std::atomic<double> base_height_;
     map_t steps_length_;
     map_t steps_rotation_;
     map_t steps_height_;
+
+    std::shared_ptr<GaitGenerator> gait_generator_;
 
 };
 

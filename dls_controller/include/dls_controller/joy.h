@@ -11,7 +11,7 @@ class JoyHandler
 
 public:
 
-    JoyHandler(ros::NodeHandle& node, std::shared_ptr<dls_controller::RobotCmdsInterface> cmds)
+    JoyHandler(ros::NodeHandle& node, std::shared_ptr<dls_controller::CommandsInterface> cmds)
     {
         joy_base_velocity_x_scale_     = 0.0;
         joy_base_velocity_y_scale_     = 0.0;
@@ -38,10 +38,12 @@ private:
         joy_start_button_           = static_cast<bool>(msg->buttons[4]); // L1 button
 
        // Set the joypad commands
-       if(std::abs(joy_base_velocity_x_scale_)>0 || std::abs(joy_base_velocity_y_scale_)>0) // Translate the base
+       if(std::abs(joy_base_velocity_x_scale_)>0 || std::abs(joy_base_velocity_y_scale_)>0)
        {
-            cmds_->setCmd(dls_controller::RobotCmdsInterface::TRANSLATE_BASE);
-            cmds_->setBaseVelocityScale(joy_base_velocity_x_scale_,joy_base_velocity_y_scale_,0.0);
+            cmds_->setCmd(dls_controller::CommandsInterface::BASE_VELOCITY);
+            cmds_->setBaseVelocityScaleX(joy_base_velocity_x_scale_);
+            cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
+            cmds_->setBaseVelocityScaleZ(0.0);
        }
        /*else if(std::abs(joy_base_yaw_scale_)>0)
        {
@@ -49,15 +51,17 @@ private:
        }*/
        else
        {
-            cmds_->setCmd(dls_controller::RobotCmdsInterface::HOLD);
-            cmds_->setBaseVelocityScale(0.0,0.0,0.0);
+            cmds_->setCmd(dls_controller::CommandsInterface::HOLD);
+            cmds_->setBaseVelocityScaleX(0.0);
+            cmds_->setBaseVelocityScaleY(0.0);
+            cmds_->setBaseVelocityScaleZ(0.0);
        }
 
     }
 
     /** @brief Ros subscriber for joypad */
     ros::Subscriber     joy_sub_;
-    std::shared_ptr<dls_controller::RobotCmdsInterface> cmds_;
+    std::shared_ptr<dls_controller::CommandsInterface> cmds_;
     double joy_base_velocity_x_scale_;
     double joy_base_velocity_y_scale_;
     double joy_base_yaw_scale_;
