@@ -333,7 +333,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the rviz publisher thread
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
-    cmds_.reset(new RobotCmds(contact_links_,0.05,0.05));
+    cmds_.reset(new RobotCmdsInterface(contact_links_,0.05,0.05));
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
     return true;
@@ -677,7 +677,7 @@ void Controller::setInitialPose()
     }
 }
 
-void Controller::rotateBase(const double& yaw_rate, const double& period)
+/*void Controller::rotateBase(const double& yaw_rate, const double& period)
 {
     // FIXME
     Eigen::Vector3d angular_vel;
@@ -726,7 +726,7 @@ void Controller::rotateBase(const double& yaw_rate, const double& period)
         cmds_->setStepLength(contact_links_[i],r);
         cmds_->setStepRotation(contact_links_[i],yaw_foot_);
     }
-}
+}*/
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
@@ -745,12 +745,14 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set Default values
     des_joint_positions_ = qhome_;
 
-    if(cmds_->getCmd() != RobotCmds::HOLD)
+    cmds_->update(period.toSec());
+
+    if(cmds_->getCmd() != RobotCmdsInterface::HOLD)
         tracking_active_ = true;
     else
         tracking_active_ = false;
 
-    Eigen::Affine3d world_T_base; // FIXME
+    /*Eigen::Affine3d world_T_base; // FIXME
     switch(cmds_->getCmd())
     {
         case RobotCmds::MOVE_FEET:
@@ -764,7 +766,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             gait_generator_->setTrajectoryTransformation(world_T_base);
             rotateBase(0.05,period.toSec());
             break;
-    };
+    };*/
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {

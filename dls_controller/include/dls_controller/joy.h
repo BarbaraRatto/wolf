@@ -11,13 +11,13 @@ class JoyHandler
 
 public:
 
-    JoyHandler(ros::NodeHandle& node, std::shared_ptr<dls_controller::RobotCmds> cmds)
+    JoyHandler(ros::NodeHandle& node, std::shared_ptr<dls_controller::RobotCmdsInterface> cmds)
     {
-        joy_foot_forward_scale_     = 0.0;
-        joy_foot_lateral_scale_     = 0.0;
-        joy_base_yaw_scale_         = 0.0;
-        joy_base_pitch_scale_       = 0.0;
-        joy_start_button_           = false;
+        joy_base_velocity_x_scale_     = 0.0;
+        joy_base_velocity_y_scale_     = 0.0;
+        joy_base_yaw_scale_            = 0.0;
+        joy_base_pitch_scale_          = 0.0;
+        joy_start_button_              = false;
 
         joy_sub_ = node.subscribe("joy", 1, &JoyHandler::joyCallback, this);
 
@@ -25,48 +25,43 @@ public:
         cmds_ = cmds;
     }
 
-    bool   start() {return joy_start_button_;}
-    double getFeetRotation() {return feet_rotation_;}
-    double getBaseYawScale() {return joy_base_yaw_scale_;}
-
 private:
 
     void joyCallback(const sensor_msgs::Joy::ConstPtr& msg)
     {
-        joy_foot_lateral_scale_     = static_cast<double>(msg->axes[0]);
-        joy_foot_forward_scale_     = static_cast<double>(msg->axes[1]);
+        joy_base_velocity_y_scale_     = static_cast<double>(msg->axes[0]);
+        joy_base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
 
         joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
         joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
 
         joy_start_button_           = static_cast<bool>(msg->buttons[4]); // L1 button
 
-        // Set the joypad commands
-       if(std::abs(joy_foot_forward_scale_)>0 || std::abs(joy_foot_lateral_scale_)>0) // Move the feet
+       // Set the joypad commands
+       if(std::abs(joy_base_velocity_x_scale_)>0 || std::abs(joy_base_velocity_y_scale_)>0) // Translate the base
        {
-            cmds_->setCmd(dls_controller::RobotCmds::MOVE_FEET);
-            feet_rotation_ = std::atan2(joy_foot_lateral_scale_,joy_foot_forward_scale_);
-            cmds_->setStepRotation(feet_rotation_);
+            cmds_->setCmd(dls_controller::RobotCmdsInterface::TRANSLATE_BASE);
+            cmds_->setBaseVelocityScale(joy_base_velocity_x_scale_,joy_base_velocity_y_scale_,0.0);
        }
-       else if(std::abs(joy_base_yaw_scale_)>0)
+       /*else if(std::abs(joy_base_yaw_scale_)>0)
        {
-            cmds_->setCmd(dls_controller::RobotCmds::ROTATE_BASE_YAW);
-       }
+            cmds_->setCmd(dls_controller::RobotCmdsInterface::ROTATE_BASE);
+       }*/
        else
        {
-            cmds_->setCmd(dls_controller::RobotCmds::HOLD);
+            cmds_->setCmd(dls_controller::RobotCmdsInterface::HOLD);
+            cmds_->setBaseVelocityScale(0.0,0.0,0.0);
        }
 
     }
 
     /** @brief Ros subscriber for joypad */
     ros::Subscriber     joy_sub_;
-    std::shared_ptr<dls_controller::RobotCmds> cmds_;
-    double joy_foot_forward_scale_;
-    double joy_foot_lateral_scale_;
+    std::shared_ptr<dls_controller::RobotCmdsInterface> cmds_;
+    double joy_base_velocity_x_scale_;
+    double joy_base_velocity_y_scale_;
     double joy_base_yaw_scale_;
     double joy_base_pitch_scale_;
-    double feet_rotation_;
     bool   joy_start_button_;
 };
 

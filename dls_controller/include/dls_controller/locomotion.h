@@ -731,30 +731,85 @@ private:
 
 };
 
-
-class RobotCmds
+class RobotCmdsInterface
 {
 
 public:
 
-    enum cmds {HOLD=0,MOVE_FEET,ROTATE_BASE_YAW};
+    enum cmd_t {HOLD=0,TRANSLATE_BASE,ROTATE_BASE};
 
-    RobotCmds(const std::vector<std::string>& feet, const double & default_length = 0.0, const double & default_height = 0.0)
+    RobotCmdsInterface(const std::vector<std::string>& feet_names, const double & default_length = 0.0, const double & default_height = 0.0)
     {
-        assert(feet.size() > 0);
-        for(unsigned int i=0;i<feet.size();i++)
+        assert(feet_names.size() > 0);
+        feet_names_ = feet_names;
+        for(unsigned int i=0;i<feet_names_.size();i++)
         {
-            steps_length_[feet[i]] = default_length;
-            steps_rotation_[feet[i]] = 0.0;
-            steps_height_[feet[i]] = default_height;
+            steps_length_[feet_names_[i]] = default_length;
+            steps_rotation_[feet_names_[i]] = 0.0;
+            steps_height_[feet_names_[i]] = default_height;
         }
+
+        base_linear_velocity_(0) = 0.1;
+        base_linear_velocity_(1) = 0.1;
+
+        base_linear_velocity_scale_x_ = 0.0;
+        base_linear_velocity_scale_y_ = 0.0;
+        base_linear_velocity_scale_z_ = 0.0;
+
+        base_position_ = Eigen::Vector3d::Zero();
+
+        cmd_ = cmd_t::HOLD;
     }
 
-    void update()
+    void update(const double& period)
     {
+        double r;
+        double yaw_foot;
 
+        unsigned int cmd = cmd_;
 
+        switch(cmd)
+        {
 
+        case cmd_t::HOLD:
+
+            break;
+
+        case cmd_t::TRANSLATE_BASE:
+
+            std::cout << "***********"<< std::endl;
+            std::cout << base_linear_velocity_scale_x_<< std::endl;
+            std::cout << base_linear_velocity_scale_y_<< std::endl;
+            std::cout << base_linear_velocity_scale_z_<< std::endl;
+
+            base_linear_velocity_(0) = base_linear_velocity_(0) * base_linear_velocity_scale_x_;
+            base_linear_velocity_(1) = base_linear_velocity_(1) * base_linear_velocity_scale_y_;
+            base_linear_velocity_(2) = base_linear_velocity_(2) * base_linear_velocity_scale_z_;
+
+            base_position_ = base_linear_velocity_ * period + base_position_; // FIXME where is the swing freq? also, where is base_position initialized
+
+            std::cout << "**** base pos ****"<< std::endl;
+            std::cout << base_position_ << std::endl;
+
+            r = std::sqrt(base_position_(0)*base_position_(0) + base_position_(1)*base_position_(1));
+            yaw_foot = std::atan2(base_position_(1),base_position_(0));
+
+            std::cout << yaw_foot << std::endl;
+
+            for(unsigned int i=0; i<feet_names_.size();i++)
+            {
+                steps_length_[feet_names_[i]] = r;
+                steps_rotation_[feet_names_[i]] = yaw_foot;
+            }
+
+            base_height_ = base_position_(2);
+
+            break;
+
+        case cmd_t::ROTATE_BASE:
+            break;
+
+        };
 
     }
 
@@ -762,8 +817,18 @@ public:
     void startTracking()  {tracking_active_ = true;}
     void stopTracking()   {tracking_active_ = false;}
     // Command type
-    unsigned int getCmd()   {return cmd_;}
+    unsigned int getCmd()                  {return cmd_;}
     void setCmd(const unsigned int& cmd)   {cmd_ = cmd;}
+
+    // Velocity commands
+    void setBaseVelocityScale(const double& x_scale,const double& y_scale,const double& z_scale)
+    {
+        base_linear_velocity_scale_x_ = x_scale;
+        base_linear_velocity_scale_y_ = y_scale;
+        base_linear_velocity_scale_z_ = z_scale;
+    }
+
+
     // Base commands
     void setBaseRollAngle(const double& roll)   {base_roll_   = roll;}
     void setBasePitchAngle(const double& pitch) {base_pitch_  = pitch;}
@@ -806,6 +871,19 @@ private:
     std::atomic<double> base_roll_  ;
     std::atomic<double> base_pitch_ ;
     std::atomic<double> base_yaw_   ;
+
+    std::atomic<double>  base_linear_velocity_scale_x_;
+    std::atomic<double>  base_linear_velocity_scale_y_;
+    std::atomic<double>  base_linear_velocity_scale_z_;
+
+    Eigen::Vector3d base_angular_velocity_;
+    Eigen::Vector3d base_linear_velocity_;
+
+    Eigen::Vector3d base_position_;
+    Eigen::Vector3d base_orientation_;
+
+    std::vector<std::string> feet_names_;
+
     std::atomic<double> base_height_;
     map_t steps_length_;
     map_t steps_rotation_;

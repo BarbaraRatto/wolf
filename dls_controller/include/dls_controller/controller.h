@@ -273,7 +273,7 @@ private:
 
 
     std::shared_ptr<JoyHandler> joy_handler_;
-    std::shared_ptr<RobotCmds>  cmds_;
+    std::shared_ptr<RobotCmdsInterface> cmds_;
 
     double base_yaw_  = 0.0;
 
