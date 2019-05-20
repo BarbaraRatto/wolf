@@ -246,12 +246,12 @@ public:
 
     TrajectoryInterface()
     {
-        reference_ = initial_pose_ = state_ = Eigen::Affine3d::Identity();
+        reference_ = initial_pose_ = state_ = T_ = Eigen::Affine3d::Identity();
         swing_frequency_ = 5.0;
         time_ = 0.0;
-        x_amp_ = 0.0;
-        y_amp_ = 0.0;
-        z_amp_ = 0.0;
+        length_ = 0.0;
+        rotation_ = 0.0;
+        height_ = 0.0;
 
         trajectory_finished_ = false;
     }
@@ -309,34 +309,34 @@ public:
         reference_ = initial_pose_;
     }
 
-    void setAmpX(const double& x_amp)
+    void setStepLength(const double& length)
     {
-        x_amp_ = x_amp;
+        length_ = length;
     }
 
-    void setAmpY(const double& y_amp)
+    void setStepRotation(const double& rotation)
     {
-        y_amp_ = y_amp;
+        rotation_ = rotation;
     }
 
-    void setAmpZ(const double& z_amp)
+    void setStepHeight(const double& height)
     {
-        z_amp_ = z_amp;
+        height_ = height;
     }
 
-    double getAmpX()
+    double getStepLength()
     {
-        return x_amp_;
+        return length_;
     }
 
-    double getAmpY()
+    double getStepRotation()
     {
-        return y_amp_;
+        return rotation_;
     }
 
-    double getAmpZ()
+    double getStepHeight()
     {
-        return z_amp_;
+        return height_;
     }
 
     void setSwingFrequency(const double& swing_frequency)
@@ -352,16 +352,22 @@ public:
         return swing_frequency_;
     }
 
+    void setTrajectoryTransformation(const Eigen::Affine3d& T)
+    {
+        T_ = T;
+    }
+
 protected:
 
     Eigen::Affine3d reference_;
     Eigen::Affine3d initial_pose_;
     Eigen::Affine3d state_;
+    Eigen::Affine3d T_;
     double time_;
     std::atomic<double> swing_frequency_;
-    std::atomic<double> x_amp_;
-    std::atomic<double> y_amp_;
-    std::atomic<double> z_amp_;
+    std::atomic<double> length_;
+    std::atomic<double> rotation_;
+    std::atomic<double> height_;
     std::atomic<bool> trajectory_finished_;
 
     virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
@@ -391,11 +397,13 @@ protected:
 
     const Eigen::Affine3d& trajectoryFunction(const double& time)
     {
-        double psi = y_amp_;
+        double psi = rotation_;
 
-        xyz(0) = x_amp_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
+        xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
-        xyz(2) = z_amp_ * std::sin(M_PI * (swing_frequency_ * time));
+        xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
+
+        xyz = T_ * xyz;
 
         double c = std::cos(psi);
         double s = std::sin(psi);
@@ -407,7 +415,6 @@ protected:
         state_.translation().x() = initial_pose_.translation().x() + xyz_rotated(0);
         state_.translation().y() = initial_pose_.translation().y() + xyz_rotated(1);
         state_.translation().z() = initial_pose_.translation().z() + xyz_rotated(2);
-
 
         return state_;
     }
@@ -503,6 +510,12 @@ public:
         return schedule_changed_;
     }
 
+    void setTrajectoryTransformation(const Eigen::Affine3d& T)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+            it->second.trajectory->setTrajectoryTransformation(T);
+    }
+
     bool isAnyFootInLiftOff()
     {
         bool result = false;
@@ -550,28 +563,28 @@ public:
         return feet_[foot_name].trajectory->getSwingFrequency();
     }
 
-    void setTrajectoryAmplitudes(const double& x_amp, const double& y_amp, const double& z_amp)
+    void setTrajectoryAmplitude(const double& length, const double& rotation, const double& height)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
         {
-            it->second.trajectory->setAmpX(x_amp);
-            it->second.trajectory->setAmpY(y_amp);
-            it->second.trajectory->setAmpZ(z_amp);
+            it->second.trajectory->setStepLength(length);
+            it->second.trajectory->setStepRotation(rotation);
+            it->second.trajectory->setStepHeight(height);
         }
     }
 
-    void setTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id_xyz, const double& amp)
+    void setTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id, const double& amp)
     {
-        switch(id_xyz)
+        switch(id)
         {
         case 0:
-            feet_[foot_name].trajectory->setAmpX(amp);
+            feet_[foot_name].trajectory->setStepLength(amp);
             break;
         case 1:
-            feet_[foot_name].trajectory->setAmpY(amp);
+            feet_[foot_name].trajectory->setStepRotation(amp);
             break;
         case 2:
-            feet_[foot_name].trajectory->setAmpZ(amp);
+            feet_[foot_name].trajectory->setStepHeight(amp);
             break;
         default:
             ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are X=0,Y=1,Z=2");
@@ -579,19 +592,19 @@ public:
         };
     }
 
-    double getTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id_xyz)
+    double getTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id)
     {
         double amp = 0.0;
-        switch(id_xyz)
+        switch(id)
         {
         case 0:
-            amp = feet_[foot_name].trajectory->getAmpX();
+            amp = feet_[foot_name].trajectory->getStepLength();
             break;
         case 1:
-            amp = feet_[foot_name].trajectory->getAmpY();
+            amp = feet_[foot_name].trajectory->getStepRotation();
             break;
         case 2:
-            amp = feet_[foot_name].trajectory->getAmpZ();
+            amp = feet_[foot_name].trajectory->getStepHeight();
             break;
         default:
             ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are X=0,Y=1,Z=2");

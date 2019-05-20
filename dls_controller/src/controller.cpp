@@ -750,12 +750,18 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     else
         tracking_active_ = false;
 
+    Eigen::Affine3d world_T_base; // FIXME
     switch(cmds_->getCmd())
     {
         case RobotCmds::MOVE_FEET:
+            xbot_model_->getPose("base_link",world_T_base);
+            world_T_base.translation() = Eigen::Vector3d::Zero();
+            gait_generator_->setTrajectoryTransformation(world_T_base);
             break;
 
         case RobotCmds::ROTATE_BASE_YAW:
+            world_T_base = Eigen::Affine3d::Identity();
+            gait_generator_->setTrajectoryTransformation(world_T_base);
             rotateBase(0.05,period.toSec());
             break;
     };
