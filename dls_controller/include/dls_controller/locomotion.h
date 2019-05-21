@@ -369,7 +369,7 @@ protected:
     std::atomic<double> length_;
     std::atomic<double> rotation_;
     std::atomic<double> height_;
-    std::atomic<bool> trajectory_finished_;
+    bool trajectory_finished_;
 
     virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
 };
@@ -658,7 +658,7 @@ public:
         // 2) Update the trajectories for each foot depending on the state machine status
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
-            //it->second.state_machine.update(period,it->second.is_in_contact); //ClosedLoop
+            //it->second.state_machine.update(period,it->second.is_in_contact); //ClosedLoop with Haptic
             it->second.state_machine.update(period,it->second.trajectory->isFinished()); // OpenLoop
 
             if (it->second.state_machine.isSwing())
