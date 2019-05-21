@@ -31,6 +31,7 @@ private:
     {
         joy_base_velocity_y_scale_     = static_cast<double>(msg->axes[0]);
         joy_base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
+        joy_base_velocity_z_scale_     = (static_cast<double>(msg->buttons[5])-static_cast<double>(msg->buttons[7])); //R1 and R2
 
         joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
         joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
@@ -39,13 +40,14 @@ private:
 
        if(std::abs(joy_base_velocity_x_scale_)>0 ||
           std::abs(joy_base_velocity_y_scale_)>0 ||
+          std::abs(joy_base_velocity_z_scale_)>0 ||
           std::abs(joy_base_yaw_scale_)       >0 ||
           std::abs(joy_base_pitch_scale_)     >0  )
        {
            cmds_->setCmd(dls_controller::CommandsInterface::BASE_VELOCITY_FULL);
            cmds_->setBaseVelocityScaleX(joy_base_velocity_x_scale_);
            cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
-           cmds_->setBaseVelocityScaleZ(0.0);
+           cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
            cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
        }
        else
@@ -66,6 +68,7 @@ private:
     std::shared_ptr<dls_controller::CommandsInterface> cmds_;
     double joy_base_velocity_x_scale_;
     double joy_base_velocity_y_scale_;
+    double joy_base_velocity_z_scale_;
     double joy_base_yaw_scale_;
     double joy_base_pitch_scale_;
     bool   joy_start_button_;

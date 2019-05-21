@@ -574,7 +574,13 @@ void Controller::stateEstimation()
     floating_base_pose_.translation() = floating_base_position_;
     floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 
-    //floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(2, 1, 0); // FIXME
+    /*Eigen::Vector3d ypr;
+    ypr = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(2, 1, 0); // FIXME
+    // Re-order
+    floating_base_orientation_rpy_(0) = ypr(2);
+    floating_base_orientation_rpy_(1) = ypr(1);
+    floating_base_orientation_rpy_(2) = ypr(0);*/
+
 }
 
 void Controller::updateXBotModel()
@@ -711,20 +717,24 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             // Set the initial feet poses
             setInitialPose(); //w.r.t to the frame selected in IDProblem
+
+            cmds_->setBasePosition(floating_base_position_);
         }
 
         if(tracking_active_)
         {
-            /*if(gait_generator_->isScheduleChanged()) // Reset world
+            /*if(gait_generator_->isScheduleChanged())
             {
-
+                // Reset world
             }*/
 
             gait_generator_->activateSwing();
 
+            // Set the task reference for the waist
             Eigen::Affine3d world_T_base; //FIXME NO-RT
             id_prob_->_waist->getReference(world_T_base);
             world_T_base.linear() = cmds_->getBaseRotationReference();
+            world_T_base.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(world_T_base);
 
             // Give to the gait_generator the contact status of the feet and the steps length

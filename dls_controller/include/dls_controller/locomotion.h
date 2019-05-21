@@ -804,6 +804,11 @@ public:
 
     }
 
+    void update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
+    {
+        update(period,base_position,base_orientation_);
+    }
+
     void update(const double& period) // OpenLoop
     {
         update(period,base_position_,base_orientation_);
@@ -885,6 +890,14 @@ public:
 
     // Sets
     void setCmd(const unsigned int cmd)   {cmd_ = cmd;}
+    void setBasePosition(const Eigen::Vector3d& position)
+    {
+        base_position_ = position;
+    }
+    void setBaseOrientation(const Eigen::Vector3d& orientation)
+    {
+        base_orientation_ = orientation;
+    }
     void setBaseVelocityScaleX(const double scale)
     {
         base_linear_velocity_scale_x_ = scale;
@@ -941,6 +954,7 @@ public:
     const double& getStepLength(const std::string& foot_name) {return steps_length_[foot_name];}
     const double& getStepRotation(const std::string& foot_name) {return steps_rotation_[foot_name];}
     const double& getStepHeight(const std::string& foot_name) {return steps_height_[foot_name];}
+    const double& getBaseHeight() const {return base_height_;}
 
 private:
 
