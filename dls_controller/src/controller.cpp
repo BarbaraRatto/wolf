@@ -366,12 +366,12 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setSwingFrequency(config.swing_frequency);
         break;
     case 7:
-        cmds_->setStepLength(config.step_length);
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set step length to "<< config.step_length);
+        cmds_->setMaxLinearVelocity(config.base_max_vel);
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum velocity to "<< config.base_max_vel);
         break;
     case 8:
-        cmds_->setStepHeight(config.step_height);
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set step height to "<< config.step_height);
+        cmds_->setMaxAngularVelocity(config.base_max_rot_rate);
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum rotation rate to "<< config.base_max_rot_rate);
         break;
     default:
         break;
@@ -573,6 +573,8 @@ void Controller::stateEstimation()
 
     floating_base_pose_.translation() = floating_base_position_;
     floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
+
+    //floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(2, 1, 0); // FIXME
 }
 
 void Controller::updateXBotModel()
@@ -675,57 +677,6 @@ void Controller::setInitialPose()
     }
 }
 
-/*void Controller::rotateBase(const double& yaw_rate, const double& period)
-{
-    // FIXME
-    Eigen::Vector3d angular_vel;
-    Eigen::Vector3d delta_hip, delta_foot, delta_foot_world;
-    Eigen::Affine3d world_T_foot, world_T_hip, world_T_base;
-    Eigen::Matrix3d waist_rotation_reference;
-
-    base_yaw_ = yaw_rate * joy_handler_->getBaseYawScale() * period + base_yaw_;
-
-    angular_vel << 0, 0, yaw_rate;
-
-    waist_rotation_reference = Eigen::AngleAxisd(base_yaw_, Eigen::Vector3d::UnitZ());
-
-    id_prob_->_waist->getReference(world_T_base);
-
-    world_T_base.linear() = waist_rotation_reference;
-
-    id_prob_->_waist->setReference(world_T_base);
-
-    std::vector<std::string> hips(4);
-
-    hips[0] = "lf_hipassembly";
-    hips[1] = "rf_hipassembly";
-    hips[2] = "lh_hipassembly";
-    hips[3] = "rh_hipassembly";
-
-    xbot_model_->getPose("base_link",world_T_base);
-
-    for(unsigned int i=0; i<contact_links_.size(); i++)
-    {
-
-        xbot_model_->getPose(contact_links_[i],world_T_foot);
-        xbot_model_->getPose(hips[i],world_T_hip);
-
-        delta_hip = angular_vel.cross(world_T_hip.translation()) * 1.0/gait_generator_->getSwingFrequency(contact_links_[i]); // It should be done in the world frame
-
-        delta_foot = delta_hip + (world_T_hip.translation() - world_T_foot.translation());
-
-        //delta_foot_world = world_T_base * delta_foot;
-        delta_foot_world = delta_foot;
-
-        double yaw_foot_ = std::atan2(delta_foot_world(1),delta_foot_world(0));
-
-        double r = std::sqrt(delta_foot_world(0)*delta_foot_world(0) + delta_foot_world(1)*delta_foot_world(1));
-
-        cmds_->setStepLength(contact_links_[i],r);
-        cmds_->setStepRotation(contact_links_[i],yaw_foot_);
-    }
-}*/
-
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
     // Read from the hardware interfaces:
@@ -745,28 +696,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     cmds_->update(period.toSec());
 
-    if(cmds_->getCmd() != CommandsInterface::HOLD)
-        tracking_active_ = true;
-    else
+    if(cmds_->getCmd() == CommandsInterface::HOLD)
         tracking_active_ = false;
-
-    /*Eigen::Affine3d world_T_base;
-    switch(cmds_->getCmd())
-    {
-        case CommandsInterface::BASE_LINEAR_VELOCITY:
-            xbot_model_->getPose("base_link",world_T_base);
-            world_T_base.translation() = Eigen::Vector3d::Zero();
-            gait_generator_->setTrajectoryTransformation(world_T_base);
-            break;
-
-        case CommandsInterface::BASE_ANGULAR_VELOCITY:
-            world_T_base = Eigen::Affine3d::Identity();
-            gait_generator_->setTrajectoryTransformation(world_T_base);
-
-
-
-            break;
-    };*/
+    else
+        tracking_active_ = true;
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -782,7 +715,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(tracking_active_)
         {
-
             /*if(gait_generator_->isScheduleChanged()) // Reset world
             {
 
@@ -790,8 +722,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             gait_generator_->activateSwing();
 
-            // FIXME
-            Eigen::Affine3d world_T_base;
+            Eigen::Affine3d world_T_base; //FIXME NO-RT
             id_prob_->_waist->getReference(world_T_base);
             world_T_base.linear() = cmds_->getBaseRotationReference();
             id_prob_->_waist->setReference(world_T_base);

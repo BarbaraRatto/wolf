@@ -756,10 +756,13 @@ class CommandsInterface
 
 public:
 
-    enum cmd_t {HOLD=0,BASE_LINEAR_VELOCITY,BASE_ANGULAR_VELOCITY};
+    enum cmd_t {HOLD=0,BASE_VELOCITY_ONLY_LINEAR,BASE_VELOCITY_ONLY_ANGULAR,BASE_VELOCITY_FULL};
 
     CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, const double & default_length = 0.0, const double & default_height = 0.0)
     {
+
+        // FIXME:
+        // Add max safety height and length
         assert(gait_generator);
         gait_generator_ = gait_generator;
         assert(xbot_model);
@@ -780,28 +783,38 @@ public:
         base_angular_velocity_scale_pitch_ = 0.0;
         base_angular_velocity_scale_yaw_ = 0.0;
 
-        base_linear_velocity_max_ << 0.1, 0.1, 0.0;
-        base_angular_velocity_max_ << 0.05, 0.05, 0.05;
+        base_linear_velocity_max_ = 0.1;
+        base_angular_velocity_max_ = 0.05;
 
         base_rotation_reference_ = Eigen::Matrix3d::Identity();
         base_position_ = base_orientation_ = Eigen::Vector3d::Zero();
 
         cmd_ = cmd_t::HOLD;
+
+        // FIXME hardcoded names
+        hips_.resize(4);
+        hips_[0] = "lf_hipassembly";
+        hips_[1] = "rf_hipassembly";
+        hips_[2] = "lh_hipassembly";
+        hips_[3] = "rh_hipassembly";
+
+        hip_foot_offsets_.resize(4);
+
+        offset_applied_ = false;
+
     }
 
-    void update(const double& period)
+    void update(const double& period) // OpenLoop
     {
+        update(period,base_position_,base_orientation_);
+    }
 
+    void update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop
+    {
         unsigned int cmd = cmd_;
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
-        // FIXME to be moved
-        Eigen::Affine3d world_T_foot, world_T_hip, world_T_base;
-        std::vector<std::string> hips(4);
-        hips[0] = "lf_hipassembly";
-        hips[1] = "rf_hipassembly";
-        hips[2] = "lh_hipassembly";
-        hips[3] = "rh_hipassembly";
+        setHipOffset();
 
         switch(cmd)
         {
@@ -809,65 +822,69 @@ public:
         case cmd_t::HOLD:
             break;
 
-        case cmd_t::BASE_LINEAR_VELOCITY:
-
-            base_linear_velocity_(0) = base_linear_velocity_max_(0) * base_linear_velocity_scale_x_;
-            base_linear_velocity_(1) = base_linear_velocity_max_(1) * base_linear_velocity_scale_y_;
-            base_linear_velocity_(2) = base_linear_velocity_max_(2) * base_linear_velocity_scale_z_;
-
-            base_position_ = base_linear_velocity_ * period + base_position_;
-
-            for(unsigned int i=0; i<feet_names.size();i++)
-            {
-                delta_foot_ = base_linear_velocity_ * 1.0/gait_generator_->getSwingFrequency(feet_names[i]);
-                steps_length_[feet_names[i]] = std::sqrt(delta_foot_(0)*delta_foot_(0) + delta_foot_(1)*delta_foot_(1));
-                steps_rotation_[feet_names[i]] = std::atan2(delta_foot_(1),delta_foot_(0));
-            }
-
-            base_height_ = base_position_(2);
-
+        case cmd_t::BASE_VELOCITY_ONLY_LINEAR:
+            calculatePosition(period,base_position);
+            base_angular_velocity_.fill(0.0);
             break;
 
-        case cmd_t::BASE_ANGULAR_VELOCITY:
-
-            base_angular_velocity_(0) = base_angular_velocity_max_(0) * base_angular_velocity_scale_roll_;
-            base_angular_velocity_(1) = base_angular_velocity_max_(1) * base_angular_velocity_scale_pitch_;
-            base_angular_velocity_(2) = base_angular_velocity_max_(2) * base_angular_velocity_scale_yaw_;
-
-            base_orientation_ = base_angular_velocity_ * period + base_orientation_;
-
-            base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ()); // YAW
-
-            //id_prob_->_waist->getReference(world_T_base);
-            //world_T_base.linear() = waist_rotation_reference;
-            //id_prob_->_waist->setReference(world_T_base);
-
-            xbot_model_->getPose("base_link",world_T_base);
-
-            for(unsigned int i=0; i<feet_names.size(); i++)
-            {
-                xbot_model_->getPose(feet_names[i],world_T_foot);
-                xbot_model_->getPose(hips[i],world_T_hip);
-
-                delta_hip_ = base_angular_velocity_.cross(world_T_hip.translation()) * 1.0/gait_generator_->getSwingFrequency(feet_names[i]); // It should be done in the world frame
-
-                delta_foot_ = delta_hip_ + (world_T_hip.translation() - world_T_foot.translation());
-
-                steps_length_[feet_names[i]] = std::sqrt(delta_foot_(0)*delta_foot_(0) + delta_foot_(1)*delta_foot_(1));
-                steps_rotation_[feet_names[i]] = std::atan2(delta_foot_(1),delta_foot_(0));
-            }
-
+        case cmd_t::BASE_VELOCITY_ONLY_ANGULAR:
+            calculateOrientation(period,base_orientation);
+            base_linear_velocity_.fill(0.0);
             break;
 
+        case cmd_t::BASE_VELOCITY_FULL:
+            calculatePosition(period,base_position);
+            calculateOrientation(period,base_orientation);
+            break;
         };
 
+        xbot_model_->getPose("base_link",world_T_base_);
+
+        for(unsigned int i=0; i<feet_names.size(); i++)
+        {
+            xbot_model_->getPose(feet_names[i],world_T_foot_);
+            xbot_model_->getPose(hips_[i],world_T_hip_);
+
+            delta_hip_ = (base_linear_velocity_ + base_angular_velocity_.cross(world_T_hip_.translation())) * 1.0/gait_generator_->getSwingFrequency(feet_names[i]); // It should be done in the world frame
+
+            delta_foot_ = hip_foot_offsets_[i] + delta_hip_ + (world_T_hip_.translation() - world_T_foot_.translation());
+
+            steps_length_[feet_names[i]]   = std::sqrt(delta_foot_(0)*delta_foot_(0) + delta_foot_(1)*delta_foot_(1));
+            steps_rotation_[feet_names[i]] = std::atan2(delta_foot_(1),delta_foot_(0));
+        }
+
+        world_T_base_.translation() = Eigen::Vector3d::Zero();
+        gait_generator_->setTrajectoryTransformation(world_T_base_);
+
+        base_height_ = base_position_(2);
     }
 
-    // Command type
-    unsigned int getCmd()                 {return cmd_;}
-    void setCmd(const unsigned int cmd)   {cmd_ = cmd;}
+    void calculatePosition(const double& period, const Eigen::Vector3d& base_position)
+    {
+        base_position_ = base_position;
 
-    // Velocity commands
+        base_linear_velocity_(0) = base_linear_velocity_max_ * base_linear_velocity_scale_x_;
+        base_linear_velocity_(1) = base_linear_velocity_max_ * base_linear_velocity_scale_y_;
+        base_linear_velocity_(2) = base_linear_velocity_max_ * base_linear_velocity_scale_z_;
+
+        base_position_ = base_linear_velocity_ * period + base_position_;
+    }
+
+    void calculateOrientation(const double& period, const Eigen::Vector3d& base_orientation)
+    {
+        base_orientation_ = base_orientation;
+
+        base_angular_velocity_(0) = base_angular_velocity_max_ * base_angular_velocity_scale_roll_;
+        base_angular_velocity_(1) = base_angular_velocity_max_ * base_angular_velocity_scale_pitch_;
+        base_angular_velocity_(2) = base_angular_velocity_max_ * base_angular_velocity_scale_yaw_;
+
+        base_orientation_ = base_angular_velocity_ * period + base_orientation_;
+
+        base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ()); // YAW
+    }
+
+    // Sets
+    void setCmd(const unsigned int cmd)   {cmd_ = cmd;}
     void setBaseVelocityScaleX(const double scale)
     {
         base_linear_velocity_scale_x_ = scale;
@@ -893,26 +910,33 @@ public:
         base_angular_velocity_scale_yaw_ = scale;
     }
 
-    //Feet commands
-    void setStepLength(const std::string& foot_name, const double& length) {steps_length_[foot_name]   = length;}
-    void setStepRotation(const std::string& foot_name, const double& rot)  {steps_rotation_[foot_name] = rot;}
-    void setStepHeight(const std::string& foot_name, const double& height) {steps_height_[foot_name]   = height;}
-    void setStepLength(const double& length)
+    void setMaxLinearVelocity(const double max)
     {
-        for(map_t::iterator it = steps_length_.begin(); it!=steps_length_.end(); ++it)
-            it->second = length;
+        base_linear_velocity_max_ = max;
     }
-    void setStepRotation(const double& rot)
+
+    void setMaxAngularVelocity(const double max)
     {
-        for(map_t::iterator it = steps_rotation_.begin(); it!=steps_rotation_.end(); ++it)
-            it->second = rot;
+        base_angular_velocity_max_ = max;
     }
-    void setStepHeight(const double& height)
+
+    void setHipOffset()
     {
-        for(map_t::iterator it = steps_height_.begin(); it!=steps_height_.end(); ++it)
-            it->second = height;
+        if(!offset_applied_)
+        {
+            for(unsigned int i=0; i<hips_.size(); i++)
+            {
+                xbot_model_->getPose(gait_generator_->getFeetNames()[i],world_T_foot_);
+                xbot_model_->getPose(hips_[i],world_T_hip_);
+                hip_foot_offsets_[i] = world_T_foot_.translation() - world_T_hip_.translation();
+                hip_foot_offsets_[i](2) = 0.0; // Z = 0
+            }
+            offset_applied_ = true;
+        }
     }
+
     // Gets
+    unsigned int getCmd()  {return cmd_;}
     const Eigen::Matrix3d& getBaseRotationReference() const {return base_rotation_reference_;}
     const double& getStepLength(const std::string& foot_name) {return steps_length_[foot_name];}
     const double& getStepRotation(const std::string& foot_name) {return steps_rotation_[foot_name];}
@@ -920,18 +944,17 @@ public:
 
 private:
 
+    // These are modified by the external interface (e.g joypad and dynamic_reconfigure)
     std::atomic<unsigned int> cmd_;
-
     std::atomic<double>  base_linear_velocity_scale_x_;
     std::atomic<double>  base_linear_velocity_scale_y_;
     std::atomic<double>  base_linear_velocity_scale_z_;
-
     std::atomic<double>  base_angular_velocity_scale_roll_;
     std::atomic<double>  base_angular_velocity_scale_pitch_;
     std::atomic<double>  base_angular_velocity_scale_yaw_;
+    std::atomic<double>  base_linear_velocity_max_;
+    std::atomic<double>  base_angular_velocity_max_;
 
-    Eigen::Vector3d base_linear_velocity_max_;
-    Eigen::Vector3d base_angular_velocity_max_;
     Eigen::Vector3d base_angular_velocity_;
     Eigen::Vector3d base_linear_velocity_;
 
@@ -940,6 +963,9 @@ private:
 
     Eigen::Vector3d delta_foot_;
     Eigen::Vector3d delta_hip_;
+    Eigen::Vector3d hip_offset_;
+
+    bool offset_applied_;
 
     double base_height_;
     typedef std::map<std::string,double> map_t;
@@ -950,6 +976,10 @@ private:
 
     GaitGenerator::Ptr gait_generator_;
     XBot::ModelInterface::Ptr xbot_model_;
+
+    Eigen::Affine3d world_T_foot_, world_T_hip_, world_T_base_, hip_T_foot_;
+    std::vector<std::string> hips_;
+    std::vector<Eigen::Vector3d> hip_foot_offsets_;
 
 };
 

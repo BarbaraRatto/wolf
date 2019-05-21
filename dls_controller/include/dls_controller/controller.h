@@ -37,6 +37,8 @@
 #include <dls_controller/locomotion.h>
 #include <dls_controller/joy.h>
 
+#include <Eigen/Geometry>
+
 namespace dls_controller
 {
 
@@ -244,6 +246,8 @@ private:
     Eigen::VectorXd qhome_;
     /** @brief Floating base position w.r.t the world frame, computed by the state estimator */
     Eigen::Vector3d floating_base_position_;
+    /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
+    Eigen::Vector3d floating_base_orientation_rpy_;
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator */
     Eigen::Quaterniond floating_base_orientation_;
     /** @brief Floating base velocity, computed by the state estimator */
