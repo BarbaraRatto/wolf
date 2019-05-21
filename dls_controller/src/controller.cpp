@@ -331,7 +331,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the rviz publisher thread
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
-    cmds_.reset(new CommandsInterface(gait_generator_,0.05,0.05));
+    cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_,0.05,0.05));
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
     return true;
@@ -750,19 +750,21 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     else
         tracking_active_ = false;
 
-    /*Eigen::Affine3d world_T_base; // FIXME
+    /*Eigen::Affine3d world_T_base;
     switch(cmds_->getCmd())
     {
-        case RobotCmds::MOVE_FEET:
+        case CommandsInterface::BASE_LINEAR_VELOCITY:
             xbot_model_->getPose("base_link",world_T_base);
             world_T_base.translation() = Eigen::Vector3d::Zero();
             gait_generator_->setTrajectoryTransformation(world_T_base);
             break;
 
-        case RobotCmds::ROTATE_BASE_YAW:
+        case CommandsInterface::BASE_ANGULAR_VELOCITY:
             world_T_base = Eigen::Affine3d::Identity();
             gait_generator_->setTrajectoryTransformation(world_T_base);
-            rotateBase(0.05,period.toSec());
+
+
+
             break;
     };*/
 
@@ -787,6 +789,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             }*/
 
             gait_generator_->activateSwing();
+
+            // FIXME
+            Eigen::Affine3d world_T_base;
+            id_prob_->_waist->getReference(world_T_base);
+            world_T_base.linear() = cmds_->getBaseRotationReference();
+            id_prob_->_waist->setReference(world_T_base);
 
             // Give to the gait_generator the contact status of the feet and the steps length
             for(unsigned int i = 0; i<contact_links_.size(); i++)

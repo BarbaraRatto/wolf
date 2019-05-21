@@ -267,7 +267,7 @@ private:
     /** @brief True if the solver has been resetted */
     bool solver_reset_done_;
     /** @brief Gait generator */
-    std::shared_ptr<GaitGenerator> gait_generator_;
+    dls_controller::GaitGenerator::Ptr gait_generator_;
     /** @brief Visual tools */
     std::map<std::string,rviz_visual_tools::RvizVisualToolsPtr> visual_tools_;
 

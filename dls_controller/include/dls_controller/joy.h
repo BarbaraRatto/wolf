@@ -40,15 +40,16 @@ private:
        // Set the joypad commands
        if(std::abs(joy_base_velocity_x_scale_)>0 || std::abs(joy_base_velocity_y_scale_)>0)
        {
-            cmds_->setCmd(dls_controller::CommandsInterface::BASE_VELOCITY);
+            cmds_->setCmd(dls_controller::CommandsInterface::BASE_LINEAR_VELOCITY);
             cmds_->setBaseVelocityScaleX(joy_base_velocity_x_scale_);
             cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
             cmds_->setBaseVelocityScaleZ(0.0);
        }
-       /*else if(std::abs(joy_base_yaw_scale_)>0)
+       else if(std::abs(joy_base_yaw_scale_)>0)
        {
-            cmds_->setCmd(dls_controller::RobotCmdsInterface::ROTATE_BASE);
-       }*/
+           cmds_->setCmd(dls_controller::CommandsInterface::BASE_ANGULAR_VELOCITY);
+           cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
+       }
        else
        {
             cmds_->setCmd(dls_controller::CommandsInterface::HOLD);
