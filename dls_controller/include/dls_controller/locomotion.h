@@ -760,7 +760,6 @@ public:
 
     CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, const double & default_length = 0.0, const double & default_height = 0.0)
     {
-
         // FIXME:
         // Add max safety height and length
         assert(gait_generator);
@@ -885,7 +884,9 @@ public:
 
         base_orientation_ = base_angular_velocity_ * period + base_orientation_;
 
-        base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ()); // YAW
+        base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX())  // ROLL
+                                 * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())  // PITCH
+                                 * Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ()); // YAW
     }
 
     // Sets

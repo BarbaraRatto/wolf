@@ -49,6 +49,7 @@ private:
            cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
            cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
            cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
+           cmds_->setBaseVelocityScalePitch(joy_base_pitch_scale_);
        }
        else
        {
