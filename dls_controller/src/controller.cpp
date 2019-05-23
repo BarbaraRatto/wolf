@@ -324,14 +324,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_.reset(new GaitGenerator(0.8,contact_links_,"trot","ellipse"));
+    gait_generator_.reset(new GaitGenerator(0.8,contact_links_,"crawl","ellipse"));
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
     // Spawn the rviz publisher thread
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
-    cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_,0.05,0.05));
+    cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
     return true;
@@ -705,7 +705,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     if(cmds_->getCmd() == CommandsInterface::HOLD)
         tracking_active_ = false;
     else
+    {
         tracking_active_ = true;
+    }
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -765,6 +767,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 }
                 else
                 {
+
+                    /*if(gait_generator_->isTouchDown(contact_links_[i]))
+                    {
+                        setInitialPose("world",contact_links_[i]);
+                    }*/
+
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
                 }

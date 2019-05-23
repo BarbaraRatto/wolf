@@ -1,0 +1,199 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root>
+ <tabbed_widget parent="main_window" name="Main Window">
+  <plotmatrix tab_name="plot" columns="4" rows="5">
+   <plot row="0" col="0">
+    <range top="0.365514" left="211.612000" right="216.612000" bottom="0.363935"/>
+    <limitY/>
+    <curve B="245" custom_transform="noTransform" R="0" G="54" name="/tasks_actual_pose/task_poses/poses.0/position/x"/>
+    <curve B="11" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/x"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="0">
+    <range top="-0.364080" left="211.612000" right="216.612000" bottom="-0.365541"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="107" name="/tasks_actual_pose/task_poses/poses.1/position/x"/>
+    <curve B="4" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/x"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="0">
+    <range top="0.365541" left="211.612000" right="216.612000" bottom="0.363892"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.2/position/x"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.2/position/x"/>
+    <transform value="Custom::noTransform"/>
+   </plot>
+   <plot row="3" col="0">
+    <range top="-0.363722" left="211.612000" right="216.612000" bottom="-0.365559"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.3/position/x"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="7" name="/tasks_desired_pose/task_poses/poses.3/position/x"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="4" col="0">
+    <range top="0.005876" left="211.612000" right="216.612000" bottom="0.000817"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="60" name="/tasks_actual_pose/task_poses/poses.4/position/x"/>
+    <curve B="6" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.4/position/x"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="1">
+    <range top="0.324096" left="211.612000" right="216.612000" bottom="0.322365"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="34" name="/tasks_actual_pose/task_poses/poses.0/position/y"/>
+    <curve B="3" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/y"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="1">
+    <range top="0.323709" left="211.612000" right="216.612000" bottom="0.322459"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.1/position/y"/>
+    <curve B="6" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/y"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="1">
+    <range top="-0.322388" left="211.612000" right="216.612000" bottom="-0.324008"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="40" name="/tasks_actual_pose/task_poses/poses.2/position/y"/>
+    <curve B="7" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.2/position/y"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="3" col="1">
+    <range top="-0.322437" left="211.612000" right="216.612000" bottom="-0.323621"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="85" name="/tasks_actual_pose/task_poses/poses.3/position/y"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="1" name="/tasks_desired_pose/task_poses/poses.3/position/y"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="4" col="1">
+    <range top="0.001813" left="211.612000" right="216.612000" bottom="-0.005229"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="70" name="/tasks_actual_pose/task_poses/poses.4/position/y"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="4" name="/tasks_desired_pose/task_poses/poses.4/position/y"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="2">
+    <range top="0.023467" left="211.612000" right="216.612000" bottom="0.020866"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="82" name="/tasks_actual_pose/task_poses/poses.0/position/z"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/z"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="2">
+    <range top="0.023109" left="211.612000" right="216.612000" bottom="0.021214"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="48" name="/tasks_actual_pose/task_poses/poses.1/position/z"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/z"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="2">
+    <range top="0.024915" left="211.612000" right="216.612000" bottom="0.020681"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="70" name="/tasks_actual_pose/task_poses/poses.2/position/z"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="2" name="/tasks_desired_pose/task_poses/poses.2/position/z"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="3" col="2">
+    <range top="0.023103" left="211.612000" right="216.612000" bottom="0.020309"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="57" name="/tasks_actual_pose/task_poses/poses.3/position/z"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.3/position/z"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="4" col="2">
+    <range top="0.549843" left="211.612000" right="216.612000" bottom="0.548729"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="0" G="55" name="/tasks_actual_pose/task_poses/poses.4/position/z"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.4/position/z"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="3">
+    <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
+    <limitY/>
+    <curve B="255" custom_transform="noTransform" R="255" G="0" name="/contacts/data.0"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="3">
+    <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
+    <limitY/>
+    <curve B="128" custom_transform="noTransform" R="0" G="0" name="/contacts/data.1"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="3">
+    <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
+    <limitY/>
+    <curve B="128" custom_transform="noTransform" R="0" G="128" name="/contacts/data.2"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="3" col="3">
+    <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
+    <limitY/>
+    <curve B="164" custom_transform="noTransform" R="160" G="160" name="/contacts/data.3"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="4" col="3">
+    <range top="1.025000" left="-11.389000" right="-6.389000" bottom="-0.025000"/>
+    <limitY/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <currentPlotMatrix index="0"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="1"/>
+ <Plugins>
+  <DataLoad_CSV>
+   <default time_axis=""/>
+  </DataLoad_CSV>
+  <DataLoad_ROS_bags>
+   <selected_topics list=""/>
+  </DataLoad_ROS_bags>
+  <DataLoad_ULog>
+   <no_params/>
+  </DataLoad_ULog>
+  <ROS_Topic_Streamer>
+   <selected_topics list="/tasks_actual_pose;/tasks_desired_pose;/contacts"/>
+  </ROS_Topic_Streamer>
+  <RosoutPublisherROS/>
+  <TopicPublisherROS/>
+ </Plugins>
+ <previouslyLoadedStreamer name="ROS_Topic_Streamer"/>
+ <customMathEquations/>
+ <snippets>
+  <snippet name="1st_derivative">
+   <global>var prevX = 0
+var prevY = 0</global>
+   <equation>dx = time - prevX
+dy = value - prevY
+prevX = time
+prevY = value
+
+return dy/dx</equation>
+  </snippet>
+  <snippet name="1st_order_lowpass">
+   <global>var prevY = 0
+var alpha = 0.1</global>
+   <equation>prevY = alpha * value + (1.-alpha) * prevY
+
+return prevY</equation>
+  </snippet>
+  <snippet name="sum_A_B">
+   <global></global>
+   <equation>return $$PLOT_A$$ + $$PLOT_B$$</equation>
+  </snippet>
+  <snippet name="yaw_from_quaternion">
+   <global>// source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+function quaternionToYaw(x, y, z, w)
+{
+  // yaw (z-axis rotation)
+  t1 = 2.0 * (w * z + x * y);
+  t2 = 1.0 - 2.0 * (y * y + z * z);
+  yaw = Math.atan2(t1, t2);
+
+  return yaw
+}</global>
+   <equation>return quaternionToYaw($$x$$, $$y$$, $$z$$, $$w$$);</equation>
+  </snippet>
+ </snippets>
+</root>
+
