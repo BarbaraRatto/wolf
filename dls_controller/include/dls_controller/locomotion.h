@@ -305,7 +305,7 @@ public:
 
     void stop() // Take the last reference as next initial pose
     {
-        initial_pose_ = reference_;
+        //initial_pose_ = reference_; // This is useful if the trajectory has to be computed w.r.t world
     }
 
     void stop(const Eigen::Affine3d& initial_pose_next_swing)
@@ -911,8 +911,12 @@ public:
 
                 ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
-                steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
-                steps_rotation_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
+                //steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                //steps_rotation_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
+                //steps_height_[feet_names[i]]   = 0.05; // FIXME
+
+                steps_length_[feet_names[i]]   = 0.05;
+                steps_rotation_[feet_names[i]] = 0.0;
                 steps_height_[feet_names[i]]   = 0.05; // FIXME
             }
             else

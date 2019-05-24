@@ -450,7 +450,7 @@ bool Controller::setLambda(const std::string& task_name, const double& lambda_va
 
     if(id_prob_)
     {
-        if(lambda_value>0.0)
+        if(lambda_value>=0.0)
         {
             // FIXME hardcoded like there is no tomorrow
             if(task_name == "com")
@@ -571,6 +571,7 @@ void Controller::stateEstimation()
     floating_base_velocity_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularVelocity());
     floating_base_accelleration_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularAcceleration());
 
+    floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
     floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 
@@ -762,16 +763,20 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
+
+                    id_prob_->_feet[contact_links_[i]]->setLambda(2000.0);
+
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
                 else
                 {
-
                     /*if(gait_generator_->isTouchDown(contact_links_[i]))
                     {
                         setInitialPose("world",contact_links_[i]);
                     }*/
+
+                    id_prob_->_feet[contact_links_[i]]->setLambda(0.0);
 
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
