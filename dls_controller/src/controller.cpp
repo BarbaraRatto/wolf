@@ -334,6 +334,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
+    task_reset_done_.resize(4);
+    task_reset_done_[0] = false;
+    task_reset_done_[1] = false;
+    task_reset_done_[2] = false;
+    task_reset_done_[3] = false;
+
     return true;
 }
 
@@ -760,11 +766,21 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             for(unsigned int i = 0; i<contact_links_.size(); i++)
             {
+
+                id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
+
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
+                    /*if(!task_reset_done_[i])
+                    {
+                            id_prob_->_feet[contact_links_[i]]->reset();
+                            task_reset_done_[i] = true;
+                    }*/
 
-                    id_prob_->_feet[contact_links_[i]]->setLambda(2000.0);
+                    //id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
+                    id_prob_->_feet[contact_links_[i]]->setLambda(1000.0);
+                    //id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(0));
 
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
@@ -776,6 +792,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                         setInitialPose("world",contact_links_[i]);
                     }*/
 
+                    task_reset_done_[i] = false;
+
                     id_prob_->_feet[contact_links_[i]]->setLambda(0.0);
 
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
@@ -783,7 +801,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 }
 
                 // Set the references to each foot
-                id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
+                //id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
             }
         }
         else

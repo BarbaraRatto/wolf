@@ -279,6 +279,9 @@ private:
     std::shared_ptr<JoyHandler> joy_handler_;
     std::shared_ptr<CommandsInterface> cmds_;
 
+
+    std::vector<bool> task_reset_done_;
+
     double base_yaw_  = 0.0;
 
     /*std::atomic<double> base_roll_  ;
