@@ -812,12 +812,16 @@ public:
         hips_[2] = "lh_hipassembly";
         hips_[3] = "rh_hipassembly";
 
-        hip_foot_offsets_.resize(4);
-        for(unsigned int i=0; i<hip_foot_offsets_.size(); i++)
-            hip_foot_offsets_[i] << 0.0,0.0,0.0;
+
+        base_X_hip_foot_offsets_.resize(4);
+        hf_X_base_hip_offsets_.resize(4);
+        for(unsigned int i=0; i<base_X_hip_foot_offsets_.size(); i++)
+        {
+            base_X_hip_foot_offsets_[i].setZero();
+            hf_X_base_hip_offsets_[i].setZero();
+        }
 
         offset_applied_ = false;
-
     }
 
     void update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
@@ -840,9 +844,9 @@ public:
         world_R_hf_ = Eigen::Matrix3d::Identity();
         yaw_base_ = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
         world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
-        Eigen::Matrix3d world_R_base = world_T_base_.linear();
-        world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
-        Eigen::Matrix3d hf_R_base = world_R_hf_.transpose()*world_R_base;
+
+        world_R_base_ = world_T_base_.linear();
+        hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
 
         setHipOffset();
 
@@ -868,65 +872,61 @@ public:
             break;
         };
 
-        std::vector<Eigen::Vector3d> hf_X_hip(4);
-        hf_X_hip[0] <<0.3,0.2,0.0;
-        hf_X_hip[1] <<0.3,-0.2,0.0;
-        hf_X_hip[2] <<-0.3,0.2,0.0;
-        hf_X_hip[3] <<-0.3,-0.2,0.0;
+        const Eigen::Vector3d& hf_base_linear_velocity = base_linear_velocity_;
 
         for(unsigned int i=0; i<feet_names.size(); i++)
-        {
-            xbot_model_->getPose(feet_names[i],world_T_foot_); // Should it be in respect of the hf?
-            xbot_model_->getPose(hips_[i],world_T_hip_);
-            xbot_model_->getPose(hips_[i],"base_link",base_T_hip_);
+        {            
+            if(gait_generator_->isSwinging(feet_names[i]))
+            {
+                xbot_model_->getPose(feet_names[i],world_T_foot_); // Should it be in respect of the hf?
+                xbot_model_->getPose(hips_[i],world_T_hip_);
+                xbot_model_->getPose(hips_[i],"base_link",base_T_hip_);
 
-            //delta_hip_ = (base_linear_velocity_ + base_angular_velocity_.cross(hf_T_hip_.translation())) * 1.0/gait_generator_->getSwingFrequency(feet_names[i]); // It should be done in the world frame
-            Eigen::Vector3d hf_base_linear_velocity_ = base_linear_velocity_;
-            Eigen::Vector3d hf_delta_hip_;hf_delta_hip_.setZero();
+                //delta_hip_ = (base_linear_velocity_ + base_angular_velocity_.cross(hf_T_hip_.translation())) * 1.0/gait_generator_->getSwingFrequency(feet_names[i]); // It should be done in the world frame
 
-            hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
-            hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
+                hf_delta_hip_.setZero();
+                hf_delta_hip_(0) = hf_base_linear_velocity(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
+                hf_delta_hip_(1) = hf_base_linear_velocity(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
 
-            Eigen::Vector3d hf_X_hip_ = hf_R_base*base_T_hip_.translation();
-            Eigen::Vector3d delta_heding = Eigen::Vector3d( 0, 0,  base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])         ).cross(hf_X_hip_);
-            std::cout<<"delta_heding"<<delta_heding.transpose()<<std::endl;
+                hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
+                delta_heding_ = Eigen::Vector3d( 0, 0,  base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])         ).cross(hf_X_hip_);
 
+                hf_delta_hip_(0)+= delta_heding_(0);
+                hf_delta_hip_(1)+= delta_heding_(1);
 
-            hf_delta_hip_(0)+= delta_heding(0);
-            hf_delta_hip_(1)+= delta_heding(1);
-            std::cout<<"hf_delta_hip_"<<hf_delta_hip_.transpose()<<std::endl;
+                ROS_DEBUG_STREAM("hf_delta_hip_: "<<hf_delta_hip_.transpose());
 
-            Eigen::Vector3d world_delta_hip_ = world_R_hf_*hf_delta_hip_;
-            std::cout<<"world_delta_hip_"<<world_delta_hip_.transpose()<<std::endl;
+                world_delta_hip_ = world_R_hf_ * hf_delta_hip_;
 
-            //
+                world_X_hip_ = world_R_hf_ * hf_X_base_hip_offsets_[i] + world_T_base_.translation();
+                //Eigen::Vector3d world_X_hip_foot = world_T_foot_.translation()- world_T_hip_.translation();
 
+                world_X_hip_foot_ = world_T_foot_.translation() - world_X_hip_;
 
+                world_X_hip_foot_offset_ = world_R_base_ * base_X_hip_foot_offsets_[i];
+                world_X_hip_foot_offset_(2) = 0;
 
+                world_delta_foot_.setZero();
+                world_delta_foot_.head(2) =  world_X_hip_foot_offset_.head(2) + world_delta_hip_.head(2) - world_X_hip_foot_.head(2);
 
-            Eigen::Vector3d world_X_hip;
-            world_X_hip = world_R_hf_ *hf_X_hip[i] + world_T_base_.translation();
-            //Eigen::Vector3d world_X_hip_foot = world_T_foot_.translation()- world_T_hip_.translation();
+                ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
-            Eigen::Vector3d world_X_hip_foot = world_T_foot_.translation() - world_X_hip;
+                steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                steps_rotation_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
+                steps_height_[feet_names[i]]   = 0.05; // FIXME
+            }
+            else
+            {
+                steps_length_[feet_names[i]]   = 0.0;
+                steps_rotation_[feet_names[i]] = 0.0;
+                steps_height_[feet_names[i]]   = 0.0;
+            }
 
+            ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
+            ROS_DEBUG_STREAM("steps_rotation_["<<feet_names[i]<<"]: "<<steps_rotation_[feet_names[i]]);
+            ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
 
-            Eigen::Vector3d world_delta_foot_;world_delta_foot_.setZero();
-            Eigen::Vector3d world_X_hip_foot_offset = world_R_base * hip_foot_offsets_[i];
-            world_X_hip_foot_offset(2)=0;
-            world_delta_foot_.head(2) =  world_X_hip_foot_offset.head(2) + world_delta_hip_.head(2) - world_X_hip_foot.head(2);
-
-
-            std::cout<<"world_X_hip_foot"<<world_X_hip_foot.transpose()<<std::endl;
-            std::cout<<"world_delta_foot_"<<world_delta_foot_.transpose()<<std::endl;
-
-
-            steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
-            steps_rotation_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
-
-            steps_height_[feet_names[i]]   = 0.05 ;
         }
-
         //world_T_base_.translation() = Eigen::Vector3d::Zero();
         //gait_generator_->setTrajectoryTransformation(world_T_base_);
 
@@ -940,8 +940,6 @@ public:
         base_linear_velocity_(0) = base_linear_velocity_max_ * base_linear_velocity_scale_x_;
         base_linear_velocity_(1) = base_linear_velocity_max_ * base_linear_velocity_scale_y_;
         base_linear_velocity_(2) = base_linear_velocity_max_ * base_linear_velocity_scale_z_;
-
-        //base_linear_velocity_ = world_R_hf_ * base_linear_velocity_;
 
         base_position_ = base_linear_velocity_ * period + base_position_;
     }
@@ -1010,13 +1008,19 @@ public:
 
     void setHipOffset()
     {
+        // FIXME
+        hf_X_base_hip_offsets_[0] <<0.3,0.2,0.0;
+        hf_X_base_hip_offsets_[1] <<0.3,-0.2,0.0;
+        hf_X_base_hip_offsets_[2] <<-0.3,0.2,0.0;
+        hf_X_base_hip_offsets_[3] <<-0.3,-0.2,0.0;
+
         if(!offset_applied_)
         {
             for(unsigned int i=0; i<hips_.size(); i++)
             {
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],base_T_foot_);
                 xbot_model_->getPose(hips_[i],base_T_hip_);
-                hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
+                base_X_hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
             }
             offset_applied_ = true;
         }
@@ -1043,15 +1047,23 @@ private:
     std::atomic<double>  base_linear_velocity_max_;
     std::atomic<double>  base_angular_velocity_max_;
 
-    Eigen::Vector3d base_angular_velocity_;
     Eigen::Vector3d base_linear_velocity_;
+    Eigen::Vector3d base_angular_velocity_;
 
     Eigen::Vector3d base_position_;
     Eigen::Vector3d base_orientation_;
 
-    Eigen::Vector3d delta_foot_;
-    Eigen::Vector3d delta_hip_;
-    Eigen::Vector3d hip_offset_;
+    Eigen::Vector3d hf_delta_hip_;
+    Eigen::Vector3d hf_X_hip_;
+    Eigen::Vector3d delta_heding_;
+    Eigen::Vector3d world_delta_hip_;
+    Eigen::Vector3d world_X_hip_;
+    Eigen::Vector3d world_X_hip_foot_;
+    Eigen::Vector3d world_delta_foot_;
+    Eigen::Vector3d world_X_hip_foot_offset_;
+
+    Eigen::Matrix3d world_R_base_;
+    Eigen::Matrix3d hf_R_base_;
 
     bool offset_applied_;
 
@@ -1067,10 +1079,8 @@ private:
 
     Eigen::Affine3d world_T_foot_, world_T_hip_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
     std::vector<std::string> hips_;
-    std::vector<Eigen::Vector3d> hip_foot_offsets_;
-
-
-
+    std::vector<Eigen::Vector3d> base_X_hip_foot_offsets_;
+    std::vector<Eigen::Vector3d> hf_X_base_hip_offsets_;
 
     double yaw_base_;
     Eigen::Matrix3d world_R_hf_;
