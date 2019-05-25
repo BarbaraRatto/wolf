@@ -741,7 +741,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             // Set the task reference for the waist
             Eigen::Affine3d world_T_base; //FIXME NO-RT
-            id_prob_->_waist->getReference(world_T_base);
+            xbot_model_->getPose("base_link",world_T_base);
+            //id_prob_->_waist->getReference(world_T_base);
             world_T_base.linear() = cmds_->getBaseRotationReference();
             world_T_base.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(world_T_base);
@@ -792,7 +793,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                         setInitialPose("world",contact_links_[i]);
                     }*/
 
-                    task_reset_done_[i] = false;
+                    //task_reset_done_[i] = false;
 
                     id_prob_->_feet[contact_links_[i]]->setLambda(0.0);
 

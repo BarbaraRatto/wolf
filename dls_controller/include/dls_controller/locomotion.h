@@ -310,7 +310,7 @@ public:
 
     void stop() // Take the last reference as next initial pose
     {
-        //initial_pose_ = reference_; // This is useful if the trajectory has to be computed w.r.t world
+        initial_pose_ = reference_; // This is useful if the trajectory has to be computed w.r.t world
     }
 
     void stop(const Eigen::Affine3d& initial_pose_next_swing)
@@ -878,15 +878,15 @@ public:
         };
 
         const Eigen::Vector3d& hf_base_linear_velocity = base_linear_velocity_;
-
+        const Eigen::Vector3d& hf_base_angular_velocity = base_angular_velocity_;
 
         for(unsigned int i=0; i<feet_names.size(); i++)
         {            
             if(gait_generator_->isSwinging(feet_names[i]))
             {
 
-                ROS_DEBUG_STREAM("*********");
-                ROS_DEBUG_STREAM("Swinging foot "<<feet_names[i]);
+                ROS_INFO_STREAM("*********");
+                ROS_INFO_STREAM("Swinging foot "<<feet_names[i]);
 
                 xbot_model_->getPose(feet_names[i],world_T_foot_); // Should it be in respect of the hf?
                 xbot_model_->getPose(hips_[i],world_T_hip_);
@@ -897,42 +897,43 @@ public:
                 hf_delta_hip_(1) = hf_base_linear_velocity(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
 
                 //hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
-                delta_heding_ = Eigen::Vector3d( 0, 0,  base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i]) ).cross(hf_X_base_hip_offsets_[i]);
+                hf_delta_heding_ = Eigen::Vector3d(0,0,hf_base_angular_velocity(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])).cross(hf_X_base_hip_offsets_[i]);
 
-                ROS_DEBUG_STREAM("delta_heding_: "<<delta_heding_.transpose());
+                ROS_INFO_STREAM("hf_delta_heding_: "<<hf_delta_heding_.transpose());
 
-                hf_delta_hip_(0)+= delta_heding_(0);
-                hf_delta_hip_(1)+= delta_heding_(1);
+                hf_delta_hip_(0)+= hf_delta_heding_(0);
+                hf_delta_hip_(1)+= hf_delta_heding_(1);
 
-                ROS_DEBUG_STREAM("hf_delta_hip_: "<<hf_delta_hip_.transpose());
+                ROS_INFO_STREAM("hf_delta_hip_: "<<hf_delta_hip_.transpose());
 
                 world_delta_hip_ = world_R_hf_ * hf_delta_hip_;
 
-                ROS_DEBUG_STREAM("world_delta_hip_: "<<world_delta_hip_.transpose());
+                ROS_INFO_STREAM("world_delta_hip_: "<<world_delta_hip_.transpose());
 
                 world_X_hip_ = world_R_hf_ * hf_X_base_hip_offsets_[i] + world_T_base_.translation();
                 //Eigen::Vector3d world_X_hip_foot = world_T_foot_.translation()- world_T_hip_.translation();
 
-                ROS_DEBUG_STREAM("world_X_hip_: "<<world_X_hip_.transpose());
+                ROS_INFO_STREAM("world_X_hip_: "<<world_X_hip_.transpose());
 
                 world_X_hip_foot_ = world_T_foot_.translation() - world_X_hip_;
 
-                ROS_DEBUG_STREAM("world_X_hip_foot_: "<<world_X_hip_foot_.transpose());
+                ROS_INFO_STREAM("world_X_hip_foot_: "<<world_X_hip_foot_.transpose());
 
                 world_X_hip_foot_offset_ = world_R_base_ * base_X_hip_foot_offsets_[i];
                 world_X_hip_foot_offset_(2) = 0;
 
-                ROS_DEBUG_STREAM("world_X_hip_foot_offset_: "<<world_X_hip_foot_offset_.transpose());
+                ROS_INFO_STREAM("world_X_hip_foot_offset_: "<<world_X_hip_foot_offset_.transpose());
 
                 world_delta_foot_.setZero();
                 world_delta_foot_.head(2) =  world_X_hip_foot_offset_.head(2) + world_delta_hip_.head(2) - world_X_hip_foot_.head(2);
 
-                ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
+                ROS_INFO_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
                 steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
                 steps_heading_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
                 steps_height_[feet_names[i]]   = 0.05; // FIXME
 
+                //getchar();
             }
             else
             {
@@ -942,14 +943,15 @@ public:
             }
 
             ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
-            ROS_DEBUG_STREAM("steps_rotation_["<<feet_names[i]<<"]: "<<steps_rotation_[feet_names[i]]);
+            ROS_DEBUG_STREAM("steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
             ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
 
         }
+        // FIXME: Look up in stop().
+        // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
+        // the base rotates w.r.t world. So I have to apply the current rotation to have a correct trajectory
         //world_T_base_.translation() = Eigen::Vector3d::Zero();
         //gait_generator_->setTrajectoryTransformation(world_T_base_);
-
-        //getchar();
 
         base_height_ = base_position_(2);
     }
@@ -962,6 +964,7 @@ public:
         base_linear_velocity_(1) = base_linear_velocity_max_ * base_linear_velocity_scale_y_;
         base_linear_velocity_(2) = base_linear_velocity_max_ * base_linear_velocity_scale_z_;
 
+        // FIXME this should be reported as computed in the hf.
         base_position_ = base_linear_velocity_ * period + base_position_;
     }
 
@@ -975,8 +978,11 @@ public:
 
         //base_angular_velocity_ = world_R_hf_.transpose() * base_angular_velocity_;
 
-        base_orientation_ = base_angular_velocity_ * period + base_orientation_;
+        const Eigen::Vector3d& world_base_angular_velocity_ = world_R_hf_ * base_angular_velocity_;
 
+        base_orientation_ = world_base_angular_velocity_ * period + base_orientation_;
+
+        // FIXME base_orientation in which frame is? hf?
         base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX())  // ROLL
                                  * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())  // PITCH
                                  * Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ()); // YAW
@@ -1076,8 +1082,8 @@ private:
     Eigen::Vector3d base_orientation_;
 
     Eigen::Vector3d hf_delta_hip_;
+    Eigen::Vector3d hf_delta_heding_;
     Eigen::Vector3d hf_X_hip_;
-    Eigen::Vector3d delta_heding_;
     Eigen::Vector3d world_delta_hip_;
     Eigen::Vector3d world_X_hip_;
     Eigen::Vector3d world_X_hip_foot_;
