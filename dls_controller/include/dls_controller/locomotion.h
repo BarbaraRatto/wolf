@@ -259,7 +259,7 @@ public:
         swing_frequency_ = 5.0;
         time_ = 0.0;
         length_ = 0.0;
-        rotation_ = 0.0;
+        heading_ = 0.0;
         height_ = 0.0;
 
         trajectory_finished_ = false;
@@ -328,9 +328,9 @@ public:
         length_ = length;
     }
 
-    void setStepRotation(const double& rotation)
+    void setStepHeading(const double& heading)
     {
-        rotation_ = rotation;
+        heading_ = heading;
     }
 
     void setStepHeight(const double& height)
@@ -343,9 +343,9 @@ public:
         return length_;
     }
 
-    double getStepRotation()
+    double getStepHeading()
     {
-        return rotation_;
+        return heading_;
     }
 
     double getStepHeight()
@@ -380,7 +380,7 @@ protected:
     double time_;
     std::atomic<double> swing_frequency_;
     std::atomic<double> length_;
-    std::atomic<double> rotation_;
+    std::atomic<double> heading_;
     std::atomic<double> height_;
     bool trajectory_finished_;
 
@@ -411,7 +411,7 @@ protected:
 
     const Eigen::Affine3d& trajectoryFunction(const double& time)
     {
-        double psi = rotation_;
+        double psi = heading_;
 
         xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
@@ -598,12 +598,12 @@ public:
         return feet_names_;
     }
 
-    void setTrajectoryAmplitude(const double& length, const double& rotation, const double& height)
+    void setTrajectoryAmplitude(const double& length, const double& heading, const double& height)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
         {
             it->second.trajectory->setStepLength(length);
-            it->second.trajectory->setStepRotation(rotation);
+            it->second.trajectory->setStepHeading(heading);
             it->second.trajectory->setStepHeight(height);
         }
     }
@@ -616,13 +616,13 @@ public:
             feet_[foot_name].trajectory->setStepLength(amp);
             break;
         case 1:
-            feet_[foot_name].trajectory->setStepRotation(amp);
+            feet_[foot_name].trajectory->setStepHeading(amp);
             break;
         case 2:
             feet_[foot_name].trajectory->setStepHeight(amp);
             break;
         default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are X=0,Y=1,Z=2");
+            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are Length=0,Heading=1,Height=2");
             break;
         };
     }
@@ -636,13 +636,13 @@ public:
             amp = feet_[foot_name].trajectory->getStepLength();
             break;
         case 1:
-            amp = feet_[foot_name].trajectory->getStepRotation();
+            amp = feet_[foot_name].trajectory->getStepHeading();
             break;
         case 2:
             amp = feet_[foot_name].trajectory->getStepHeight();
             break;
         default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are X=0,Y=1,Z=2");
+            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values Length=0,Heading=1,Height=2");
             break;
         };
         return amp;
@@ -790,7 +790,7 @@ public:
         for(unsigned int i=0;i<feet_names.size();i++)
         {
             steps_length_[feet_names[i]] = 0.0;
-            steps_rotation_[feet_names[i]] = 0.0;
+            steps_heading_[feet_names[i]] = 0.0;
             steps_height_[feet_names[i]] = 0.0;
         }
 
@@ -930,13 +930,14 @@ public:
                 ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
                 steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
-                steps_rotation_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
+                steps_heading_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
                 steps_height_[feet_names[i]]   = 0.05; // FIXME
+
             }
             else
             {
                 steps_length_[feet_names[i]]   = 0.0;
-                steps_rotation_[feet_names[i]] = 0.0;
+                steps_heading_[feet_names[i]] = 0.0;
                 steps_height_[feet_names[i]]   = 0.0;
             }
 
@@ -1051,7 +1052,7 @@ public:
     unsigned int getCmd()  {return cmd_;}
     const Eigen::Matrix3d& getBaseRotationReference() const {return base_rotation_reference_;}
     const double& getStepLength(const std::string& foot_name) {return steps_length_[foot_name];}
-    const double& getStepRotation(const std::string& foot_name) {return steps_rotation_[foot_name];}
+    const double& getStepHeading(const std::string& foot_name) {return steps_heading_[foot_name];}
     const double& getStepHeight(const std::string& foot_name) {return steps_height_[foot_name];}
     const double& getBaseHeight() const {return base_height_;}
 
@@ -1091,7 +1092,7 @@ private:
     double base_height_;
     typedef std::map<std::string,double> map_t;
     map_t steps_length_;
-    map_t steps_rotation_;
+    map_t steps_heading_;
     map_t steps_height_;
     Eigen::Matrix3d base_rotation_reference_;
 

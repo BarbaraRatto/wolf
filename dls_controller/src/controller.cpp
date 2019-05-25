@@ -752,7 +752,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 gait_generator_->setContact(contact_links_[i],contacts_[i]);
 
                 gait_generator_->setTrajectoryAmplitude(contact_links_[i],0, cmds_->getStepLength(contact_links_[i]));
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],1, cmds_->getStepRotation(contact_links_[i]));
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],1, cmds_->getStepHeading(contact_links_[i]));
                 gait_generator_->setTrajectoryAmplitude(contact_links_[i],2, cmds_->getStepHeight(contact_links_[i]));
             }
 
