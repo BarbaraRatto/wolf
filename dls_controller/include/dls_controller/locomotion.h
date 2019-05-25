@@ -897,7 +897,7 @@ public:
                 hf_delta_hip_(1) = hf_base_linear_velocity(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
 
                 //hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
-                delta_heding_ = Eigen::Vector3d( 0, 0,  base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])         ).cross(hf_X_base_hip_offsets_[i]);
+                delta_heding_ = Eigen::Vector3d( 0, 0,  base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i]) ).cross(hf_X_base_hip_offsets_[i]);
 
                 ROS_DEBUG_STREAM("delta_heding_: "<<delta_heding_.transpose());
 
@@ -1039,8 +1039,8 @@ public:
 
             for(unsigned int i=0; i<hips_.size(); i++)
             {
-                xbot_model_->getPose(gait_generator_->getFeetNames()[i],base_T_foot_);
-                xbot_model_->getPose(hips_[i],base_T_hip_);
+                xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
+                xbot_model_->getPose(hips_[i],"base_link",base_T_hip_);
                 base_X_hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
             }
             offset_applied_ = true;
