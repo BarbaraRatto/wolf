@@ -119,7 +119,7 @@ public:
             if(contact)
 #endif
             {
-                calculate_times();
+                calculateTimes();
                 state_ = states::STANCE;
             }
             else
@@ -168,7 +168,7 @@ private:
         trigger_swing_ = false;
     }
 
-    void calculate_times()
+    void calculateTimes()
     {
         total_time_ = active_time_/dc_;
         wait_time_ = total_time_ - active_time_;
