@@ -859,6 +859,8 @@ public:
         {
 
         case cmd_t::HOLD:
+            base_angular_velocity_.fill(0.0);
+            base_linear_velocity_.fill(0.0);
             break;
 
         case cmd_t::BASE_VELOCITY_ONLY_LINEAR:
