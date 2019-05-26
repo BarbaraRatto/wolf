@@ -581,12 +581,12 @@ void Controller::stateEstimation()
     floating_base_pose_.translation() = floating_base_position_;
     floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 
-    /*Eigen::Vector3d ypr;
-    ypr = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(2, 1, 0); // FIXME
+    Eigen::Vector3d ypr; // FIXME
+    ypr = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(2, 1, 0);
     // Re-order
     floating_base_orientation_rpy_(0) = ypr(2);
     floating_base_orientation_rpy_(1) = ypr(1);
-    floating_base_orientation_rpy_(2) = ypr(0);*/
+    floating_base_orientation_rpy_(2) = ypr(0);
 
 }
 
@@ -728,6 +728,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             setInitialPose(); //w.r.t to the frame selected in IDProblem
 
             cmds_->setBasePosition(floating_base_position_);
+            cmds_->setBaseOrientation(floating_base_orientation_rpy_);
         }
 
         if(tracking_active_)
