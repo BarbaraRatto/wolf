@@ -35,21 +35,32 @@ private:
 
         joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
         joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
+        joy_base_roll_scale_       = static_cast<double>(msg->axes[4]);
 
         joy_start_button_           = static_cast<bool>(msg->buttons[4]); // L1 button
 
-       if(std::abs(joy_base_velocity_x_scale_)>0 ||
-          std::abs(joy_base_velocity_y_scale_)>0 ||
-          std::abs(joy_base_velocity_z_scale_)>0 ||
-          std::abs(joy_base_yaw_scale_)       >0 ||
-          std::abs(joy_base_pitch_scale_)     >0  )
+       if(joy_start_button_)
        {
-           cmds_->setCmd(dls_controller::CommandsInterface::BASE_VELOCITY_FULL);
+           cmds_->setCmd(dls_controller::CommandsInterface::LINEAR_AND_ANGULAR);
            cmds_->setBaseVelocityScaleX(joy_base_velocity_x_scale_);
            cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
            cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
            cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
            cmds_->setBaseVelocityScalePitch(joy_base_pitch_scale_);
+           cmds_->setBaseVelocityScaleRoll(joy_base_roll_scale_);
+       }
+       else if(std::abs(joy_base_velocity_z_scale_)>0 ||
+               std::abs(joy_base_yaw_scale_)       >0 ||
+               std::abs(joy_base_pitch_scale_)     >0 ||
+               std::abs(joy_base_roll_scale_)      >0  )
+       {
+           cmds_->setCmd(dls_controller::CommandsInterface::BASE_ONLY);
+           cmds_->setBaseVelocityScaleX(0.0);
+           cmds_->setBaseVelocityScaleY(0.0);
+           cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
+           cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
+           cmds_->setBaseVelocityScalePitch(joy_base_pitch_scale_);
+           cmds_->setBaseVelocityScaleRoll(joy_base_roll_scale_);
        }
        else
        {
@@ -58,10 +69,9 @@ private:
             cmds_->setBaseVelocityScaleY(0.0);
             cmds_->setBaseVelocityScaleZ(0.0);
             cmds_->setBaseVelocityScaleYaw(0.0);
+            cmds_->setBaseVelocityScalePitch(0.0);
+            cmds_->setBaseVelocityScaleRoll(0.0);
        }
-
-
-
     }
 
     /** @brief Ros subscriber for joypad */
@@ -72,6 +82,7 @@ private:
     double joy_base_velocity_z_scale_;
     double joy_base_yaw_scale_;
     double joy_base_pitch_scale_;
+    double joy_base_roll_scale_;
     bool   joy_start_button_;
 };
 

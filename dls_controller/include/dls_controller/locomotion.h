@@ -842,7 +842,8 @@ class CommandsInterface
 
 public:
 
-    enum cmd_t {HOLD=0,BASE_VELOCITY_ONLY_LINEAR,BASE_VELOCITY_ONLY_ANGULAR,BASE_VELOCITY_FULL};
+    enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY};
+
 
     CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
     {
@@ -907,7 +908,6 @@ public:
     void update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop
     {
         unsigned int cmd = cmd_;
-        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
         xbot_model_->getPose("base_link",world_T_base_);
 
@@ -937,31 +937,43 @@ public:
             hf_base_linear_velocity_.fill(0.0);
             break;
 
-        case cmd_t::BASE_VELOCITY_ONLY_LINEAR:
-            calculatePosition(period,base_position);
+        case cmd_t::LINEAR:
+            calculateBasePosition(period,base_position);
             hf_base_angular_velocity_.fill(0.0);
+            calculateFeetStep();
             break;
 
-        case cmd_t::BASE_VELOCITY_ONLY_ANGULAR:
-            calculateOrientation(period,base_orientation);
+        case cmd_t::ANGULAR:
+            calculateBaseOrientation(period,base_orientation);
             hf_base_linear_velocity_.fill(0.0);
+            calculateFeetStep();
             break;
 
-        case cmd_t::BASE_VELOCITY_FULL:
-            calculatePosition(period,base_position);
-            calculateOrientation(period,base_orientation);
+        case cmd_t::LINEAR_AND_ANGULAR:
+            calculateBasePosition(period,base_position);
+            calculateBaseOrientation(period,base_orientation);
+            calculateFeetStep();
+            break;
+
+        case cmd_t::BASE_ONLY:
+            calculateBasePosition(period,base_position);
+            calculateBaseOrientation(period,base_orientation);
+            resetFeetStep();
             break;
         };
+    }
 
+    void calculateFeetStep()
+    {
+        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
         for(unsigned int i=0; i<feet_names.size(); i++)
-        {            
+        {
             if(gait_generator_->isSwinging(feet_names[i]))
             {
-
                 ROS_DEBUG_STREAM("*********");
                 ROS_DEBUG_STREAM("Swinging foot "<<feet_names[i]);
 
-                xbot_model_->getPose(feet_names[i],world_T_foot_); // Should it be in respect of the hf?
+                xbot_model_->getPose(feet_names[i],world_T_foot_);
                 xbot_model_->getPose(hips_[i],world_T_hip_);
                 xbot_model_->getPose(hips_[i],"base_link",base_T_hip_);
 
@@ -1026,11 +1038,21 @@ public:
         // the base rotates w.r.t world. So I have to apply the current rotation to have a correct trajectory
         //world_T_base_.translation() = Eigen::Vector3d::Zero();
         //gait_generator_->setTrajectoryTransformation(world_T_base_);
-
-        base_height_ = base_position_(2);
     }
 
-    void calculatePosition(const double& period, const Eigen::Vector3d& base_position)
+    void resetFeetStep()
+    {
+        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+        for(unsigned int i=0; i<feet_names.size(); i++)
+        {
+            steps_length_[feet_names[i]]   = 0.0;
+            steps_heading_[feet_names[i]] = 0.0;
+            steps_height_[feet_names[i]]   = 0.0;
+            steps_heading_rate_[feet_names[i]]   = 0.0;
+        }
+    }
+
+    void calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
     {
         base_position_ = base_position;
 
@@ -1039,9 +1061,12 @@ public:
         hf_base_linear_velocity_(2) = base_linear_velocity_max_ * base_linear_velocity_scale_z_;
 
         base_position_ = world_R_hf_ * hf_base_linear_velocity_ * period + base_position_;
+
+        // This is the base height computed w.r.t world
+        base_height_ = base_position_(2);
     }
 
-    void calculateOrientation(const double& period, const Eigen::Vector3d& base_orientation)
+    void calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
     {
         base_orientation_ = base_orientation;
 
@@ -1103,12 +1128,6 @@ public:
     {
         if(!offset_applied_)
         {
-            // FIXME
-            //hf_X_base_hip_offsets_[0] <<0.3,0.2,0.0;
-            //hf_X_base_hip_offsets_[1] <<0.3,-0.2,0.0;
-            //hf_X_base_hip_offsets_[2] <<-0.3,0.2,0.0;
-            //hf_X_base_hip_offsets_[3] <<-0.3,-0.2,0.0;
-
             for(unsigned int i=0; i<hips_.size(); i++)
             {
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
@@ -1116,6 +1135,23 @@ public:
                 base_X_hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
                 hf_X_base_hip_offsets_[i] = base_T_hip_.translation();
             }
+
+            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[0] is "
+                             << hf_X_base_hip_offsets_[0] <<
+                             " it should be: 0.3,0.2,0.0");
+
+            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[1] is "
+                             << hf_X_base_hip_offsets_[1] <<
+                             " it should be: 0.3,0.2,0.0");
+
+            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[2] is "
+                             << hf_X_base_hip_offsets_[2] <<
+                             " it should be: -0.3,0.2,0.0");
+
+            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[3] is "
+                             << hf_X_base_hip_offsets_[3] <<
+                             " it should be: -0.3,-0.2,0.0");
+
             offset_applied_ = true;
         }
     }
@@ -1142,7 +1178,9 @@ private:
     std::atomic<double>  base_linear_velocity_max_;
     std::atomic<double>  base_angular_velocity_max_;
 
+    /** @brief Base linear velocity w.r.t horizontal frame (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw) */
     Eigen::Vector3d hf_base_linear_velocity_;
+    /** @brief Base angular velocity */
     Eigen::Vector3d hf_base_angular_velocity_;
 
     Eigen::Vector3d base_position_;
