@@ -236,11 +236,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[2] = "lh_foot";
     contact_links_[3] = "rh_foot";
 
-    task_poses_["waist"] = desired_task_poses_["waist"]  = Eigen::Affine3d::Identity();
+    task_poses_["waist"].first = desired_task_poses_["waist"].first = Eigen::Affine3d::Identity();
+    task_poses_["waist"].second = desired_task_poses_["waist"].second = Eigen::Vector6d::Zero();
     base_frames_["waist"] = "world";
     for(unsigned int i=0;i<contact_links_.size();i++)
     {
-        task_poses_[contact_links_[i]] = desired_task_poses_[contact_links_[i]] = Eigen::Affine3d::Identity();
+        task_poses_[contact_links_[i]].first = desired_task_poses_[contact_links_[i]].first = Eigen::Affine3d::Identity();
+        task_poses_[contact_links_[i]].second = desired_task_poses_[contact_links_[i]].second = Eigen::Vector6d::Zero();
         base_frames_[contact_links_[i]] = "world";
     }
 
@@ -303,11 +305,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     tasks_actual_pose_rt_pub_->msg_.reference_frames.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_names.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_poses.poses.resize(task_poses_.size());
+    tasks_actual_pose_rt_pub_->msg_.task_velocities.resize(task_poses_.size());
 
     tasks_desired_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_desired_pose", 4);
     tasks_desired_pose_rt_pub_->msg_.reference_frames.resize(desired_task_poses_.size());
     tasks_desired_pose_rt_pub_->msg_.task_names.resize(desired_task_poses_.size());
     tasks_desired_pose_rt_pub_->msg_.task_poses.poses.resize(desired_task_poses_.size());
+    tasks_desired_pose_rt_pub_->msg_.task_velocities.resize(desired_task_poses_.size());
 
     contacts_rt_pub_ = new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4);
     contacts_rt_pub_->msg_.data.resize(4);
@@ -604,13 +608,15 @@ void Controller::updateXBotModel()
         id_prob_->_com->getReference(com_position_);
         desired_task_poses_["com"].translation() = com_position_;*/
 
-        id_prob_->_waist->getActualPose(task_poses_["waist"]);
-        id_prob_->_waist->getReference(desired_task_poses_["waist"]);
+        id_prob_->_waist->getActualPose(task_poses_["waist"].first);
+        id_prob_->_waist->getReference(desired_task_poses_["waist"].first);
         base_frames_["waist"] = id_prob_->_waist->getBaseLink();
         for(unsigned int i=0; i<contact_links_.size(); i++)
         {
-            id_prob_->_feet[contact_links_[i]]->getActualPose(task_poses_[contact_links_[i]]);
-            id_prob_->_feet[contact_links_[i]]->getReference(desired_task_poses_[contact_links_[i]]);
+            id_prob_->_feet[contact_links_[i]]->getActualPose(task_poses_[contact_links_[i]].first);
+            id_prob_->_feet[contact_links_[i]]->getActualTwist(task_poses_[contact_links_[i]].second);
+            id_prob_->_feet[contact_links_[i]]->getReference(desired_task_poses_[contact_links_[i]].first,desired_task_poses_[contact_links_[i]].second);
+
             base_frames_[contact_links_[i]] = id_prob_->_feet[contact_links_[i]]->getBaseLink();
         }
     }
@@ -1062,9 +1068,14 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         {
             tasks_actual_pose_rt_pub_->msg_.reference_frames[idx] = base_frames_[it->first];
             tasks_actual_pose_rt_pub_->msg_.task_names[idx] = it->first;
-            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.translation().x();
-            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.translation().y();
-            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.translation().z();
+            // Pose
+            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.first.translation().x();
+            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.first.translation().y();
+            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.first.translation().z();
+            // Velocity
+            tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.x = it->second.second(0);
+            tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.y = it->second.second(1);
+            tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.z = it->second.second(2);
             //FIXME Missing orientation
             idx++;
         }
@@ -1080,9 +1091,14 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         {
             tasks_desired_pose_rt_pub_->msg_.reference_frames[idx] = base_frames_[it->first];
             tasks_desired_pose_rt_pub_->msg_.task_names[idx] = it->first;
-            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.translation().x();
-            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.translation().y();
-            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.translation().z();
+            // Pose
+            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.first.translation().x();
+            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.first.translation().y();
+            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.first.translation().z();
+            // Velocity
+            tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.x = it->second.second(0);
+            tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.y = it->second.second(1);
+            tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.z = it->second.second(2);
             //FIXME Missing orientation
             idx++;
         }

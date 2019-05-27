@@ -41,8 +41,9 @@
 
 namespace dls_controller
 {
-
-typedef std::map<std::string,Eigen::Affine3d> TaskPosesMap;
+// FIXME move to a class with publishers and subscribers
+typedef std::pair<Eigen::Affine3d,Eigen::Vector6d> Task;
+typedef std::map<std::string,Task> TaskPosesMap;
 typedef std::map<std::string,std::string> BaseFramesMap;
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
@@ -212,9 +213,9 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-    /** @brief Actual task poses */
+    /** @brief Actual task poses and velocities */
     TaskPosesMap task_poses_;
-    /** @brief Desired task poses */
+    /** @brief Desired task poses and velocities */
     TaskPosesMap desired_task_poses_;
     /** @brief Desired task poses */
     BaseFramesMap base_frames_;
