@@ -411,7 +411,7 @@ protected:
 
     const Eigen::Affine3d& trajectoryFunction(const double& time)
     {
-        double psi = heading_;
+        const double& psi = heading_;
 
         xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
