@@ -756,6 +756,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 gait_generator_->setTrajectoryAmplitude(contact_links_[i],0, cmds_->getStepLength(contact_links_[i]));
                 gait_generator_->setTrajectoryAmplitude(contact_links_[i],1, cmds_->getStepHeading(contact_links_[i]));
                 gait_generator_->setTrajectoryAmplitude(contact_links_[i],2, cmds_->getStepHeight(contact_links_[i]));
+                gait_generator_->setTrajectoryAmplitude(contact_links_[i],3, cmds_->getStepHeadingRate(contact_links_[i]));
             }
 
             // Update the gait_generator
@@ -769,7 +770,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             for(unsigned int i = 0; i<contact_links_.size(); i++)
             {
 
-                id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
+                Eigen::Vector6d ref; ref << gait_generator_->getReferenceDot(contact_links_[i]).translation(), 0.0 , 0.0, 0.0; // FIXME fix the vector6d stuff from the trajectories
+
+                id_prob_->_feet[contact_links_[i]]->setReference(Eigen::Affine3d::Identity(),ref);
 
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(contact_links_[i]))
@@ -781,7 +784,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                     }*/
 
                     //id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
-                    id_prob_->_feet[contact_links_[i]]->setLambda(1000.0);
+                    //id_prob_->_feet[contact_links_[i]]->setLambda(1000.0);
                     //id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(0));
 
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
@@ -796,7 +799,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
                     //task_reset_done_[i] = false;
 
-                    id_prob_->_feet[contact_links_[i]]->setLambda(0.0);
+                    //id_prob_->_feet[contact_links_[i]]->setLambda(0.0);
 
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);

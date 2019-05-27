@@ -24,7 +24,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     {
         _feet[contact_links[i]] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(contact_links[i], *_model, contact_links[i],
                                                                                "world", _id->getJointsAccelerationAffine());
-        _feet[contact_links[i]]->setLambda(0);
+        _feet[contact_links[i]]->setLambda(0,100);
         _feet[contact_links[i]]->setWeightIsDiagonalFlag(true);
     }
     //   --------------------------

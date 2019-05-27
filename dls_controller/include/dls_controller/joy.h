@@ -44,7 +44,7 @@ private:
           std::abs(joy_base_yaw_scale_)       >0 ||
           std::abs(joy_base_pitch_scale_)     >0  )
        {
-           cmds_->setCmd(dls_controller::CommandsInterface::BASE_VELOCITY_ONLY_ANGULAR);
+           cmds_->setCmd(dls_controller::CommandsInterface::BASE_VELOCITY_ONLY_LINEAR);
            cmds_->setBaseVelocityScaleX(joy_base_velocity_x_scale_);
            cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
            cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);

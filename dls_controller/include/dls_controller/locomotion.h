@@ -255,17 +255,16 @@ public:
 
     TrajectoryInterface()
     {
-        reference_ = initial_pose_ = state_ = T_ = Eigen::Affine3d::Identity();
+        reference_ = reference_dot_ = initial_pose_ = state_ = state_dot_ = T_ = Eigen::Affine3d::Identity();
         swing_frequency_ = 5.0;
         time_ = 0.0;
         length_ = 0.0;
         heading_ = 0.0;
+        heading_rate_ = 0.0;
         height_ = 0.0;
 
         trajectory_finished_ = false;
     }
-
-    virtual void update(const double& period) = 0;
 
     void preview(std::vector<Eigen::Affine3d>& poses)
     {
@@ -285,6 +284,11 @@ public:
     const Eigen::Affine3d& getReference()
     {
         return reference_;
+    }
+
+    const Eigen::Affine3d& getReferenceDot()
+    {
+        return reference_dot_;
     }
 
     const Eigen::Affine3d& getInitialPose()
@@ -311,6 +315,7 @@ public:
     void stop() // Take the last reference as next initial pose
     {
         initial_pose_ = reference_; // This is useful if the trajectory has to be computed w.r.t world
+        reference_dot_ = Eigen::Affine3d::Identity();
     }
 
     void stop(const Eigen::Affine3d& initial_pose_next_swing)
@@ -321,6 +326,12 @@ public:
     void standBy()
     {
         reference_ = initial_pose_;
+        reference_dot_ = Eigen::Affine3d::Identity();
+    }
+
+    void setStepHeadingRate(const double& heading_rate)
+    {
+        heading_rate_ = heading_rate;
     }
 
     void setStepLength(const double& length)
@@ -348,6 +359,11 @@ public:
         return heading_;
     }
 
+    double getStepHeadingRate()
+    {
+        return heading_rate_;
+    }
+
     double getStepHeight()
     {
         return height_;
@@ -371,20 +387,35 @@ public:
         T_ = T;
     }
 
+    void update(const double& period)
+    {
+        reference_ = trajectoryFunction(time_);
+        reference_dot_ = trajectoryFunctionDot(time_);
+
+        if(swing_frequency_*time_<1.0)
+            time_ += period;
+        else
+            trajectory_finished_ = true;
+    }
+
 protected:
 
     Eigen::Affine3d reference_;
+    Eigen::Affine3d reference_dot_;
     Eigen::Affine3d initial_pose_;
     Eigen::Affine3d state_;
+    Eigen::Affine3d state_dot_;
     Eigen::Affine3d T_;
     double time_;
     std::atomic<double> swing_frequency_;
     std::atomic<double> length_;
     std::atomic<double> heading_;
+    std::atomic<double> heading_rate_;
     std::atomic<double> height_;
     bool trajectory_finished_;
 
     virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
+    virtual const Eigen::Affine3d& trajectoryFunctionDot(const double& time) = 0;
 };
 
 class Ellipse : public TrajectoryInterface
@@ -394,17 +425,8 @@ public:
 
     Ellipse()
     {
-        xyz = Eigen::Vector3d::Zero();
-    }
-
-    void update(const double& period)
-    {
-        reference_ = trajectoryFunction(time_);
-
-        if(swing_frequency_*time_<1.0)
-            time_ += period;
-        else
-            trajectory_finished_ = true;
+        xyz = xyz_rotated = xyz_dot = Eigen::Vector3d::Zero();
+        Rz = Sz = Eigen::Matrix3d::Zero();
     }
 
 protected:
@@ -421,25 +443,47 @@ protected:
         xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 #endif
 
+        // Should I remove that?
         xyz = T_ * xyz;
 
         double c = std::cos(psi);
         double s = std::sin(psi);
 
-        xyz_rotated(0) = c * xyz(0) - s * xyz(1);
-        xyz_rotated(1) = s * xyz(0) + c * xyz(1);
-        xyz_rotated(2) = xyz(2);
+        Rz(0,0) = c;
+        Rz(0,1) = -s;
+        Rz(1,0) = s;
+        Rz(1,1) = c;
+        Rz(2,2) = 1;
 
-        state_.translation().x() = initial_pose_.translation().x() + xyz_rotated(0);
-        state_.translation().y() = initial_pose_.translation().y() + xyz_rotated(1);
-        state_.translation().z() = initial_pose_.translation().z() + xyz_rotated(2);
+        xyz_rotated = Rz * xyz;
+
+        state_.translation() = initial_pose_.translation() + xyz_rotated;
 
         return state_;
     }
 
+    const Eigen::Affine3d& trajectoryFunctionDot(const double& time)
+    {
+        const double& psi_rate = heading_rate_;
+
+        Sz(0,1) = -psi_rate;
+        Sz(1,0) = -psi_rate;
+
+        xyz_dot(0) = M_PI * swing_frequency_ * length_/2 * std::sin(M_PI * (swing_frequency_ * time));
+        xyz_dot(1) = 0.0;
+        xyz_dot(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
+
+        state_dot_.translation() = Sz * xyz_rotated + Rz * xyz_dot;
+
+        return state_dot_;
+    }
+
 private:
     Eigen::Vector3d xyz;
+    Eigen::Vector3d xyz_dot;
     Eigen::Vector3d xyz_rotated;
+    Eigen::Matrix3d Rz;
+    Eigen::Matrix3d Sz;
 
 };
 
@@ -498,6 +542,11 @@ public:
     const Eigen::Affine3d& getReference(const std::string& foot_name)
     {
         return feet_[foot_name].trajectory->getReference();
+    }
+
+    const Eigen::Affine3d& getReferenceDot(const std::string& foot_name)
+    {
+        return feet_[foot_name].trajectory->getReferenceDot();
     }
 
     bool isSwinging(const std::string& foot_name)
@@ -598,13 +647,14 @@ public:
         return feet_names_;
     }
 
-    void setTrajectoryAmplitude(const double& length, const double& heading, const double& height)
+    void setTrajectoryAmplitude(const double& length, const double& height, const double& heading = 0.0, const double& heading_rate = 0.0)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
         {
             it->second.trajectory->setStepLength(length);
             it->second.trajectory->setStepHeading(heading);
             it->second.trajectory->setStepHeight(height);
+            it->second.trajectory->setStepHeadingRate(heading_rate);
         }
     }
 
@@ -621,8 +671,11 @@ public:
         case 2:
             feet_[foot_name].trajectory->setStepHeight(amp);
             break;
+        case 3:
+            feet_[foot_name].trajectory->setStepHeadingRate(amp);
+            break;
         default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are Length=0,Heading=1,Height=2");
+            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are Length=0,Heading=1,Height=2,Heading Rate=3");
             break;
         };
     }
@@ -641,8 +694,11 @@ public:
         case 2:
             amp = feet_[foot_name].trajectory->getStepHeight();
             break;
+        case 3:
+            amp = feet_[foot_name].trajectory->getStepHeadingRate();
+            break;
         default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values Length=0,Heading=1,Height=2");
+            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values Length=0,Heading=1,Height=2,Heading Rate=3");
             break;
         };
         return amp;
@@ -942,6 +998,7 @@ public:
                 steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
                 steps_heading_[feet_names[i]] = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
                 steps_height_[feet_names[i]]   = 0.05; // FIXME
+                steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity(2);
 
                 //getchar();
             }
@@ -950,11 +1007,13 @@ public:
                 steps_length_[feet_names[i]]   = 0.0;
                 steps_heading_[feet_names[i]] = 0.0;
                 steps_height_[feet_names[i]]   = 0.0;
+                steps_heading_rate_[feet_names[i]]   = 0.0;
             }
 
             ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
             ROS_DEBUG_STREAM("steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
             ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
+            ROS_DEBUG_STREAM("steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
 
         }
         // FIXME: Look up in stop().
@@ -1069,6 +1128,7 @@ public:
     const double& getStepLength(const std::string& foot_name) {return steps_length_[foot_name];}
     const double& getStepHeading(const std::string& foot_name) {return steps_heading_[foot_name];}
     const double& getStepHeight(const std::string& foot_name) {return steps_height_[foot_name];}
+    const double& getStepHeadingRate(const std::string& foot_name) {return steps_heading_rate_[foot_name];}
     const double& getBaseHeight() const {return base_height_;}
 
 private:
@@ -1109,6 +1169,7 @@ private:
     map_t steps_length_;
     map_t steps_heading_;
     map_t steps_height_;
+    map_t steps_heading_rate_;
     Eigen::Matrix3d base_rotation_reference_;
 
     GaitGenerator::Ptr gait_generator_;
