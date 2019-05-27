@@ -341,6 +341,27 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     return true;
 }
 
+void Controller::updateDynamicReconfigureCallback()
+{
+    // Update the config for dynamic reconfigure
+    if(id_prob_)
+    {
+        default_config_.com_lambda = id_prob_->_com->getLambda();
+        default_config_.waist_lambda = id_prob_->_waist->getLambda();
+        default_config_.postural_lambda = id_prob_->_postural->getLambda();
+    }
+    default_config_.toggle_solver = solver_started_;
+    default_config_.toggle_relative_tasks = relative_tasks_active_;
+    default_config_.toggle_tracking = tracking_active_;
+    if(gait_generator_)
+    {
+        default_config_.gaits = gait_generator_->getGaitType();
+        default_config_.swing_frequency = gait_generator_->getSwingFrequency();
+        default_config_.swing_frequency = gait_generator_->getSwingFrequency();
+    }
+    server_->updateConfig(default_config_);
+}
+
 void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level)
 {
     switch(level)
@@ -358,13 +379,12 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setDutyCycle(config.duty_cycle);
         break;
     case 4:
-        setLambda("feet",config.feet_lambda);
         setLambda("com",config.com_lambda);
         setLambda("waist",config.waist_lambda);
         setLambda("postural",config.postural_lambda);
         break;
     case 5:
-        setGaitType(config.Gaits);
+        setGaitType(config.gaits);
         break;
     case 6:
         setSwingFrequency(config.swing_frequency);
@@ -585,7 +605,6 @@ void Controller::stateEstimation()
     floating_base_orientation_rpy_(0) = ypr(2);
     floating_base_orientation_rpy_(1) = ypr(1);
     floating_base_orientation_rpy_(2) = ypr(0);
-
 }
 
 void Controller::updateXBotModel()
@@ -731,17 +750,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(tracking_active_)
         {
-            /*if(gait_generator_->isScheduleChanged())
-            {
-                // Reset world
-            }*/
-
             gait_generator_->activateSwing();
 
             // Set the task reference for the waist
             Eigen::Affine3d world_T_base; //FIXME NO-RT
-            xbot_model_->getPose("base_link",world_T_base);
-            //id_prob_->_waist->getReference(world_T_base);
+            //xbot_model_->getPose("base_link",world_T_base);
+            id_prob_->_waist->getReference(world_T_base);
             world_T_base.linear() = cmds_->getBaseRotationReference();
             world_T_base.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(world_T_base);

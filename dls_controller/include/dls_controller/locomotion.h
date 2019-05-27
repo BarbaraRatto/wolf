@@ -535,6 +535,7 @@ public:
         schedule_changed_ = true; // At the beginning is already changed no?
         activate_swing_ = false;
 
+        gait_type_ = gait_type;
     }
 
     void setGaitType(const std::string& gait_type)
@@ -542,6 +543,7 @@ public:
         std::vector<std::string> feet_names; // FIXME NO-RT
         gait_buffer_[next_gait_idx_].reset(new Gait(feet_names,gait_type));
         change_gait_ = true;
+        gait_type_ = gait_type;
     }
 
     void getTrajectoryPreview(const std::string& foot_name, std::vector<Eigen::Affine3d>& poses)
@@ -655,6 +657,11 @@ public:
     const std::vector<std::string>& getFeetNames()
     {
         return feet_names_;
+    }
+
+    const std::string& getGaitType()
+    {
+        return gait_type_;
     }
 
     void setTrajectoryAmplitude(const double& length, const double& height, const double& heading = 0.0, const double& heading_rate = 0.0)
@@ -834,6 +841,8 @@ private:
     std::atomic<bool> activate_swing_;
 
     std::vector<std::string> feet_names_;
+
+    std::string gait_type_;
 
 };
 
@@ -1178,7 +1187,8 @@ private:
     std::atomic<double>  base_linear_velocity_max_;
     std::atomic<double>  base_angular_velocity_max_;
 
-    /** @brief Base linear velocity w.r.t horizontal frame (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw) */
+    /** @brief Base linear velocity w.r.t horizontal frame
+     * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
     Eigen::Vector3d hf_base_linear_velocity_;
     /** @brief Base angular velocity */
     Eigen::Vector3d hf_base_angular_velocity_;
@@ -1207,6 +1217,7 @@ private:
     map_t steps_height_;
     map_t steps_heading_rate_;
     Eigen::Matrix3d base_rotation_reference_;
+    Eigen::Matrix3d world_R_hf_;
 
     GaitGenerator::Ptr gait_generator_;
     XBot::ModelInterface::Ptr xbot_model_;
@@ -1217,9 +1228,6 @@ private:
     std::vector<Eigen::Vector3d> hf_X_base_hip_offsets_;
 
     double yaw_base_;
-    Eigen::Matrix3d world_R_hf_;
-
-
 };
 
 } // namespace

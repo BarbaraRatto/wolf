@@ -237,6 +237,8 @@ private:
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
     dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>* server_;
+    /** @brief ROS dynamic reconfigure config struct */
+    DlsControllerConfig default_config_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
