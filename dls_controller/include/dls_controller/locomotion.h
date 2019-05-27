@@ -91,6 +91,11 @@ public:
         dc_ = duty_cycle;
     }
 
+    double getDutyCycle()
+    {
+        return dc_;
+    }
+
     void update(const double& period, const bool& contact)
     {
 
@@ -633,6 +638,11 @@ public:
         feet_[foot_name].trajectory->setInitialPose(initial_pose);
     }
 
+    double getDutyCycle(const std::string& foot_name)
+    {
+        return feet_[foot_name].state_machine.getDutyCycle();
+    }
+
     void setDutyCycle(const double& duty_cycle)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
@@ -878,8 +888,8 @@ public:
         base_angular_velocity_scale_pitch_ = 0.0;
         base_angular_velocity_scale_yaw_ = 0.0;
 
-        base_linear_velocity_max_ = 0.5;
-        base_angular_velocity_max_ = 0.05;
+        base_linear_velocity_max_ = 1.0; // [m/s]
+        base_angular_velocity_max_ = 1.0; // [rad/s]
 
         base_rotation_reference_ = Eigen::Matrix3d::Identity();
         base_position_ = base_orientation_ = Eigen::Vector3d::Zero();
@@ -1173,6 +1183,8 @@ public:
     const double& getStepHeight(const std::string& foot_name) {return steps_height_[foot_name];}
     const double& getStepHeadingRate(const std::string& foot_name) {return steps_heading_rate_[foot_name];}
     const double& getBaseHeight() const {return base_height_;}
+    double getMaxLinearVelocity() const { return base_linear_velocity_max_;}
+    double getMaxAngularVelocity() const { return base_angular_velocity_max_;}
 
 private:
 

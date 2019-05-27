@@ -341,7 +341,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     return true;
 }
 
-void Controller::updateDynamicReconfigureCallback()
+void Controller::dynamicReconfigureUpdate()
 {
     // Update the config for dynamic reconfigure
     if(id_prob_)
@@ -356,10 +356,16 @@ void Controller::updateDynamicReconfigureCallback()
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
-        default_config_.swing_frequency = gait_generator_->getSwingFrequency();
-        default_config_.swing_frequency = gait_generator_->getSwingFrequency();
+        default_config_.swing_frequency = gait_generator_->getSwingFrequency(contact_links_[0]); // HACK
+        default_config_.duty_cycle = gait_generator_->getDutyCycle(contact_links_[0]); // HACK
     }
-    server_->updateConfig(default_config_);
+    if(cmds_)
+    {
+        default_config_.base_max_linear_vel = cmds_->getMaxLinearVelocity();
+        default_config_.base_max_angular_vel = cmds_->getMaxAngularVelocity();
+    }
+    if(server_)
+        server_->updateConfig(default_config_);
 }
 
 void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig &config, uint32_t level)
@@ -390,12 +396,12 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setSwingFrequency(config.swing_frequency);
         break;
     case 7:
-        cmds_->setMaxLinearVelocity(config.base_max_vel);
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum velocity to "<< config.base_max_vel);
+        cmds_->setMaxLinearVelocity(config.base_max_linear_vel);
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum velocity to "<< config.base_max_linear_vel);
         break;
     case 8:
-        cmds_->setMaxAngularVelocity(config.base_max_rot_rate);
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum rotation rate to "<< config.base_max_rot_rate);
+        cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
         break;
     default:
         break;
@@ -746,6 +752,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             cmds_->setBasePosition(floating_base_position_);
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
+
+            dynamicReconfigureUpdate();
         }
 
         if(tracking_active_)

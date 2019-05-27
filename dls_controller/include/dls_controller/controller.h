@@ -281,7 +281,6 @@ private:
     std::shared_ptr<JoyHandler> joy_handler_;
     std::shared_ptr<CommandsInterface> cmds_;
 
-
     /**
          * @brief thread body for the odometry publisher
          */
@@ -347,8 +346,10 @@ private:
          */
     void setWorldTasks();
 
-
-    void rotateBase(const double& yaw, const double& period);
+    /**
+         * @brief Update the dynamic reconfigure interface
+         */
+    void dynamicReconfigureUpdate();
 };
 
 
