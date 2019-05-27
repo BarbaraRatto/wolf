@@ -888,8 +888,8 @@ public:
         base_angular_velocity_scale_pitch_ = 0.0;
         base_angular_velocity_scale_yaw_ = 0.0;
 
-        base_linear_velocity_max_ = 1.0; // [m/s]
-        base_angular_velocity_max_ = 1.0; // [rad/s]
+        base_linear_velocity_max_ = 0.5; // [m/s]
+        base_angular_velocity_max_ = 0.5; // [rad/s]
 
         base_rotation_reference_ = Eigen::Matrix3d::Identity();
         base_position_ = base_orientation_ = Eigen::Vector3d::Zero();
