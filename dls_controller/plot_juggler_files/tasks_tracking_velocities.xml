@@ -1,0 +1,149 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root>
+ <tabbed_widget name="Main Window" parent="main_window">
+  <plotmatrix rows="4" tab_name="plot" columns="3">
+   <plot row="0" col="0">
+    <range left="40.248000" right="45.248000" bottom="-0.002146" top="0.002131"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.0/linear/x" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.0/linear/x" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="0">
+    <range left="40.248000" right="45.248000" bottom="-0.002706" top="0.002692"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.1/linear/x" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.1/linear/x" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="0">
+    <range left="40.248000" right="45.248000" bottom="-0.002274" top="0.002273"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.2/linear/x" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.2/linear/x" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="3" col="0">
+    <range left="40.248000" right="45.248000" bottom="-0.001876" top="0.001881"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.3/linear/x" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.4/linear/x" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="1">
+    <range left="40.248000" right="45.248000" bottom="-0.033799" top="0.033922"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.0/linear/y" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.0/linear/y" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="1">
+    <range left="40.248000" right="45.248000" bottom="-0.029092" top="0.029285"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.1/linear/y" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.1/linear/y" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="1">
+    <range left="40.248000" right="45.248000" bottom="-0.033104" top="0.032927"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.2/linear/y" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.2/linear/y" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="3" col="1">
+    <range left="40.248000" right="45.248000" bottom="-0.026704" top="0.026591"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.3/linear/y" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.4/linear/y" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="2">
+    <range left="40.248000" right="45.248000" bottom="-0.051672" top="0.053587"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.0/linear/z" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.0/linear/z" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="2">
+    <range left="40.248000" right="45.248000" bottom="-0.069802" top="0.071673"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.1/linear/z" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.1/linear/z" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="2">
+    <range left="40.248000" right="45.248000" bottom="-0.061953" top="0.063844"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.2/linear/z" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.2/linear/z" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="3" col="2">
+    <range left="40.248000" right="45.248000" bottom="-0.052964" top="0.054737"/>
+    <limitY/>
+    <curve B="255" R="0" name="/tasks_actual_pose/task_velocities.3/linear/z" G="0" custom_transform="noTransform"/>
+    <curve B="0" R="255" name="/tasks_desired_pose/task_velocities.4/linear/z" G="0" custom_transform="noTransform"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <currentPlotMatrix index="0"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="1"/>
+ <Plugins>
+  <DataLoad_CSV>
+   <default time_axis=""/>
+  </DataLoad_CSV>
+  <DataLoad_ROS_bags>
+   <selected_topics list=""/>
+  </DataLoad_ROS_bags>
+  <DataLoad_ULog>
+   <no_params/>
+  </DataLoad_ULog>
+  <ROS_Topic_Streamer>
+   <selected_topics list="/tasks_actual_pose;/tasks_desired_pose"/>
+  </ROS_Topic_Streamer>
+  <RosoutPublisherROS/>
+  <TopicPublisherROS/>
+ </Plugins>
+ <previouslyLoadedStreamer name="ROS_Topic_Streamer"/>
+ <customMathEquations/>
+ <snippets>
+  <snippet name="1st_derivative">
+   <global>var prevX = 0
+var prevY = 0</global>
+   <equation>dx = time - prevX
+dy = value - prevY
+prevX = time
+prevY = value
+
+return dy/dx</equation>
+  </snippet>
+  <snippet name="1st_order_lowpass">
+   <global>var prevY = 0
+var alpha = 0.1</global>
+   <equation>prevY = alpha * value + (1.-alpha) * prevY
+
+return prevY</equation>
+  </snippet>
+  <snippet name="sum_A_B">
+   <global></global>
+   <equation>return $$PLOT_A$$ + $$PLOT_B$$</equation>
+  </snippet>
+  <snippet name="yaw_from_quaternion">
+   <global>// source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+function quaternionToYaw(x, y, z, w)
+{
+  // yaw (z-axis rotation)
+  t1 = 2.0 * (w * z + x * y);
+  t2 = 1.0 - 2.0 * (y * y + z * z);
+  yaw = Math.atan2(t1, t2);
+
+  return yaw
+}</global>
+   <equation>return quaternionToYaw($$x$$, $$y$$, $$z$$, $$w$$);</equation>
+  </snippet>
+ </snippets>
+</root>
+

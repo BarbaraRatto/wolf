@@ -5,15 +5,15 @@
    <plot row="0" col="0">
     <range top="0.365514" left="211.612000" right="216.612000" bottom="0.363935"/>
     <limitY/>
-    <curve B="245" custom_transform="noTransform" R="0" G="54" name="/tasks_actual_pose/task_poses/poses.0/position/x"/>
-    <curve B="11" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/x"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.0/position/x"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/x"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="1" col="0">
     <range top="-0.364080" left="211.612000" right="216.612000" bottom="-0.365541"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="107" name="/tasks_actual_pose/task_poses/poses.1/position/x"/>
-    <curve B="4" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/x"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.1/position/x"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/x"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="2" col="0">
@@ -27,76 +27,76 @@
     <range top="-0.363722" left="211.612000" right="216.612000" bottom="-0.365559"/>
     <limitY/>
     <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.3/position/x"/>
-    <curve B="0" custom_transform="noTransform" R="255" G="7" name="/tasks_desired_pose/task_poses/poses.3/position/x"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.3/position/x"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="4" col="0">
     <range top="0.005876" left="211.612000" right="216.612000" bottom="0.000817"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="60" name="/tasks_actual_pose/task_poses/poses.4/position/x"/>
-    <curve B="6" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.4/position/x"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.4/position/x"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.4/position/x"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="0" col="1">
     <range top="0.324096" left="211.612000" right="216.612000" bottom="0.322365"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="34" name="/tasks_actual_pose/task_poses/poses.0/position/y"/>
-    <curve B="3" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/y"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.0/position/y"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/y"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="1" col="1">
     <range top="0.323709" left="211.612000" right="216.612000" bottom="0.322459"/>
     <limitY/>
     <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.1/position/y"/>
-    <curve B="6" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/y"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/y"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="2" col="1">
     <range top="-0.322388" left="211.612000" right="216.612000" bottom="-0.324008"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="40" name="/tasks_actual_pose/task_poses/poses.2/position/y"/>
-    <curve B="7" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.2/position/y"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.2/position/y"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.2/position/y"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="3" col="1">
     <range top="-0.322437" left="211.612000" right="216.612000" bottom="-0.323621"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="85" name="/tasks_actual_pose/task_poses/poses.3/position/y"/>
-    <curve B="0" custom_transform="noTransform" R="255" G="1" name="/tasks_desired_pose/task_poses/poses.3/position/y"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.3/position/y"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.3/position/y"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="4" col="1">
     <range top="0.001813" left="211.612000" right="216.612000" bottom="-0.005229"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="70" name="/tasks_actual_pose/task_poses/poses.4/position/y"/>
-    <curve B="0" custom_transform="noTransform" R="255" G="4" name="/tasks_desired_pose/task_poses/poses.4/position/y"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.4/position/y"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.4/position/y"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="0" col="2">
     <range top="0.023467" left="211.612000" right="216.612000" bottom="0.020866"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="82" name="/tasks_actual_pose/task_poses/poses.0/position/z"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.0/position/z"/>
     <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.0/position/z"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="1" col="2">
     <range top="0.023109" left="211.612000" right="216.612000" bottom="0.021214"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="48" name="/tasks_actual_pose/task_poses/poses.1/position/z"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.1/position/z"/>
     <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.1/position/z"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="2" col="2">
     <range top="0.024915" left="211.612000" right="216.612000" bottom="0.020681"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="70" name="/tasks_actual_pose/task_poses/poses.2/position/z"/>
-    <curve B="0" custom_transform="noTransform" R="255" G="2" name="/tasks_desired_pose/task_poses/poses.2/position/z"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.2/position/z"/>
+    <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.2/position/z"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="3" col="2">
     <range top="0.023103" left="211.612000" right="216.612000" bottom="0.020309"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="0" G="57" name="/tasks_actual_pose/task_poses/poses.3/position/z"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/tasks_actual_pose/task_poses/poses.3/position/z"/>
     <curve B="0" custom_transform="noTransform" R="255" G="0" name="/tasks_desired_pose/task_poses/poses.3/position/z"/>
     <transform value="noTransform"/>
    </plot>
@@ -110,25 +110,25 @@
    <plot row="0" col="3">
     <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
     <limitY/>
-    <curve B="255" custom_transform="noTransform" R="255" G="0" name="/contacts/data.0"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/contacts/data.0"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="1" col="3">
     <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
     <limitY/>
-    <curve B="128" custom_transform="noTransform" R="0" G="0" name="/contacts/data.1"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/contacts/data.1"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="2" col="3">
     <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
     <limitY/>
-    <curve B="128" custom_transform="noTransform" R="0" G="128" name="/contacts/data.2"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/contacts/data.2"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="3" col="3">
     <range top="1.025000" left="211.612000" right="216.612000" bottom="-0.025000"/>
     <limitY/>
-    <curve B="164" custom_transform="noTransform" R="160" G="160" name="/contacts/data.3"/>
+    <curve B="255" custom_transform="noTransform" R="0" G="0" name="/contacts/data.3"/>
     <transform value="noTransform"/>
    </plot>
    <plot row="4" col="3">
