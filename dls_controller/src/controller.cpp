@@ -718,9 +718,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     if(cmds_->getCmd() == CommandsInterface::HOLD)
         tracking_active_ = false;
     else
-    {
         tracking_active_ = true;
-    }
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
@@ -768,51 +766,23 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Update the gait_generator
             gait_generator_->update(period.toSec());
 
-            /*if(relative_tasks_active_)
-                setRelativeTasks();
-            else
-                setWorldTasks();*/
-
             for(unsigned int i = 0; i<contact_links_.size(); i++)
             {
 
-                Eigen::Vector6d ref; ref << gait_generator_->getReferenceDot(contact_links_[i]).translation(), 0.0 , 0.0, 0.0; // FIXME fix the vector6d stuff from the trajectories
-
-                id_prob_->_feet[contact_links_[i]]->setReference(Eigen::Affine3d::Identity(),ref);
+                id_prob_->_feet[contact_links_[i]]->setReference(Eigen::Affine3d::Identity(),gait_generator_->getReferenceDot(contact_links_[i]));
 
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(contact_links_[i]))
                 {
-                    /*if(!task_reset_done_[i])
-                    {
-                            id_prob_->_feet[contact_links_[i]]->reset();
-                            task_reset_done_[i] = true;
-                    }*/
-
-                    //id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
-                    //id_prob_->_feet[contact_links_[i]]->setLambda(1000.0);
-                    //id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(0));
-
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
                 }
                 else
                 {
-                    /*if(gait_generator_->isTouchDown(contact_links_[i]))
-                    {
-                        setInitialPose("world",contact_links_[i]);
-                    }*/
-
-                    //task_reset_done_[i] = false;
-
-                    //id_prob_->_feet[contact_links_[i]]->setLambda(0.0);
-
                     id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
                 }
 
-                // Set the references to each foot
-                //id_prob_->_feet[contact_links_[i]]->setReference(gait_generator_->getReference(contact_links_[i]));
             }
         }
         else
@@ -1072,7 +1042,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
             tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.first.translation().x();
             tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.first.translation().y();
             tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.first.translation().z();
-            // Velocity
+            // Twist
             tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.x = it->second.second(0);
             tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.y = it->second.second(1);
             tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.z = it->second.second(2);
@@ -1095,7 +1065,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
             tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.first.translation().x();
             tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.first.translation().y();
             tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.first.translation().z();
-            // Velocity
+            // Twist
             tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.x = it->second.second(0);
             tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.y = it->second.second(1);
             tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.z = it->second.second(2);
@@ -1120,6 +1090,7 @@ void Controller::stopping(const ros::Time& time)
 
     stopping_ = true;
     odom_publisher_thread_->join();
+    rviz_publisher_thread_->join();
 
     ROS_DEBUG("Stopping DLS Controller Completed");
 }

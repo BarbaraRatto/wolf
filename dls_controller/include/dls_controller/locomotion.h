@@ -255,7 +255,9 @@ public:
 
     TrajectoryInterface()
     {
-        reference_ = reference_dot_ = initial_pose_ = state_ = state_dot_ = T_ = Eigen::Affine3d::Identity();
+        pose_reference_ = initial_pose_ = pose_ = T_ = Eigen::Affine3d::Identity();
+        twist_reference_.setZero();
+        twist_.setZero();
         swing_frequency_ = 5.0;
         time_ = 0.0;
         length_ = 0.0;
@@ -283,12 +285,12 @@ public:
 
     const Eigen::Affine3d& getReference()
     {
-        return reference_;
+        return pose_reference_;
     }
 
-    const Eigen::Affine3d& getReferenceDot()
+    const Eigen::Vector6d& getReferenceDot()
     {
-        return reference_dot_;
+        return twist_reference_;
     }
 
     const Eigen::Affine3d& getInitialPose()
@@ -312,21 +314,22 @@ public:
         trajectory_finished_ = false;
     }
 
-    void stop() // Take the last reference as next initial pose
+    void stop()
     {
-        initial_pose_ = reference_; // This is useful if the trajectory has to be computed w.r.t world
-        reference_dot_ = Eigen::Affine3d::Identity();
+        initial_pose_ = pose_reference_;
+        twist_reference_.setZero();
     }
 
     void stop(const Eigen::Affine3d& initial_pose_next_swing)
     {
         initial_pose_ = initial_pose_next_swing;
+        twist_reference_.setZero();
     }
 
     void standBy()
     {
-        reference_ = initial_pose_;
-        reference_dot_ = Eigen::Affine3d::Identity();
+        pose_reference_ = initial_pose_;
+        twist_reference_.setZero();
     }
 
     void setStepHeadingRate(const double& heading_rate)
@@ -389,8 +392,8 @@ public:
 
     void update(const double& period)
     {
-        reference_ = trajectoryFunction(time_);
-        reference_dot_ = trajectoryFunctionDot(time_);
+        pose_reference_  = trajectoryFunction(time_);
+        twist_reference_ = trajectoryFunctionDot(time_);
 
         if(swing_frequency_*time_<1.0)
             time_ += period;
@@ -400,11 +403,17 @@ public:
 
 protected:
 
-    Eigen::Affine3d reference_;
-    Eigen::Affine3d reference_dot_;
+    /** @brief Pose reference */
+    Eigen::Affine3d pose_reference_;
+    /** @brief Twist reference */
+    Eigen::Vector6d twist_reference_;
+    /** @brief Initial pose for the trajectory generation */
     Eigen::Affine3d initial_pose_;
-    Eigen::Affine3d state_;
-    Eigen::Affine3d state_dot_;
+    /** @brief Internal pose of the trajectory */
+    Eigen::Affine3d pose_;
+    /** @brief Internal twist of the trajectory */
+    Eigen::Vector6d twist_;
+    /** @brief Custom transformation to apply to the trajectory (before it gets rotated by the heading) */
     Eigen::Affine3d T_;
     double time_;
     std::atomic<double> swing_frequency_;
@@ -415,7 +424,7 @@ protected:
     bool trajectory_finished_;
 
     virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
-    virtual const Eigen::Affine3d& trajectoryFunctionDot(const double& time) = 0;
+    virtual const Eigen::Vector6d& trajectoryFunctionDot(const double& time) = 0;
 };
 
 class Ellipse : public TrajectoryInterface
@@ -443,7 +452,6 @@ protected:
         xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 #endif
 
-        // Should I remove that?
         xyz = T_ * xyz;
 
         double c = std::cos(psi);
@@ -457,12 +465,12 @@ protected:
 
         xyz_rotated = Rz * xyz;
 
-        state_.translation() = initial_pose_.translation() + xyz_rotated;
+        pose_.translation() = initial_pose_.translation() + xyz_rotated;
 
-        return state_;
+        return pose_;
     }
 
-    const Eigen::Affine3d& trajectoryFunctionDot(const double& time)
+    const Eigen::Vector6d& trajectoryFunctionDot(const double& time)
     {
         const double& psi_rate = heading_rate_;
 
@@ -473,12 +481,14 @@ protected:
         xyz_dot(1) = 0.0;
         xyz_dot(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
 
-        state_dot_.translation() = Sz * xyz_rotated + Rz * xyz_dot;
+        twist_.setZero(); // No angular velocities
+        twist_.head(3) = Sz * xyz_rotated + Rz * xyz_dot;
 
-        return state_dot_;
+        return twist_;
     }
 
 private:
+
     Eigen::Vector3d xyz;
     Eigen::Vector3d xyz_dot;
     Eigen::Vector3d xyz_rotated;
@@ -544,7 +554,7 @@ public:
         return feet_[foot_name].trajectory->getReference();
     }
 
-    const Eigen::Affine3d& getReferenceDot(const std::string& foot_name)
+    const Eigen::Vector6d& getReferenceDot(const std::string& foot_name)
     {
         return feet_[foot_name].trajectory->getReferenceDot();
     }
