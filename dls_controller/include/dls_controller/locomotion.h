@@ -883,7 +883,6 @@ public:
         hips_[2] = "lh_hipassembly";
         hips_[3] = "rh_hipassembly";
 
-
         base_X_hip_foot_offsets_.resize(4);
         hf_X_base_hip_offsets_.resize(4);
         for(unsigned int i=0; i<base_X_hip_foot_offsets_.size(); i++)
@@ -1100,33 +1099,30 @@ public:
     {
         base_angular_velocity_scale_yaw_ = scale;
     }
-
     void setMaxLinearVelocity(const double max)
     {
         base_linear_velocity_max_ = max;
     }
-
     void setMaxAngularVelocity(const double max)
     {
         base_angular_velocity_max_ = max;
     }
-
     void setHipOffset()
     {
-
         if(!offset_applied_)
         {
             // FIXME
-            hf_X_base_hip_offsets_[0] <<0.3,0.2,0.0;
-            hf_X_base_hip_offsets_[1] <<0.3,-0.2,0.0;
-            hf_X_base_hip_offsets_[2] <<-0.3,0.2,0.0;
-            hf_X_base_hip_offsets_[3] <<-0.3,-0.2,0.0;
+            //hf_X_base_hip_offsets_[0] <<0.3,0.2,0.0;
+            //hf_X_base_hip_offsets_[1] <<0.3,-0.2,0.0;
+            //hf_X_base_hip_offsets_[2] <<-0.3,0.2,0.0;
+            //hf_X_base_hip_offsets_[3] <<-0.3,-0.2,0.0;
 
             for(unsigned int i=0; i<hips_.size(); i++)
             {
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
                 xbot_model_->getPose(hips_[i],"base_link",base_T_hip_);
                 base_X_hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
+                hf_X_base_hip_offsets_[i] = base_T_hip_.translation();
             }
             offset_applied_ = true;
         }
