@@ -338,12 +338,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
-    task_reset_done_.resize(4);
-    task_reset_done_[0] = false;
-    task_reset_done_[1] = false;
-    task_reset_done_[2] = false;
-    task_reset_done_[3] = false;
-
     return true;
 }
 

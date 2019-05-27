@@ -276,22 +276,9 @@ private:
     /** @brief Visual tools */
     std::map<std::string,rviz_visual_tools::RvizVisualToolsPtr> visual_tools_;
 
-
     std::shared_ptr<JoyHandler> joy_handler_;
     std::shared_ptr<CommandsInterface> cmds_;
 
-
-    std::vector<bool> task_reset_done_;
-
-    double base_yaw_  = 0.0;
-
-    /*std::atomic<double> base_roll_  ;
-    std::atomic<double> base_pitch_ ;
-    std::atomic<double> base_yaw_   ;
-    std::atomic<double> base_height_;
-    std::map<std::string,std::atomic<double>> steps_length_;
-    std::map<std::string,std::atomic<double>> steps_rotation_;
-    std::map<std::string,std::atomic<double>> steps_height_;*/
 
     /**
          * @brief thread body for the odometry publisher
