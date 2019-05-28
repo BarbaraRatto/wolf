@@ -27,6 +27,7 @@
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
+#include <OpenSoT/floating_base_estimation/qp_estimation.h>
 #include <dls_controller/IDProblem.h>
 // STD
 #include <atomic>
@@ -189,6 +190,8 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
     OpenSoT::IDProblem::Ptr id_prob_;
+     /** @brief Base estimation */
+    OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
     /** @brief Real time publisher - desired joint states */
     realtime_tools::RealtimePublisher<sensor_msgs::JointState>* ci_joint_states_rt_pub_;
     /** @brief Real time publisher - estimated pose */

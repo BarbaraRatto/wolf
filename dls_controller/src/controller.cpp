@@ -229,6 +229,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Those are associated to the SRDF model
     // NOTE: do not confuse these with the contact_sensors
+    //FIXME hardcoded names...
     feet_names_.resize(4);
     feet_names_[0] = "lf_foot";
     feet_names_[1] = "rf_foot";
@@ -249,12 +250,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         task_poses_[feet_names_[i]].second = desired_task_poses_[feet_names_[i]].second = Eigen::Vector6d::Zero();
         base_frames_[feet_names_[i]] = "world";
     }
-
-    //desired_task_poses_.initRT(task_poses_);
-
-    //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,feet_names_));
-    //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,feet_names_,false));
-    //id_prob_ = boost::make_shared<OpenSoT::IDProblem>(std::shared_ptr<XBot::ModelInterface>(xbot_model_, dt, feet_names_));
 
     // Resize the variables
     joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
@@ -340,7 +335,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
+
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
+
+    Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
+    contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
+
+    qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
 
     return true;
 }
@@ -600,12 +601,13 @@ void Controller::stateEstimation()
     floating_base_orientation_.z() = state_estimators_[selected_se].getOrientation()[3];
 
     floating_base_velocity_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearVelocity());
-    floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
-
     floating_base_velocity_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularVelocity());
+
+    floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
     floating_base_accelleration_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularAcceleration());
 
-    floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
+    //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
+    floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
     floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 
@@ -617,6 +619,25 @@ void Controller::updateXBotModel()
     xbot_model_->setJointVelocity(joint_velocities_);
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
+
+    for(unsigned int i=0;i<feet_names_.size();i++)
+    {
+        if(gait_generator_->getContact(feet_names_[i]))
+            std::cout << feet_names_[i] << std::endl;
+        qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
+    }
+    //getchar();
+
+    qp_estimation_->update(0.001,false);
+
+    std::cout << "***********" << std::endl;
+    Eigen::VectorXd qdot;
+    qp_estimation_->getFloatingBaseTwist(qdot);
+    std::cout << "stima" << std::endl;
+    std::cout << qdot.transpose() << std::endl;
+    std::cout << "gazebo" << std::endl;
+    std::cout << floating_base_velocity_.transpose() << std::endl;
+
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
     if(id_prob_)
@@ -773,7 +794,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 #ifdef HAPTIC_CLOSED_LOOP
                 gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
 #endif
-
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],0, cmds_->getStepLength(feet_names_[i]));
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],1, cmds_->getStepHeading(feet_names_[i]));
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],2, cmds_->getStepHeight(feet_names_[i]));
@@ -877,7 +897,6 @@ void Controller::setRelativeTasks()
                 setInitialPose("base_link",feet_names_[i]);
             }
         }
-
     // Set the base frame of the feet in stance w.r.t the foot in touchDown.
     // Set the base frame of the foot in touchDown w.r.t the base_link.
     for(unsigned int i=0; i<feet_names_.size(); i++)
