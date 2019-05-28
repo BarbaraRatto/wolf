@@ -234,6 +234,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_links_[1] = "rf_foot";
     contact_links_[2] = "lh_foot";
     contact_links_[3] = "rh_foot";
+    hips_.resize(4);
+    hips_[0] = "lf_hipassembly";
+    hips_[1] = "rf_hipassembly";
+    hips_[2] = "lh_hipassembly";
+    hips_[3] = "rh_hipassembly";
 
     task_poses_["waist"].first = desired_task_poses_["waist"].first = Eigen::Affine3d::Identity();
     task_poses_["waist"].second = desired_task_poses_["waist"].second = Eigen::Vector6d::Zero();
@@ -327,7 +332,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_.reset(new GaitGenerator(0.8,contact_links_,"crawl","ellipse"));
+    gait_generator_.reset(new GaitGenerator(0.8,contact_links_,hips_,"crawl","ellipse"));
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
@@ -629,7 +634,6 @@ void Controller::updateXBotModel()
             id_prob_->_feet[contact_links_[i]]->getActualPose(task_poses_[contact_links_[i]].first);
             id_prob_->_feet[contact_links_[i]]->getActualTwist(task_poses_[contact_links_[i]].second);
             id_prob_->_feet[contact_links_[i]]->getReference(desired_task_poses_[contact_links_[i]].first,desired_task_poses_[contact_links_[i]].second);
-
             base_frames_[contact_links_[i]] = id_prob_->_feet[contact_links_[i]]->getBaseLink();
         }
     }
@@ -758,7 +762,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             // Set the task reference for the waist
             Eigen::Affine3d world_T_base; //FIXME NO-RT
-            //xbot_model_->getPose("base_link",world_T_base);
             id_prob_->_waist->getReference(world_T_base);
             world_T_base.linear() = cmds_->getBaseRotationReference();
             world_T_base.translation().z() = cmds_->getBaseHeight();

@@ -535,10 +535,12 @@ public:
      */
     typedef std::shared_ptr<const GaitGenerator> ConstPtr;
 
-    GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::string& gait_type, const std::string& trajectory_type)
+    GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::vector<std::string>& hips_names, const std::string& gait_type, const std::string& trajectory_type)
     {
         assert(feet_names.size()==4);// We assume we are working with a dog
+        assert(hips_names.size()==4);
         feet_names_ = feet_names;
+        hips_names_ = hips_names;
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
             feet_[feet_names[i]].state_machine = FootStateMachine(duty_cycle);
@@ -685,6 +687,11 @@ public:
     const std::vector<std::string>& getFeetNames()
     {
         return feet_names_;
+    }
+
+    const std::vector<std::string>& getHipsNames()
+    {
+        return hips_names_;
     }
 
     const std::string& getGaitType()
@@ -869,6 +876,7 @@ private:
     std::atomic<bool> activate_swing_;
 
     std::vector<std::string> feet_names_;
+    std::vector<std::string> hips_names_;
 
     std::string gait_type_;
 
@@ -913,13 +921,6 @@ public:
         base_position_ = base_orientation_ = Eigen::Vector3d::Zero();
 
         cmd_ = cmd_t::HOLD;
-
-        // FIXME hardcoded names
-        hips_.resize(4);
-        hips_[0] = "lf_hipassembly";
-        hips_[1] = "rf_hipassembly";
-        hips_[2] = "lh_hipassembly";
-        hips_[3] = "rh_hipassembly";
 
         base_X_hip_foot_offsets_.resize(4);
         hf_X_base_hip_offsets_.resize(4);
@@ -1010,6 +1011,7 @@ public:
     void calculateFeetStep()
     {
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+        const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
         for(unsigned int i=0; i<feet_names.size(); i++)
         {
             if(gait_generator_->isSwinging(feet_names[i]))
@@ -1018,8 +1020,8 @@ public:
                 ROS_DEBUG_STREAM("Swinging foot "<<feet_names[i]);
 
                 xbot_model_->getPose(feet_names[i],world_T_foot_);
-                xbot_model_->getPose(hips_[i],world_T_hip_);
-                xbot_model_->getPose(hips_[i],"base_link",base_T_hip_);
+                xbot_model_->getPose(hips_names[i],world_T_hip_);
+                xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
 
                 hf_delta_hip_.setZero();
                 hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
@@ -1040,7 +1042,6 @@ public:
                 ROS_DEBUG_STREAM("world_delta_hip_: "<<world_delta_hip_.transpose());
 
                 world_X_hip_ = world_R_hf_ * hf_X_base_hip_offsets_[i] + world_T_base_.translation();
-                //Eigen::Vector3d world_X_hip_foot = world_T_foot_.translation()- world_T_hip_.translation();
 
                 ROS_DEBUG_STREAM("world_X_hip_: "<<world_X_hip_.transpose());
 
@@ -1198,10 +1199,11 @@ public:
     {
         if(!offset_applied_)
         {
-            for(unsigned int i=0; i<hips_.size(); i++)
+            const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
+            for(unsigned int i=0; i<hips_names.size(); i++)
             {
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
-                xbot_model_->getPose(hips_[i],"base_link",base_T_hip_);
+                xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
                 base_X_hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
                 hf_X_base_hip_offsets_[i] = base_T_hip_.translation();
             }
@@ -1288,7 +1290,6 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
 
     Eigen::Affine3d world_T_foot_, world_T_hip_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
-    std::vector<std::string> hips_;
     std::vector<Eigen::Vector3d> base_X_hip_foot_offsets_;
     std::vector<Eigen::Vector3d> hf_X_base_hip_offsets_;
 
