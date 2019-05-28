@@ -670,15 +670,14 @@ void Controller::starting(const ros::Time& time)
 
 void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
 {
-    Eigen::Affine3d tmp; //FIXME NO-RT
     if(id_prob_)
     {
         if(id_prob_->_feet[contact_name]->setBaseLink(base_frame))
         {
             id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
-            id_prob_->_feet[contact_name]->getActualPose(tmp);
+            id_prob_->_feet[contact_name]->getActualPose(tmp_affine3d_);
             if(gait_generator_)
-                gait_generator_->setInitialPose(contact_name,tmp);
+                gait_generator_->setInitialPose(contact_name,tmp_affine3d_);
         }
         else
             ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
@@ -701,14 +700,13 @@ void Controller::setInitialPose(const std::string& base_frame)
 
 void Controller::setInitialPose()
 {
-    Eigen::Affine3d tmp; //FIXME NO-RT
     if(id_prob_)
     {
         for(unsigned int i = 0;i<feet_names_.size(); i++)
         {
-            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp);
+            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp_affine3d_);
             if(gait_generator_)
-                gait_generator_->setInitialPose(feet_names_[i],tmp);
+                gait_generator_->setInitialPose(feet_names_[i],tmp_affine3d_);
         }
     }
 }
@@ -761,11 +759,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             gait_generator_->activateSwing();
 
             // Set the task reference for the waist
-            Eigen::Affine3d world_T_base; //FIXME NO-RT
-            id_prob_->_waist->getReference(world_T_base);
-            world_T_base.linear() = cmds_->getBaseRotationReference();
-            world_T_base.translation().z() = cmds_->getBaseHeight();
-            id_prob_->_waist->setReference(world_T_base);
+            id_prob_->_waist->getReference(tmp_affine3d_);
+            tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
+            tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
+            id_prob_->_waist->setReference(tmp_affine3d_);
 
             // Give to the gait_generator the contact status of the feet and the steps length
             for(unsigned int i = 0; i<feet_names_.size(); i++)
@@ -773,7 +770,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 #ifdef HAPTIC_CLOSED_LOOP
                 gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
 #endif
-
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],0, cmds_->getStepLength(feet_names_[i]));
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],1, cmds_->getStepHeading(feet_names_[i]));
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],2, cmds_->getStepHeight(feet_names_[i]));
