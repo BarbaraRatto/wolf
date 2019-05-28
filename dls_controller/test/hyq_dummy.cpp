@@ -12,12 +12,10 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     HyqDummy robot;
-    std::string joints_param_name = "dls_controller/joints";
+    std::string ns = ros::this_node::getNamespace();
+    std::string joints_param_name = ns+"/dls_controller/joints";
     std::vector<std::string> joint_names;
 
-    // Get joint names from the parameter server, using the controller config file
-    //using namespace XmlRpc;
-    //XmlRpcValue joint_names;
     if (!nh.getParam(joints_param_name, joint_names))
     {
         ROS_ERROR_STREAM_NAMED("hyq_dummy","No joints given (expected namespace: /" + joints_param_name + ").");
@@ -50,13 +48,13 @@ int main(int argc, char **argv)
 
     while(ros::ok())
     {
-        ROS_INFO_STREAM("Running...");
+        ROS_DEBUG_STREAM("Running...");
         robot.read();
-        ROS_INFO_STREAM("Read complete...");
+        ROS_DEBUG_STREAM("Read complete...");
         cm.update(robot.getTime(), robot.getPeriod());
-        ROS_INFO_STREAM("Controller Manager update complete...");
+        ROS_DEBUG_STREAM("Controller Manager update complete...");
         robot.write();
-        ROS_INFO_STREAM("Write complete...");
+        ROS_DEBUG_STREAM("Write complete...");
         rate.sleep();
     }
     spinner.stop();

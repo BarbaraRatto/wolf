@@ -1,8 +1,0 @@
-<launch>
-    <arg name="robot_name" default="hyqreal"/>
-
-    <!-- Load the robot description -->
-    <include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
-    </include>
-
-</launch>
