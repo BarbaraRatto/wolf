@@ -228,7 +228,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->setJointPosition(qhome_);
 
     // Those are associated to the SRDF model
-    // FIXME, modify IDProblem to contain a map
     // NOTE: do not confuse these with the contact_sensors
     contact_links_.resize(4);
     contact_links_[0] = "lf_foot";
@@ -288,7 +287,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ci_joint_states_rt_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     ci_joint_states_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     ci_joint_states_rt_pub_->msg_.effort.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.name[0] = "x"; //FIXME
+    ci_joint_states_rt_pub_->msg_.name[0] = "x";
     ci_joint_states_rt_pub_->msg_.name[1] = "y";
     ci_joint_states_rt_pub_->msg_.name[2] = "z";
     ci_joint_states_rt_pub_->msg_.name[3] = "r";
@@ -605,12 +604,7 @@ void Controller::stateEstimation()
     floating_base_pose_.translation() = floating_base_position_;
     floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 
-    Eigen::Vector3d ypr; // FIXME
-    ypr = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(2, 1, 0);
-    // Re-order
-    floating_base_orientation_rpy_(0) = ypr(2);
-    floating_base_orientation_rpy_(1) = ypr(1);
-    floating_base_orientation_rpy_(2) = ypr(0);
+    floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
 }
 
 void Controller::updateXBotModel()
