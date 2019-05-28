@@ -891,14 +891,18 @@ public:
 
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
-    CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
+    CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3)
     {
-        // FIXME:
-        // Add max safety height and length
+
         assert(gait_generator);
         gait_generator_ = gait_generator;
         assert(xbot_model);
         xbot_model_ = xbot_model;
+        assert(step_length_max>=0.0);
+        step_length_max_ = step_length_max;
+        assert(step_height_max>=0.0);
+        step_height_max_ = step_height_max;
+
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
         for(unsigned int i=0;i<feet_names.size();i++)
         {
@@ -1060,16 +1064,31 @@ public:
 
                 ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
-                steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
-                steps_heading_[feet_names[i]]  = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
-                steps_height_[feet_names[i]]   = 0.05; // FIXME
+                double step_length = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                double step_height = 0.05; // FIXME
+
+                if(step_length > step_length_max_)
+                {
+                    step_length = step_length_max_;
+                    ROS_WARN_STREAM("Step length is greater than: "<<step_length_max_);
+                }
+
+                if(step_height > step_height_max_)
+                {
+                    step_height = step_height_max_;
+                    ROS_WARN_STREAM("Step height is greater than: "<<step_height_max_);
+                }
+
+                steps_length_[feet_names[i]]         = step_length;
+                steps_heading_[feet_names[i]]        = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
+                steps_height_[feet_names[i]]         = step_height;
                 steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
             }
             else
             {
-                steps_length_[feet_names[i]]   = 0.0;
-                steps_heading_[feet_names[i]] = 0.0;
-                steps_height_[feet_names[i]]   = 0.0;
+                steps_length_[feet_names[i]]         = 0.0;
+                steps_heading_[feet_names[i]]        = 0.0;
+                steps_height_[feet_names[i]]         = 0.0;
                 steps_heading_rate_[feet_names[i]]   = 0.0;
             }
 
@@ -1295,6 +1314,8 @@ private:
     std::vector<Eigen::Vector3d> hf_X_base_hip_offsets_;
 
     double yaw_base_;
+    double step_height_max_;
+    double step_length_max_;
 };
 
 } // namespace
