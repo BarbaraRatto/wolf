@@ -45,7 +45,7 @@ public:
     virtual ~RealTimePublisherInterface(){}
 
     /** Publish the topic. */
-    inline virtual void publish(const ros::Time& time) = 0;
+    virtual void publish(const ros::Time& time) = 0;
 
     inline std::string getTopic(){return topic_name_;}
 
