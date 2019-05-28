@@ -266,9 +266,9 @@ private:
     /** @brief GRF contact forces */
     std::vector<Eigen::Vector3d> contact_forces_;
     /** @brief Feet names */
-    std::vector<std::string> contact_links_;
+    std::vector<std::string> feet_names_;
     /** @brief Hips names */
-    std::vector<std::string> hips_;
+    std::vector<std::string> hips_names_;
     /** @brief Thread for the odometry publisher */
     std::shared_ptr<std::thread> odom_publisher_thread_;
     /** @brief Thread for the rviz publisher */

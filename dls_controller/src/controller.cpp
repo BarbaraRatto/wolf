@@ -229,32 +229,32 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Those are associated to the SRDF model
     // NOTE: do not confuse these with the contact_sensors
-    contact_links_.resize(4);
-    contact_links_[0] = "lf_foot";
-    contact_links_[1] = "rf_foot";
-    contact_links_[2] = "lh_foot";
-    contact_links_[3] = "rh_foot";
-    hips_.resize(4);
-    hips_[0] = "lf_hipassembly";
-    hips_[1] = "rf_hipassembly";
-    hips_[2] = "lh_hipassembly";
-    hips_[3] = "rh_hipassembly";
+    feet_names_.resize(4);
+    feet_names_[0] = "lf_foot";
+    feet_names_[1] = "rf_foot";
+    feet_names_[2] = "lh_foot";
+    feet_names_[3] = "rh_foot";
+    hips_names_.resize(4);
+    hips_names_[0] = "lf_hipassembly";
+    hips_names_[1] = "rf_hipassembly";
+    hips_names_[2] = "lh_hipassembly";
+    hips_names_[3] = "rh_hipassembly";
 
     task_poses_["waist"].first = desired_task_poses_["waist"].first = Eigen::Affine3d::Identity();
     task_poses_["waist"].second = desired_task_poses_["waist"].second = Eigen::Vector6d::Zero();
     base_frames_["waist"] = "world";
-    for(unsigned int i=0;i<contact_links_.size();i++)
+    for(unsigned int i=0;i<feet_names_.size();i++)
     {
-        task_poses_[contact_links_[i]].first = desired_task_poses_[contact_links_[i]].first = Eigen::Affine3d::Identity();
-        task_poses_[contact_links_[i]].second = desired_task_poses_[contact_links_[i]].second = Eigen::Vector6d::Zero();
-        base_frames_[contact_links_[i]] = "world";
+        task_poses_[feet_names_[i]].first = desired_task_poses_[feet_names_[i]].first = Eigen::Affine3d::Identity();
+        task_poses_[feet_names_[i]].second = desired_task_poses_[feet_names_[i]].second = Eigen::Vector6d::Zero();
+        base_frames_[feet_names_[i]] = "world";
     }
 
     //desired_task_poses_.initRT(task_poses_);
 
-    //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,contact_links_));
-    //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,contact_links_,false));
-    //id_prob_ = boost::make_shared<OpenSoT::IDProblem>(std::shared_ptr<XBot::ModelInterface>(xbot_model_, dt, contact_links_));
+    //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,feet_names_));
+    //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,feet_names_,false));
+    //id_prob_ = boost::make_shared<OpenSoT::IDProblem>(std::shared_ptr<XBot::ModelInterface>(xbot_model_, dt, feet_names_));
 
     // Resize the variables
     joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
@@ -323,8 +323,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Reference for the tasks
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
 
-    for(unsigned int i=0;i<contact_links_.size();i++)
-        visual_tools_[contact_links_[i]].reset(new rviz_visual_tools::RvizVisualTools("ci/world_odom",contact_links_[i]+"_rviz_visual_marker"));
+    for(unsigned int i=0;i<feet_names_.size();i++)
+        visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("ci/world_odom",feet_names_[i]+"_rviz_visual_marker"));
 
     solver_reset_done_ = false;
 
@@ -332,7 +332,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_.reset(new GaitGenerator(0.8,contact_links_,hips_,"crawl","ellipse"));
+    gait_generator_.reset(new GaitGenerator(0.8,feet_names_,hips_names_,"crawl","ellipse"));
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
@@ -360,8 +360,8 @@ void Controller::dynamicReconfigureUpdate()
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
-        default_config_.swing_frequency = gait_generator_->getSwingFrequency(contact_links_[0]); // HACK
-        default_config_.duty_cycle = gait_generator_->getDutyCycle(contact_links_[0]); // HACK
+        default_config_.swing_frequency = gait_generator_->getSwingFrequency(feet_names_[0]); // HACK
+        default_config_.duty_cycle = gait_generator_->getDutyCycle(feet_names_[0]); // HACK
     }
     if(cmds_)
     {
@@ -415,8 +415,8 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
 bool Controller::setSwingFrequency(const double& swing_frequency)
 {
     if(gait_generator_)
-        for(unsigned int i=0; i < contact_links_.size(); i++)
-            gait_generator_->setSwingFrequency(contact_links_[i],swing_frequency);
+        for(unsigned int i=0; i < feet_names_.size(); i++)
+            gait_generator_->setSwingFrequency(feet_names_[i],swing_frequency);
     else
     {
         ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
@@ -428,8 +428,8 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
 bool Controller::setTrajectoryAmplitude(const unsigned int& id_xyz, const double& amp)
 {
     if(gait_generator_)
-        for(unsigned int i=0; i < contact_links_.size(); i++)
-            gait_generator_->setTrajectoryAmplitude(contact_links_[i],id_xyz,amp);
+        for(unsigned int i=0; i < feet_names_.size(); i++)
+            gait_generator_->setTrajectoryAmplitude(feet_names_[i],id_xyz,amp);
     else
     {
         ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
@@ -629,12 +629,12 @@ void Controller::updateXBotModel()
         id_prob_->_waist->getActualPose(task_poses_["waist"].first);
         id_prob_->_waist->getReference(desired_task_poses_["waist"].first);
         base_frames_["waist"] = id_prob_->_waist->getBaseLink();
-        for(unsigned int i=0; i<contact_links_.size(); i++)
+        for(unsigned int i=0; i<feet_names_.size(); i++)
         {
-            id_prob_->_feet[contact_links_[i]]->getActualPose(task_poses_[contact_links_[i]].first);
-            id_prob_->_feet[contact_links_[i]]->getActualTwist(task_poses_[contact_links_[i]].second);
-            id_prob_->_feet[contact_links_[i]]->getReference(desired_task_poses_[contact_links_[i]].first,desired_task_poses_[contact_links_[i]].second);
-            base_frames_[contact_links_[i]] = id_prob_->_feet[contact_links_[i]]->getBaseLink();
+            id_prob_->_feet[feet_names_[i]]->getActualPose(task_poses_[feet_names_[i]].first);
+            id_prob_->_feet[feet_names_[i]]->getActualTwist(task_poses_[feet_names_[i]].second);
+            id_prob_->_feet[feet_names_[i]]->getReference(desired_task_poses_[feet_names_[i]].first,desired_task_poses_[feet_names_[i]].second);
+            base_frames_[feet_names_[i]] = id_prob_->_feet[feet_names_[i]]->getBaseLink();
         }
     }
 }
@@ -687,11 +687,11 @@ void Controller::setInitialPose(const std::string& base_frame, const std::string
 
 void Controller::setInitialPose(const std::string& base_frame)
 {
-    for(unsigned int i = 0;i<contact_links_.size(); i++)
+    for(unsigned int i = 0;i<feet_names_.size(); i++)
     {
-        if(id_prob_->_feet[contact_links_[i]]->setBaseLink(base_frame))
+        if(id_prob_->_feet[feet_names_[i]]->setBaseLink(base_frame))
         {
-            id_prob_->_feet[contact_links_[i]]->update(Eigen::VectorXd(1));
+            id_prob_->_feet[feet_names_[i]]->update(Eigen::VectorXd(1));
         }
         else
             ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
@@ -704,11 +704,11 @@ void Controller::setInitialPose()
     Eigen::Affine3d tmp; //FIXME NO-RT
     if(id_prob_)
     {
-        for(unsigned int i = 0;i<contact_links_.size(); i++)
+        for(unsigned int i = 0;i<feet_names_.size(); i++)
         {
-            id_prob_->_feet[contact_links_[i]]->getActualPose(tmp);
+            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp);
             if(gait_generator_)
-                gait_generator_->setInitialPose(contact_links_[i],tmp);
+                gait_generator_->setInitialPose(feet_names_[i],tmp);
         }
     }
 }
@@ -742,7 +742,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(!solver_reset_done_)
         {
             ROS_INFO("Reset the solver");
-            id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),contact_links_)); // FIXME NO-RT
+            id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),feet_names_)); // FIXME NO-RT
             solver_reset_done_ = true;
 
             // Set the initial feet poses
@@ -768,34 +768,34 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->_waist->setReference(world_T_base);
 
             // Give to the gait_generator the contact status of the feet and the steps length
-            for(unsigned int i = 0; i<contact_links_.size(); i++)
+            for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
-                gait_generator_->setContact(contact_links_[i],contacts_[i]);
+                gait_generator_->setContact(feet_names_[i],contacts_[i]);
 
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],0, cmds_->getStepLength(contact_links_[i]));
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],1, cmds_->getStepHeading(contact_links_[i]));
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],2, cmds_->getStepHeight(contact_links_[i]));
-                gait_generator_->setTrajectoryAmplitude(contact_links_[i],3, cmds_->getStepHeadingRate(contact_links_[i]));
+                gait_generator_->setTrajectoryAmplitude(feet_names_[i],0, cmds_->getStepLength(feet_names_[i]));
+                gait_generator_->setTrajectoryAmplitude(feet_names_[i],1, cmds_->getStepHeading(feet_names_[i]));
+                gait_generator_->setTrajectoryAmplitude(feet_names_[i],2, cmds_->getStepHeight(feet_names_[i]));
+                gait_generator_->setTrajectoryAmplitude(feet_names_[i],3, cmds_->getStepHeadingRate(feet_names_[i]));
             }
 
             // Update the gait_generator
             gait_generator_->update(period.toSec());
 
-            for(unsigned int i = 0; i<contact_links_.size(); i++)
+            for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
 
-                id_prob_->_feet[contact_links_[i]]->setReference(Eigen::Affine3d::Identity(),gait_generator_->getReferenceDot(contact_links_[i]));
+                id_prob_->_feet[feet_names_[i]]->setReference(Eigen::Affine3d::Identity(),gait_generator_->getReferenceDot(feet_names_[i]));
 
                 // Set the wrench limits to enstablish the contacts
-                if(gait_generator_->isSwinging(contact_links_[i]))
+                if(gait_generator_->isSwinging(feet_names_[i]))
                 {
-                    id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(true);
-                    ROS_DEBUG_STREAM("Swinging: "<< contact_links_[i]);
+                    id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
+                    ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
                 }
                 else
                 {
-                    id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
-                    ROS_DEBUG_STREAM("Stance: "<< contact_links_[i]);
+                    id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
+                    ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
                 }
 
             }
@@ -806,8 +806,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             gait_generator_->deactivateSwing();
 
             // Force the contact to each foot
-            for(unsigned int i = 0; i<contact_links_.size(); i++)
-                id_prob_->_wrenches_lims->getWrenchLimits(contact_links_[i])->releaseContact(false);
+            for(unsigned int i = 0; i<feet_names_.size(); i++)
+                id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
         }
 
         // Solver Update
@@ -866,35 +866,35 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
 void Controller::setRelativeTasks()
 {
-    for(unsigned int i=0; i<contact_links_.size(); i++)
-        if(gait_generator_->isSwinging(contact_links_[i]))
+    for(unsigned int i=0; i<feet_names_.size(); i++)
+        if(gait_generator_->isSwinging(feet_names_[i]))
             // Set the base frame of the swinging feet w.r.t the base_link.
         {
-            if(gait_generator_->isLiftOff(contact_links_[i]))
+            if(gait_generator_->isLiftOff(feet_names_[i]))
             {
-                setInitialPose("base_link",contact_links_[i]);
+                setInitialPose("base_link",feet_names_[i]);
             }
         }
 
     // Set the base frame of the feet in stance w.r.t the foot in touchDown.
     // Set the base frame of the foot in touchDown w.r.t the base_link.
-    for(unsigned int i=0; i<contact_links_.size(); i++)
-        if(gait_generator_->isTouchDown(contact_links_[i]))
+    for(unsigned int i=0; i<feet_names_.size(); i++)
+        if(gait_generator_->isTouchDown(feet_names_[i]))
         {
-            for(unsigned int j = 0; j<contact_links_.size(); j++)
+            for(unsigned int j = 0; j<feet_names_.size(); j++)
             {
                 if(j!=i)
                 {
-                    if(gait_generator_->isInStanceOrInit(contact_links_[j]))// Another foot is in stance
+                    if(gait_generator_->isInStanceOrInit(feet_names_[j]))// Another foot is in stance
                     {
-                        setInitialPose(contact_links_[i],contact_links_[j]);
-                        ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to " << contact_links_[i]);
+                        setInitialPose(feet_names_[i],feet_names_[j]);
+                        ROS_INFO_STREAM("Set "<< feet_names_[j] << " to respect to " << feet_names_[i]);
                     }
                 }
                 else
                 {
-                    setInitialPose("base_link",contact_links_[j]);
-                    ROS_INFO_STREAM("Set "<< contact_links_[j] << " to respect to base_link");
+                    setInitialPose("base_link",feet_names_[j]);
+                    ROS_INFO_STREAM("Set "<< feet_names_[j] << " to respect to base_link");
                 }
             }
         }
@@ -902,9 +902,9 @@ void Controller::setRelativeTasks()
 
 void Controller::setWorldTasks()
 {
-    for(unsigned int i=0; i<contact_links_.size(); i++)
-        if(gait_generator_->isTouchDown(contact_links_[i]))
-            setInitialPose("world",contact_links_[i]);
+    for(unsigned int i=0; i<feet_names_.size(); i++)
+        if(gait_generator_->isTouchDown(feet_names_[i]))
+            setInitialPose("world",feet_names_[i]);
 }
 
 
@@ -923,14 +923,14 @@ void Controller::rvizPublisher()
     {
         if(id_prob_ && visual_tools_.size()>0)
         {
-            for(unsigned int i=0; i<contact_links_.size();i++)
+            for(unsigned int i=0; i<feet_names_.size();i++)
             {
-                if(gait_generator_->isSwinging(contact_links_[i]))
+                if(gait_generator_->isSwinging(feet_names_[i]))
                 {
-                    gait_generator_->getTrajectoryPreview(contact_links_[i],poses);
-                    //visual_tools_->setBaseFrame(id_prob_->_feet[contact_links_[i]]->getBaseLink());
+                    gait_generator_->getTrajectoryPreview(feet_names_[i],poses);
+                    //visual_tools_->setBaseFrame(id_prob_->_feet[feet_names_[i]]->getBaseLink());
 
-                    //gait_generator_->getTrajectoryPtr(contact_links_[i])->preview(poses);
+                    //gait_generator_->getTrajectoryPtr(feet_names_[i])->preview(poses);
                     for(unsigned int j=0; j<n_points; j++)
                     {
                         path[j].position.x = poses[j].translation().x();
@@ -938,17 +938,17 @@ void Controller::rvizPublisher()
                         path[j].position.z = poses[j].translation().z();
                         //colors[j] = rviz_visual_tools::RED;
                     }
-                    visual_tools_[contact_links_[i]]->publishPath(path);
+                    visual_tools_[feet_names_[i]]->publishPath(path);
 
                 }
                 else
                 {
-                    visual_tools_[contact_links_[i]]->deleteAllMarkers();
+                    visual_tools_[feet_names_[i]]->deleteAllMarkers();
                 }
 
-                //visual_tools_[contact_links_[i]]->publishArrow(arrow_start,arrow_end);
+                //visual_tools_[feet_names_[i]]->publishArrow(arrow_start,arrow_end);
 
-                visual_tools_[contact_links_[i]]->trigger();
+                visual_tools_[feet_names_[i]]->trigger();
             }
 
 
