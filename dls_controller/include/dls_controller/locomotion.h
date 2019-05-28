@@ -188,33 +188,52 @@ class Gait
 public:
     Gait(const std::vector<std::string>& feet_names, const std::string& gait_type)
     {
-        //ROS_INFO_STREAM("Selected " << gait_type << " gait");
+        ROS_INFO_STREAM("Selected " << gait_type << " gait");
+
+        assert(feet_names.size() == 4);
+
+        // Reorder the feet names
+        std::string lf="lf";
+        std::string rh="rh";
+        std::string rf="rf";
+        std::string lh="lh";
+        std::vector<std::string> ordered_feet_names(4);
+        for(unsigned int i=0;i<feet_names.size();i++)
+        {
+            if(feet_names[i].find(lf) != std::string::npos)
+                ordered_feet_names[0] = feet_names[i]; //LF
+            if(feet_names[i].find(rh) != std::string::npos)
+                ordered_feet_names[1] = feet_names[i]; //RH
+            if(feet_names[i].find(rf) != std::string::npos)
+                ordered_feet_names[2] = feet_names[i]; //RF
+            if(feet_names[i].find(lh) != std::string::npos)
+                ordered_feet_names[3] = feet_names[i]; //LH
+        }
 
         if(std::strcmp(gait_type.c_str(),"trot")==0)
         {
-            schedule_.push_back(foot_priority_t("lf_foot",0));
-            schedule_.push_back(foot_priority_t("rh_foot",0));
-
-            schedule_.push_back(foot_priority_t("rf_foot",1));
-            schedule_.push_back(foot_priority_t("lh_foot",1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[1],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[2],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[3],1));
             next_feet_to_move_.resize(2);
             max_priority_ = 1;
         }
         else if(std::strcmp(gait_type.c_str(),"crawl")==0)
         {
-            schedule_.push_back(foot_priority_t("lf_foot",0));
-            schedule_.push_back(foot_priority_t("rh_foot",1));
-            schedule_.push_back(foot_priority_t("rf_foot",2));
-            schedule_.push_back(foot_priority_t("lh_foot",3));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[1],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[2],2));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[3],3));
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
         }
         else if(std::strcmp(gait_type.c_str(),"bound")==0)
         {
-            schedule_.push_back(foot_priority_t("lf_foot",0));
-            schedule_.push_back(foot_priority_t("rh_foot",1));
-            schedule_.push_back(foot_priority_t("rf_foot",0));
-            schedule_.push_back(foot_priority_t("lh_foot",1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[1],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[2],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[3],1));
             next_feet_to_move_.resize(2);
             max_priority_ = 1;
         }
@@ -545,8 +564,7 @@ public:
 
     void setGaitType(const std::string& gait_type)
     {
-        std::vector<std::string> feet_names; // FIXME NO-RT
-        gait_buffer_[next_gait_idx_].reset(new Gait(feet_names,gait_type));
+        gait_buffer_[next_gait_idx_].reset(new Gait(feet_names_,gait_type));
         change_gait_ = true;
         gait_type_ = gait_type;
     }
