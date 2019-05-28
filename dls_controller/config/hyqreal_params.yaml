@@ -33,9 +33,9 @@ dls_controller:
       rf_kfe_joint: {p: 700.0, i: 0.0, d: 20.0}
 
       lh_haa_joint: {p: 700.0, i: 0.0, d: 20.0}
-      lh_hfe_joint: {p: 700.0, i: 0.0, d: 20.0}
-      lh_kfe_joint: {p: 700.0, i: 0.0, d: 20.0}
+      lh_hfe_joint: {p: 1000.0, i: 0.0, d: 30.0}
+      lh_kfe_joint: {p: 1200.0, i: 0.0, d: 40.0}
 
       rh_haa_joint: {p: 700.0, i: 0.0, d: 20.0}
-      rh_hfe_joint: {p: 700.0, i: 0.0, d: 20.0}
-      rh_kfe_joint: {p: 700.0, i: 0.0, d: 20.0}
+      rh_hfe_joint: {p: 1000.0, i: 0.0, d: 30.0}
+      rh_kfe_joint: {p: 1200.0, i: 0.0, d: 40.0}
