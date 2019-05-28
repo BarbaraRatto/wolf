@@ -861,7 +861,7 @@ class CommandsInterface
 
 public:
 
-    enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY};
+    enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
 
     CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
@@ -952,19 +952,19 @@ public:
         {
 
         case cmd_t::HOLD:
-            hf_base_angular_velocity_.fill(0.0);
-            hf_base_linear_velocity_.fill(0.0);
+            resetBaseVelocities();
+            resetFeetStep();
             break;
 
         case cmd_t::LINEAR:
             calculateBasePosition(period,base_position);
-            hf_base_angular_velocity_.fill(0.0);
+            resetBaseAngularVelocity();
             calculateFeetStep();
             break;
 
         case cmd_t::ANGULAR:
             calculateBaseOrientation(period,base_orientation);
-            hf_base_linear_velocity_.fill(0.0);
+            resetBaseLinearVelocity();
             calculateFeetStep();
             break;
 
@@ -977,6 +977,13 @@ public:
         case cmd_t::BASE_ONLY:
             calculateBasePosition(period,base_position);
             calculateBaseOrientation(period,base_orientation);
+            resetFeetStep();
+            break;
+
+        case cmd_t::RESET_BASE:
+            resetBaseVelocities();
+            calculateBasePosition(period,default_base_position_);
+            calculateBaseOrientation(period,default_base_orientation_);
             resetFeetStep();
             break;
         };
@@ -1071,6 +1078,22 @@ public:
         }
     }
 
+    void resetBaseAngularVelocity()
+    {
+        hf_base_angular_velocity_.setZero();
+    }
+
+    void resetBaseLinearVelocity()
+    {
+        hf_base_linear_velocity_.setZero();
+    }
+
+    void resetBaseVelocities()
+    {
+        resetBaseAngularVelocity();
+        resetBaseLinearVelocity();
+    }
+
     void calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
     {
         base_position_ = base_position;
@@ -1093,12 +1116,14 @@ public:
         hf_base_angular_velocity_(1) = base_angular_velocity_max_ * base_angular_velocity_scale_pitch_;
         hf_base_angular_velocity_(2) = base_angular_velocity_max_ * base_angular_velocity_scale_yaw_;
 
-        base_orientation_ = world_R_hf_ * hf_base_angular_velocity_ * period + base_orientation_;
+        base_orientation_ = hf_base_angular_velocity_ * period + base_orientation_;
 
         // This rotation is computed w.r.t world
-        base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX())  // ROLL
-                                 * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())  // PITCH
-                                 * Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ()); // YAW
+        base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ())
+                                 * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())
+                                 * Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX());
+
+        base_rotation_reference_ = world_R_hf_.transpose() * base_rotation_reference_;
     }
 
     // Sets
@@ -1110,6 +1135,14 @@ public:
     void setBaseOrientation(const Eigen::Vector3d& orientation)
     {
         base_orientation_ = orientation;
+    }
+    void setDefaultBaseOrientation(const Eigen::Vector3d& orientation)
+    {
+        default_base_orientation_ = orientation;
+    }
+    void setDefaultBasePosition(const Eigen::Vector3d& position)
+    {
+        default_base_position_ = position;
     }
     void setBaseVelocityScaleX(const double scale)
     {
@@ -1207,6 +1240,8 @@ private:
 
     Eigen::Vector3d base_position_;
     Eigen::Vector3d base_orientation_;
+    Eigen::Vector3d default_base_orientation_;
+    Eigen::Vector3d default_base_position_;
 
     Eigen::Vector3d hf_delta_hip_;
     Eigen::Vector3d hf_delta_heding_;
