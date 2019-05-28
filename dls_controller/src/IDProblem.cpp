@@ -29,8 +29,8 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     }
     //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
-                                                                        "world", _id->getJointsAccelerationAffine());
-    _waist->setLambda(2000.);
+                                                                         "world", _id->getJointsAccelerationAffine());
+    _waist->setLambda(500.);
     _waist->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
@@ -39,6 +39,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     //   --------------------------
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
     _com->setLambda(0.);
+    _com->setWeightIsDiagonalFlag(true);
 
     //
     // Here we create the constraints & bounds
