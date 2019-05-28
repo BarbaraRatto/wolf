@@ -279,9 +279,10 @@ private:
     dls_controller::GaitGenerator::Ptr gait_generator_;
     /** @brief Visual tools */
     std::map<std::string,rviz_visual_tools::RvizVisualToolsPtr> visual_tools_;
-
-    std::shared_ptr<JoyHandler> joy_handler_;
-    std::shared_ptr<CommandsInterface> cmds_;
+    /** @brief Joy handler */
+    JoyHandler::Ptr joy_handler_;
+    /** @brief Command interface */
+    CommandsInterface::Ptr cmds_;
 
     /**
          * @brief thread body for the odometry publisher

@@ -11,6 +11,16 @@ class JoyHandler
 
 public:
 
+    /**
+     * @brief Shared pointer to JoyHandler
+     */
+    typedef std::shared_ptr<JoyHandler> Ptr;
+
+    /**
+     * @brief Shared pointer to const JoyHandler
+     */
+    typedef std::shared_ptr<const JoyHandler> ConstPtr;
+
     JoyHandler(ros::NodeHandle& node, std::shared_ptr<dls_controller::CommandsInterface> cmds)
     {
         joy_base_velocity_x_scale_     = 0.0;

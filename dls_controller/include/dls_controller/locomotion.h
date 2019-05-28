@@ -887,8 +887,17 @@ class CommandsInterface
 
 public:
 
-    enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
+    /**
+     * @brief Shared pointer to CommandsInterface
+     */
+    typedef std::shared_ptr<CommandsInterface> Ptr;
 
+    /**
+     * @brief Shared pointer to const CommandsInterface
+     */
+    typedef std::shared_ptr<const CommandsInterface> ConstPtr;
+
+    enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
     CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
     {
