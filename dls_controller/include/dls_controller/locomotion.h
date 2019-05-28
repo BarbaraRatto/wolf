@@ -935,6 +935,9 @@ public:
             hf_X_base_hip_offsets_[i].setZero();
         }
 
+        step_length_ = 0.0;
+        step_height_ = 0.0;
+
         offset_applied_ = false;
     }
 
@@ -1064,24 +1067,24 @@ public:
 
                 ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
-                double step_length = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
-                double step_height = 0.05; // FIXME
+                step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                step_height_ = 0.05; // FIXME
 
-                if(step_length > step_length_max_)
+                if(step_length_ > step_length_max_)
                 {
-                    step_length = step_length_max_;
+                    step_length_ = step_length_max_;
                     ROS_WARN_STREAM("Step length is greater than: "<<step_length_max_);
                 }
 
-                if(step_height > step_height_max_)
+                if(step_height_ > step_height_max_)
                 {
-                    step_height = step_height_max_;
+                    step_height_ = step_height_max_;
                     ROS_WARN_STREAM("Step height is greater than: "<<step_height_max_);
                 }
 
-                steps_length_[feet_names[i]]         = step_length;
+                steps_length_[feet_names[i]]         = step_length_;
                 steps_heading_[feet_names[i]]        = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
-                steps_height_[feet_names[i]]         = step_height;
+                steps_height_[feet_names[i]]         = step_height_;
                 steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
             }
             else
@@ -1316,6 +1319,8 @@ private:
     double yaw_base_;
     double step_height_max_;
     double step_length_max_;
+    double step_length_;
+    double step_height_;
 };
 
 } // namespace
