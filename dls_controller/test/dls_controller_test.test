@@ -1,5 +1,5 @@
 <launch>
-     <arg name="robot_name" default="hyqreal"/>
+     <arg name="robot_name" default="hyq"/>
 
      <!-- Load the robot stuff -->
      <include file="$(find dls_controller)/test/dls_controller_test.launch" />
