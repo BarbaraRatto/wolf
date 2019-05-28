@@ -751,7 +751,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             setInitialPose(); //w.r.t to the frame selected in IDProblem
 
             cmds_->setBasePosition(floating_base_position_);
+            cmds_->setDefaultBasePosition(floating_base_position_);
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
+            cmds_->setDefaultBaseOrientation(floating_base_orientation_rpy_);
 
             dynamicReconfigureUpdate();
         }
