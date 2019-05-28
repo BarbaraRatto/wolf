@@ -425,19 +425,6 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     return true;
 }
 
-bool Controller::setTrajectoryAmplitude(const unsigned int& id_xyz, const double& amp)
-{
-    if(gait_generator_)
-        for(unsigned int i=0; i < feet_names_.size(); i++)
-            gait_generator_->setTrajectoryAmplitude(feet_names_[i],id_xyz,amp);
-    else
-    {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
-        return false;
-    }
-    return true;
-}
-
 bool Controller::setGaitType(const std::string& gait_type)
 {
     try
@@ -770,10 +757,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 #ifdef HAPTIC_CLOSED_LOOP
                 gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
 #endif
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],0, cmds_->getStepLength(feet_names_[i]));
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],1, cmds_->getStepHeading(feet_names_[i]));
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],2, cmds_->getStepHeight(feet_names_[i]));
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],3, cmds_->getStepHeadingRate(feet_names_[i]));
+                gait_generator_->setStepLength(feet_names_[i],cmds_->getStepLength(feet_names_[i]));
+                gait_generator_->setStepHeading(feet_names_[i],cmds_->getStepHeading(feet_names_[i]));
+                gait_generator_->setStepHeight(feet_names_[i],cmds_->getStepHeight(feet_names_[i]));
+                gait_generator_->setStepHeadingRate(feet_names_[i],cmds_->getStepHeadingRate(feet_names_[i]));
             }
 
             // Update the gait_generator

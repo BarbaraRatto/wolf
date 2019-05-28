@@ -704,61 +704,48 @@ public:
         return gait_type_;
     }
 
-    void setTrajectoryAmplitude(const double& length, const double& height, const double& heading = 0.0, const double& heading_rate = 0.0)
+    void setStepLength(const double& length)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-        {
             it->second.trajectory->setStepLength(length);
+    }
+
+    void setStepHeading(const double& heading)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
             it->second.trajectory->setStepHeading(heading);
+    }
+
+    void setStepHeight(const double& height)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
             it->second.trajectory->setStepHeight(height);
+    }
+
+    void setStepHeadingRate(const double& heading_rate)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
             it->second.trajectory->setStepHeadingRate(heading_rate);
-        }
     }
 
-    void setTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id, const double& amp)
+    void setStepLength(const std::string& foot_name, const double& length)
     {
-        switch(id)
-        {
-        case 0:
-            feet_[foot_name].trajectory->setStepLength(amp);
-            break;
-        case 1:
-            feet_[foot_name].trajectory->setStepHeading(amp);
-            break;
-        case 2:
-            feet_[foot_name].trajectory->setStepHeight(amp);
-            break;
-        case 3:
-            feet_[foot_name].trajectory->setStepHeadingRate(amp);
-            break;
-        default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are Length=0,Heading=1,Height=2,Heading Rate=3");
-            break;
-        };
+        feet_[foot_name].trajectory->setStepLength(length);
     }
 
-    double getTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id)
+    void setStepHeading(const std::string& foot_name, const double& heading)
     {
-        double amp = 0.0;
-        switch(id)
-        {
-        case 0:
-            amp = feet_[foot_name].trajectory->getStepLength();
-            break;
-        case 1:
-            amp = feet_[foot_name].trajectory->getStepHeading();
-            break;
-        case 2:
-            amp = feet_[foot_name].trajectory->getStepHeight();
-            break;
-        case 3:
-            amp = feet_[foot_name].trajectory->getStepHeadingRate();
-            break;
-        default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values Length=0,Heading=1,Height=2,Heading Rate=3");
-            break;
-        };
-        return amp;
+       feet_[foot_name].trajectory->setStepHeading(heading);
+    }
+
+    void setStepHeight(const std::string& foot_name, const double& height)
+    {
+        feet_[foot_name].trajectory->setStepHeight(height);
+    }
+
+    void setStepHeadingRate(const std::string& foot_name, const double& heading_rate)
+    {
+        feet_[foot_name].trajectory->setStepHeadingRate(heading_rate);
     }
 
     void activateSwing()

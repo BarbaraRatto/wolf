@@ -142,13 +142,6 @@ public:
          */
     bool setSwingFrequency(const double& swing_frequency);
 
-    /**
-         * @brief Set the trajectory amplitude
-         * @param const unsigned int& id_xyz X=0,Y=1,Z=2
-         * @param const double& amp
-         */
-    bool setTrajectoryAmplitude(const unsigned int& id_xyz, const double& amp);
-
 private:
 
     /** @brief Number of joints */
