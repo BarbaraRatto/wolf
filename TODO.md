@@ -7,4 +7,4 @@ create locomotion .cpp
 move to github
 package opensot
 merge the ids and ik problems
-reset base is too fast
+HAL
