@@ -770,7 +770,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Give to the gait_generator the contact status of the feet and the steps length
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
-                gait_generator_->setContact(feet_names_[i],contacts_[i]);
+#ifdef HAPTIC_CLOSED_LOOP
+                gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
+#endif
 
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],0, cmds_->getStepLength(feet_names_[i]));
                 gait_generator_->setTrajectoryAmplitude(feet_names_[i],1, cmds_->getStepHeading(feet_names_[i]));

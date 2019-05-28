@@ -653,6 +653,11 @@ public:
         feet_[foot_name].is_in_contact = contact;
     }
 
+    const bool& getContact(const std::string& foot_name)
+    {
+        return feet_[foot_name].is_in_contact;
+    }
+
     void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
     {
         feet_[foot_name].trajectory->setInitialPose(initial_pose);
@@ -783,11 +788,11 @@ public:
         // 2) Update the trajectories for each foot depending on the state machine status
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
-#ifdef HAPTIC_CLOSED_LOOP
-            it->second.state_machine.update(period,it->second.is_in_contact); //ClosedLoop with Haptic
-#else
-            it->second.state_machine.update(period,it->second.trajectory->isFinished()); // OpenLoop
+
+#ifndef HAPTIC_CLOSED_LOOP
+            it->second.is_in_contact = it->second.trajectory->isFinished(); // OpenLoop
 #endif
+            it->second.state_machine.update(period,it->second.is_in_contact);
 
             if (it->second.state_machine.isSwing())
             {
