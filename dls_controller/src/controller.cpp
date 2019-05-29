@@ -594,9 +594,12 @@ void Controller::stateEstimation()
 
     floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
-    floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 
-    floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
+    //floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
+    //floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
+
+    floating_base_pose_.linear() = quatToRotMat(floating_base_orientation_.normalized()).transpose();
+    floating_base_orientation_rpy_ = quatToRPY(floating_base_orientation_.normalized());
 }
 
 void Controller::updateXBotModel()
@@ -733,6 +736,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the initial feet poses
             setInitialPose(); //w.r.t to the frame selected in IDProblem
 
+            // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
+            // when the robot is grounded.
             cmds_->setBasePosition(floating_base_position_);
             cmds_->setDefaultBasePosition(floating_base_position_);
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);

@@ -459,7 +459,7 @@ public:
     Ellipse()
     {
         xyz = xyz_rotated = xyz_dot = Eigen::Vector3d::Zero();
-        Rz = Sz = Eigen::Matrix3d::Zero();
+        w_Rz_sw = Sz = Eigen::Matrix3d::Zero();
     }
 
 protected:
@@ -476,18 +476,22 @@ protected:
         xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 #endif
 
-        xyz = T_ * xyz;
+//        Rz << cos(yaw)  ,  -sin(yaw) ,		0,
+//                sin(yaw) ,  cos(yaw) ,  		0,
+//                0      ,     0     ,       1;
+
+        //xyz = T_ * xyz;
 
         double c = std::cos(psi);
         double s = std::sin(psi);
 
-        Rz(0,0) = c;
-        Rz(0,1) = -s;
-        Rz(1,0) = s;
-        Rz(1,1) = c;
-        Rz(2,2) = 1;
+        w_Rz_sw(0,0) = c;
+        w_Rz_sw(0,1) = -s;
+        w_Rz_sw(1,0) = s;
+        w_Rz_sw(1,1) = c;
+        w_Rz_sw(2,2) = 1;
 
-        xyz_rotated = Rz * xyz;
+        xyz_rotated = w_Rz_sw * xyz;
 
         pose_.translation() = initial_pose_.translation() + xyz_rotated;
 
@@ -506,7 +510,7 @@ protected:
         xyz_dot(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
 
         twist_.setZero(); // No angular velocities
-        twist_.head(3) = Sz * xyz_rotated + Rz * xyz_dot;
+        twist_.head(3) = Sz * xyz_rotated + w_Rz_sw * xyz_dot;
 
         return twist_;
     }
@@ -516,7 +520,7 @@ private:
     Eigen::Vector3d xyz;
     Eigen::Vector3d xyz_dot;
     Eigen::Vector3d xyz_rotated;
-    Eigen::Matrix3d Rz;
+    Eigen::Matrix3d w_Rz_sw;
     Eigen::Matrix3d Sz;
 
 };
@@ -874,6 +878,162 @@ private:
 
 };
 
+
+
+/**
+ * @brief converts a quaternion \f$\mathbf{q}\f$ into a rotation matrix
+ * \f$R_q(\mathbf{q})\f$. The rotation matrix maps a vector
+ * \f$\mathbf{z}\in\mathbb{R}^{3\times1}\f$ (expressed in global coordinates)
+ * into a vector \f$ \mathbf{z}' \in \mathbb{R}^{3\times1}\f$ (expressed in
+ * local coordinates), such that \f$ \mathbf{z}' = R_q(\mathbf{q})\mathbf{z}\f$.
+ *
+ * @param[in] q structure containing the quaternion
+ * @return the 3 by 3 rotation matrix \f$R_q(\mathbf{q})\f$
+ * @remark the function uses the formula (125) from <a href="https://www.astro.rug.nl/software/kapteyn/_downloads/attitude.pdf">"Representing Attitude: Euler
+ *  Angles, Unit Quaternions, and Rotation Vectors"</a> by James Diebel.
+ * @date July 2005
+ */
+inline Eigen::Matrix3d  quatToRotMat(const Eigen::Quaterniond & q) {
+    Eigen::Matrix3d R;
+    R(0, 0) = -1.0 + 2.0 * (q.w() * q.w()) + 2.0 * (q.x() * q.x());
+    R(1, 1) = -1.0 + 2.0 * (q.w() * q.w()) + 2.0 * (q.y() * q.y());
+    R(2, 2) = -1.0 + 2.0 * (q.w() * q.w()) + 2.0 * (q.z() * q.z());
+    R(0, 1) = 2.0 * (q.x() * q.y() + q.w() * q.z());
+    R(0, 2) = 2.0 * (q.x() * q.z() - q.w() * q.y());
+    R(1, 0) = 2.0 * (q.x() * q.y() - q.w() * q.z());
+    R(1, 2) = 2.0 * (q.y() * q.z() + q.w() * q.x());
+    R(2, 0) = 2.0 * (q.x() * q.z() + q.w() * q.y());
+    R(2, 1) = 2.0 * (q.y() * q.z() - q.w() * q.x());
+
+    return R;
+}
+
+/**
+ * @brief the dual of rpyToRot()
+ * @param R matrix \f$ {}_B R_A\f$ which maps a vector\f${}_A\mathbf{v}\f$
+ *  (expressed in a fixed frame A) to a vector \f${}_B\mathbf{v}\f$ expressed
+ *  in a (rotated) frame B such that \f${}_A\mathbf{v} = {}_B R_A {}_B\mathbf{v} \f$
+ * @return a set of Euler angles (according to ZYX convention) representing the
+ * orientation of frame B
+ * @sa rpyToRot()
+ */
+Eigen::Vector3d inline rotTorpy(Eigen::Matrix3d R)
+{
+    Eigen::Vector3d rpy;
+    rpy(0) = atan2f((float) R(1,2), (float) R(2,2));
+    rpy(1) = -asinf((float) R(0,2));
+    rpy(2) = atan2f((float) R(0,1), (float) R(0,0));
+
+    return rpy;
+}
+
+/**
+ * @brief Converts a quaternion to a rpy ZYX convention
+ * @param[in] q quaternion
+ * @return corresponding rpy vector
+ */
+inline Eigen::Vector3d quatToRPY(const Eigen::Quaterniond & q){
+    Eigen::Vector3d rpy;
+    rpy = rotTorpy(quatToRotMat(q));
+    return rpy;
+}
+
+/**
+ * @brief Function to compute the rotation matrix which expresses a vector of
+ * the fixed frame A into the rotated frame B according to the ZYX convention
+ * (subsequent rotation) considering right hand coordinate systems (counter
+ * clockwise convention)
+ * \f[
+ * {}_B R_A = \begin{bmatrix}
+ * \cos(\psi)\cos(\theta) & \cos(\theta)\sin(\psi) & -\sin(\theta) \\
+ * \cos(\psi)\sin(\phi)\sin(\theta) - \cos(\phi)\sin(\psi) & \cos(\phi)\cos(\psi) + \sin(\phi)\sin(\psi)\sin(\theta) & \cos(\theta)\sin(\phi) \\
+ * \sin(\phi)\sin(\psi) + \cos(\phi)\cos(\psi)\sin(\theta) & \cos(\phi)\sin(\psi)\sin(\theta) - \cos(\psi)\sin(\phi) & \cos(\phi)\cos(\theta)
+ * \end{bmatrix}
+ * \f]
+ * the transpose of this matrix has as director cosines (columns) the axis of
+ * the rotated frame expressed in the fixed frame which will be multiplied for
+ * the component of the vector in the rotated frame B to get the components in
+ * the fixed frame A
+ * @param[in] rpy vector containing roll \f$ \phi\f$, pitch \f$ \theta \f$ and yaw \f$\psi\f$
+ * @return the matrix \f${}_B R_A\f$
+ *
+*/
+Eigen::Matrix3d inline rpyToRot(const Eigen::Vector3d & rpy){
+
+    Eigen::Matrix3d Rx, Ry, Rz;
+    double roll, pitch, yaw;
+
+    roll = rpy(0);
+    pitch = rpy(1);
+    yaw = rpy(2);
+
+    Rx <<	1   ,    0     	  ,  	  0,
+            0   ,    cos(roll) ,  sin(roll),
+            0   ,    -sin(roll),  cos(roll);
+
+
+    Ry << cos(pitch) 	,	 0  ,   -sin(pitch),
+            0       ,    1  ,   0,
+            sin(pitch) 	,	0   ,  cos(pitch);
+
+    Rz << cos(yaw)  ,  sin(yaw) ,		0,
+            -sin(yaw) ,  cos(yaw) ,  		0,
+            0      ,     0     ,       1;
+
+
+    return Rx*Ry*Rz;
+
+}
+
+/** \brief Function to compute the linear tranformation matrix between euler
+ * rates (in ZYX convention) and omega vector, where omega is expressed in world
+ * coordinates to get the component expressed in the world ortogonal frame.
+ *
+ * I need to multiply  the components of the vector of euler rate which is
+ * expressed the rpy (non orthogonal) by the roll pitch yaw axis expressed in
+ * the world frame I need to express the yaw/pitch/roll axis in world frame,
+ * since we do first the rotation in the z axis, wz = yaw_d therefore
+ * z = z' =[0;0;1] then we rotate about pitch so we have component for this
+ * rotation in wy and -wx (y'= [-sin(yaw; cos(yaw) ;0]) if we consider roll
+ * after the pitch we will have the roll axis after yaw and pitch rotation to
+ * be x'' = cos(pitch)*x' -sin(pitch)*[0;0;1] where x' = [cos(yaw);sin(yaw);0]
+*/
+Eigen::Matrix3d inline rpyToEarInv(const Eigen::Vector3d & rpy){
+
+    Eigen::Matrix3d EarInv;
+    double pitch = rpy(1);
+    double yaw = rpy(2);
+
+    EarInv << cos(pitch)*cos(yaw), -sin(yaw), 0,
+              cos(pitch)*sin(yaw),   cos(yaw),    0,
+              -sin(pitch),         0,    1;
+
+    return EarInv;
+}
+
+/**
+ * @brief rpyToEar Function to compute the linear tranformation matrix between
+ * euler rates (in ZYX convention) and omega vector where omega is expressed
+ * in base coordinates (is R*EarInv)
+ * @param rpy
+ * @return
+ */
+Eigen::Matrix3d inline  rpyToEar(const Eigen::Vector3d & rpy){
+
+    Eigen::Matrix3d Ear;
+    double roll = rpy(0);
+    double pitch = rpy(1);
+    double yaw = rpy(2);
+
+    Ear<< 1,         0,         -sin(pitch),
+            0,  cos(roll),  cos(pitch)*sin(roll),
+            0,  -sin(roll), cos(pitch)*cos(roll);
+
+
+    return Ear;
+}
+
+
 class CommandsInterface
 {
 
@@ -927,12 +1087,12 @@ public:
 
         cmd_ = cmd_t::HOLD;
 
-        base_X_hip_foot_offsets_.resize(4);
-        hf_X_base_hip_offsets_.resize(4);
-        for(unsigned int i=0; i<base_X_hip_foot_offsets_.size(); i++)
+        hf_X_hip_foot_offsets_.resize(4);
+        hf_X_virtual_hips_.resize(4);
+        for(unsigned int i=0; i<4; i++)
         {
-            base_X_hip_foot_offsets_[i].setZero();
-            hf_X_base_hip_offsets_[i].setZero();
+            hf_X_hip_foot_offsets_[i].setZero();
+            hf_X_virtual_hips_[i].setZero();
         }
 
         step_length_ = 0.0;
@@ -1028,46 +1188,43 @@ public:
                 ROS_DEBUG_STREAM("Swinging foot "<<feet_names[i]);
 
                 xbot_model_->getPose(feet_names[i],world_T_foot_);
+                xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_);
                 xbot_model_->getPose(hips_names[i],world_T_hip_);
-                xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
+                //xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
 
                 hf_delta_hip_.setZero();
                 hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
                 hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
 
                 //hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
-                hf_delta_heding_ = Eigen::Vector3d(0,0,hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])).cross(hf_X_base_hip_offsets_[i]);
-
+                hf_delta_heding_ = Eigen::Vector3d(0,0,hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])).cross(hf_X_virtual_hips_[i]);
                 ROS_DEBUG_STREAM("hf_delta_heding_: "<<hf_delta_heding_.transpose());
 
                 hf_delta_hip_(0)+= hf_delta_heding_(0);
                 hf_delta_hip_(1)+= hf_delta_heding_(1);
-
-                ROS_DEBUG_STREAM("hf_delta_hip_: "<<hf_delta_hip_.transpose());
+                ROS_DEBUG_STREAM("hf_delta_hip_(velocity based): "<<hf_delta_hip_.transpose());
 
                 world_delta_hip_ = world_R_hf_ * hf_delta_hip_;
+                ROS_DEBUG_STREAM("world_delta_hip_(velocity based): "<<world_delta_hip_.transpose());
 
-                ROS_DEBUG_STREAM("world_delta_hip_: "<<world_delta_hip_.transpose());
+                world_X_virtual_hip_ = world_R_hf_ *(hf_X_virtual_hips_[i] - hf_R_base_*base_T_foot_.translation() );
+                world_X_virtual_hip_(2)=0;
+                ROS_DEBUG_STREAM("world_X_virtual_hip_(distance of actual foot position wrt to virtual hip pos in wf): "<<world_X_virtual_hip_.transpose());
 
-                world_X_hip_ = world_R_hf_ * hf_X_base_hip_offsets_[i] + world_T_base_.translation();
 
-                ROS_DEBUG_STREAM("world_X_hip_: "<<world_X_hip_.transpose());
-
-                world_X_hip_foot_ = world_T_foot_.translation() - world_X_hip_;
-
-                ROS_DEBUG_STREAM("world_X_hip_foot_: "<<world_X_hip_foot_.transpose());
-
-                world_X_hip_foot_offset_ = world_R_base_ * base_X_hip_foot_offsets_[i];
+                world_X_hip_foot_offset_ = world_R_hf_ * hf_X_hip_foot_offsets_[i];
                 world_X_hip_foot_offset_(2) = 0;
-
                 ROS_DEBUG_STREAM("world_X_hip_foot_offset_: "<<world_X_hip_foot_offset_.transpose());
 
                 world_delta_foot_.setZero();
-                world_delta_foot_.head(2) =  world_X_hip_foot_offset_.head(2) + world_delta_hip_.head(2) - world_X_hip_foot_.head(2);
+                world_delta_foot_.head(2) =   world_delta_hip_.head(2)  + world_X_hip_foot_offset_.head(2) + world_X_virtual_hip_.head(2);
 
                 ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
-                step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                // if(std::abs(hf_base_linear_velocity_(0))!=0.0 || std::abs(hf_base_linear_velocity_(1))!=0.0)
+                    step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                // else
+                //    step_length_ = 0.0;
                 step_height_ = 0.05; // FIXME
 
                 if(step_length_ > step_length_max_)
@@ -1086,6 +1243,12 @@ public:
                 steps_heading_[feet_names[i]]        = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
                 steps_height_[feet_names[i]]         = step_height_;
                 steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
+
+                ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
+                ROS_DEBUG_STREAM("steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
+                ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
+                ROS_DEBUG_STREAM("steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
+
             }
             else
             {
@@ -1094,11 +1257,6 @@ public:
                 steps_height_[feet_names[i]]         = 0.0;
                 steps_heading_rate_[feet_names[i]]   = 0.0;
             }
-
-            ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
-            ROS_DEBUG_STREAM("steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
-            ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
-            ROS_DEBUG_STREAM("steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
 
         }
         // FIXME: Look up in stop().
@@ -1161,11 +1319,12 @@ public:
         base_orientation_ = hf_base_angular_velocity_ * period + base_orientation_;
 
         // This rotation is computed w.r.t world
-        base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ())
+        /*base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ())
                                  * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())
-                                 * Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX());
+                                 * Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX());*/
 
-        base_rotation_reference_ = world_R_hf_.transpose() * base_rotation_reference_;
+        base_rotation_reference_ = rpyToRot(base_orientation_).transpose();
+
     }
 
     // Sets
@@ -1227,24 +1386,28 @@ public:
             {
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
                 xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
-                base_X_hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
-                hf_X_base_hip_offsets_[i] = base_T_hip_.translation();
+                //initial feet offsets
+                hf_X_hip_foot_offsets_[i] = hf_R_base_ * (base_T_foot_.translation() - base_T_hip_.translation());
+
+                //virtual hips we assume base starts horizzontal (TODO)
+                hf_X_virtual_hips_[i] = base_T_hip_.translation();
+
             }
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[0] is "
-                             << hf_X_base_hip_offsets_[0] <<
+                             << hf_X_virtual_hips_[0] <<
                              " it should be: 0.3,0.2,0.0");
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[1] is "
-                             << hf_X_base_hip_offsets_[1] <<
+                             << hf_X_virtual_hips_[1] <<
                              " it should be: 0.3,0.2,0.0");
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[2] is "
-                             << hf_X_base_hip_offsets_[2] <<
+                             << hf_X_virtual_hips_[2] <<
                              " it should be: -0.3,0.2,0.0");
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[3] is "
-                             << hf_X_base_hip_offsets_[3] <<
+                             << hf_X_virtual_hips_[3] <<
                              " it should be: -0.3,-0.2,0.0");
 
             offset_applied_ = true;
@@ -1291,7 +1454,7 @@ private:
     Eigen::Vector3d hf_X_hip_;
     Eigen::Vector3d world_delta_hip_;
     Eigen::Vector3d world_X_hip_;
-    Eigen::Vector3d world_X_hip_foot_;
+    Eigen::Vector3d world_X_virtual_hip_;
     Eigen::Vector3d world_delta_foot_;
     Eigen::Vector3d world_X_hip_foot_offset_;
 
@@ -1313,8 +1476,8 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
 
     Eigen::Affine3d world_T_foot_, world_T_hip_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
-    std::vector<Eigen::Vector3d> base_X_hip_foot_offsets_;
-    std::vector<Eigen::Vector3d> hf_X_base_hip_offsets_;
+    std::vector<Eigen::Vector3d> hf_X_hip_foot_offsets_;
+    std::vector<Eigen::Vector3d> hf_X_virtual_hips_;
 
     double yaw_base_;
     double step_height_max_;
