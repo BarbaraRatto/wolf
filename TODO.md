@@ -12,3 +12,4 @@ anymal
 fix cmds
 fix scheduler ( no alloc )
 reset with filter
+add feet and hips names to the config file of the controller

@@ -476,10 +476,6 @@ protected:
         xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 #endif
 
-//        Rz << cos(yaw)  ,  -sin(yaw) ,		0,
-//                sin(yaw) ,  cos(yaw) ,  		0,
-//                0      ,     0     ,       1;
-
         //xyz = T_ * xyz;
 
         double c = std::cos(psi);
@@ -1253,21 +1249,21 @@ public:
 
             }
 
-            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[0] is "
+            ROS_INFO_STREAM("The signs for hf_X_base_hip_offsets_[lf] are "
                              << hf_X_virtual_hips_[0] <<
-                             " it should be: 0.3,0.2,0.0");
+                             " they should be: +,+ and 0.0");
 
-            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[1] is "
+            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[rf] is "
                              << hf_X_virtual_hips_[1] <<
-                             " it should be: 0.3,0.2,0.0");
+                             " they should be: +,- and 0.0");
 
-            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[2] is "
+            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[lh] is "
                              << hf_X_virtual_hips_[2] <<
-                             " it should be: -0.3,0.2,0.0");
+                             " they should be: -,+ and 0.0");
 
-            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[3] is "
+            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[rh] is "
                              << hf_X_virtual_hips_[3] <<
-                             " it should be: -0.3,-0.2,0.0");
+                             " they should be: -,- and 0.0");
 
             offset_applied_ = true;
         }
