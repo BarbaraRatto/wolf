@@ -1013,8 +1013,8 @@ public:
 
         case cmd_t::RESET_BASE:
             resetBaseVelocities();
-            calculateBasePosition(period,default_base_position_);
-            calculateBaseOrientation(period,default_base_orientation_);
+            resetBasePosition(period);
+            resetBaseOrientation(period);
             resetFeetStep();
             break;
         };
@@ -1136,6 +1136,19 @@ public:
     {
         resetBaseAngularVelocity();
         resetBaseLinearVelocity();
+    }
+
+    void resetBasePosition(const double& period)
+    {
+        // FIXME, add a filter
+        calculateBasePosition(period,default_base_position_);
+    }
+
+    void resetBaseOrientation(const double& period)
+    {
+        // FIXME, add a filter
+        default_base_orientation_(2) = base_orientation_(2); // Keep the same yaw
+        calculateBaseOrientation(period,default_base_orientation_);
     }
 
     void calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
