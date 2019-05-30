@@ -874,6 +874,75 @@ private:
 
 };
 
+
+/*void TaskGlobals::updateVelBaseOdometry(const  JointState & qd_,
+                                        planning::Point3d & rel_base,
+                                        planning::Point3d & absolute_base,
+                                        Eigen::Vector3d & omega,
+                                        double & roll,
+                                        double & pitch,
+                                        double & yaw )
+{
+//	Eigen::Matrix<double, Eigen::Dynamic, jointsCount>  Jcq;
+//	Eigen::Matrix<double, Eigen::Dynamic, 6>  Jcb;
+//	computeJcb(Jcb, Rodometry, stance_legs_odometry, footPos);
+//	computeJcq(Jcq, Rodometry, stance_legs_odometry, *jacobians);
+//	//this is in the base frame
+//	rbd::VelocityVector basetwistOdometry = -commons::psdInv(Jcb, 1e-04)*(Jcq* qd_);
+//	compute_relative_base(rel_base);
+//	//compute Rdot
+//	Eigen::Matrix3d dR;
+//	dR.col(0) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(0)); // dR = w x R
+//	dR.col(1) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(1)); // dR = w x R
+//	dR.col(2) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(2)); // dR = w x R
+//
+//	if (frame_change == false){
+//		Rodometry -=dR/(double)(task_servo_rate);//TODO to understand the minus
+//		Eigen::Vector3d rpyOdometry = commons::rotTorpy(Rodometry);
+//		roll = rpyOdometry(0); pitch= rpyOdometry(1); yaw = rpyOdometry(2);
+//		absolute_base.x += Rodometry.transpose()*rbd::linearPart(basetwistOdometry)/(double)(task_servo_rate);//this shoul be in the world
+//		rel_base.xd = rbd::linearPart(basetwistOdometry);
+//		absolute_base.xd =Rodometry.transpose()*rel_base.xd;
+//		omega = rbd::angularPart(basetwistOdometry);//is already in the base
+//	} else{
+//		frame_change = false;
+//	}
+
+        compute_relative_base(rel_base);
+        if (frame_change == false){
+                rbd::VelocityVector basetwistOdometry;
+                computeOdometry(qd_, Rodometry, basetwistOdometry);
+                Eigen::Vector3d rpyOdometry = commons::rotTorpy(Rodometry);
+                roll = rpyOdometry(0); pitch= rpyOdometry(1); yaw = rpyOdometry(2);
+                absolute_base.x += Rodometry.transpose()*rbd::linearPart(basetwistOdometry)/(double)(task_servo_rate);//this shoul be in the world
+                rel_base.xd = rbd::linearPart(basetwistOdometry);
+                absolute_base.xd =Rodometry.transpose()*rel_base.xd;
+                omega = rbd::angularPart(basetwistOdometry);//is already in the base
+        } else{
+                frame_change = false;
+        }
+}
+
+void TaskGlobals::computeOdometry(const  JointState & qd_,
+                                                                  Eigen::Matrix3d & Rodom,
+                                                                  rbd::VelocityVector &  basetwistOdometry)
+{
+        Eigen::Matrix<double, Eigen::Dynamic, dog::jointsCount>  Jcq;
+        Eigen::Matrix<double, Eigen::Dynamic, 6>  Jcb;
+        computeJcb(Jcb, Rodom, stance_legs_odometry, footPos);
+        computeJcq(Jcq, Rodom, stance_legs_odometry, JFoot);
+        //this is in the base frame
+        basetwistOdometry = -commons::psdInv(Jcb, 1e-04)*(Jcq* qd_);
+        //compute Rdot
+        Eigen::Matrix3d dR;
+        dR.col(0) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(0)); // dR = w x R
+        dR.col(1) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(1)); // dR = w x R
+        dR.col(2) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(2)); // dR = w x R
+        Rodom -=dR/(double)(task_servo_rate);//TODO to understand the minus
+}*/
+
+
+
 class CommandsInterface
 {
 
@@ -1242,26 +1311,26 @@ public:
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
                 xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
                 //initial feet offsets
-                hf_X_hip_foot_offsets_[i] = hf_R_base_ * (base_T_foot_.translation() - base_T_hip_.translation());
+                hf_X_hip_foot_offsets_[i] = hf_R_base_ * (base_T_foot_.translation() - base_T_hip_.translation() + Eigen::Vector3d(-0.03,0,0));
 
                 //virtual hips we assume base starts horizzontal (TODO)
                 hf_X_virtual_hips_[i] = base_T_hip_.translation();
 
             }
 
-            ROS_INFO_STREAM("The signs for hf_X_base_hip_offsets_[lf] are "
+            ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[lf] are "
                              << hf_X_virtual_hips_[0] <<
                              " they should be: +,+ and 0.0");
 
-            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[rf] is "
+            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[rf] is "
                              << hf_X_virtual_hips_[1] <<
                              " they should be: +,- and 0.0");
 
-            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[lh] is "
+            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[lh] is "
                              << hf_X_virtual_hips_[2] <<
                              " they should be: -,+ and 0.0");
 
-            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[rh] is "
+            ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[rh] is "
                              << hf_X_virtual_hips_[3] <<
                              " they should be: -,- and 0.0");
 
