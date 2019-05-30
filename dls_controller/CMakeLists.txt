@@ -70,11 +70,17 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 if (CATKIN_ENABLE_TESTING)
-  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface hyqreal_description)
+  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
+  find_package(OpenSoT REQUIRED)
+  find_package(XCM REQUIRED)
+  find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
   add_executable(hyq_dummy test/hyq_dummy.cpp)
   target_link_libraries(hyq_dummy ${catkin_LIBRARIES})
+
+  add_executable(test_state_estimation test/test_state_estimation.cpp)
+  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
   add_rostest_gtest(dls_controller_test
     test/dls_controller_test.test

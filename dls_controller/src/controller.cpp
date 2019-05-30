@@ -594,10 +594,6 @@ void Controller::stateEstimation()
     floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
 
-    floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
-    floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
-
-
     quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
 
     floating_base_pose_.linear() = tmp_matrix3d_.transpose();
