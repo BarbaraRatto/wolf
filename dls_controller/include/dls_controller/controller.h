@@ -280,6 +280,8 @@ private:
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */
     Eigen::Vector3d tmp_vector3d_;
+    /** @brief Support temporary Matrix3d */
+    Eigen::Matrix3d tmp_matrix3d_;
 
     /**
          * @brief thread body for the odometry publisher

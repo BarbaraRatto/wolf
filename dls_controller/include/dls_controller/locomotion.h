@@ -7,9 +7,9 @@
 #include <Eigen/StdVector>
 #include <atomic>
 #include <XBotInterface/ModelInterface.h>
+#include <dls_controller/geometry.h>
 
 //#define HAPTIC_CLOSED_LOOP
-
 
 namespace dls_controller
 {
@@ -878,162 +878,6 @@ private:
 
 };
 
-
-
-/**
- * @brief converts a quaternion \f$\mathbf{q}\f$ into a rotation matrix
- * \f$R_q(\mathbf{q})\f$. The rotation matrix maps a vector
- * \f$\mathbf{z}\in\mathbb{R}^{3\times1}\f$ (expressed in global coordinates)
- * into a vector \f$ \mathbf{z}' \in \mathbb{R}^{3\times1}\f$ (expressed in
- * local coordinates), such that \f$ \mathbf{z}' = R_q(\mathbf{q})\mathbf{z}\f$.
- *
- * @param[in] q structure containing the quaternion
- * @return the 3 by 3 rotation matrix \f$R_q(\mathbf{q})\f$
- * @remark the function uses the formula (125) from <a href="https://www.astro.rug.nl/software/kapteyn/_downloads/attitude.pdf">"Representing Attitude: Euler
- *  Angles, Unit Quaternions, and Rotation Vectors"</a> by James Diebel.
- * @date July 2005
- */
-inline Eigen::Matrix3d  quatToRotMat(const Eigen::Quaterniond & q) {
-    Eigen::Matrix3d R;
-    R(0, 0) = -1.0 + 2.0 * (q.w() * q.w()) + 2.0 * (q.x() * q.x());
-    R(1, 1) = -1.0 + 2.0 * (q.w() * q.w()) + 2.0 * (q.y() * q.y());
-    R(2, 2) = -1.0 + 2.0 * (q.w() * q.w()) + 2.0 * (q.z() * q.z());
-    R(0, 1) = 2.0 * (q.x() * q.y() + q.w() * q.z());
-    R(0, 2) = 2.0 * (q.x() * q.z() - q.w() * q.y());
-    R(1, 0) = 2.0 * (q.x() * q.y() - q.w() * q.z());
-    R(1, 2) = 2.0 * (q.y() * q.z() + q.w() * q.x());
-    R(2, 0) = 2.0 * (q.x() * q.z() + q.w() * q.y());
-    R(2, 1) = 2.0 * (q.y() * q.z() - q.w() * q.x());
-
-    return R;
-}
-
-/**
- * @brief the dual of rpyToRot()
- * @param R matrix \f$ {}_B R_A\f$ which maps a vector\f${}_A\mathbf{v}\f$
- *  (expressed in a fixed frame A) to a vector \f${}_B\mathbf{v}\f$ expressed
- *  in a (rotated) frame B such that \f${}_A\mathbf{v} = {}_B R_A {}_B\mathbf{v} \f$
- * @return a set of Euler angles (according to ZYX convention) representing the
- * orientation of frame B
- * @sa rpyToRot()
- */
-Eigen::Vector3d inline rotTorpy(Eigen::Matrix3d R)
-{
-    Eigen::Vector3d rpy;
-    rpy(0) = atan2f((float) R(1,2), (float) R(2,2));
-    rpy(1) = -asinf((float) R(0,2));
-    rpy(2) = atan2f((float) R(0,1), (float) R(0,0));
-
-    return rpy;
-}
-
-/**
- * @brief Converts a quaternion to a rpy ZYX convention
- * @param[in] q quaternion
- * @return corresponding rpy vector
- */
-inline Eigen::Vector3d quatToRPY(const Eigen::Quaterniond & q){
-    Eigen::Vector3d rpy;
-    rpy = rotTorpy(quatToRotMat(q));
-    return rpy;
-}
-
-/**
- * @brief Function to compute the rotation matrix which expresses a vector of
- * the fixed frame A into the rotated frame B according to the ZYX convention
- * (subsequent rotation) considering right hand coordinate systems (counter
- * clockwise convention)
- * \f[
- * {}_B R_A = \begin{bmatrix}
- * \cos(\psi)\cos(\theta) & \cos(\theta)\sin(\psi) & -\sin(\theta) \\
- * \cos(\psi)\sin(\phi)\sin(\theta) - \cos(\phi)\sin(\psi) & \cos(\phi)\cos(\psi) + \sin(\phi)\sin(\psi)\sin(\theta) & \cos(\theta)\sin(\phi) \\
- * \sin(\phi)\sin(\psi) + \cos(\phi)\cos(\psi)\sin(\theta) & \cos(\phi)\sin(\psi)\sin(\theta) - \cos(\psi)\sin(\phi) & \cos(\phi)\cos(\theta)
- * \end{bmatrix}
- * \f]
- * the transpose of this matrix has as director cosines (columns) the axis of
- * the rotated frame expressed in the fixed frame which will be multiplied for
- * the component of the vector in the rotated frame B to get the components in
- * the fixed frame A
- * @param[in] rpy vector containing roll \f$ \phi\f$, pitch \f$ \theta \f$ and yaw \f$\psi\f$
- * @return the matrix \f${}_B R_A\f$
- *
-*/
-Eigen::Matrix3d inline rpyToRot(const Eigen::Vector3d & rpy){
-
-    Eigen::Matrix3d Rx, Ry, Rz;
-    double roll, pitch, yaw;
-
-    roll = rpy(0);
-    pitch = rpy(1);
-    yaw = rpy(2);
-
-    Rx <<	1   ,    0     	  ,  	  0,
-            0   ,    cos(roll) ,  sin(roll),
-            0   ,    -sin(roll),  cos(roll);
-
-
-    Ry << cos(pitch) 	,	 0  ,   -sin(pitch),
-            0       ,    1  ,   0,
-            sin(pitch) 	,	0   ,  cos(pitch);
-
-    Rz << cos(yaw)  ,  sin(yaw) ,		0,
-            -sin(yaw) ,  cos(yaw) ,  		0,
-            0      ,     0     ,       1;
-
-
-    return Rx*Ry*Rz;
-
-}
-
-/** \brief Function to compute the linear tranformation matrix between euler
- * rates (in ZYX convention) and omega vector, where omega is expressed in world
- * coordinates to get the component expressed in the world ortogonal frame.
- *
- * I need to multiply  the components of the vector of euler rate which is
- * expressed the rpy (non orthogonal) by the roll pitch yaw axis expressed in
- * the world frame I need to express the yaw/pitch/roll axis in world frame,
- * since we do first the rotation in the z axis, wz = yaw_d therefore
- * z = z' =[0;0;1] then we rotate about pitch so we have component for this
- * rotation in wy and -wx (y'= [-sin(yaw; cos(yaw) ;0]) if we consider roll
- * after the pitch we will have the roll axis after yaw and pitch rotation to
- * be x'' = cos(pitch)*x' -sin(pitch)*[0;0;1] where x' = [cos(yaw);sin(yaw);0]
-*/
-Eigen::Matrix3d inline rpyToEarInv(const Eigen::Vector3d & rpy){
-
-    Eigen::Matrix3d EarInv;
-    double pitch = rpy(1);
-    double yaw = rpy(2);
-
-    EarInv << cos(pitch)*cos(yaw), -sin(yaw), 0,
-              cos(pitch)*sin(yaw),   cos(yaw),    0,
-              -sin(pitch),         0,    1;
-
-    return EarInv;
-}
-
-/**
- * @brief rpyToEar Function to compute the linear tranformation matrix between
- * euler rates (in ZYX convention) and omega vector where omega is expressed
- * in base coordinates (is R*EarInv)
- * @param rpy
- * @return
- */
-Eigen::Matrix3d inline  rpyToEar(const Eigen::Vector3d & rpy){
-
-    Eigen::Matrix3d Ear;
-    double roll = rpy(0);
-    double pitch = rpy(1);
-    double yaw = rpy(2);
-
-    Ear<< 1,         0,         -sin(pitch),
-            0,  cos(roll),  cos(pitch)*sin(roll),
-            0,  -sin(roll), cos(pitch)*cos(roll);
-
-
-    return Ear;
-}
-
-
 class CommandsInterface
 {
 
@@ -1323,7 +1167,9 @@ public:
                                  * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())
                                  * Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX());*/
 
-        base_rotation_reference_ = rpyToRot(base_orientation_).transpose();
+        //base_rotation_reference_ = rpyToRot(base_orientation_).transpose();
+        rpyToRot(base_orientation_,base_rotation_reference_);
+        base_rotation_reference_.transposeInPlace();
 
     }
 

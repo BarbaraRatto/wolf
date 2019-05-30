@@ -595,11 +595,15 @@ void Controller::stateEstimation()
     floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
 
-    //floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
-    //floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
+    floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
+    floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
 
-    floating_base_pose_.linear() = quatToRotMat(floating_base_orientation_.normalized()).transpose();
-    floating_base_orientation_rpy_ = quatToRPY(floating_base_orientation_.normalized());
+
+    quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
+
+    floating_base_pose_.linear() = tmp_matrix3d_.transpose();
+
+    rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
 }
 
 void Controller::updateXBotModel()
