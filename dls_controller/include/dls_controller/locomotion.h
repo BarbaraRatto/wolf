@@ -1296,7 +1296,7 @@ public:
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
                 xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
                 //initial feet offsets
-                hf_X_hip_foot_offsets_[i] = hf_R_base_ * (base_T_foot_.translation() - base_T_hip_.translation() + Eigen::Vector3d(-0.03,0,0));
+                hf_X_hip_foot_offsets_[i] = hf_R_base_ * (base_T_foot_.translation() - base_T_hip_.translation());
 
                 //virtual hips we assume base starts horizzontal (TODO)
                 hf_X_virtual_hips_[i] = base_T_hip_.translation();
