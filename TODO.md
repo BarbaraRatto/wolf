@@ -9,3 +9,6 @@ package opensot
 merge the ids and ik problems
 HAL
 anymal
+fix cmds
+fix scheduler ( no alloc )
+reset with filter
