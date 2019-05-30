@@ -187,6 +187,8 @@ private:
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
     /** @brief Real time publisher - desired joint states */
     realtime_tools::RealtimePublisher<sensor_msgs::JointState>* ci_joint_states_rt_pub_;
+    /** @brief Real time publisher - QP */
+    realtime_tools::RealtimePublisher<nav_msgs::Odometry>* state_estimation_qp_rt_pub_;
     /** @brief Real time publisher - estimated pose */
     realtime_tools::RealtimePublisher<nav_msgs::Odometry>* state_estimation_rt_pub_;
     /** @brief Real time publisher - actual tasks pose */
@@ -251,6 +253,8 @@ private:
     Eigen::Quaterniond floating_base_orientation_;
     /** @brief Floating base velocity, computed by the state estimator */
     Eigen::Vector6d floating_base_velocity_;
+    /** @brief Floating base velocity, computed by the QP */
+    Eigen::VectorXd floating_base_velocity_qp_;
     /** @brief Floating base accelleration, computed by the state estimator */
     Eigen::Vector6d floating_base_accelleration_;
     /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */

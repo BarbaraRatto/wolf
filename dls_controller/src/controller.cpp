@@ -35,6 +35,8 @@ Controller::~Controller()
         delete ci_joint_states_rt_pub_;
     if(state_estimation_rt_pub_)
         delete state_estimation_rt_pub_;
+    if(state_estimation_qp_rt_pub_)
+        delete state_estimation_qp_rt_pub_;
     if(tasks_actual_pose_rt_pub_)
         delete tasks_actual_pose_rt_pub_;
     if(server_)
@@ -300,6 +302,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
 
+    state_estimation_qp_rt_pub_ = new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation_qp", 4);
+    state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
+    state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
+
     tasks_actual_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_actual_pose", 4);
     tasks_actual_pose_rt_pub_->msg_.reference_frames.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_names.resize(task_poses_.size());
@@ -338,7 +344,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
-
+    floating_base_velocity_qp_.resize(6);
 
     return true;
 }
@@ -745,35 +751,25 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             dynamicReconfigureUpdate();
 
-
+            // STATE ESTIMATION RESET
             Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
             contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-
             qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
-
-
-
         }
 
         if(tracking_active_)
         {
+
+            // STATE ESTIMATION QP
             for(unsigned int i=0;i<feet_names_.size();i++)
             {
                 if(contacts_[i])
-                    std::cout << feet_names_[i] << std::endl;
-                qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
+                    qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
             }
-            //getchar();
 
             qp_estimation_->update(0.001,false);
+            qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
-            std::cout << "***********" << std::endl;
-            Eigen::VectorXd qdot;
-            qp_estimation_->getFloatingBaseTwist(qdot);
-            std::cout << "stima" << std::endl;
-            std::cout << qdot.transpose() << std::endl;
-            std::cout << "gazebo" << std::endl;
-            std::cout << floating_base_velocity_.transpose() << std::endl;
 
 
             gait_generator_->activateSwing();
@@ -1061,7 +1057,18 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         state_estimation_rt_pub_->msg_.header.stamp = time;
         state_estimation_rt_pub_->unlockAndPublish();
     }
+    if(state_estimation_qp_rt_pub_->trylock())
+    {
+        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_qp_(0);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_qp_(1);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.z     = floating_base_velocity_qp_(2);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.x    = floating_base_velocity_qp_(3);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.y    = floating_base_velocity_qp_(4);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.z    = floating_base_velocity_qp_(5);
 
+        state_estimation_qp_rt_pub_->msg_.header.stamp = time;
+        state_estimation_qp_rt_pub_->unlockAndPublish();
+    }
     if(tasks_actual_pose_rt_pub_->trylock())
     {
         TaskPosesMap::iterator it;
