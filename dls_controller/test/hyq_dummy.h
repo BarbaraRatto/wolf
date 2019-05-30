@@ -19,14 +19,17 @@
 // ostringstream
 #include <sstream>
 
+// std::atomic
+#include <atomic>
+
 class HyqDummy : public hardware_interface::RobotHW, public hardware_interface::DlsRobotHwInterface
 {
 
 public:
   HyqDummy()
     : running_(true)
-    , start_srv_(nh_.advertiseService("start", &HyqDummy::start_callback, this))
-    , stop_srv_(nh_.advertiseService("stop", &HyqDummy::stop_callback, this))
+    , start_srv_(nh_.advertiseService("start", &HyqDummy::startCallback, this))
+    , stop_srv_(nh_.advertiseService("stop", &HyqDummy::stopCallback, this))
   {
 
   }
@@ -43,6 +46,7 @@ public:
         registerInterface(&joint_interface_);
         registerInterface(&imu_sensor_interface_);
         registerInterface(&ground_truth_interface_);
+        registerInterface(&contact_sensor_interface_);
     }
     return true;
   }
@@ -76,13 +80,13 @@ public:
     }
   }
 
-  bool start_callback(std_srvs::Empty::Request& /*req*/, std_srvs::Empty::Response& /*res*/)
+  bool startCallback(std_srvs::Empty::Request& /*req*/, std_srvs::Empty::Response& /*res*/)
   {
     running_ = true;
     return true;
   }
 
-  bool stop_callback(std_srvs::Empty::Request& /*req*/, std_srvs::Empty::Response& /*res*/)
+  bool stopCallback(std_srvs::Empty::Request& /*req*/, std_srvs::Empty::Response& /*res*/)
   {
     running_ = false;
     return true;
@@ -90,7 +94,7 @@ public:
 
 private:
 
-  bool running_;
+  std::atomic<bool> running_;
   ros::NodeHandle nh_;
   ros::ServiceServer start_srv_;
   ros::ServiceServer stop_srv_;

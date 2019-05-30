@@ -338,10 +338,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
-    Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
-    contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
 
-    qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
 
     return true;
 }
@@ -418,19 +415,6 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     if(gait_generator_)
         for(unsigned int i=0; i < feet_names_.size(); i++)
             gait_generator_->setSwingFrequency(feet_names_[i],swing_frequency);
-    else
-    {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
-        return false;
-    }
-    return true;
-}
-
-bool Controller::setTrajectoryAmplitude(const unsigned int& id_xyz, const double& amp)
-{
-    if(gait_generator_)
-        for(unsigned int i=0; i < feet_names_.size(); i++)
-            gait_generator_->setTrajectoryAmplitude(feet_names_[i],id_xyz,amp);
     else
     {
         ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
@@ -609,9 +593,16 @@ void Controller::stateEstimation()
     //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
     floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
-    floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
 
+    floating_base_pose_.linear() = floating_base_orientation_.normalized().toRotationMatrix();
     floating_base_orientation_rpy_ = floating_base_orientation_.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
+
+
+    quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
+
+    floating_base_pose_.linear() = tmp_matrix3d_.transpose();
+
+    rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
 }
 
 void Controller::updateXBotModel()
@@ -619,24 +610,6 @@ void Controller::updateXBotModel()
     xbot_model_->setJointVelocity(joint_velocities_);
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
-
-    for(unsigned int i=0;i<feet_names_.size();i++)
-    {
-        if(gait_generator_->getContact(feet_names_[i]))
-            std::cout << feet_names_[i] << std::endl;
-        qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
-    }
-    //getchar();
-
-    qp_estimation_->update(0.001,false);
-
-    std::cout << "***********" << std::endl;
-    Eigen::VectorXd qdot;
-    qp_estimation_->getFloatingBaseTwist(qdot);
-    std::cout << "stima" << std::endl;
-    std::cout << qdot.transpose() << std::endl;
-    std::cout << "gazebo" << std::endl;
-    std::cout << floating_base_velocity_.transpose() << std::endl;
 
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
@@ -691,15 +664,14 @@ void Controller::starting(const ros::Time& time)
 
 void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
 {
-    Eigen::Affine3d tmp; //FIXME NO-RT
     if(id_prob_)
     {
         if(id_prob_->_feet[contact_name]->setBaseLink(base_frame))
         {
             id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
-            id_prob_->_feet[contact_name]->getActualPose(tmp);
+            id_prob_->_feet[contact_name]->getActualPose(tmp_affine3d_);
             if(gait_generator_)
-                gait_generator_->setInitialPose(contact_name,tmp);
+                gait_generator_->setInitialPose(contact_name,tmp_affine3d_);
         }
         else
             ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
@@ -722,14 +694,13 @@ void Controller::setInitialPose(const std::string& base_frame)
 
 void Controller::setInitialPose()
 {
-    Eigen::Affine3d tmp; //FIXME NO-RT
     if(id_prob_)
     {
         for(unsigned int i = 0;i<feet_names_.size(); i++)
         {
-            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp);
+            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp_affine3d_);
             if(gait_generator_)
-                gait_generator_->setInitialPose(feet_names_[i],tmp);
+                gait_generator_->setInitialPose(feet_names_[i],tmp_affine3d_);
         }
     }
 }
@@ -769,24 +740,53 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the initial feet poses
             setInitialPose(); //w.r.t to the frame selected in IDProblem
 
+            // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
+            // when the robot is grounded.
             cmds_->setBasePosition(floating_base_position_);
             cmds_->setDefaultBasePosition(floating_base_position_);
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
             cmds_->setDefaultBaseOrientation(floating_base_orientation_rpy_);
 
             dynamicReconfigureUpdate();
+
+
+            Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
+            contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
+
+            qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
+
+
+
         }
 
         if(tracking_active_)
         {
+            for(unsigned int i=0;i<feet_names_.size();i++)
+            {
+                if(contacts_[i])
+                    std::cout << feet_names_[i] << std::endl;
+                qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
+            }
+            //getchar();
+
+            qp_estimation_->update(0.001,false);
+
+            std::cout << "***********" << std::endl;
+            Eigen::VectorXd qdot;
+            qp_estimation_->getFloatingBaseTwist(qdot);
+            std::cout << "stima" << std::endl;
+            std::cout << qdot.transpose() << std::endl;
+            std::cout << "gazebo" << std::endl;
+            std::cout << floating_base_velocity_.transpose() << std::endl;
+
+
             gait_generator_->activateSwing();
 
             // Set the task reference for the waist
-            Eigen::Affine3d world_T_base; //FIXME NO-RT
-            id_prob_->_waist->getReference(world_T_base);
-            world_T_base.linear() = cmds_->getBaseRotationReference();
-            world_T_base.translation().z() = cmds_->getBaseHeight();
-            id_prob_->_waist->setReference(world_T_base);
+            id_prob_->_waist->getReference(tmp_affine3d_);
+            tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
+            tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
+            id_prob_->_waist->setReference(tmp_affine3d_);
 
             // Give to the gait_generator the contact status of the feet and the steps length
             for(unsigned int i = 0; i<feet_names_.size(); i++)
@@ -794,10 +794,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 #ifdef HAPTIC_CLOSED_LOOP
                 gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
 #endif
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],0, cmds_->getStepLength(feet_names_[i]));
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],1, cmds_->getStepHeading(feet_names_[i]));
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],2, cmds_->getStepHeight(feet_names_[i]));
-                gait_generator_->setTrajectoryAmplitude(feet_names_[i],3, cmds_->getStepHeadingRate(feet_names_[i]));
+                gait_generator_->setStepLength(feet_names_[i],cmds_->getStepLength(feet_names_[i]));
+                gait_generator_->setStepHeading(feet_names_[i],cmds_->getStepHeading(feet_names_[i]));
+                gait_generator_->setStepHeight(feet_names_[i],cmds_->getStepHeight(feet_names_[i]));
+                gait_generator_->setStepHeadingRate(feet_names_[i],cmds_->getStepHeadingRate(feet_names_[i]));
             }
 
             // Update the gait_generator

@@ -7,9 +7,9 @@
 #include <Eigen/StdVector>
 #include <atomic>
 #include <XBotInterface/ModelInterface.h>
+#include <dls_controller/geometry.h>
 
 //#define HAPTIC_CLOSED_LOOP
-
 
 namespace dls_controller
 {
@@ -459,7 +459,7 @@ public:
     Ellipse()
     {
         xyz = xyz_rotated = xyz_dot = Eigen::Vector3d::Zero();
-        Rz = Sz = Eigen::Matrix3d::Zero();
+        w_Rz_sw = Sz = Eigen::Matrix3d::Zero();
     }
 
 protected:
@@ -476,18 +476,22 @@ protected:
         xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 #endif
 
-        xyz = T_ * xyz;
+//        Rz << cos(yaw)  ,  -sin(yaw) ,		0,
+//                sin(yaw) ,  cos(yaw) ,  		0,
+//                0      ,     0     ,       1;
+
+        //xyz = T_ * xyz;
 
         double c = std::cos(psi);
         double s = std::sin(psi);
 
-        Rz(0,0) = c;
-        Rz(0,1) = -s;
-        Rz(1,0) = s;
-        Rz(1,1) = c;
-        Rz(2,2) = 1;
+        w_Rz_sw(0,0) = c;
+        w_Rz_sw(0,1) = -s;
+        w_Rz_sw(1,0) = s;
+        w_Rz_sw(1,1) = c;
+        w_Rz_sw(2,2) = 1;
 
-        xyz_rotated = Rz * xyz;
+        xyz_rotated = w_Rz_sw * xyz;
 
         pose_.translation() = initial_pose_.translation() + xyz_rotated;
 
@@ -506,7 +510,7 @@ protected:
         xyz_dot(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
 
         twist_.setZero(); // No angular velocities
-        twist_.head(3) = Sz * xyz_rotated + Rz * xyz_dot;
+        twist_.head(3) = Sz * xyz_rotated + w_Rz_sw * xyz_dot;
 
         return twist_;
     }
@@ -516,7 +520,7 @@ private:
     Eigen::Vector3d xyz;
     Eigen::Vector3d xyz_dot;
     Eigen::Vector3d xyz_rotated;
-    Eigen::Matrix3d Rz;
+    Eigen::Matrix3d w_Rz_sw;
     Eigen::Matrix3d Sz;
 
 };
@@ -704,61 +708,48 @@ public:
         return gait_type_;
     }
 
-    void setTrajectoryAmplitude(const double& length, const double& height, const double& heading = 0.0, const double& heading_rate = 0.0)
+    void setStepLength(const double& length)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-        {
             it->second.trajectory->setStepLength(length);
+    }
+
+    void setStepHeading(const double& heading)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
             it->second.trajectory->setStepHeading(heading);
+    }
+
+    void setStepHeight(const double& height)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
             it->second.trajectory->setStepHeight(height);
+    }
+
+    void setStepHeadingRate(const double& heading_rate)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
             it->second.trajectory->setStepHeadingRate(heading_rate);
-        }
     }
 
-    void setTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id, const double& amp)
+    void setStepLength(const std::string& foot_name, const double& length)
     {
-        switch(id)
-        {
-        case 0:
-            feet_[foot_name].trajectory->setStepLength(amp);
-            break;
-        case 1:
-            feet_[foot_name].trajectory->setStepHeading(amp);
-            break;
-        case 2:
-            feet_[foot_name].trajectory->setStepHeight(amp);
-            break;
-        case 3:
-            feet_[foot_name].trajectory->setStepHeadingRate(amp);
-            break;
-        default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values are Length=0,Heading=1,Height=2,Heading Rate=3");
-            break;
-        };
+        feet_[foot_name].trajectory->setStepLength(length);
     }
 
-    double getTrajectoryAmplitude(const std::string& foot_name, const unsigned int& id)
+    void setStepHeading(const std::string& foot_name, const double& heading)
     {
-        double amp = 0.0;
-        switch(id)
-        {
-        case 0:
-            amp = feet_[foot_name].trajectory->getStepLength();
-            break;
-        case 1:
-            amp = feet_[foot_name].trajectory->getStepHeading();
-            break;
-        case 2:
-            amp = feet_[foot_name].trajectory->getStepHeight();
-            break;
-        case 3:
-            amp = feet_[foot_name].trajectory->getStepHeadingRate();
-            break;
-        default:
-            ROS_WARN("setTrajectoryAmplitude: Wrong id, possible values Length=0,Heading=1,Height=2,Heading Rate=3");
-            break;
-        };
-        return amp;
+       feet_[foot_name].trajectory->setStepHeading(heading);
+    }
+
+    void setStepHeight(const std::string& foot_name, const double& height)
+    {
+        feet_[foot_name].trajectory->setStepHeight(height);
+    }
+
+    void setStepHeadingRate(const std::string& foot_name, const double& heading_rate)
+    {
+        feet_[foot_name].trajectory->setStepHeadingRate(heading_rate);
     }
 
     void activateSwing()
@@ -904,14 +895,18 @@ public:
 
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
-    CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
+    CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3)
     {
-        // FIXME:
-        // Add max safety height and length
+
         assert(gait_generator);
         gait_generator_ = gait_generator;
         assert(xbot_model);
         xbot_model_ = xbot_model;
+        assert(step_length_max>=0.0);
+        step_length_max_ = step_length_max;
+        assert(step_height_max>=0.0);
+        step_height_max_ = step_height_max;
+
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
         for(unsigned int i=0;i<feet_names.size();i++)
         {
@@ -936,13 +931,16 @@ public:
 
         cmd_ = cmd_t::HOLD;
 
-        base_X_hip_foot_offsets_.resize(4);
-        hf_X_base_hip_offsets_.resize(4);
-        for(unsigned int i=0; i<base_X_hip_foot_offsets_.size(); i++)
+        hf_X_hip_foot_offsets_.resize(4);
+        hf_X_virtual_hips_.resize(4);
+        for(unsigned int i=0; i<4; i++)
         {
-            base_X_hip_foot_offsets_[i].setZero();
-            hf_X_base_hip_offsets_[i].setZero();
+            hf_X_hip_foot_offsets_[i].setZero();
+            hf_X_virtual_hips_[i].setZero();
         }
+
+        step_length_ = 0.0;
+        step_height_ = 0.0;
 
         offset_applied_ = false;
     }
@@ -1015,8 +1013,8 @@ public:
 
         case cmd_t::RESET_BASE:
             resetBaseVelocities();
-            calculateBasePosition(period,default_base_position_);
-            calculateBaseOrientation(period,default_base_orientation_);
+            resetBasePosition(period);
+            resetBaseOrientation(period);
             resetFeetStep();
             break;
         };
@@ -1034,62 +1032,75 @@ public:
                 ROS_DEBUG_STREAM("Swinging foot "<<feet_names[i]);
 
                 xbot_model_->getPose(feet_names[i],world_T_foot_);
+                xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_);
                 xbot_model_->getPose(hips_names[i],world_T_hip_);
-                xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
+                //xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
 
                 hf_delta_hip_.setZero();
                 hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
                 hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
 
                 //hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
-                hf_delta_heding_ = Eigen::Vector3d(0,0,hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])).cross(hf_X_base_hip_offsets_[i]);
-
+                hf_delta_heding_ = Eigen::Vector3d(0,0,hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])).cross(hf_X_virtual_hips_[i]);
                 ROS_DEBUG_STREAM("hf_delta_heding_: "<<hf_delta_heding_.transpose());
 
                 hf_delta_hip_(0)+= hf_delta_heding_(0);
                 hf_delta_hip_(1)+= hf_delta_heding_(1);
-
-                ROS_DEBUG_STREAM("hf_delta_hip_: "<<hf_delta_hip_.transpose());
+                ROS_DEBUG_STREAM("hf_delta_hip_(velocity based): "<<hf_delta_hip_.transpose());
 
                 world_delta_hip_ = world_R_hf_ * hf_delta_hip_;
+                ROS_DEBUG_STREAM("world_delta_hip_(velocity based): "<<world_delta_hip_.transpose());
 
-                ROS_DEBUG_STREAM("world_delta_hip_: "<<world_delta_hip_.transpose());
+                world_X_virtual_hip_ = world_R_hf_ *(hf_X_virtual_hips_[i] - hf_R_base_*base_T_foot_.translation() );
+                world_X_virtual_hip_(2)=0;
+                ROS_DEBUG_STREAM("world_X_virtual_hip_(distance of actual foot position wrt to virtual hip pos in wf): "<<world_X_virtual_hip_.transpose());
 
-                world_X_hip_ = world_R_hf_ * hf_X_base_hip_offsets_[i] + world_T_base_.translation();
 
-                ROS_DEBUG_STREAM("world_X_hip_: "<<world_X_hip_.transpose());
-
-                world_X_hip_foot_ = world_T_foot_.translation() - world_X_hip_;
-
-                ROS_DEBUG_STREAM("world_X_hip_foot_: "<<world_X_hip_foot_.transpose());
-
-                world_X_hip_foot_offset_ = world_R_base_ * base_X_hip_foot_offsets_[i];
+                world_X_hip_foot_offset_ = world_R_hf_ * hf_X_hip_foot_offsets_[i];
                 world_X_hip_foot_offset_(2) = 0;
-
                 ROS_DEBUG_STREAM("world_X_hip_foot_offset_: "<<world_X_hip_foot_offset_.transpose());
 
                 world_delta_foot_.setZero();
-                world_delta_foot_.head(2) =  world_X_hip_foot_offset_.head(2) + world_delta_hip_.head(2) - world_X_hip_foot_.head(2);
+                world_delta_foot_.head(2) =   world_delta_hip_.head(2)  + world_X_hip_foot_offset_.head(2) + world_X_virtual_hip_.head(2);
 
                 ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
-                steps_length_[feet_names[i]]   = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
-                steps_heading_[feet_names[i]]  = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
-                steps_height_[feet_names[i]]   = 0.05; // FIXME
+                // if(std::abs(hf_base_linear_velocity_(0))!=0.0 || std::abs(hf_base_linear_velocity_(1))!=0.0)
+                    step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                // else
+                //    step_length_ = 0.0;
+                step_height_ = 0.05; // FIXME
+
+                if(step_length_ > step_length_max_)
+                {
+                    step_length_ = step_length_max_;
+                    ROS_WARN_STREAM("Step length is greater than: "<<step_length_max_);
+                }
+
+                if(step_height_ > step_height_max_)
+                {
+                    step_height_ = step_height_max_;
+                    ROS_WARN_STREAM("Step height is greater than: "<<step_height_max_);
+                }
+
+                steps_length_[feet_names[i]]         = step_length_;
+                steps_heading_[feet_names[i]]        = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
+                steps_height_[feet_names[i]]         = step_height_;
                 steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
+
+                ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
+                ROS_DEBUG_STREAM("steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
+                ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
+                ROS_DEBUG_STREAM("steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
+
             }
             else
             {
-                steps_length_[feet_names[i]]   = 0.0;
-                steps_heading_[feet_names[i]] = 0.0;
-                steps_height_[feet_names[i]]   = 0.0;
+                steps_length_[feet_names[i]]         = 0.0;
+                steps_heading_[feet_names[i]]        = 0.0;
+                steps_height_[feet_names[i]]         = 0.0;
                 steps_heading_rate_[feet_names[i]]   = 0.0;
             }
-
-            ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
-            ROS_DEBUG_STREAM("steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
-            ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
-            ROS_DEBUG_STREAM("steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
 
         }
         // FIXME: Look up in stop().
@@ -1127,6 +1138,19 @@ public:
         resetBaseLinearVelocity();
     }
 
+    void resetBasePosition(const double& period)
+    {
+        // FIXME, add a filter
+        calculateBasePosition(period,default_base_position_);
+    }
+
+    void resetBaseOrientation(const double& period)
+    {
+        // FIXME, add a filter
+        default_base_orientation_(2) = base_orientation_(2); // Keep the same yaw
+        calculateBaseOrientation(period,default_base_orientation_);
+    }
+
     void calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
     {
         base_position_ = base_position;
@@ -1152,11 +1176,14 @@ public:
         base_orientation_ = hf_base_angular_velocity_ * period + base_orientation_;
 
         // This rotation is computed w.r.t world
-        base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ())
+        /*base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ())
                                  * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())
-                                 * Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX());
+                                 * Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX());*/
 
-        base_rotation_reference_ = world_R_hf_.transpose() * base_rotation_reference_;
+        //base_rotation_reference_ = rpyToRot(base_orientation_).transpose();
+        rpyToRot(base_orientation_,base_rotation_reference_);
+        base_rotation_reference_.transposeInPlace();
+
     }
 
     // Sets
@@ -1218,24 +1245,28 @@ public:
             {
                 xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
                 xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
-                base_X_hip_foot_offsets_[i] = base_T_foot_.translation() - base_T_hip_.translation();
-                hf_X_base_hip_offsets_[i] = base_T_hip_.translation();
+                //initial feet offsets
+                hf_X_hip_foot_offsets_[i] = hf_R_base_ * (base_T_foot_.translation() - base_T_hip_.translation());
+
+                //virtual hips we assume base starts horizzontal (TODO)
+                hf_X_virtual_hips_[i] = base_T_hip_.translation();
+
             }
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[0] is "
-                             << hf_X_base_hip_offsets_[0] <<
+                             << hf_X_virtual_hips_[0] <<
                              " it should be: 0.3,0.2,0.0");
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[1] is "
-                             << hf_X_base_hip_offsets_[1] <<
+                             << hf_X_virtual_hips_[1] <<
                              " it should be: 0.3,0.2,0.0");
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[2] is "
-                             << hf_X_base_hip_offsets_[2] <<
+                             << hf_X_virtual_hips_[2] <<
                              " it should be: -0.3,0.2,0.0");
 
             ROS_DEBUG_STREAM("The value for hf_X_base_hip_offsets_[3] is "
-                             << hf_X_base_hip_offsets_[3] <<
+                             << hf_X_virtual_hips_[3] <<
                              " it should be: -0.3,-0.2,0.0");
 
             offset_applied_ = true;
@@ -1282,7 +1313,7 @@ private:
     Eigen::Vector3d hf_X_hip_;
     Eigen::Vector3d world_delta_hip_;
     Eigen::Vector3d world_X_hip_;
-    Eigen::Vector3d world_X_hip_foot_;
+    Eigen::Vector3d world_X_virtual_hip_;
     Eigen::Vector3d world_delta_foot_;
     Eigen::Vector3d world_X_hip_foot_offset_;
 
@@ -1304,10 +1335,14 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
 
     Eigen::Affine3d world_T_foot_, world_T_hip_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
-    std::vector<Eigen::Vector3d> base_X_hip_foot_offsets_;
-    std::vector<Eigen::Vector3d> hf_X_base_hip_offsets_;
+    std::vector<Eigen::Vector3d> hf_X_hip_foot_offsets_;
+    std::vector<Eigen::Vector3d> hf_X_virtual_hips_;
 
     double yaw_base_;
+    double step_height_max_;
+    double step_length_max_;
+    double step_length_;
+    double step_height_;
 };
 
 } // namespace

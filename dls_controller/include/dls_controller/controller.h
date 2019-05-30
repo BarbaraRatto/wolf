@@ -143,13 +143,6 @@ public:
          */
     bool setSwingFrequency(const double& swing_frequency);
 
-    /**
-         * @brief Set the trajectory amplitude
-         * @param const unsigned int& id_xyz X=0,Y=1,Z=2
-         * @param const double& amp
-         */
-    bool setTrajectoryAmplitude(const unsigned int& id_xyz, const double& amp);
-
 private:
 
     /** @brief Number of joints */
@@ -286,6 +279,12 @@ private:
     JoyHandler::Ptr joy_handler_;
     /** @brief Command interface */
     CommandsInterface::Ptr cmds_;
+    /** @brief Support temporary Affine3d */
+    Eigen::Affine3d tmp_affine3d_;
+    /** @brief Support temporary Vector3d */
+    Eigen::Vector3d tmp_vector3d_;
+    /** @brief Support temporary Matrix3d */
+    Eigen::Matrix3d tmp_matrix3d_;
 
     /**
          * @brief thread body for the odometry publisher
