@@ -279,7 +279,7 @@ public:
 
     TrajectoryInterface()
     {
-        pose_reference_ = initial_pose_ = pose_ = T_ = Eigen::Affine3d::Identity();
+        pose_reference_ = initial_pose_ = pose_ = Eigen::Affine3d::Identity();
         twist_reference_.setZero();
         twist_.setZero();
         swing_frequency_ = 5.0;
@@ -409,11 +409,6 @@ public:
         return swing_frequency_;
     }
 
-    void setTrajectoryTransformation(const Eigen::Affine3d& T)
-    {
-        T_ = T;
-    }
-
     void update(const double& period)
     {
         pose_reference_  = trajectoryFunction(time_);
@@ -437,8 +432,6 @@ protected:
     Eigen::Affine3d pose_;
     /** @brief Internal twist of the trajectory */
     Eigen::Vector6d twist_;
-    /** @brief Custom transformation to apply to the trajectory (before it gets rotated by the heading) */
-    Eigen::Affine3d T_;
     double time_;
     std::atomic<double> swing_frequency_;
     std::atomic<double> length_;
@@ -624,12 +617,6 @@ public:
     bool isScheduleChanged()
     {
         return schedule_changed_;
-    }
-
-    void setTrajectoryTransformation(const Eigen::Affine3d& T)
-    {
-        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-            it->second.trajectory->setTrajectoryTransformation(T);
     }
 
     bool isAnyFootInLiftOff()
@@ -1062,7 +1049,7 @@ public:
                 ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
 
                 // if(std::abs(hf_base_linear_velocity_(0))!=0.0 || std::abs(hf_base_linear_velocity_(1))!=0.0)
-                    step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+                step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
                 // else
                 //    step_length_ = 0.0;
                 step_height_ = 0.05; // FIXME
@@ -1102,8 +1089,6 @@ public:
         // FIXME: Look up in stop().
         // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
         // the base rotates w.r.t world. So I have to apply the current rotation to have a correct trajectory
-        //world_T_base_.translation() = Eigen::Vector3d::Zero();
-        //gait_generator_->setTrajectoryTransformation(world_T_base_);
     }
 
     void resetFeetStep()
@@ -1249,19 +1234,19 @@ public:
 
             }
 
-            ROS_INFO_STREAM("The signs for hf_X_base_hip_offsets_[lf] are "
+            ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[lf] are "
                              << hf_X_virtual_hips_[0] <<
                              " they should be: +,+ and 0.0");
 
-            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[rf] is "
+            ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[rf] are "
                              << hf_X_virtual_hips_[1] <<
                              " they should be: +,- and 0.0");
 
-            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[lh] is "
+            ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[lh] are "
                              << hf_X_virtual_hips_[2] <<
                              " they should be: -,+ and 0.0");
 
-            ROS_INFO_STREAM("The value for hf_X_base_hip_offsets_[rh] is "
+            ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[rh] are "
                              << hf_X_virtual_hips_[3] <<
                              " they should be: -,- and 0.0");
 
