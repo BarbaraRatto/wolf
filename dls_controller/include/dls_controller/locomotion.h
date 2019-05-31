@@ -1085,6 +1085,11 @@ public:
                 steps_heading_rate_[feet_names[i]]   = 0.0;
             }
 
+            gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
+            gait_generator_->setStepHeading(feet_names[i], steps_heading_[feet_names[i]]);
+            gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
+            gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
+
         }
         // FIXME: Look up in stop().
         // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
