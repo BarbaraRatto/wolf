@@ -14,6 +14,16 @@ dls_controller:
   - rh_haa_joint
   - rh_hfe_joint
   - rh_kfe_joint
+  feet:
+  - rh_foot
+  - lf_foot
+  - lh_foot
+  - rf_foot
+  hips:
+  - rh_hip
+  - lf_hip
+  - lh_hip
+  - rf_hip
   imu_sensors:
   - trunk_imu
   state_estimators:

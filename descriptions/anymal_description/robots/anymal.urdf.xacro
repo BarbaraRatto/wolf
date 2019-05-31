@@ -89,8 +89,6 @@
         </collision>  
     </link>
 
-
-
     <!-- Floating-base Joint -->
     <link name="world"/>
     <joint name="floating_base_joint" type="floating">
@@ -119,7 +117,7 @@
             <inertia ixx="0.217391101503" ixy="-0.00132873239126" ixz="-0.00228200226173" iyy="0.639432546734" iyz="-0.00138078263145" izz="0.62414077654"/>    
         </inertial>  
     </link>  
-    <link name="lf_hipassembly">
+    <link name="lf_hip">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -150,13 +148,13 @@
     <!-- Hip joint -->  
     <joint name="lf_haa_joint" type="revolute">
         <parent link="trunk"/>
-        <child link="lf_hipassembly"/>
+        <child link="lf_hip"/>
         <origin xyz="0.277 0.116 0.0"/>    
         <axis xyz="1 0 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="LF_THIGH">    
+    <link name="lf_thigh">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -193,14 +191,14 @@
     </link>  
     <!-- Thigh joint -->  
     <joint name="lf_hfe_joint" type="revolute">
-        <parent link="lf_hipassembly"/>
-        <child link="LF_THIGH"/>    
+        <parent link="lf_hip"/>
+        <child link="lf_thigh"/>
         <origin xyz="0.0635                    0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="LF_SHANK">    
+    <link name="lf_shank">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -222,21 +220,21 @@
     </link>  
     <!-- Shank joint -->  
     <joint name="lf_kfe_joint" type="revolute">
-        <parent link="LF_THIGH"/>    
-        <child link="LF_SHANK"/>    
+        <parent link="lf_thigh"/>
+        <child link="lf_shank"/>
         <origin xyz="0.0 0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
     <!-- Shank to Adapter joint -->  
-    <joint name="LF_SHANK_TO_ADAPTER" type="fixed">    
-        <parent link="LF_SHANK"/>    
-        <child link="LF_ADAPTER"/>    
+    <joint name="lf_shank_to_adapter" type="fixed">
+        <parent link="lf_shank"/>
+        <child link="lf_adapter"/>
         <origin rpy="0.0 0.0 0.0" xyz="0.1 -0.02 0.0"/>  
     </joint>  
     <!-- Adapter link -->  
-    <link name="LF_ADAPTER">    
+    <link name="lf_adapter">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0.032"/>      
             <geometry>        
@@ -258,8 +256,8 @@
         </inertial>  
     </link>  
     <!-- Adapter to Foot joint -->  
-    <joint name="LF_ADAPTER_TO_FOOT" type="fixed">    
-        <parent link="LF_ADAPTER"/>    
+    <joint name="lf_adapter_to_foot" type="fixed">
+        <parent link="lf_adapter"/>
         <child link="lf_foot"/>
         <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 -0.32125"/>  
     </joint>  
@@ -272,7 +270,7 @@
             </geometry>    
         </collision>  
     </link>   
-    <link name="rf_hipassembly">
+    <link name="rf_hip">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -303,13 +301,13 @@
     <!-- Hip joint -->  
     <joint name="rf_haa_joint" type="revolute">
         <parent link="trunk"/>
-        <child link="rf_hipassembly"/>
+        <child link="rf_hip"/>
         <origin xyz="0.277 -0.116 0.0"/>    
         <axis xyz="1 0 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="RF_THIGH">    
+    <link name="rf_tigh">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -346,14 +344,14 @@
     </link>  
     <!-- Thigh joint -->  
     <joint name="rf_hfe_joint" type="revolute">
-        <parent link="rf_hipassembly"/>
-        <child link="RF_THIGH"/>    
+        <parent link="rf_hip"/>
+        <child link="rf_tigh"/>
         <origin xyz="0.0635                    -0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="RF_SHANK">    
+    <link name="rf_shank">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -375,21 +373,21 @@
     </link>  
     <!-- Shank joint -->  
     <joint name="rf_kfe_joint" type="revolute">
-        <parent link="RF_THIGH"/>    
-        <child link="RF_SHANK"/>    
+        <parent link="rf_tigh"/>
+        <child link="rf_shank"/>
         <origin xyz="0.0 -0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
     <!-- Shank to Adapter joint -->  
-    <joint name="RF_SHANK_TO_ADAPTER" type="fixed">    
-        <parent link="RF_SHANK"/>    
-        <child link="RF_ADAPTER"/>    
+    <joint name="rf_shank_to_adapter" type="fixed">
+        <parent link="rf_shank"/>
+        <child link="rf_adapter"/>
         <origin rpy="-0.0 0.0 -0.0" xyz="0.1 0.02 0.0"/>  
     </joint>  
     <!-- Adapter link -->  
-    <link name="RF_ADAPTER">    
+    <link name="rf_adapter">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0.032"/>      
             <geometry>        
@@ -411,8 +409,8 @@
         </inertial>  
     </link>  
     <!-- Adapter to Foot joint -->  
-    <joint name="RF_ADAPTER_TO_FOOT" type="fixed">    
-        <parent link="RF_ADAPTER"/>    
+    <joint name="rf_adapter_to_foot" type="fixed">
+        <parent link="rf_adapter"/>
         <child link="rf_foot"/>
         <origin rpy="-0.0 0.0 -0.0" xyz="0.0 -0.0 -0.32125"/>  
     </joint>  
@@ -425,7 +423,7 @@
             </geometry>    
         </collision>  
     </link>  
-    <link name="lh_hipassembly">
+    <link name="lh_hip">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -456,13 +454,13 @@
     <!-- Hip joint -->  
     <joint name="lh_haa_joint" type="revolute">
         <parent link="trunk"/>
-        <child link="lh_hipassembly"/>
+        <child link="lh_hip"/>
         <origin xyz="-0.277 0.116 0.0"/>    
         <axis xyz="1 0 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="LH_THIGH">    
+    <link name="lh_thigh">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -499,14 +497,14 @@
     </link>  
     <!-- Thigh joint -->  
     <joint name="lh_hfe_joint" type="revolute">
-        <parent link="lh_hipassembly"/>
-        <child link="LH_THIGH"/>    
+        <parent link="lh_hip"/>
+        <child link="lh_thigh"/>
         <origin xyz="-0.0635                    0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="LH_SHANK">    
+    <link name="lh_shank">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -528,21 +526,21 @@
     </link>  
     <!-- Shank joint -->  
     <joint name="lh_kfe_joint" type="revolute">
-        <parent link="LH_THIGH"/>    
-        <child link="LH_SHANK"/>    
+        <parent link="lh_thigh"/>
+        <child link="lh_shank"/>
         <origin xyz="-0.0 0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
     <!-- Shank to Adapter joint -->  
-    <joint name="LH_SHANK_TO_ADAPTER" type="fixed">    
-        <parent link="LH_SHANK"/>    
-        <child link="LH_ADAPTER"/>    
+    <joint name="lh_shank_to_adapter" type="fixed">
+        <parent link="lh_shank"/>
+        <child link="lh_adapter"/>
         <origin rpy="0.0 -0.0 -0.0" xyz="-0.1 -0.02 0.0"/>  
     </joint>  
     <!-- Adapter link -->  
-    <link name="LH_ADAPTER">    
+    <link name="lh_adapter">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0.032"/>      
             <geometry>        
@@ -564,8 +562,8 @@
         </inertial>  
     </link>  
     <!-- Adapter to Foot joint -->  
-    <joint name="LH_ADAPTER_TO_FOOT" type="fixed">    
-        <parent link="LH_ADAPTER"/>    
+    <joint name="lh_adapter_to_foot" type="fixed">
+        <parent link="lh_adapter"/>
         <child link="lh_foot"/>
         <origin rpy="0.0 -0.0 -0.0" xyz="-0.0 0.0 -0.32125"/>  
     </joint>  
@@ -578,7 +576,7 @@
             </geometry>    
         </collision>  
     </link>  
-    <link name="rh_hipassembly">
+    <link name="rh_hip">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -609,13 +607,13 @@
     <!-- Hip joint -->  
     <joint name="rh_haa_joint" type="revolute">
         <parent link="trunk"/>
-        <child link="rh_hipassembly"/>
+        <child link="rh_hip"/>
         <origin xyz="-0.277 -0.116 0.0"/>    
         <axis xyz="1 0 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="RH_THIGH">    
+    <link name="rh_thigh">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -652,14 +650,14 @@
     </link>  
     <!-- Thigh joint -->  
     <joint name="rh_hfe_joint" type="revolute">
-        <parent link="rh_hipassembly"/>
-        <child link="RH_THIGH"/>    
+        <parent link="rh_hip"/>
+        <child link="rh_thigh"/>
         <origin xyz="-0.0635                    -0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="RH_SHANK">    
+    <link name="rh_shank">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -681,21 +679,21 @@
     </link>  
     <!-- Shank joint -->  
     <joint name="rh_kfe_joint" type="revolute">
-        <parent link="RH_THIGH"/>    
-        <child link="RH_SHANK"/>    
+        <parent link="rh_thigh"/>
+        <child link="rh_shank"/>
         <origin xyz="-0.0 -0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
     <!-- Shank to Adapter joint -->  
-    <joint name="RH_SHANK_TO_ADAPTER" type="fixed">    
-        <parent link="RH_SHANK"/>    
-        <child link="RH_ADAPTER"/>    
+    <joint name="rh_shank_to_adapter" type="fixed">
+        <parent link="rh_shank"/>
+        <child link="rh_adapter"/>
         <origin rpy="-0.0 -0.0 0.0" xyz="-0.1 0.02 0.0"/>  
     </joint>  
     <!-- Adapter link -->  
-    <link name="RH_ADAPTER">    
+    <link name="rh_adapter">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0.032"/>      
             <geometry>        
@@ -717,8 +715,8 @@
         </inertial>  
     </link>  
     <!-- Adapter to Foot joint -->  
-    <joint name="RH_ADAPTER_TO_FOOT" type="fixed">    
-        <parent link="RH_ADAPTER"/>    
+    <joint name="rh_adapter_to_foot" type="fixed">
+        <parent link="rh_adapter"/>
         <child link="rh_foot"/>
         <origin rpy="-0.0 -0.0 0.0" xyz="-0.0 -0.0 -0.32125"/>  
     </joint>  
@@ -753,39 +751,18 @@
                 imu_name="trunk_imu"
                 imu_topic="trunk_imu_1/data"
                 update_rate="250">
-                <!-- old URDF -->
-                <!--origin xyz="0.290 0.000 0.0999214" rpy="0 ${-PI} 0"/ -->
-                <!-- new URDF with ideal values from CAD -->
-                <!--origin xyz="0.28525 0.000 0.0967678" rpy="0 0 0"/-->
-
-                <!-- new URDF, REAL values manually measured from the edge of the robot -->
                 <origin xyz="0.27025 0.000 0.0967678" rpy="0 0 0"/>
         </xacro:microstrain_3dmgx425_imu>
-
 
         <xacro:kvh_1775_imu
                 parent="base"
                 imu_name="kvh_imu"
                 imu_topic="kvh_imu/data"
                 update_rate="250">
-            <!-- OLD URDF with manually created cylinder -->
-            <!--origin xyz="0.352845 0.0029 0.0503678" rpy="0 ${-PI} 0"/-->
-
-            <!-- NEW URDF with mesh, ideal values from CAD -->
-            <!--origin xyz="0.36347 0.00 0.0887678" rpy="0 ${PI} ${PI/4}"/-->
-
-                <!-- NEW URDF with mesh, REAL values measured from the edge of the robot -->
-                <!-- x = (500 - 153 - 61.77/2) / 1000	-->
-                <!-- y = from CAD -->
                 <origin xyz="0.316115 0.00 0.0887678" rpy="0 ${PI} ${PI/4}"/>
         </xacro:kvh_1775_imu>
 
 
     </xacro:if>
 
-
-
-
-
 </robot>
-
