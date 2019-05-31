@@ -8,6 +8,7 @@
 #include <atomic>
 #include <XBotInterface/ModelInterface.h>
 #include <dls_controller/geometry.h>
+#include <dls_controller/utils.h>
 
 //#define HAPTIC_CLOSED_LOOP
 
@@ -1065,8 +1066,8 @@ public:
 
         case cmd_t::RESET_BASE:
             resetBaseVelocities();
-            resetBasePosition(period);
-            resetBaseOrientation(period);
+            resetBasePosition();
+            resetBaseOrientation();
             resetFeetStep();
             break;
         };
@@ -1093,7 +1094,9 @@ public:
                 hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
 
                 //hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
-                hf_delta_heding_ = Eigen::Vector3d(0,0,hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i])).cross(hf_X_virtual_hips_[i]);
+                hf_delta_heding_.setZero();
+                hf_delta_heding_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
+                hf_delta_heding_ = hf_delta_heding_.cross(hf_X_virtual_hips_[i]);
                 ROS_DEBUG_STREAM("hf_delta_heding_: "<<hf_delta_heding_.transpose());
 
                 hf_delta_hip_(0)+= hf_delta_heding_(0);
@@ -1154,6 +1157,11 @@ public:
                 steps_heading_rate_[feet_names[i]]   = 0.0;
             }
 
+            gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
+            gait_generator_->setStepHeading(feet_names[i], steps_heading_[feet_names[i]]);
+            gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
+            gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
+
         }
         // FIXME: Look up in stop().
         // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
@@ -1175,11 +1183,15 @@ public:
     void resetBaseAngularVelocity()
     {
         hf_base_angular_velocity_.setZero();
+        hf_base_angular_velocity_ref_.setZero();
+        hf_base_angular_velocity_filt_.setZero();
     }
 
     void resetBaseLinearVelocity()
     {
         hf_base_linear_velocity_.setZero();
+        hf_base_linear_velocity_ref_.setZero();
+        hf_base_linear_velocity_filt_.setZero();
     }
 
     void resetBaseVelocities()
@@ -1188,26 +1200,35 @@ public:
         resetBaseLinearVelocity();
     }
 
-    void resetBasePosition(const double& period)
+    void resetBasePosition()
     {
-        // FIXME, add a filter
-        calculateBasePosition(period,default_base_position_);
+        for(unsigned int i=0;i<3;i++)
+            base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
+
+        base_height_ = base_position_(2);
     }
 
-    void resetBaseOrientation(const double& period)
+    void resetBaseOrientation()
     {
-        // FIXME, add a filter
         default_base_orientation_(2) = base_orientation_(2); // Keep the same yaw
-        calculateBaseOrientation(period,default_base_orientation_);
+
+        for(unsigned int i=0;i<3;i++)
+            base_orientation_(i) = secondOrderFilter(base_orientation_(i),base_orientation_filt_(i),default_base_orientation_(i),1.0); //FIXME hardcoded gain, it should be based on the sampling time
+
+        rpyToRot(base_orientation_,base_rotation_reference_);
+        base_rotation_reference_.transposeInPlace();
     }
 
     void calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
     {
         base_position_ = base_position;
 
-        hf_base_linear_velocity_(0) = base_linear_velocity_max_ * base_linear_velocity_scale_x_;
-        hf_base_linear_velocity_(1) = base_linear_velocity_max_ * base_linear_velocity_scale_y_;
-        hf_base_linear_velocity_(2) = base_linear_velocity_max_ * base_linear_velocity_scale_z_;
+        hf_base_linear_velocity_ref_(0) = base_linear_velocity_max_ * base_linear_velocity_scale_x_;
+        hf_base_linear_velocity_ref_(1) = base_linear_velocity_max_ * base_linear_velocity_scale_y_;
+        hf_base_linear_velocity_ref_(2) = base_linear_velocity_max_ * base_linear_velocity_scale_z_;
+
+        for(unsigned int i=0;i<3;i++)
+            hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
 
         base_position_ = world_R_hf_ * hf_base_linear_velocity_ * period + base_position_;
 
@@ -1219,21 +1240,18 @@ public:
     {
         base_orientation_ = base_orientation;
 
-        hf_base_angular_velocity_(0) = base_angular_velocity_max_ * base_angular_velocity_scale_roll_;
-        hf_base_angular_velocity_(1) = base_angular_velocity_max_ * base_angular_velocity_scale_pitch_;
-        hf_base_angular_velocity_(2) = base_angular_velocity_max_ * base_angular_velocity_scale_yaw_;
+        hf_base_angular_velocity_ref_(0) = base_angular_velocity_max_ * base_angular_velocity_scale_roll_;
+        hf_base_angular_velocity_ref_(1) = base_angular_velocity_max_ * base_angular_velocity_scale_pitch_;
+        hf_base_angular_velocity_ref_(2) = base_angular_velocity_max_ * base_angular_velocity_scale_yaw_;
+
+        for(unsigned int i=0;i<3;i++)
+            hf_base_angular_velocity_(i) = secondOrderFilter(hf_base_angular_velocity_(i),hf_base_angular_velocity_filt_(i),hf_base_angular_velocity_ref_(i),0.5);
 
         base_orientation_ = hf_base_angular_velocity_ * period + base_orientation_;
 
-        // This rotation is computed w.r.t world
-        /*base_rotation_reference_ = Eigen::AngleAxisd(base_orientation_(2), Eigen::Vector3d::UnitZ())
-                                 * Eigen::AngleAxisd(base_orientation_(1), Eigen::Vector3d::UnitY())
-                                 * Eigen::AngleAxisd(base_orientation_(0), Eigen::Vector3d::UnitX());*/
-
-        //base_rotation_reference_ = rpyToRot(base_orientation_).transpose();
+         // This is the base rotation computed w.r.t world
         rpyToRot(base_orientation_,base_rotation_reference_);
         base_rotation_reference_.transposeInPlace();
-
     }
 
     // Sets
@@ -1353,10 +1371,19 @@ private:
     /** @brief Base angular velocity */
     Eigen::Vector3d hf_base_angular_velocity_;
 
+    Eigen::Vector3d hf_base_linear_velocity_filt_;
+    Eigen::Vector3d hf_base_angular_velocity_filt_;
+
+    Eigen::Vector3d hf_base_linear_velocity_ref_;
+    Eigen::Vector3d hf_base_angular_velocity_ref_;
+
     Eigen::Vector3d base_position_;
     Eigen::Vector3d base_orientation_;
     Eigen::Vector3d default_base_orientation_;
     Eigen::Vector3d default_base_position_;
+
+    Eigen::Vector3d base_position_filt_;
+    Eigen::Vector3d base_orientation_filt_;
 
     Eigen::Vector3d hf_delta_hip_;
     Eigen::Vector3d hf_delta_heding_;

@@ -64,37 +64,47 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     if(!imu_hw)
     {
-        ROS_ERROR("hardware_interface::ImuSensorInterface not found");
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::ImuSensorInterface not found");
         return false;
     }
     if(!gt_hw)
     {
-        ROS_ERROR("hardware_interface::GroundTruthInterface not found");
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::GroundTruthInterface not found");
         return false;
     }
     if(!cont_hw)
     {
-        ROS_ERROR("hardware_interface::ContactSwitchSensorInterface not found");
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
         return false;
     }
     if (!controller_nh.getParam("joints", joint_names_))
     {
-        ROS_ERROR("No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        return false;
+    }
+    if (!controller_nh.getParam("feet", feet_names_))
+    {
+        ROS_ERROR("No feet given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        return false;
+    }
+    if (!controller_nh.getParam("hips", hips_names_))
+    {
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"No hips given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     if (!controller_nh.getParam("imu_sensors", imu_names_))
     {
-        ROS_ERROR("No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     if (!controller_nh.getParam("state_estimators", state_estimator_names_))
     {
-        ROS_ERROR("No state_estimators given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"No state_estimators given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     if (!controller_nh.getParam("contact_sensors", contact_sensor_names_))
     {
-        ROS_ERROR("No contact_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"No contact_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     // Setting up handles:
@@ -108,7 +118,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
         catch(...)
         {
-            ROS_ERROR("Error loading joint_states_");
+            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading joint_states_");
             return false;
         }
     }
@@ -123,7 +133,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
         catch(...)
         {
-            ROS_ERROR("Error loading imu_sensors_");
+            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading imu_sensors_");
             return false;
         }
     }
@@ -138,7 +148,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
         catch(...)
         {
-            ROS_ERROR("Error loading state_estimators_");
+            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading state_estimators_");
             return false;
         }
     }
@@ -151,7 +161,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
         catch(...)
         {
-            ROS_ERROR("Error loading contact_sensors_");
+            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading contact_sensors_");
             return false;
         }
     }
@@ -168,17 +178,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         // Getting PID gains
         if (!controller_nh.getParam("gains/" + joint_names_[i] + "/p", joint_p_gain_[i]))
         {
-            ROS_ERROR("No P gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            ROS_ERROR_NAMED(CONTROLLER_NAME,"No P gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
         if (!controller_nh.getParam("gains/" + joint_names_[i] + "/i", joint_i_gain_[i]))
         {
-            ROS_ERROR("No D gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            ROS_ERROR_NAMED(CONTROLLER_NAME,"No D gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
         if (!controller_nh.getParam("gains/" + joint_names_[i] + "/d", joint_d_gain_[i]))
         {
-            ROS_ERROR("No I gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            ROS_ERROR_NAMED(CONTROLLER_NAME,"No I gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
         // Check if the values are positive
@@ -190,6 +200,18 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_DEBUG("P value for joint %i is: %d",i,joint_p_gain_[i]);
         ROS_DEBUG("I value for joint %i is: %d",i,joint_i_gain_[i]);
         ROS_DEBUG("D value for joint %i is: %d",i,joint_d_gain_[i]);
+    }
+
+    // Assume we are working with a dog
+    if(hips_names_.size()!=4)
+    {
+        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"Wrong number of hips!");
+        return false;
+    }
+    if(feet_names_.size()!=4)
+    {
+        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"Wrong number of feet!");
+        return false;
     }
 
     // Create the ModelInterface from XBot
@@ -228,20 +250,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Set home position defined in the srdf
     xbot_model_->getRobotState("home", qhome_);
     xbot_model_->setJointPosition(qhome_);
-
-    // Those are associated to the SRDF model
-    // NOTE: do not confuse these with the contact_sensors
-    //FIXME hardcoded names...
-    feet_names_.resize(4);
-    feet_names_[0] = "lf_foot";
-    feet_names_[1] = "rf_foot";
-    feet_names_[2] = "lh_foot";
-    feet_names_[3] = "rh_foot";
-    hips_names_.resize(4);
-    hips_names_[0] = "lf_hipassembly";
-    hips_names_[1] = "rf_hipassembly";
-    hips_names_[2] = "lh_hipassembly";
-    hips_names_[3] = "rh_hipassembly";
 
     task_poses_["waist"].first = desired_task_poses_["waist"].first = Eigen::Affine3d::Identity();
     task_poses_["waist"].second = desired_task_poses_["waist"].second = Eigen::Vector6d::Zero();
@@ -780,18 +788,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(tmp_affine3d_);
 
+#ifdef HAPTIC_CLOSED_LOOP
             // Give to the gait_generator the contact status of the feet and the steps length
             for(unsigned int i = 0; i<feet_names_.size(); i++)
-            {
-#ifdef HAPTIC_CLOSED_LOOP
                 gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
 #endif
-                gait_generator_->setStepLength(feet_names_[i],cmds_->getStepLength(feet_names_[i]));
-                gait_generator_->setStepHeading(feet_names_[i],cmds_->getStepHeading(feet_names_[i]));
-                gait_generator_->setStepHeight(feet_names_[i],cmds_->getStepHeight(feet_names_[i]));
-                gait_generator_->setStepHeadingRate(feet_names_[i],cmds_->getStepHeadingRate(feet_names_[i]));
-            }
-
             // Update the gait_generator
             gait_generator_->update(period.toSec());
 
