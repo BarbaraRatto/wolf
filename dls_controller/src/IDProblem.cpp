@@ -79,7 +79,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
     _id_problem->update(Eigen::VectorXd(1));
 
-    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(),1e4); //, 1e6);
+    _solver = boost::make_shared<OpenSoT::solvers::iHQP>(_id_problem->getStack(), _id_problem->getBounds(),1e6); //, 1e6);
                                                          //, OpenSoT::solvers::solver_back_ends::OSQP);
                                                          //, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 
