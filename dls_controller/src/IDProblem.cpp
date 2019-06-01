@@ -34,7 +34,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     _waist->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
-    _postural->setLambda(2000.);
+    _postural->setLambda(1000.);
     _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
@@ -55,11 +55,14 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
 
 
     /// HERE WE SET SOME BOUNDS
-    Eigen::VectorXd xmax = 1000.*Eigen::VectorXd::Ones(_model->getJointNum());
+    Eigen::VectorXd xmax = 100.*Eigen::VectorXd::Ones(_model->getJointNum());
     Eigen::VectorXd xmin = -xmax;
 
     _qddot_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
                 "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
+
+    //_qddot_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
+    //            "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
 
     Eigen::Vector6d wrench_upper_lims; wrench_upper_lims<<1000,1000,1000,Eigen::Vector3d::Zero();
     Eigen::Vector6d wrench_lower_lims; wrench_lower_lims<<-1000, -1000, 0.0 ,Eigen::Vector3d::Zero();
@@ -75,8 +78,8 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     std::list<unsigned int> idf = {0,1,2};
 
     _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf + _waist%idw)
-            /(_com%idc + _postural)
-            )<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+            /(_postural))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+            ///(_postural))<<_wrenches_lims<<_dynamics<<_friction_cones;
            // /(_com%idc + _waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
 
     _id_problem->update(Eigen::VectorXd(1));
