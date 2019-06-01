@@ -767,6 +767,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
             cmds_->setDefaultBaseOrientation(floating_base_orientation_rpy_);
 
+            id_prob_->_postural->setReference(qhome_);
+
             dynamicReconfigureUpdate();
         }
 
