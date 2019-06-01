@@ -105,6 +105,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_NAMED(CONTROLLER_NAME,"No contact_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
+    // Assume we have a contact sensor for each foot
+    if(contact_sensor_names_.size()!=4)
+    {
+        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"Wrong number of contact sensors!");
+        return false;
+    }
+    contact_sensor_names_ = sortByLegName(contact_sensor_names_);
+
     // Setting up handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
     {
@@ -150,20 +158,30 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
             return false;
         }
     }
-    for (unsigned int i = 0; i < contact_sensor_names_.size(); i++)
-    {
+    contact_sensors_.resize(4);
+    //for (unsigned int i = 0; i < contact_sensor_names_.size(); i++)
+    //{
         try
         {
-            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[i]);
-            contact_sensors_.push_back(cont_hw->getHandle(contact_sensor_names_[i]));
+            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LF]);
+            contact_sensors_[leg_id::LF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LF]));
+
+            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RH]);
+            contact_sensors_[leg_id::RH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RH]));
+
+            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RF]);
+            contact_sensors_[leg_id::RF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RF]));
+
+            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LH]);
+            contact_sensors_[leg_id::LH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LH]));
         }
         catch(...)
         {
             ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading contact_sensors_");
             return false;
         }
-    }
-    assert(contact_sensors_.size()>0);
+    //}
+    //assert(contact_sensors_.size()>0);
 
     des_joint_p_gain_.resize(joint_states_.size());
     des_joint_i_gain_.resize(joint_states_.size());
@@ -211,6 +229,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"Wrong number of feet!");
         return false;
     }
+    hips_names_ = sortByLegName(hips_names_);
+    feet_names_ = sortByLegName(feet_names_);
 
     // Create the ModelInterface from XBot
     XBot::ConfigOptions opt;

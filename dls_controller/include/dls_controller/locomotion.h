@@ -193,23 +193,7 @@ public:
 
         assert(feet_names.size() == 4);
 
-        // Reorder the feet names
-        std::string lf="lf";
-        std::string rh="rh";
-        std::string rf="rf";
-        std::string lh="lh";
-        std::vector<std::string> ordered_feet_names(4);
-        for(unsigned int i=0;i<feet_names.size();i++)
-        {
-            if(feet_names[i].find(lf) != std::string::npos)
-                ordered_feet_names[0] = feet_names[i]; //LF
-            if(feet_names[i].find(rh) != std::string::npos)
-                ordered_feet_names[1] = feet_names[i]; //RH
-            if(feet_names[i].find(rf) != std::string::npos)
-                ordered_feet_names[2] = feet_names[i]; //RF
-            if(feet_names[i].find(lh) != std::string::npos)
-                ordered_feet_names[3] = feet_names[i]; //LH
-        }
+        auto ordered_feet_names = sortByLegName(feet_names);
 
         if(std::strcmp(gait_type.c_str(),"trot")==0)
         {
