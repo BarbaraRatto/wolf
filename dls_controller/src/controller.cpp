@@ -344,6 +344,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4));
     contacts_rt_pub_->msg_.data.resize(4);
 
+    grfs_rt_pub_.resize(feet_names_.size());
+    for(unsigned int i=0;i<feet_names_.size();i++)
+    {
+        grfs_rt_pub_[i].reset(new realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>(controller_nh, "/"+feet_names_[i]+"_grf", 4));
+        grfs_rt_pub_[i]->msg_.header.frame_id = "world";
+    }
+
     // Reference for the tasks
     //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
 
