@@ -790,7 +790,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
 
-                id_prob_->_feet[feet_names_[i]]->setReference(Eigen::Affine3d::Identity(),gait_generator_->getReferenceDot(feet_names_[i]));
+                id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
 
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
