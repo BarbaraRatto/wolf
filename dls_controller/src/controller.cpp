@@ -748,11 +748,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // STATE ESTIMATION QP
     for(unsigned int i=0;i<feet_names_.size();i++)
     {
-         qp_estimation_->setContactState(feet_names_[i],true);
+         qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
     }
 
-    qp_estimation_->update(0.001,false);
-    qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+    //qp_estimation_->update(period.toSec(),false);
+    //qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
 
     if(solver_started_) // Use the ID solver to calculate the torques
@@ -779,8 +779,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(tracking_active_)
         {
 
-            gait_generator_->activateSwing();
-
             // Set the task reference for the waist
             id_prob_->_waist->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
@@ -792,13 +790,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             for(unsigned int i = 0; i<feet_names_.size(); i++)
                 gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
 #endif
-            // Update the gait_generator
-            gait_generator_->update(period.toSec());
 
+            std::cout<<"*****"<<std::endl;
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
 
                 id_prob_->_feet[feet_names_[i]]->setReference(Eigen::Affine3d::Identity(),gait_generator_->getReferenceDot(feet_names_[i]));
+
+                std::cout<<feet_names_[i]<<" "<<gait_generator_->getReferenceDot(feet_names_[i]).transpose() << std::endl;
+
 
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
@@ -816,12 +816,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
         else
         {
-
-            gait_generator_->deactivateSwing();
-
             // Force the contact to each foot
             for(unsigned int i = 0; i<feet_names_.size(); i++)
+            {
+                id_prob_->_feet[feet_names_[i]]->setLambda(0.,0.);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
+            }
         }
 
         // Solver Update
