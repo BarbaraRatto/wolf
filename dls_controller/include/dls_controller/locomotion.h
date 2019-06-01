@@ -992,6 +992,10 @@ public:
             resetFeetStep();
             break;
         };
+
+        // Update the gait_generator
+        gait_generator_->update(period);
+
     }
 
     void calculateFeetStep()
@@ -1087,6 +1091,7 @@ public:
         // FIXME: Look up in stop().
         // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
         // the base rotates w.r.t world. So I have to apply the current rotation to have a correct trajectory
+         gait_generator_->activateSwing();
     }
 
     void resetFeetStep()
@@ -1099,6 +1104,7 @@ public:
             steps_height_[feet_names[i]]   = 0.0;
             steps_heading_rate_[feet_names[i]]   = 0.0;
         }
+        gait_generator_->deactivateSwing();
     }
 
     void resetBaseAngularVelocity()
