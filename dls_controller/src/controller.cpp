@@ -604,8 +604,8 @@ void Controller::stateEstimation()
     floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
     floating_base_accelleration_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularAcceleration());
 
-    //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
-    floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
+    floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
+    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
 
     quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
@@ -613,6 +613,7 @@ void Controller::stateEstimation()
     floating_base_pose_.linear() = tmp_matrix3d_.transpose();
 
     rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
+
 }
 
 void Controller::updateXBotModel()
@@ -668,6 +669,11 @@ void Controller::starting(const ros::Time& time)
     stateEstimation();
     // 5) Virtual Model Update
     updateXBotModel();
+
+    // STATE ESTIMATION RESET
+    Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
+    contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
+    qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
 
     ROS_DEBUG("Starting DLS Controller Completed");
 }
@@ -739,6 +745,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     else
         tracking_active_ = true;
 
+    // STATE ESTIMATION QP
+    for(unsigned int i=0;i<feet_names_.size();i++)
+    {
+         qp_estimation_->setContactState(feet_names_[i],true);
+    }
+
+    qp_estimation_->update(0.001,false);
+    qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+
+
     if(solver_started_) // Use the ID solver to calculate the torques
     {
         if(!solver_reset_done_)
@@ -758,27 +774,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->setDefaultBaseOrientation(floating_base_orientation_rpy_);
 
             dynamicReconfigureUpdate();
-
-            // STATE ESTIMATION RESET
-            Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
-            contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-            qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
         }
 
         if(tracking_active_)
         {
-
-            // STATE ESTIMATION QP
-            for(unsigned int i=0;i<feet_names_.size();i++)
-            {
-                if(contacts_[i])
-                    qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
-            }
-
-            qp_estimation_->update(0.001,false);
-            qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-
-
 
             gait_generator_->activateSwing();
 
