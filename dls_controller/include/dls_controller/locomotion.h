@@ -1076,6 +1076,15 @@ public:
             break;
         };
 
+        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+        for(unsigned int i=0; i<feet_names.size(); i++)
+        {
+            gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
+            gait_generator_->setStepHeading(feet_names[i], steps_heading_[feet_names[i]]);
+            gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
+            gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
+        }
+
         // Update the gait_generator
         gait_generator_->update(period);
     }
@@ -1165,12 +1174,6 @@ public:
                 steps_height_[feet_names[i]]         = 0.0;
                 steps_heading_rate_[feet_names[i]]   = 0.0;
             }
-
-            gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
-            gait_generator_->setStepHeading(feet_names[i], steps_heading_[feet_names[i]]);
-            gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
-            gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
-
         }
 
         // FIXME: Look up in stop().
@@ -1182,8 +1185,6 @@ public:
     {
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
-        gait_generator_->deactivateSwing();
-
         for(unsigned int i=0; i<feet_names.size(); i++)
         {
             steps_length_[feet_names[i]]   = 0.0;
@@ -1191,6 +1192,7 @@ public:
             steps_height_[feet_names[i]]   = 0.0;
             steps_heading_rate_[feet_names[i]]   = 0.0;
         }
+        gait_generator_->deactivateSwing();
     }
 
     void resetBaseAngularVelocity()
