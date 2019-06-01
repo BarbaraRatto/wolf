@@ -38,6 +38,12 @@ public:
     bool solve(Eigen::VectorXd& x);
 
     /**
+     * @brief get the ground reaction forces call this after solve()
+     * @param grfs from the solver
+     */
+    void getGroundReactionForces(Eigen::VectorXd& grfs);
+
+    /**
      * @brief update call after the model.update() to update the autostack
      * @param x input state q
      */

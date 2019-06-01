@@ -31,12 +31,6 @@ Controller::Controller()
 
 Controller::~Controller()
 {
-    if(ci_joint_states_rt_pub_)
-        delete ci_joint_states_rt_pub_;
-    if(state_estimation_rt_pub_)
-        delete state_estimation_rt_pub_;
-    if(tasks_actual_pose_rt_pub_)
-        delete tasks_actual_pose_rt_pub_;
     if(server_)
         delete server_;
 }
@@ -297,6 +291,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     normals_.resize(contact_sensors_.size());
     contacts_.resize(contact_sensors_.size());
     contact_forces_.resize(contact_sensors_.size());
+    ground_reaction_forces_.resize(24);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -316,7 +311,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
     // Create the realtime publishers
-    ci_joint_states_rt_pub_ = new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4);
+    ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4));
     ci_joint_states_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     ci_joint_states_rt_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     ci_joint_states_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
@@ -330,23 +325,23 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
-    state_estimation_rt_pub_ = new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation", 4);
+    state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation", 4));
     state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
 
-    tasks_actual_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_actual_pose", 4);
+    tasks_actual_pose_rt_pub_.reset(new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_actual_pose", 4));
     tasks_actual_pose_rt_pub_->msg_.reference_frames.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_names.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_poses.poses.resize(task_poses_.size());
     tasks_actual_pose_rt_pub_->msg_.task_velocities.resize(task_poses_.size());
 
-    tasks_desired_pose_rt_pub_ = new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_desired_pose", 4);
+    tasks_desired_pose_rt_pub_.reset(new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_desired_pose", 4));
     tasks_desired_pose_rt_pub_->msg_.reference_frames.resize(desired_task_poses_.size());
     tasks_desired_pose_rt_pub_->msg_.task_names.resize(desired_task_poses_.size());
     tasks_desired_pose_rt_pub_->msg_.task_poses.poses.resize(desired_task_poses_.size());
     tasks_desired_pose_rt_pub_->msg_.task_velocities.resize(desired_task_poses_.size());
 
-    contacts_rt_pub_ = new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4);
+    contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4));
     contacts_rt_pub_->msg_.data.resize(4);
 
     // Reference for the tasks
@@ -833,6 +828,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         else
             des_joint_efforts_ = x_;
 
+        id_prob_->getGroundReactionForces(ground_reaction_forces_);
+
         pid_active_ = false;
     }
     else // Use a position PID controller
@@ -1022,6 +1019,18 @@ void Controller::odomPublisher()
 
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
 {
+    for(unsigned int i=0;i<grfs_rt_pub_.size();i++)
+    {
+        if(grfs_rt_pub_[i]->trylock())
+        {
+            grfs_rt_pub_[i]->msg_.wrench.force.x  = ground_reaction_forces_.segment(6*i,3)(0);
+            grfs_rt_pub_[i]->msg_.wrench.force.y  = ground_reaction_forces_.segment(6*i,3)(1);
+            grfs_rt_pub_[i]->msg_.wrench.force.z  = ground_reaction_forces_.segment(6*i,3)(2);
+            grfs_rt_pub_[i]->msg_.header.stamp = time;
+            grfs_rt_pub_[i]->unlockAndPublish();
+        }
+    }
+
 
     // Publish using rt-publishers
     if(ci_joint_states_rt_pub_->trylock())

@@ -102,13 +102,16 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
         return false;
     a = _id->computedTorque(_x, tau, _qddot);
 
+    return a;
+}
+
+void IDProblem::getGroundReactionForces(Eigen::VectorXd& grfs)
+{
     //std::cout << "   FORZE GRF *********** " << std::endl;
-    //std::cout << _x.segment(18,24).transpose() << std::endl;
+    grfs = _x.segment(18,24);
 
     //std::cout << "   ACC FB *********** " << std::endl;
     //std::cout << _x.segment(0,6).transpose() << std::endl;
-
-    return a;
 }
 
 void IDProblem::log(XBot::MatLogger::Ptr& logger)
