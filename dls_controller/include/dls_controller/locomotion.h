@@ -204,6 +204,15 @@ public:
             next_feet_to_move_.resize(2);
             max_priority_ = 1;
         }
+        if(std::strcmp(gait_type.c_str(),"trot")==0)
+        {
+            schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[1],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[2],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[3],1));
+            next_feet_to_move_.resize(2);
+            max_priority_ = 1;
+        }
         else if(std::strcmp(gait_type.c_str(),"crawl")==0)
         {
             schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
@@ -213,14 +222,11 @@ public:
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
         }
-        else if(std::strcmp(gait_type.c_str(),"bound")==0)
+        else if(std::strcmp(gait_type.c_str(),"one_foot")==0)
         {
             schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[1],1));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[2],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[3],1));
-            next_feet_to_move_.resize(2);
-            max_priority_ = 1;
+            next_feet_to_move_.resize(1);
+            max_priority_ = 0;
         }
         else
         {
