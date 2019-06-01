@@ -61,7 +61,7 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
                 "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
 
     Eigen::Vector6d wrench_upper_lims; wrench_upper_lims<<1000,1000,1000,Eigen::Vector3d::Zero();
-    Eigen::Vector6d wrench_lower_lims; wrench_lower_lims<<-1000, -1000, 0.0 ,Eigen::Vector3d::Zero();
+    Eigen::Vector6d wrench_lower_lims; wrench_lower_lims<<-1000, -1000, 10.0 ,Eigen::Vector3d::Zero();
     _wrenches_lims = boost::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
                 contact_links, wrench_lower_lims, wrench_upper_lims,_id->getContactsWrenchAffine());
 
