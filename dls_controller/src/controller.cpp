@@ -25,6 +25,7 @@ Controller::Controller()
     ,pid_active_(true)
     ,tracking_active_(false)
     ,relative_tasks_active_(false)
+    ,use_qp_state_estimation_(false)
     ,stopping_(false)
 {
 }
@@ -273,12 +274,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         base_frames_[feet_names_[i]] = "world";
     }
 
-    //desired_task_poses_.initRT(task_poses_);
-
-    //id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,DT,feet_names_));
-    //fo_.reset(new OpenSoT::utils::ForceOptimization(xbot_model_,feet_names_,false));
-    //id_prob_ = boost::make_shared<OpenSoT::IDProblem>(std::shared_ptr<XBot::ModelInterface>(xbot_model_, dt, feet_names_));
-
     // Resize the variables
     joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
@@ -292,6 +287,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contacts_.resize(contact_sensors_.size());
     contact_forces_.resize(contact_sensors_.size());
     ground_reaction_forces_.resize(24);
+    floating_base_velocity_qp_.resize(6);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -328,6 +324,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation", 4));
     state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
+
+    state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation_qp", 4));
+    state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
+    state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
 
     tasks_actual_pose_rt_pub_.reset(new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_actual_pose", 4));
     tasks_actual_pose_rt_pub_->msg_.reference_frames.resize(task_poses_.size());
@@ -371,7 +371,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
+
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
+
+    // STATE ESTIMATION RESET FIXME Move
+    Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
+    contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
+    qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
 
     return true;
 }
@@ -387,7 +393,7 @@ void Controller::dynamicReconfigureUpdate()
     }
     default_config_.toggle_solver = solver_started_;
     default_config_.toggle_relative_tasks = relative_tasks_active_;
-    default_config_.toggle_tracking = tracking_active_;
+    default_config_.toggle_qp_estimation = use_qp_state_estimation_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -414,7 +420,7 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         toggleRelativeTasks();
         break;
     case 2:
-        toggleTracking();
+        toggleQPestimation();
         break;
     case 3:
         setDutyCycle(config.duty_cycle);
@@ -568,6 +574,16 @@ void Controller::toggleSolver()
         ROS_INFO("Solver integration is OFF");
 }
 
+void Controller::toggleQPestimation()
+{
+    use_qp_state_estimation_=!use_qp_state_estimation_;
+
+    if(use_qp_state_estimation_)
+        ROS_INFO("QP estimation is ON");
+    else
+        ROS_INFO("QP estimation is OFF");
+}
+
 void Controller::toggleTracking()
 {
     tracking_active_=!tracking_active_;
@@ -617,13 +633,14 @@ void Controller::stateEstimation()
     floating_base_orientation_.y() = state_estimators_[selected_se].getOrientation()[2];
     floating_base_orientation_.z() = state_estimators_[selected_se].getOrientation()[3];
 
-    floating_base_velocity_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearVelocity());
-    floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
 
     floating_base_velocity_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularVelocity());
+
+    floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
     floating_base_accelleration_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularAcceleration());
 
     floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
+    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
 
     quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
@@ -631,6 +648,16 @@ void Controller::stateEstimation()
     floating_base_pose_.linear() = tmp_matrix3d_.transpose();
 
     rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
+
+    qp_estimation_->update(0.0,false); // FIXME Dt
+
+    qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+
+    if(use_qp_state_estimation_)
+        floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    else
+        floating_base_velocity_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearVelocity());
+
 }
 
 void Controller::updateXBotModel()
@@ -638,6 +665,7 @@ void Controller::updateXBotModel()
     xbot_model_->setJointVelocity(joint_velocities_);
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
+
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
     if(id_prob_)
@@ -667,6 +695,12 @@ void Controller::readContactsState()
         normals_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getNormal());
         contacts_[i] = *contact_sensors_[i].getContactState();
         contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());
+        // Note that feet and contact sensors are ordered in the same way
+#ifndef HAPTIC_CLOSED_LOOP
+        qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
+#else
+        qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
+#endif
     }
 }
 
@@ -782,7 +816,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(tracking_active_)
         {
 
-
             // Set the task reference for the waist
             id_prob_->_waist->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
@@ -794,6 +827,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             for(unsigned int i = 0; i<feet_names_.size(); i++)
                 gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
 #endif
+
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
 
@@ -816,7 +850,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
         else
         {
-
             // Force the contact to each foot
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
@@ -892,7 +925,6 @@ void Controller::setRelativeTasks()
                 setInitialPose("base_link",feet_names_[i]);
             }
         }
-
     // Set the base frame of the feet in stance w.r.t the foot in touchDown.
     // Set the base frame of the foot in touchDown w.r.t the base_link.
     for(unsigned int i=0; i<feet_names_.size(); i++)
@@ -1073,7 +1105,18 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         state_estimation_rt_pub_->msg_.header.stamp = time;
         state_estimation_rt_pub_->unlockAndPublish();
     }
+    if(state_estimation_qp_rt_pub_->trylock())
+    {
+        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_qp_(0);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_qp_(1);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.z     = floating_base_velocity_qp_(2);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.x    = floating_base_velocity_qp_(3);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.y    = floating_base_velocity_qp_(4);
+        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.z    = floating_base_velocity_qp_(5);
 
+        state_estimation_qp_rt_pub_->msg_.header.stamp = time;
+        state_estimation_qp_rt_pub_->unlockAndPublish();
+    }
     if(tasks_actual_pose_rt_pub_->trylock())
     {
         TaskPosesMap::iterator it;

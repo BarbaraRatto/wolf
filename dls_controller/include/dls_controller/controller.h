@@ -28,6 +28,7 @@
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
+#include <OpenSoT/floating_base_estimation/qp_estimation.h>
 #include <dls_controller/IDProblem.h>
 // STD
 #include <atomic>
@@ -119,6 +120,11 @@ public:
     void toggleRelativeTasks();
 
     /**
+         * @brief Start/Stop the qp state estimation
+         */
+    void toggleQPestimation();
+
+    /**
          * @brief Set the lambda gains of the tasks
          * @param const std::string& task_name
          * @param const double lambda_value
@@ -183,10 +189,14 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
     OpenSoT::IDProblem::Ptr id_prob_;
+     /** @brief Base estimation */
+    OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
     /** @brief Real time publisher - desired joint states */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
     /** @brief Real time publisher - estimated pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_;
+    /** @brief Real time publisher - estimated qp pose */
+    std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
     /** @brief Real time publisher - actual tasks pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<dls_controller::TaskPoses>> tasks_actual_pose_rt_pub_;
     /** @brief Real time publisher - desired tasks pose */
@@ -229,6 +239,8 @@ private:
     std::atomic<bool> tracking_active_;
     /** @brief Activate relative tasks */
     std::atomic<bool> relative_tasks_active_;
+    /** @brief Use the qp state estimation */
+    std::atomic<bool> use_qp_state_estimation_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
@@ -253,6 +265,8 @@ private:
     Eigen::Quaterniond floating_base_orientation_;
     /** @brief Floating base velocity, computed by the state estimator */
     Eigen::Vector6d floating_base_velocity_;
+    /** @brief Floating base velocity, computed by the QP */
+    Eigen::VectorXd floating_base_velocity_qp_;
     /** @brief Floating base accelleration, computed by the state estimator */
     Eigen::Vector6d floating_base_accelleration_;
     /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */

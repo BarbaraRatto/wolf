@@ -204,15 +204,6 @@ public:
             next_feet_to_move_.resize(2);
             max_priority_ = 1;
         }
-        if(std::strcmp(gait_type.c_str(),"trot")==0)
-        {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[1],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[2],1));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[3],1));
-            next_feet_to_move_.resize(2);
-            max_priority_ = 1;
-        }
         else if(std::strcmp(gait_type.c_str(),"crawl")==0)
         {
             schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
@@ -221,6 +212,15 @@ public:
             schedule_.push_back(foot_priority_t(ordered_feet_names[3],3));
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
+        }
+        else if(std::strcmp(gait_type.c_str(),"bound")==0)
+        {
+            schedule_.push_back(foot_priority_t(ordered_feet_names[0],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[1],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[2],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[3],1));
+            next_feet_to_move_.resize(2);
+            max_priority_ = 1;
         }
         else if(std::strcmp(gait_type.c_str(),"one_foot")==0)
         {
@@ -852,6 +852,75 @@ private:
 
 };
 
+
+/*void TaskGlobals::updateVelBaseOdometry(const  JointState & qd_,
+                                        planning::Point3d & rel_base,
+                                        planning::Point3d & absolute_base,
+                                        Eigen::Vector3d & omega,
+                                        double & roll,
+                                        double & pitch,
+                                        double & yaw )
+{
+//	Eigen::Matrix<double, Eigen::Dynamic, jointsCount>  Jcq;
+//	Eigen::Matrix<double, Eigen::Dynamic, 6>  Jcb;
+//	computeJcb(Jcb, Rodometry, stance_legs_odometry, footPos);
+//	computeJcq(Jcq, Rodometry, stance_legs_odometry, *jacobians);
+//	//this is in the base frame
+//	rbd::VelocityVector basetwistOdometry = -commons::psdInv(Jcb, 1e-04)*(Jcq* qd_);
+//	compute_relative_base(rel_base);
+//	//compute Rdot
+//	Eigen::Matrix3d dR;
+//	dR.col(0) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(0)); // dR = w x R
+//	dR.col(1) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(1)); // dR = w x R
+//	dR.col(2) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(2)); // dR = w x R
+//
+//	if (frame_change == false){
+//		Rodometry -=dR/(double)(task_servo_rate);//TODO to understand the minus
+//		Eigen::Vector3d rpyOdometry = commons::rotTorpy(Rodometry);
+//		roll = rpyOdometry(0); pitch= rpyOdometry(1); yaw = rpyOdometry(2);
+//		absolute_base.x += Rodometry.transpose()*rbd::linearPart(basetwistOdometry)/(double)(task_servo_rate);//this shoul be in the world
+//		rel_base.xd = rbd::linearPart(basetwistOdometry);
+//		absolute_base.xd =Rodometry.transpose()*rel_base.xd;
+//		omega = rbd::angularPart(basetwistOdometry);//is already in the base
+//	} else{
+//		frame_change = false;
+//	}
+
+        compute_relative_base(rel_base);
+        if (frame_change == false){
+                rbd::VelocityVector basetwistOdometry;
+                computeOdometry(qd_, Rodometry, basetwistOdometry);
+                Eigen::Vector3d rpyOdometry = commons::rotTorpy(Rodometry);
+                roll = rpyOdometry(0); pitch= rpyOdometry(1); yaw = rpyOdometry(2);
+                absolute_base.x += Rodometry.transpose()*rbd::linearPart(basetwistOdometry)/(double)(task_servo_rate);//this shoul be in the world
+                rel_base.xd = rbd::linearPart(basetwistOdometry);
+                absolute_base.xd =Rodometry.transpose()*rel_base.xd;
+                omega = rbd::angularPart(basetwistOdometry);//is already in the base
+        } else{
+                frame_change = false;
+        }
+}
+
+void TaskGlobals::computeOdometry(const  JointState & qd_,
+                                                                  Eigen::Matrix3d & Rodom,
+                                                                  rbd::VelocityVector &  basetwistOdometry)
+{
+        Eigen::Matrix<double, Eigen::Dynamic, dog::jointsCount>  Jcq;
+        Eigen::Matrix<double, Eigen::Dynamic, 6>  Jcb;
+        computeJcb(Jcb, Rodom, stance_legs_odometry, footPos);
+        computeJcq(Jcq, Rodom, stance_legs_odometry, JFoot);
+        //this is in the base frame
+        basetwistOdometry = -commons::psdInv(Jcb, 1e-04)*(Jcq* qd_);
+        //compute Rdot
+        Eigen::Matrix3d dR;
+        dR.col(0) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(0)); // dR = w x R
+        dR.col(1) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(1)); // dR = w x R
+        dR.col(2) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(2)); // dR = w x R
+        Rodom -=dR/(double)(task_servo_rate);//TODO to understand the minus
+}*/
+
+
+
 class CommandsInterface
 {
 
@@ -866,6 +935,8 @@ public:
      * @brief Shared pointer to const CommandsInterface
      */
     typedef std::shared_ptr<const CommandsInterface> ConstPtr;
+
+#define CLASS_NAME "CommandsInterface"
 
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
@@ -933,23 +1004,25 @@ public:
     {
         unsigned int cmd = cmd_;
 
+        ROS_DEBUG_NAMED(CLASS_NAME,"update");
+
         xbot_model_->getPose("base_link",world_T_base_);
 
-        ROS_DEBUG_STREAM("world_T_base_.translation()" << world_T_base_.translation());
-        ROS_DEBUG_STREAM("world_T_base_.linear()" << world_T_base_.linear());
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.translation()" << world_T_base_.translation());
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.linear()" << world_T_base_.linear());
 
         world_R_hf_ = Eigen::Matrix3d::Identity();
         yaw_base_ = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
         world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
 
-        ROS_DEBUG_STREAM("yaw_base_" << yaw_base_);
-        ROS_DEBUG_STREAM("world_R_hf_" << world_R_hf_);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base_" << yaw_base_);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf_" << world_R_hf_);
 
         world_R_base_ = world_T_base_.linear();
         hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
 
-        ROS_DEBUG_STREAM("world_R_base_" << world_R_base_);
-        ROS_DEBUG_STREAM("hf_R_base_" << hf_R_base_);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base_" << world_R_base_);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base_" << hf_R_base_);
 
         setHipOffset();
 
@@ -993,21 +1066,32 @@ public:
             break;
         };
 
+        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+        for(unsigned int i=0; i<feet_names.size(); i++)
+        {
+            gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
+            gait_generator_->setStepHeading(feet_names[i], steps_heading_[feet_names[i]]);
+            gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
+            gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
+        }
+
         // Update the gait_generator
         gait_generator_->update(period);
-
     }
 
     void calculateFeetStep()
     {
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
         const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
+
+        gait_generator_->activateSwing();
+
         for(unsigned int i=0; i<feet_names.size(); i++)
         {
             if(gait_generator_->isSwinging(feet_names[i]))
             {
-                ROS_DEBUG_STREAM("*********");
-                ROS_DEBUG_STREAM("Swinging foot "<<feet_names[i]);
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"*********");
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging foot "<<feet_names[i]);
 
                 xbot_model_->getPose(feet_names[i],world_T_foot_);
                 xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_);
@@ -1022,28 +1106,27 @@ public:
                 hf_delta_heding_.setZero();
                 hf_delta_heding_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
                 hf_delta_heding_ = hf_delta_heding_.cross(hf_X_virtual_hips_[i]);
-                ROS_DEBUG_STREAM("hf_delta_heding_: "<<hf_delta_heding_.transpose());
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_heding_: "<<hf_delta_heding_.transpose());
 
                 hf_delta_hip_(0)+= hf_delta_heding_(0);
                 hf_delta_hip_(1)+= hf_delta_heding_(1);
-                ROS_DEBUG_STREAM("hf_delta_hip_(velocity based): "<<hf_delta_hip_.transpose());
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_(velocity based): "<<hf_delta_hip_.transpose());
 
                 world_delta_hip_ = world_R_hf_ * hf_delta_hip_;
-                ROS_DEBUG_STREAM("world_delta_hip_(velocity based): "<<world_delta_hip_.transpose());
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_delta_hip_(velocity based): "<<world_delta_hip_.transpose());
 
                 world_X_virtual_hip_ = world_R_hf_ *(hf_X_virtual_hips_[i] - hf_R_base_*base_T_foot_.translation() );
                 world_X_virtual_hip_(2)=0;
-                ROS_DEBUG_STREAM("world_X_virtual_hip_(distance of actual foot position wrt to virtual hip pos in wf): "<<world_X_virtual_hip_.transpose());
-
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_X_virtual_hip_(distance of actual foot position wrt to virtual hip pos in wf): "<<world_X_virtual_hip_.transpose());
 
                 world_X_hip_foot_offset_ = world_R_hf_ * hf_X_hip_foot_offsets_[i];
                 world_X_hip_foot_offset_(2) = 0;
-                ROS_DEBUG_STREAM("world_X_hip_foot_offset_: "<<world_X_hip_foot_offset_.transpose());
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_X_hip_foot_offset_: "<<world_X_hip_foot_offset_.transpose());
 
                 world_delta_foot_.setZero();
                 world_delta_foot_.head(2) =   world_delta_hip_.head(2)  + world_X_hip_foot_offset_.head(2) + world_X_virtual_hip_.head(2);
 
-                ROS_DEBUG_STREAM("world_delta_foot_: "<<world_delta_foot_.transpose());
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_delta_foot_: "<<world_delta_foot_.transpose());
 
                 // if(std::abs(hf_base_linear_velocity_(0))!=0.0 || std::abs(hf_base_linear_velocity_(1))!=0.0)
                 step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
@@ -1054,13 +1137,13 @@ public:
                 if(step_length_ > step_length_max_)
                 {
                     step_length_ = step_length_max_;
-                    ROS_WARN_STREAM("Step length is greater than: "<<step_length_max_);
+                    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step length is greater than: "<<step_length_max_);
                 }
 
                 if(step_height_ > step_height_max_)
                 {
                     step_height_ = step_height_max_;
-                    ROS_WARN_STREAM("Step height is greater than: "<<step_height_max_);
+                    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is greater than: "<<step_height_max_);
                 }
 
                 steps_length_[feet_names[i]]         = step_length_;
@@ -1068,10 +1151,10 @@ public:
                 steps_height_[feet_names[i]]         = step_height_;
                 steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
 
-                ROS_DEBUG_STREAM("steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
-                ROS_DEBUG_STREAM("steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
-                ROS_DEBUG_STREAM("steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
-                ROS_DEBUG_STREAM("steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
 
             }
             else
@@ -1081,13 +1164,8 @@ public:
                 steps_height_[feet_names[i]]         = 0.0;
                 steps_heading_rate_[feet_names[i]]   = 0.0;
             }
-
-            gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
-            gait_generator_->setStepHeading(feet_names[i], steps_heading_[feet_names[i]]);
-            gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
-            gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
-
         }
+
         // FIXME: Look up in stop().
         // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
         // the base rotates w.r.t world. So I have to apply the current rotation to have a correct trajectory
@@ -1097,6 +1175,7 @@ public:
     void resetFeetStep()
     {
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+
         for(unsigned int i=0; i<feet_names.size(); i++)
         {
             steps_length_[feet_names[i]]   = 0.0;
