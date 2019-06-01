@@ -24,17 +24,17 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     {
         _feet[contact_links[i]] = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>(contact_links[i], *_model, contact_links[i],
                                                                                "world", _id->getJointsAccelerationAffine());
-        _feet[contact_links[i]]->setLambda(0,100.);
+        _feet[contact_links[i]]->setLambda(0.,10.);
         _feet[contact_links[i]]->setWeightIsDiagonalFlag(true);
     }
     //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
                                                                          "world", _id->getJointsAccelerationAffine());
-    _waist->setLambda(500.);
+    _waist->setLambda(100.);
     _waist->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural = boost::make_shared<OpenSoT::tasks::acceleration::Postural>(*_model, _id->getJointsAccelerationAffine());
-    _postural->setLambda(2000.);
+    _postural->setLambda(100.);
     _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _com = boost::make_shared<OpenSoT::tasks::acceleration::CoM>(*_model, _id->getJointsAccelerationAffine());
@@ -53,9 +53,8 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
     //_friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCone>(_id->getContactsWrenchAffine(),*_model,mus);
     _friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCones>(contact_links,_id->getContactsWrenchAffine(),*_model,mus);
 
-
     /// HERE WE SET SOME BOUNDS
-    Eigen::VectorXd xmax = 1000.*Eigen::VectorXd::Ones(_model->getJointNum());
+    Eigen::VectorXd xmax = 100.*Eigen::VectorXd::Ones(_model->getJointNum());
     Eigen::VectorXd xmin = -xmax;
 
     _qddot_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
