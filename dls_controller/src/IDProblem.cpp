@@ -71,12 +71,11 @@ IDProblem::IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vect
         minfs.push_back(boost::make_shared<OpenSoT::tasks::MinimizeVariable>("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i]));
     // Notice that we just control the orientation of the waist and the z
     std::list<unsigned int> idw = {2,3,4,5};
-    std::list<unsigned int> idc = {0,1,2};
     std::list<unsigned int> idf = {0,1,2};
 
     _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf + _waist%idw)
-            /(_com%idc + _postural)
-            )<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
+                    /(_postural)
+                    )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;//<<_qddot_lims<<_wrenches_lims
            // /(_com%idc + _waist%idw))<<_qddot_lims<<_wrenches_lims<<_dynamics<<_friction_cones;
 
     _id_problem->update(Eigen::VectorXd(1));
