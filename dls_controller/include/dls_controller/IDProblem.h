@@ -90,12 +90,11 @@ public:
             rt_pub_->msg_.header.frame_id = task_->getBaseLink();
             rt_pub_->msg_.header.stamp = time;
 
+            // ACTUAL VALUES
             task_->getActualPose(tmp_affine3d_);
             task_->getActualTwist(tmp_vector6d_);
-
+            // Transform the R matrix into a quaternion
             tmp_quaterniond_ = tmp_affine3d_.linear();
-
-            // ACTUAL VALUES
             // Pose - Translation
             rt_pub_->msg_.pose_actual.position.x = tmp_affine3d_.translation().x();
             rt_pub_->msg_.pose_actual.position.y = tmp_affine3d_.translation().y();
@@ -113,8 +112,28 @@ public:
             rt_pub_->msg_.twist_actual.angular.y = tmp_vector6d_(4);
             rt_pub_->msg_.twist_actual.angular.z = tmp_vector6d_(5);
 
-            rt_pub_->unlockAndPublish();
+            // REFERENCE VALUES
+            task_->getReference(tmp_affine3d_,tmp_vector6d_);
+            // Transform the R matrix into a quaternion
+            tmp_quaterniond_ = tmp_affine3d_.linear();
+            // Pose - Translation
+            rt_pub_->msg_.pose_reference.position.x = tmp_affine3d_.translation().x();
+            rt_pub_->msg_.pose_reference.position.y = tmp_affine3d_.translation().y();
+            rt_pub_->msg_.pose_reference.position.z = tmp_affine3d_.translation().z();
+            // Pose - Linear
+            rt_pub_->msg_.pose_reference.orientation.x = tmp_quaterniond_.x();
+            rt_pub_->msg_.pose_reference.orientation.y = tmp_quaterniond_.y();
+            rt_pub_->msg_.pose_reference.orientation.z = tmp_quaterniond_.z();
+            rt_pub_->msg_.pose_reference.orientation.w = tmp_quaterniond_.w();
+            // Twist
+            rt_pub_->msg_.twist_reference.linear.x  = tmp_vector6d_(0);
+            rt_pub_->msg_.twist_reference.linear.y  = tmp_vector6d_(1);
+            rt_pub_->msg_.twist_reference.linear.z  = tmp_vector6d_(2);
+            rt_pub_->msg_.twist_reference.angular.x = tmp_vector6d_(3);
+            rt_pub_->msg_.twist_reference.angular.y = tmp_vector6d_(4);
+            rt_pub_->msg_.twist_reference.angular.z = tmp_vector6d_(5);
 
+            rt_pub_->unlockAndPublish();
         }
     }
 };
@@ -136,16 +155,24 @@ public:
             rt_pub_->msg_.header.frame_id = task_->getBaseLink();
             rt_pub_->msg_.header.stamp = time;
 
+            // ACTUAL VALUES
             task_->getActualPose(tmp_vector3d_);
-
             // Pose - Translation
             rt_pub_->msg_.pose_actual.position.x = tmp_vector3d_(0);
             rt_pub_->msg_.pose_actual.position.y = tmp_vector3d_(1);
             rt_pub_->msg_.pose_actual.position.z = tmp_vector3d_(2);
 
+            // REFERENCE VALUES
+            task_->getReference(tmp_vector3d_);
+            // Pose - Translation
+            rt_pub_->msg_.pose_reference.position.x = tmp_vector3d_(0);
+            rt_pub_->msg_.pose_reference.position.y = tmp_vector3d_(1);
+            rt_pub_->msg_.pose_reference.position.z = tmp_vector3d_(2);
+
             rt_pub_->unlockAndPublish();
         }
     }
+
 };
 
 template <>
@@ -258,9 +285,10 @@ public:
     tasks::acceleration::Cartesian::Ptr _waist;
     tasks::acceleration::CoM::Ptr _com;
 
-
+    /**
+     * @brief Expose the tasks to ROS
+     */
     std::vector<TaskRosWrapperInterface::Ptr> _tasks_ros;
-    //TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr>::Ptr _com_task_ros;
 
     /**
      * @brief _posture a postural task
