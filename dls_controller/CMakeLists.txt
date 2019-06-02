@@ -29,7 +29,8 @@ add_service_files(FILES
   DlsControllerServices.srv)
 
 add_message_files(FILES
-                 Task.msg)
+                 CartesianTask.msg
+                 JointsTask.msg)
 
 generate_messages(
     DEPENDENCIES

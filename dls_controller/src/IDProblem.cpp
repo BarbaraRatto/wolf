@@ -91,16 +91,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     _qddot.setZero(_model->getJointNum());
 
 
-    _tasks_ros.push_back(TaskRosWrapper::Ptr(new TaskRosWrapper(nh,_waist))); // WAIST
-    for(unsigned int i=0; i<contact_links.size(); i++)
-        _tasks_ros.push_back(TaskRosWrapper::Ptr(new TaskRosWrapper(nh,_feet[contact_links[i]]))); //FEET
-
     // Add some ROS magic
-    /*_tasks_ros.push_back(TaskRosWrapper::Ptr(new TaskRosWrapper(nh,_waist))); // WAIST
-    _tasks_ros.push_back(TaskRosWrapper::Ptr(new TaskRosWrapper(nh,_waist))); // WAIST
-    _tasks_ros.push_back(boost::make_shared<TaskRosWrapper>(nh,_postural)); // POSTURAL*/
+    _tasks_ros.push_back(std::make_shared<CartesianWrapper>(nh,_waist)); // WAIST
+    for(unsigned int i=0; i<contact_links.size(); i++)
+        _tasks_ros.push_back(std::make_shared<CartesianWrapper>(nh,_feet[contact_links[i]])); // FEET
 
-
+     _tasks_ros.push_back(std::make_shared<ComWrapper>(nh,_com)); // COM
+     _tasks_ros.push_back(std::make_shared<PosturalWrapper>(nh,_postural)); // POSTURAL
 }
 
 void IDProblem::update()
@@ -144,48 +141,3 @@ IDProblem::~IDProblem()
 {
 
 }
-
-
-TaskRosWrapper::TaskRosWrapper(ros::NodeHandle& nh, tasks::acceleration::Cartesian::Ptr task)
-{
-    assert(task);
-    task_ = task;
-
-    rt_pub_.reset(new realtime_tools::RealtimePublisher<dls_controller::Task>(nh, task->getTaskID(), 4));
-}
-
-void TaskRosWrapper::publish(const ros::Time& time)
-{
-    if(rt_pub_->trylock())
-    {
-        rt_pub_->msg_.header.frame_id = task_->getBaseLink();
-        rt_pub_->msg_.header.stamp = time;
-
-        task_->getActualPose(tmp_affine3d_);
-        task_->getActualTwist(tmp_vector6d_);
-
-        tmp_quaterniond_ = tmp_affine3d_.linear();
-
-        // Pose - Translation
-        rt_pub_->msg_.pose.position.x = tmp_affine3d_.translation().x();
-        rt_pub_->msg_.pose.position.y = tmp_affine3d_.translation().y();
-        rt_pub_->msg_.pose.position.z = tmp_affine3d_.translation().z();
-        // Pose - Linear
-        rt_pub_->msg_.pose.orientation.x = tmp_quaterniond_.x();
-        rt_pub_->msg_.pose.orientation.y = tmp_quaterniond_.y();
-        rt_pub_->msg_.pose.orientation.z = tmp_quaterniond_.z();
-        rt_pub_->msg_.pose.orientation.w = tmp_quaterniond_.w();
-        // Twist
-        rt_pub_->msg_.twist.linear.x  = tmp_vector6d_(0);
-        rt_pub_->msg_.twist.linear.y  = tmp_vector6d_(1);
-        rt_pub_->msg_.twist.linear.z  = tmp_vector6d_(2);
-        rt_pub_->msg_.twist.angular.x = tmp_vector6d_(3);
-        rt_pub_->msg_.twist.angular.y = tmp_vector6d_(4);
-        rt_pub_->msg_.twist.angular.z = tmp_vector6d_(5);
-
-        rt_pub_->unlockAndPublish();
-
-    }
-
-}
-
