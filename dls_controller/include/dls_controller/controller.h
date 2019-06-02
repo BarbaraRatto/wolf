@@ -10,7 +10,6 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <dls_controller/DlsControllerServices.h>
-#include <dls_controller/TaskPoses.h>
 #include <realtime_tools/realtime_buffer.h>
 #include <dynamic_reconfigure/server.h>
 #include <rviz_visual_tools/rviz_visual_tools.h>
@@ -35,7 +34,6 @@
 #include <thread>
 #include <chrono>
 // Controller
-#include <dls_controller/publishers.h>
 #include <dls_controller/locomotion.h>
 #include <dls_controller/joy.h>
 
@@ -44,9 +42,9 @@
 namespace dls_controller
 {
 // FIXME move to a class with publishers and subscribers
-typedef std::pair<Eigen::Affine3d,Eigen::Vector6d> Task;
+/*typedef std::pair<Eigen::Affine3d,Eigen::Vector6d> Task;
 typedef std::map<std::string,Task> TaskPosesMap;
-typedef std::map<std::string,std::string> BaseFramesMap;
+typedef std::map<std::string,std::string> BaseFramesMap;*/
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
         hardware_interface::ImuSensorInterface,
@@ -87,12 +85,6 @@ public:
          * @param const ros::time& Time
          */
     void stopping(const ros::Time& time);
-
-    /**
-         * @brief Set the desired reference for the solver's tasks
-         * @param dls_controller::TaskPoses::ConstPtr& msg
-         */
-    void setTasksDesired(const dls_controller::TaskPoses::ConstPtr& msg);
 
     /**
          * @brief Ros dynamic reconfigure callback
@@ -197,10 +189,6 @@ private:
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_;
     /** @brief Real time publisher - estimated qp pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
-    /** @brief Real time publisher - actual tasks pose */
-    std::shared_ptr<realtime_tools::RealtimePublisher<dls_controller::TaskPoses>> tasks_actual_pose_rt_pub_;
-    /** @brief Real time publisher - desired tasks pose */
-    std::shared_ptr<realtime_tools::RealtimePublisher<dls_controller::TaskPoses>> tasks_desired_pose_rt_pub_;
     /** @brief Real time publisher - contacts */
     std::shared_ptr<realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>> contacts_rt_pub_;
     /** @brief Real time publisher - GRF */
@@ -220,11 +208,11 @@ private:
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
     /** @brief Actual task poses and velocities */
-    TaskPosesMap task_poses_;
+    //TaskPosesMap task_poses_;
     /** @brief Desired task poses and velocities */
-    TaskPosesMap desired_task_poses_;
+    //TaskPosesMap desired_task_poses_;
     /** @brief Desired task poses */
-    BaseFramesMap base_frames_;
+    //BaseFramesMap base_frames_;
     /** @brief Actual com position w.r.t world frame */
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */
@@ -291,6 +279,8 @@ private:
     dls_controller::GaitGenerator::Ptr gait_generator_;
     /** @brief Visual tools */
     std::map<std::string,rviz_visual_tools::RvizVisualToolsPtr> visual_tools_;
+    /** @brief Ros node handle */
+    ros::NodeHandle nh_;
     /** @brief Joy handler */
     JoyHandler::Ptr joy_handler_;
     /** @brief Command interface */

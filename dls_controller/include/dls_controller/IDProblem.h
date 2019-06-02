@@ -12,7 +12,42 @@
 #include <OpenSoT/constraints/force/FrictionCone.h>
 #include <OpenSoT/constraints/force/WrenchLimits.h>
 
+// ROS
+#include <ros/ros.h>
+#include <realtime_tools/realtime_publisher.h>
+#include <dls_controller/Task.h>
+
 namespace OpenSoT{
+
+/**
+ * @brief TaskRosWrapper wraps a cartesian accelleration task in order to publish on ROS
+ */
+
+class TaskRosWrapper
+{
+
+public:
+
+    typedef std::shared_ptr<TaskRosWrapper> Ptr;
+
+    TaskRosWrapper(ros::NodeHandle& nh, tasks::acceleration::Cartesian::Ptr task);
+
+    void publish(const ros::Time& time);
+
+protected:
+
+    /** @brief ROS dynamic reconfigure */
+    //dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>* server_;
+    /** @brief Real time publisher - actual tasks pose */
+    std::shared_ptr<realtime_tools::RealtimePublisher<dls_controller::Task>> rt_pub_;
+
+    tasks::acceleration::Cartesian::Ptr task_;
+
+    Eigen::Affine3d       tmp_affine3d_;
+    Eigen::Vector6d       tmp_vector6d_;
+    Eigen::Quaterniond    tmp_quaterniond_;
+};
+
 
 /**
  * @brief The IDProblem class wraps the tasks, constraints and the solver used to solve the ID
@@ -24,10 +59,12 @@ public:
 
     /**
      * @brief IDProblem constructor
+     * @param ros node handle
      * @param model pointer to external model
      * @param dT control loop
+     * @param vector of contact links name
      */
-    IDProblem(XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string>& contact_links);
+    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string>& contact_links);
     ~IDProblem();
 
     /**
@@ -56,11 +93,20 @@ public:
     void log(XBot::MatLogger::Ptr& logger);
 
     /**
+     * @brief publish the ros topics related to the tasks
+     * @param ros current time
+     */
+    void publish(const ros::Time& time);
+
+    /**
      * @brief _left_arm, _right_arm two Cartesian tasks
      */
     std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
     tasks::acceleration::Cartesian::Ptr _waist;
     tasks::acceleration::CoM::Ptr _com;
+
+
+    std::vector<TaskRosWrapper::Ptr> _tasks_ros;
 
     /**
      * @brief _posture a postural task
@@ -116,6 +162,8 @@ private:
     Eigen::VectorXd _qddot;
 
 };
+
+
 
 }
 

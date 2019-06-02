@@ -50,6 +50,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
     hardware_interface::ContactSwitchSensorInterface* cont_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
 
+    nh_ = controller_nh;
+
     if(!jt_hw)
     {
         ROS_ERROR("hardware_interface::JointCommandAdvInterface not found");
@@ -264,7 +266,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->getRobotState("home", qhome_);
     xbot_model_->setJointPosition(qhome_);
 
-    task_poses_["waist"].first = desired_task_poses_["waist"].first = Eigen::Affine3d::Identity();
+    /*task_poses_["waist"].first = desired_task_poses_["waist"].first = Eigen::Affine3d::Identity();
     task_poses_["waist"].second = desired_task_poses_["waist"].second = Eigen::Vector6d::Zero();
     base_frames_["waist"] = "world";
     for(unsigned int i=0;i<feet_names_.size();i++)
@@ -272,7 +274,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         task_poses_[feet_names_[i]].first = desired_task_poses_[feet_names_[i]].first = Eigen::Affine3d::Identity();
         task_poses_[feet_names_[i]].second = desired_task_poses_[feet_names_[i]].second = Eigen::Vector6d::Zero();
         base_frames_[feet_names_[i]] = "world";
-    }
+    }*/
 
     // Resize the variables
     joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
@@ -328,18 +330,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation_qp", 4));
     state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
-
-    tasks_actual_pose_rt_pub_.reset(new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_actual_pose", 4));
-    tasks_actual_pose_rt_pub_->msg_.reference_frames.resize(task_poses_.size());
-    tasks_actual_pose_rt_pub_->msg_.task_names.resize(task_poses_.size());
-    tasks_actual_pose_rt_pub_->msg_.task_poses.poses.resize(task_poses_.size());
-    tasks_actual_pose_rt_pub_->msg_.task_velocities.resize(task_poses_.size());
-
-    tasks_desired_pose_rt_pub_.reset(new realtime_tools::RealtimePublisher<dls_controller::TaskPoses>(controller_nh, "/tasks_desired_pose", 4));
-    tasks_desired_pose_rt_pub_->msg_.reference_frames.resize(desired_task_poses_.size());
-    tasks_desired_pose_rt_pub_->msg_.task_names.resize(desired_task_poses_.size());
-    tasks_desired_pose_rt_pub_->msg_.task_poses.poses.resize(desired_task_poses_.size());
-    tasks_desired_pose_rt_pub_->msg_.task_velocities.resize(desired_task_poses_.size());
 
     contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4));
     contacts_rt_pub_->msg_.data.resize(4);
@@ -668,24 +658,24 @@ void Controller::updateXBotModel()
 
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
-    if(id_prob_)
-    {
+    //if(id_prob_)
+    //{
         /*id_prob_->_com->getActualPose(com_position_); // FIXME Note: we use com_position_ as a tmp object!
         task_poses_["com"].translation() = com_position_;
         id_prob_->_com->getReference(com_position_);
         desired_task_poses_["com"].translation() = com_position_;*/
 
-        id_prob_->_waist->getActualPose(task_poses_["waist"].first);
-        id_prob_->_waist->getReference(desired_task_poses_["waist"].first);
-        base_frames_["waist"] = id_prob_->_waist->getBaseLink();
+        //id_prob_->_waist->getActualPose(task_poses_["waist"].first);
+        //id_prob_->_waist->getReference(desired_task_poses_["waist"].first);
+        /*base_frames_["waist"] = id_prob_->_waist->getBaseLink();
         for(unsigned int i=0; i<feet_names_.size(); i++)
         {
             id_prob_->_feet[feet_names_[i]]->getActualPose(task_poses_[feet_names_[i]].first);
             id_prob_->_feet[feet_names_[i]]->getActualTwist(task_poses_[feet_names_[i]].second);
             id_prob_->_feet[feet_names_[i]]->getReference(desired_task_poses_[feet_names_[i]].first,desired_task_poses_[feet_names_[i]].second);
             base_frames_[feet_names_[i]] = id_prob_->_feet[feet_names_[i]]->getBaseLink();
-        }
-    }
+        }*/
+    //}
 }
 
 void Controller::readContactsState()
@@ -795,7 +785,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(!solver_reset_done_)
         {
             ROS_INFO("Reset the solver");
-            id_prob_.reset(new OpenSoT::IDProblem(xbot_model_,period.toSec(),feet_names_)); // FIXME NO-RT
+            id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,period.toSec(),feet_names_)); // FIXME NO-RT
             solver_reset_done_ = true;
 
             // Set the initial feet poses
@@ -1060,6 +1050,10 @@ void Controller::odomPublisher()
 
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
 {
+
+    if(id_prob_)
+        id_prob_->publish(time);
+
     for(unsigned int i=0;i<grfs_rt_pub_.size();i++)
     {
         if(grfs_rt_pub_[i]->trylock())
@@ -1071,7 +1065,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
             grfs_rt_pub_[i]->unlockAndPublish();
         }
     }
-
 
     // Publish using rt-publishers
     if(ci_joint_states_rt_pub_->trylock())
@@ -1116,51 +1109,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
         state_estimation_qp_rt_pub_->msg_.header.stamp = time;
         state_estimation_qp_rt_pub_->unlockAndPublish();
-    }
-    if(tasks_actual_pose_rt_pub_->trylock())
-    {
-        TaskPosesMap::iterator it;
-        unsigned int idx = 0;
-        for(it = task_poses_.begin(); it != task_poses_.end(); it++)
-        {
-            tasks_actual_pose_rt_pub_->msg_.reference_frames[idx] = base_frames_[it->first];
-            tasks_actual_pose_rt_pub_->msg_.task_names[idx] = it->first;
-            // Pose
-            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.first.translation().x();
-            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.first.translation().y();
-            tasks_actual_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.first.translation().z();
-            // Twist
-            tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.x = it->second.second(0);
-            tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.y = it->second.second(1);
-            tasks_actual_pose_rt_pub_->msg_.task_velocities[idx].linear.z = it->second.second(2);
-            //FIXME Missing orientation
-            idx++;
-        }
-        tasks_actual_pose_rt_pub_->msg_.task_poses.header.stamp = time;
-        tasks_actual_pose_rt_pub_->unlockAndPublish();
-    }
-
-    if(tasks_desired_pose_rt_pub_->trylock())
-    {
-        TaskPosesMap::iterator it;
-        unsigned int idx = 0;
-        for(it = desired_task_poses_.begin(); it != desired_task_poses_.end(); it++)
-        {
-            tasks_desired_pose_rt_pub_->msg_.reference_frames[idx] = base_frames_[it->first];
-            tasks_desired_pose_rt_pub_->msg_.task_names[idx] = it->first;
-            // Pose
-            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.x = it->second.first.translation().x();
-            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.y = it->second.first.translation().y();
-            tasks_desired_pose_rt_pub_->msg_.task_poses.poses[idx].position.z = it->second.first.translation().z();
-            // Twist
-            tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.x = it->second.second(0);
-            tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.y = it->second.second(1);
-            tasks_desired_pose_rt_pub_->msg_.task_velocities[idx].linear.z = it->second.second(2);
-            //FIXME Missing orientation
-            idx++;
-        }
-        tasks_desired_pose_rt_pub_->msg_.task_poses.header.stamp = time;
-        tasks_desired_pose_rt_pub_->unlockAndPublish();
     }
 
     if(contacts_rt_pub_->trylock())
