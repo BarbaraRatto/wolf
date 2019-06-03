@@ -23,6 +23,7 @@ find_package(cartesian_interface REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/dls_controller.cfg
+  cfg/task.cfg
 )
 
 add_service_files(FILES

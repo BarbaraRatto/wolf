@@ -98,6 +98,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
 
      _tasks_ros.push_back(std::make_shared<ComWrapper>(nh,_com)); // COM
      _tasks_ros.push_back(std::make_shared<PosturalWrapper>(nh,_postural)); // POSTURAL
+
+
+     for(unsigned int i =0;i< _tasks_ros.size(); i++)
+         _tasks_ros[i]->dynamicReconfigureUpdate();
 }
 
 void IDProblem::update()
@@ -141,3 +145,5 @@ IDProblem::~IDProblem()
 {
 
 }
+
+

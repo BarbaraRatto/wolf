@@ -1,7 +1,7 @@
 #ifndef DLS_CONTROLLER_H
 #define DLS_CONTROLLER_H
 
-// Ros
+// ROS
 #include <ros/ros.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <tf/transform_broadcaster.h>
@@ -16,7 +16,7 @@
 #include <dls_controller/DlsControllerConfig.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
-// Ros control
+// ROS control
 #include <controller_interface/controller.h>
 #include <controller_interface/multi_interface_controller.h>
 // Hardware interfaces
@@ -28,7 +28,6 @@
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
-#include <dls_controller/IDProblem.h>
 // STD
 #include <atomic>
 #include <thread>
@@ -36,15 +35,12 @@
 // Controller
 #include <dls_controller/locomotion.h>
 #include <dls_controller/joy.h>
+#include <dls_controller/IDProblem.h>
 
 #include <Eigen/Geometry>
 
 namespace dls_controller
 {
-// FIXME move to a class with publishers and subscribers
-/*typedef std::pair<Eigen::Affine3d,Eigen::Vector6d> Task;
-typedef std::map<std::string,Task> TaskPosesMap;
-typedef std::map<std::string,std::string> BaseFramesMap;*/
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
         hardware_interface::ImuSensorInterface,
@@ -115,13 +111,6 @@ public:
          * @brief Start/Stop the qp state estimation
          */
     void toggleQPestimation();
-
-    /**
-         * @brief Set the lambda gains of the tasks
-         * @param const std::string& task_name
-         * @param const double lambda_value
-         */
-    bool setLambda(const std::string& task_name, const double& lambda_value);
 
     /**
          * @brief Set the duty cycle for the feet
@@ -207,12 +196,6 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-    /** @brief Actual task poses and velocities */
-    //TaskPosesMap task_poses_;
-    /** @brief Desired task poses and velocities */
-    //TaskPosesMap desired_task_poses_;
-    /** @brief Desired task poses */
-    //BaseFramesMap base_frames_;
     /** @brief Actual com position w.r.t world frame */
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */

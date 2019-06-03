@@ -1,6 +1,7 @@
 #ifndef _IDPROBLEM_H_
 #define _IDPROBLEM_H_
 
+// OpenSoT
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
@@ -14,9 +15,11 @@
 
 // ROS
 #include <ros/ros.h>
+#include <dynamic_reconfigure/server.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <dls_controller/CartesianTask.h>
 #include <dls_controller/JointsTask.h>
+#include <dls_controller/TaskConfig.h>
 
 namespace OpenSoT{
 
@@ -27,11 +30,16 @@ public:
 
    typedef std::shared_ptr<TaskRosWrapperInterface> Ptr;
 
+   virtual ~TaskRosWrapperInterface(){}
+
    virtual void publish(const ros::Time& /*time*/) = 0;
+   virtual void dynamicReconfigureCallback(dls_controller::TaskConfig& /*config*/, uint32_t /*level*/) = 0;
+   virtual void dynamicReconfigureUpdate() = 0;
 
 protected:
 
-    //dynamic_reconfigure::Server<dls_controller::DlsControllerConfig>* server_;
+    std::shared_ptr<dynamic_reconfigure::Server<dls_controller::TaskConfig>> server_;
+    dls_controller::TaskConfig default_config_;
 
     Eigen::Affine3d       tmp_affine3d_;
     Eigen::VectorXd       tmp_vectorxd_;
@@ -53,6 +61,28 @@ public:
         task_ = task;
 
         rt_pub_.reset(new realtime_tools::RealtimePublisher<msg_t>(nh, task->getTaskID(), 4));
+
+        //ros::NodeHandle task_nh(nh.getNamespace()+"/"+task->getTaskID());
+        ros::NodeHandle task_nh(task->getTaskID());
+        server_.reset(new dynamic_reconfigure::Server<dls_controller::TaskConfig>(task_nh));
+        server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
+   }
+
+   void dynamicReconfigureCallback(dls_controller::TaskConfig &config, uint32_t level)
+   {
+       switch(level)
+       {
+       case 0:
+           task_->setLambda(config.lambda1,config.lambda2);
+           break;
+       }
+   }
+
+   void dynamicReconfigureUpdate()
+   {
+        default_config_.lambda1 = task_->getLambda();
+        default_config_.lambda2 = 0.0;//task_->getLambda(); FIXME
+        if(server_) server_->updateConfig(default_config_);
    }
 
    virtual void publish(const ros::Time& /*time*/) = 0;
@@ -279,7 +309,7 @@ public:
     void publish(const ros::Time& time);
 
     /**
-     * @brief _left_arm, _right_arm two Cartesian tasks
+     * @brief Cartesian tasks
      */
     std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
     tasks::acceleration::Cartesian::Ptr _waist;

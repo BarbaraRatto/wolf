@@ -210,9 +210,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
             ROS_ERROR("PID gains must be positive!");
             return false;
         }
-        ROS_DEBUG("P value for joint %i is: %d",i,joint_p_gain_[i]);
-        ROS_DEBUG("I value for joint %i is: %d",i,joint_i_gain_[i]);
-        ROS_DEBUG("D value for joint %i is: %d",i,joint_d_gain_[i]);
+        ROS_DEBUG("P value for joint %i is: %f",i,joint_p_gain_[i]);
+        ROS_DEBUG("I value for joint %i is: %f",i,joint_i_gain_[i]);
+        ROS_DEBUG("D value for joint %i is: %f",i,joint_d_gain_[i]);
     }
 
     // Assume we are working with a dog
@@ -266,30 +266,20 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->getRobotState("home", qhome_);
     xbot_model_->setJointPosition(qhome_);
 
-    /*task_poses_["waist"].first = desired_task_poses_["waist"].first = Eigen::Affine3d::Identity();
-    task_poses_["waist"].second = desired_task_poses_["waist"].second = Eigen::Vector6d::Zero();
-    base_frames_["waist"] = "world";
-    for(unsigned int i=0;i<feet_names_.size();i++)
-    {
-        task_poses_[feet_names_[i]].first = desired_task_poses_[feet_names_[i]].first = Eigen::Affine3d::Identity();
-        task_poses_[feet_names_[i]].second = desired_task_poses_[feet_names_[i]].second = Eigen::Vector6d::Zero();
-        base_frames_[feet_names_[i]] = "world";
-    }*/
-
     // Resize the variables
-    joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    joint_accellerations_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    des_joint_positions_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    des_joint_velocities_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    des_joint_efforts_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    x_.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    joint_accellerations_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     normals_.resize(contact_sensors_.size());
     contacts_.resize(contact_sensors_.size());
     contact_forces_.resize(contact_sensors_.size());
-    ground_reaction_forces_.resize(24);
-    floating_base_velocity_qp_.resize(6);
+    ground_reaction_forces_.resize(24); // 24 = 6 * 4 leg
+    floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -375,12 +365,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 void Controller::dynamicReconfigureUpdate()
 {
     // Update the config for dynamic reconfigure
-    if(id_prob_)
-    {
-        default_config_.com_lambda = id_prob_->_com->getLambda();
-        default_config_.waist_lambda = id_prob_->_waist->getLambda();
-        default_config_.postural_lambda = id_prob_->_postural->getLambda();
-    }
     default_config_.toggle_solver = solver_started_;
     default_config_.toggle_relative_tasks = relative_tasks_active_;
     default_config_.toggle_qp_estimation = use_qp_state_estimation_;
@@ -416,21 +400,16 @@ void Controller::dynamicReconfigureCallback(dls_controller::DlsControllerConfig 
         setDutyCycle(config.duty_cycle);
         break;
     case 4:
-        setLambda("com",config.com_lambda);
-        setLambda("waist",config.waist_lambda);
-        setLambda("postural",config.postural_lambda);
-        break;
-    case 5:
         setGaitType(config.gaits);
         break;
-    case 6:
+    case 5:
         setSwingFrequency(config.swing_frequency);
         break;
-    case 7:
+    case 6:
         cmds_->setMaxLinearVelocity(config.base_max_linear_vel);
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum velocity to "<< config.base_max_linear_vel);
         break;
-    case 8:
+    case 7:
         cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
         break;
@@ -485,63 +464,6 @@ bool Controller::setDutyCycle(const double& duty_cycle)
         ROS_WARN_NAMED(CONTROLLER_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
         return false;
     }
-}
-
-bool Controller::setLambda(const std::string& task_name, const double& lambda_value)
-{
-
-    if(task_name.empty())
-    {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: no task_name given!");
-        return false;
-    }
-
-    if(id_prob_)
-    {
-        if(lambda_value>=0.0)
-        {
-            // FIXME hardcoded like there is no tomorrow
-            if(task_name == "com")
-                id_prob_->_com->setLambda(lambda_value);
-            else if(task_name == "postural")
-                id_prob_->_postural->setLambda(lambda_value);
-            else if(task_name == "waist")
-                id_prob_->_waist->setLambda(lambda_value);
-            else if(task_name == "feet")
-            {
-                id_prob_->_feet["lf_foot"]->setLambda(lambda_value);
-                id_prob_->_feet["rf_foot"]->setLambda(lambda_value);
-                id_prob_->_feet["lh_foot"]->setLambda(lambda_value);
-                id_prob_->_feet["rh_foot"]->setLambda(lambda_value);
-            }
-            else if(task_name == "lf_foot")
-                id_prob_->_feet[task_name]->setLambda(lambda_value);
-            else if(task_name == "rf_foot")
-                id_prob_->_feet[task_name]->setLambda(lambda_value);
-            else if(task_name == "lh_foot")
-                id_prob_->_feet[task_name]->setLambda(lambda_value);
-            else if(task_name == "rh_foot")
-                id_prob_->_feet[task_name]->setLambda(lambda_value);
-            else
-            {
-                ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: the selected task does not exist!");
-                return false;
-            }
-            ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setLambda: set "<<task_name<<" to lambda "<<lambda_value);
-        }
-        else
-        {
-            ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: lambda_value has to be positive!");
-            return false;
-        }
-    }
-    else
-    {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"setLambda: problem not initialized yet! Did you toggleSolver first?");
-        return false;
-    }
-
-    return true;
 }
 
 void Controller::toggleRelativeTasks()
@@ -655,27 +577,8 @@ void Controller::updateXBotModel()
     xbot_model_->setJointVelocity(joint_velocities_);
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
-
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
-    //if(id_prob_)
-    //{
-        /*id_prob_->_com->getActualPose(com_position_); // FIXME Note: we use com_position_ as a tmp object!
-        task_poses_["com"].translation() = com_position_;
-        id_prob_->_com->getReference(com_position_);
-        desired_task_poses_["com"].translation() = com_position_;*/
-
-        //id_prob_->_waist->getActualPose(task_poses_["waist"].first);
-        //id_prob_->_waist->getReference(desired_task_poses_["waist"].first);
-        /*base_frames_["waist"] = id_prob_->_waist->getBaseLink();
-        for(unsigned int i=0; i<feet_names_.size(); i++)
-        {
-            id_prob_->_feet[feet_names_[i]]->getActualPose(task_poses_[feet_names_[i]].first);
-            id_prob_->_feet[feet_names_[i]]->getActualTwist(task_poses_[feet_names_[i]].second);
-            id_prob_->_feet[feet_names_[i]]->getReference(desired_task_poses_[feet_names_[i]].first,desired_task_poses_[feet_names_[i]].second);
-            base_frames_[feet_names_[i]] = id_prob_->_feet[feet_names_[i]]->getBaseLink();
-        }*/
-    //}
 }
 
 void Controller::readContactsState()
