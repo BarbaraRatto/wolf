@@ -309,21 +309,21 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
-    state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation", 4));
+    state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, controller_nh.getNamespace()+"/state_estimation", 4));
     state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
 
-    state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "/state_estimation_qp", 4));
+    state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, controller_nh.getNamespace()+"/state_estimation_qp", 4));
     state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
 
-    contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, "/contacts", 4));
+    contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, controller_nh.getNamespace()+"/contacts", 4));
     contacts_rt_pub_->msg_.data.resize(4);
 
     grfs_rt_pub_.resize(feet_names_.size());
     for(unsigned int i=0;i<feet_names_.size();i++)
     {
-        grfs_rt_pub_[i].reset(new realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>(controller_nh, "/"+feet_names_[i]+"_grf", 4));
+        grfs_rt_pub_[i].reset(new realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>(controller_nh, controller_nh.getNamespace()+"/"+feet_names_[i]+"_grf", 4));
         grfs_rt_pub_[i]->msg_.header.frame_id = "world";
     }
 
@@ -341,7 +341,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
     // Spawn the rviz publisher thread
-    rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
+    //rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
 
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
 
@@ -543,10 +543,6 @@ void Controller::stateEstimation()
     floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
     floating_base_accelleration_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularAcceleration());
 
-    floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
-    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
-    floating_base_pose_.translation() = floating_base_position_;
-
     quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
 
     floating_base_pose_.linear() = tmp_matrix3d_.transpose();
@@ -562,6 +558,9 @@ void Controller::stateEstimation()
     else
         floating_base_velocity_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearVelocity());
 
+    floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
+    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
+    floating_base_pose_.translation() = floating_base_position_;
 }
 
 void Controller::updateXBotModel()
