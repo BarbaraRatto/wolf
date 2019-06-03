@@ -1,7 +1,7 @@
 /**
  * @file controller.cpp
  * @author Gennaro Raiola
- * @date 12 June, 2018
+ * @date 12 June, 2019
  * @brief DLS Controller.
  *
  * This file contains the constructor, destructor, init, stopping and other facilities for the
@@ -156,29 +156,25 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
     }
     contact_sensors_.resize(4);
-    //for (unsigned int i = 0; i < contact_sensor_names_.size(); i++)
-    //{
-        try
-        {
-            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LF]);
-            contact_sensors_[leg_id::LF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LF]));
+    try
+    {
+        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LF]);
+        contact_sensors_[leg_id::LF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LF]));
 
-            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RH]);
-            contact_sensors_[leg_id::RH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RH]));
+        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RH]);
+        contact_sensors_[leg_id::RH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RH]));
 
-            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RF]);
-            contact_sensors_[leg_id::RF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RF]));
+        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RF]);
+        contact_sensors_[leg_id::RF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RF]));
 
-            ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LH]);
-            contact_sensors_[leg_id::LH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LH]));
-        }
-        catch(...)
-        {
-            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading contact_sensors_");
-            return false;
-        }
-    //}
-    //assert(contact_sensors_.size()>0);
+        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LH]);
+        contact_sensors_[leg_id::LH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LH]));
+    }
+    catch(...)
+    {
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading contact_sensors_");
+        return false;
+    }
 
     des_joint_p_gain_.resize(joint_states_.size());
     des_joint_i_gain_.resize(joint_states_.size());
@@ -331,9 +327,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         grfs_rt_pub_[i]->msg_.header.frame_id = "world";
     }
 
-    // Reference for the tasks
-    //tasks_desired_sub_ = controller_nh.subscribe("tasks_desired", 1, &Controller::setTasksDesired, this);
-
     for(unsigned int i=0;i<feet_names_.size();i++)
         visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("ci/world_odom",feet_names_[i]+"_rviz_visual_marker"));
 
@@ -371,8 +364,8 @@ void Controller::dynamicReconfigureUpdate()
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
-        default_config_.swing_frequency = gait_generator_->getSwingFrequency(feet_names_[0]); // HACK
-        default_config_.duty_cycle = gait_generator_->getDutyCycle(feet_names_[0]); // HACK
+        default_config_.swing_frequency = gait_generator_->getSwingFrequency(feet_names_[0]); // FIXME - HACK
+        default_config_.duty_cycle = gait_generator_->getDutyCycle(feet_names_[0]); // FIXME - HACK
     }
     if(cmds_)
     {
@@ -545,7 +538,6 @@ void Controller::stateEstimation()
     floating_base_orientation_.y() = state_estimators_[selected_se].getOrientation()[2];
     floating_base_orientation_.z() = state_estimators_[selected_se].getOrientation()[3];
 
-
     floating_base_velocity_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularVelocity());
 
     floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
@@ -597,7 +589,7 @@ void Controller::readContactsState()
     }
 }
 
-void Controller::starting(const ros::Time& time)
+void Controller::starting(const ros::Time&  /*time*/)
 {
     ROS_DEBUG("Starting DLS Controller");
 
@@ -614,49 +606,6 @@ void Controller::starting(const ros::Time& time)
     updateXBotModel();
 
     ROS_DEBUG("Starting DLS Controller Completed");
-}
-
-void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
-{
-    if(id_prob_)
-    {
-        if(id_prob_->_feet[contact_name]->setBaseLink(base_frame))
-        {
-            id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
-            id_prob_->_feet[contact_name]->getActualPose(tmp_affine3d_);
-            if(gait_generator_)
-                gait_generator_->setInitialPose(contact_name,tmp_affine3d_);
-        }
-        else
-            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
-    }
-}
-
-void Controller::setInitialPose(const std::string& base_frame)
-{
-    for(unsigned int i = 0;i<feet_names_.size(); i++)
-    {
-        if(id_prob_->_feet[feet_names_[i]]->setBaseLink(base_frame))
-        {
-            id_prob_->_feet[feet_names_[i]]->update(Eigen::VectorXd(1));
-        }
-        else
-            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
-    }
-    setInitialPose();
-}
-
-void Controller::setInitialPose()
-{
-    if(id_prob_)
-    {
-        for(unsigned int i = 0;i<feet_names_.size(); i++)
-        {
-            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp_affine3d_);
-            if(gait_generator_)
-                gait_generator_->setInitialPose(feet_names_[i],tmp_affine3d_);
-        }
-    }
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
@@ -850,6 +799,49 @@ void Controller::setWorldTasks()
 }
 
 
+void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
+{
+    if(id_prob_)
+    {
+        if(id_prob_->_feet[contact_name]->setBaseLink(base_frame))
+        {
+            id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
+            id_prob_->_feet[contact_name]->getActualPose(tmp_affine3d_);
+            if(gait_generator_)
+                gait_generator_->setInitialPose(contact_name,tmp_affine3d_);
+        }
+        else
+            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
+    }
+}
+
+void Controller::setInitialPose(const std::string& base_frame)
+{
+    for(unsigned int i = 0;i<feet_names_.size(); i++)
+    {
+        if(id_prob_->_feet[feet_names_[i]]->setBaseLink(base_frame))
+        {
+            id_prob_->_feet[feet_names_[i]]->update(Eigen::VectorXd(1));
+        }
+        else
+            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
+    }
+    setInitialPose();
+}
+
+void Controller::setInitialPose()
+{
+    if(id_prob_)
+    {
+        for(unsigned int i = 0;i<feet_names_.size(); i++)
+        {
+            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp_affine3d_);
+            if(gait_generator_)
+                gait_generator_->setInitialPose(feet_names_[i],tmp_affine3d_);
+        }
+    }
+}
+
 void Controller::rvizPublisher()
 {
     ROS_INFO("Start the rvizPublisher");
@@ -969,7 +961,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         }
     }
 
-    // Publish using rt-publishers
     if(ci_joint_states_rt_pub_->trylock())
     {
         for(unsigned int i = 0; i < joint_positions_.size(); i++)
@@ -1022,7 +1013,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
     }
 }
 
-void Controller::stopping(const ros::Time& time)
+void Controller::stopping(const ros::Time& /*time*/)
 {
     ROS_DEBUG("Stopping DLS Controller");
 

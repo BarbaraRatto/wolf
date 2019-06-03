@@ -1,6 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <string>
+#include <vector>
+#include <assert.h>
+
 namespace dls_controller
 {
 

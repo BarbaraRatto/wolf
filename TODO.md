@@ -6,3 +6,4 @@ move to github
 package opensot
 merge the ids and ik problems
 HAL
+add subscribers and markers in the ROS wrappers
