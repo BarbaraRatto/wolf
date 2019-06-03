@@ -53,12 +53,12 @@ protected:
     bool initialized_ = false;
 };
 
-template <typename data_t>
+template <typename data_t, typename msg_t>
 class RealTimePublisherBase : public RealTimePublisherInterface
 {
 public:
 
-    typedef realtime_tools::RealtimePublisher<data_t> rt_publisher_t;
+    typedef realtime_tools::RealtimePublisher<msg_t> rt_publisher_t;
 
     /** Initialize the real time publisher. */
     /*RealTimePublisherBase(const ros::NodeHandle& ros_nh, const std::string topic_name, data_t* const data)
@@ -90,16 +90,16 @@ protected:
 
 };
 
-template <typename data_t>
-class RealTimePublisher : public RealTimePublisherBase<data_t>
+template <typename data_t, typename msg_t>
+class RealTimePublisher : public RealTimePublisherBase<data_t,msg_t>
 {
 public:
         RealTimePublisher(){}
-        inline void publish(const ros::Time& time){}
+        inline void publish(const ros::Time& /*time*/){}
 };
 
 template <>
-class RealTimePublisher<sensor_msgs::JointState> : public RealTimePublisherBase<sensor_msgs::JointState>
+class RealTimePublisher<Eigen::VectorXd,sensor_msgs::JointState> : public RealTimePublisherBase<Eigen::VectorXd,sensor_msgs::JointState>
 {
 public:
 
@@ -108,11 +108,11 @@ public:
     {
         if(pub_ptr_->trylock() && getDataPtr())
         {
-            for(unsigned int i = 0; i < data_->position.size(); i++)
+            for(unsigned int i = 0; i < data_->size(); i++)
             {
-                pub_ptr_->msg_.position[i]  = data_->position[i];
-                pub_ptr_->msg_.velocity[i]  = data_->velocity[i];
-                pub_ptr_->msg_.effort[i]    = data_->effort[i];
+
+                ROS_INFO("Mammt!");
+
                 pub_ptr_->msg_.header.stamp = time;
                 pub_ptr_->unlockAndPublish();
             }
@@ -120,20 +120,6 @@ public:
     }
 };
 
-template <>
-class RealTimePublisher<dls_controller::TaskPoses> : public RealTimePublisherBase<dls_controller::TaskPoses>
-{
-public:
-
-    /** Publish the topic. */
-    inline void publish(const ros::Time& time) override
-    {
-        if(pub_ptr_->trylock() && getDataPtr())
-        {
-
-        }
-    }
-};
 
 class RealTimePublishers
 {
@@ -150,11 +136,11 @@ public:
     }
 
     // Add a new fresh RealTimePublisher
-    template <typename data_t>
+    template <typename data_t, typename msg_t>
     void addPublisher(const ros::NodeHandle& ros_nh, const std::string topic_name, data_t* const data_ptr)
     {
-        std::shared_ptr<RealTimePublisher<data_t> > new_pub_ptr;
-        new_pub_ptr.reset(new RealTimePublisher<data_t>());
+        std::shared_ptr<RealTimePublisher<data_t,msg_t> > new_pub_ptr;
+        new_pub_ptr.reset(new RealTimePublisher<data_t,msg_t>());
 
         new_pub_ptr->init(ros_nh,topic_name,data_ptr);
 
