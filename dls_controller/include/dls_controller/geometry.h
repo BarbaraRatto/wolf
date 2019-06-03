@@ -123,12 +123,18 @@ void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
 */
 void rpyToEarInv(const Eigen::Vector3d& rpy, Eigen::Matrix3d& EarInv){
 
-    double pitch = rpy(1);
-    double yaw = rpy(2);
+    const double& pitch = rpy(1);
+    const double& yaw = rpy(2);
 
-    EarInv << cos(pitch)*cos(yaw), -sin(yaw), 0,
-              cos(pitch)*sin(yaw),   cos(yaw),    0,
-              -sin(pitch),         0,    1;
+    double c_y = std::cos(yaw);
+    double s_y = std::sin(yaw);
+
+    double c_p = std::cos(pitch);
+    double s_p = std::sin(pitch);
+
+    EarInv <<  c_p*c_y, -s_y,    0,
+               c_p*s_y,  c_y,    0,
+               -s_p,     0,      1;
 }
 
 /**
@@ -140,13 +146,18 @@ void rpyToEarInv(const Eigen::Vector3d& rpy, Eigen::Matrix3d& EarInv){
  */
 void rpyToEar(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
 
-    double roll = rpy(0);
-    double pitch = rpy(1);
-    double yaw = rpy(2);
+    const double& roll = rpy(0);
+    const double& pitch = rpy(1);
 
-    Ear<< 1,         0,         -sin(pitch),
-            0,  cos(roll),  cos(pitch)*sin(roll),
-            0,  -sin(roll), cos(pitch)*cos(roll);
+    double c_r = std::cos(roll);
+    double s_r = std::sin(roll);
+
+    double c_p = std::cos(pitch);
+    double s_p = std::sin(pitch);
+
+    Ear<< 1,   0,    -s_p,
+          0,   c_r,  c_p*s_r,
+          0,  -s_r,  c_p*c_r;
 }
 
 }; // namespace

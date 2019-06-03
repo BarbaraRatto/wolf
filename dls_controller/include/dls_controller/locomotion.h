@@ -461,14 +461,14 @@ public:
     Ellipse()
     {
         xyz = xyz_rotated = xyz_dot = Eigen::Vector3d::Zero();
-        w_Rz_sw = Sz = Eigen::Matrix3d::Zero();
+        world_Rz_swing = Sz = Ear = Eigen::Matrix3d::Zero();
     }
 
 protected:
 
     const Eigen::Affine3d& trajectoryFunction(const double& time)
     {
-        const double& psi = heading_;
+        const double& yaw = heading_;
 
         xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
@@ -480,16 +480,16 @@ protected:
 
         //xyz = T_ * xyz;
 
-        double c = std::cos(psi);
-        double s = std::sin(psi);
+        double c = std::cos(yaw);
+        double s = std::sin(yaw);
 
-        w_Rz_sw(0,0) = c;
-        w_Rz_sw(0,1) = -s;
-        w_Rz_sw(1,0) = s;
-        w_Rz_sw(1,1) = c;
-        w_Rz_sw(2,2) = 1;
+        world_Rz_swing(0,0) = c;
+        world_Rz_swing(0,1) = -s;
+        world_Rz_swing(1,0) = s;
+        world_Rz_swing(1,1) = c;
+        world_Rz_swing(2,2) = 1;
 
-        xyz_rotated = w_Rz_sw * xyz;
+        xyz_rotated = world_Rz_swing * xyz;
 
         pose_.translation() = initial_pose_.translation() + xyz_rotated;
 
@@ -498,17 +498,29 @@ protected:
 
     const Eigen::Vector6d& trajectoryFunctionDot(const double& time)
     {
-        const double& psi_rate = heading_rate_;
+        const double& yaw_rate = heading_rate_;
+        const double& yaw = heading_;
 
-        Sz(0,1) = -psi_rate;
-        Sz(1,0) = -psi_rate;
+        rpy_rates.setZero();
+        omegas.setZero();
+        rpy.setZero();
+
+        rpy_rates(2) = yaw_rate;
+        rpy(2) = yaw;
+
+        rpyToEar(rpy,Ear);
+
+        omegas = Ear * rpy_rates;
+
+        Sz(0,1) = -omegas(2);
+        Sz(1,0) = -omegas(2);
 
         xyz_dot(0) = M_PI * swing_frequency_ * length_/2 * std::sin(M_PI * (swing_frequency_ * time));
         xyz_dot(1) = 0.0;
         xyz_dot(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
 
         twist_.setZero(); // No angular velocities
-        twist_.head(3) = Sz * xyz_rotated + w_Rz_sw * xyz_dot;
+        twist_.head(3) = Sz * xyz_rotated + world_Rz_swing * xyz_dot;
 
         return twist_;
     }
@@ -518,9 +530,13 @@ private:
     Eigen::Vector3d xyz;
     Eigen::Vector3d xyz_dot;
     Eigen::Vector3d xyz_rotated;
-    Eigen::Matrix3d w_Rz_sw;
+    Eigen::Matrix3d world_Rz_swing;
     Eigen::Matrix3d Sz;
+    Eigen::Matrix3d Ear;
 
+    Eigen::Vector3d rpy;
+    Eigen::Vector3d rpy_rates;
+    Eigen::Vector3d omegas;
 };
 
 class GaitGenerator
