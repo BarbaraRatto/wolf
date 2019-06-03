@@ -23,7 +23,7 @@ void update(const sensor_msgs::JointState::ConstPtr& msg)
 
     _xbot_model->setJointVelocity(_joint_velocities);
     _xbot_model->setJointPosition(_joint_positions);
-    _qp_estimation->update(0.001,true);
+    _qp_estimation->update(OpenSoT::FloatingBaseEstimation::Update::All);
 
    _qp_estimation->getFloatingBaseTwist(_qdot);
 

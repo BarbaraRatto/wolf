@@ -553,7 +553,7 @@ void Controller::stateEstimation()
 
     rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
 
-    qp_estimation_->update(0.0,false); // FIXME Dt
+    qp_estimation_->update();
 
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
