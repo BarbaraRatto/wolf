@@ -18,7 +18,6 @@ find_package(catkin REQUIRED tf controller_interface dls_hardware_interface
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
-find_package(XCM REQUIRED)
 find_package(cartesian_interface REQUIRED)
 
 generate_dynamic_reconfigure_options(
@@ -53,14 +52,13 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
-    ${XCM_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/IDProblem.cpp)
 add_dependencies(${PROJECT_NAME} ${dls_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
@@ -74,7 +72,6 @@ install(TARGETS ${PROJECT_NAME}
 if (CATKIN_ENABLE_TESTING)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
-  find_package(XCM REQUIRED)
   find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
@@ -82,7 +79,7 @@ if (CATKIN_ENABLE_TESTING)
   target_link_libraries(hyq_dummy ${catkin_LIBRARIES})
 
   add_executable(test_state_estimation test/test_state_estimation.cpp)
-  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${XCM_LIBRARIES} ${cartesian_interface_LIBRARIES})
+  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
   add_rostest_gtest(dls_controller_test
     test/dls_controller_test.test
