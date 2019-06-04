@@ -17,6 +17,7 @@
         <arg name="world_name" value="$(arg world_name)" />
         <arg name="task_period" value="$(arg task_period)" />
         <arg name="gui" value="$(arg gazebo_gui)"/>
+        <!-- arg name="debug" value="true"/ -->
     </include>
 
     <!-- Loading the problem description for the solver from YAML file to parameter server -->
