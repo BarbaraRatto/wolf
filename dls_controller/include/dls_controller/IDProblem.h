@@ -214,7 +214,7 @@ public:
     TaskRosWrapper(ros::NodeHandle& nh, tasks::acceleration::Postural::Ptr task):
         TaskRosWrapperBase<tasks::acceleration::Postural::Ptr,dls_controller::JointsTask>(nh,task)
     {
-        const unsigned int& size = task->getXSize();
+        const unsigned int& size = task_->getActualPositions().size();
         tmp_vectorxd_.resize(size);
         rt_pub_->msg_.position_actual.resize(size);
         rt_pub_->msg_.velocity_actual.resize(size);
