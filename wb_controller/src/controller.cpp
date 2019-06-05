@@ -580,11 +580,16 @@ void Controller::readContactsState()
         contacts_[i] = *contact_sensors_[i].getContactState();
         contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());
         // Note that feet and contact sensors are ordered in the same way
+        if(use_qp_state_estimation_)
+        {
 #ifndef HAPTIC_CLOSED_LOOP
-        qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
+            qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
 #else
-        qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
+            qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
 #endif
+        }
+        else
+             qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state to true until we start using the qp state estimation
     }
 }
 
