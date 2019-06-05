@@ -81,7 +81,7 @@ public:
    void dynamicReconfigureUpdate()
    {
         default_config_.lambda1 = task_->getLambda();
-        default_config_.lambda2 = 0.0;//task_->getLambda(); FIXME
+        default_config_.lambda2 = task_->getLambda2();
         if(server_) server_->updateConfig(default_config_);
    }
 
