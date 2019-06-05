@@ -6,19 +6,28 @@
     <arg name="world_name" default="empty.world" />
     <arg name="task_period" default="0.001" />
     <arg name="gazebo_gui" default="true" />
+    <arg name="gazebo" default="true" />
 
     <!-- export the task_period to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
 
     <!-- Load the robot description -->
-    <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
-        <arg name="sensors" value="$(arg sensors)" />
-        <arg name="internal_wrench" value="$(arg internal_wrench)" />
-        <arg name="world_name" value="$(arg world_name)" />
-        <arg name="task_period" value="$(arg task_period)" />
-        <arg name="gui" value="$(arg gazebo_gui)"/>
-        <!-- arg name="debug" value="true"/ -->
-    </include>
+    <group if="$(arg gazebo)">
+	    <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
+		<arg name="sensors" value="$(arg sensors)" />
+		<arg name="internal_wrench" value="$(arg internal_wrench)" />
+		<arg name="world_name" value="$(arg world_name)" />
+		<arg name="task_period" value="$(arg task_period)" />
+		<arg name="gui" value="$(arg gazebo_gui)"/>
+		<!-- arg name="debug" value="true"/ -->
+	    </include>
+    </group>
+
+    <group unless="$(arg gazebo)">
+	<include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
+        	<arg name="sensors" value="$(arg sensors)" />
+	</include>
+    </group>
 
     <!-- Loading the problem description for the solver from YAML file to parameter server -->
     <param name="$(arg robot_name)/wb_controller/problem_description" textfile="$(find wb_controller)/problems/$(arg problem).yaml"/>

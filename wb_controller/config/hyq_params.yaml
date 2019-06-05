@@ -29,10 +29,10 @@ wb_controller:
   state_estimators:
   - ground_truth
   contact_sensors:
-  - lf_foot_contact_sensor
-  - rf_foot_contact_sensor
-  - lh_foot_contact_sensor
-  - rh_foot_contact_sensor
+  - lf
+  - rf
+  - lh
+  - rh
   gains:
       lf_haa_joint: {p: 300.0, i: 0.0, d: 10.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 10.0}
