@@ -325,6 +325,22 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
     contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
     qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
+    // Contact force estimation reset
+    force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(xbot_model_));
+
+    // FIXME
+    /*std::vector<int> dofs = {3};
+    auto chains = xbot_model_->getChainNames();
+    chains.pop_back(); // Remove virtual_chain
+    chains = sortByLegName(chains);
+
+    for(unsigned int i=0;i<feet_names_.size();i++)
+    {
+        std::cout << chains[i] << std::endl;
+        force_estimation_->add_link(feet_names_[i],dofs,chains[i]);
+    }
+
+    getchar();*/
 
     return true;
 }

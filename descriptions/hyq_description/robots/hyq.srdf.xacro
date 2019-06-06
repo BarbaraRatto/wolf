@@ -3,23 +3,23 @@
   <group name="base">
     <link name="base_link"/>
   </group>
-  <group name="front_left_leg">
+  <group name="lf">
     <chain base_link="trunk" tip_link="lf_foot"/>
   </group>
-  <group name="front_right_leg">
+  <group name="rf">
     <chain base_link="trunk" tip_link="rf_foot"/>
   </group>
-  <group name="back_left_leg">
+  <group name="lh">
     <chain base_link="trunk" tip_link="lh_foot"/>
   </group>
-  <group name="back_right_leg">
+  <group name="rh">
     <chain base_link="trunk" tip_link="rh_foot"/>
   </group>
   <group name="chains">
-    <group name="front_left_leg"/>
-    <group name="front_right_leg"/>
-    <group name="back_left_leg"/>
-    <group name="back_right_leg"/>
+    <group name="lf"/>
+    <group name="rf"/>
+    <group name="lh"/>
+    <group name="rh"/>
   </group>
   <group_state group="chains" name="home">
     <joint name="lf_haa_joint" value="-0.2"/>
