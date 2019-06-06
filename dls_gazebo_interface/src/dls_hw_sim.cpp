@@ -88,7 +88,7 @@ namespace dls_gazebo_interface
         // Hardware interfaces: Base IMU sensors
         imu_sensor_ = std::dynamic_pointer_cast<gazebo::sensors::ImuSensor>(sensor_manager->GetSensor("trunk_imu"));
         if (!this->imu_sensor_)
-            ROS_ERROR_NAMED(HW_NAME,"Could not find base IMU sensor.");
+            ROS_ERROR_NAMED(HW_NAME,"Could not find base IMU sensor, using the ground truth to fill the IMU data instead.");
 
         // Hardware interfaces: Contact sensors
         for(unsigned int i=0; i < contact_sensor_names_.size(); i++)
@@ -153,31 +153,6 @@ namespace dls_gazebo_interface
             joint_effort_[j] = sim_joints_[j]->GetForce((unsigned int)(0));
         }
 
-
-        //IMU data:
-        gazebo::math::Quaternion imu_quat(1, 0, 0, 0);
-        gazebo::math::Vector3 imu_ang_vel(0, 0, 0);
-        gazebo::math::Vector3 imu_lin_acc(0, 0, 0);
-
-        if(imu_sensor_ != NULL){
-            imu_quat = imu_sensor_->Orientation();
-            imu_ang_vel = imu_sensor_->AngularVelocity();
-            imu_lin_acc = imu_sensor_->LinearAcceleration();
-        }
-
-        imu_orientation_[0] = imu_quat.w;
-        imu_orientation_[1] = imu_quat.x;
-        imu_orientation_[2] = imu_quat.y;
-        imu_orientation_[3] = imu_quat.z;
-
-        imu_ang_vel_[0] = imu_ang_vel.x;
-        imu_ang_vel_[1] = imu_ang_vel.y;
-        imu_ang_vel_[2] = imu_ang_vel.z;
-
-        imu_lin_acc_[0] = imu_lin_acc.x;
-        imu_lin_acc_[1] = imu_lin_acc.y;
-        imu_lin_acc_[2] = imu_lin_acc.z;
-
         //Ground truth:
         gazebo::math::Vector3  gzLinearVel = sim_model_->GetWorldLinearVel();
         base_lin_vel_[0] = gzLinearVel.x;
@@ -213,6 +188,47 @@ namespace dls_gazebo_interface
         base_orientation_[1] = gzPose.rot.x;
         base_orientation_[2] = gzPose.rot.y;
         base_orientation_[3] = gzPose.rot.z;
+
+
+        //IMU data:
+        gazebo::math::Quaternion imu_quat(1, 0, 0, 0);
+        gazebo::math::Vector3 imu_ang_vel(0, 0, 0);
+        gazebo::math::Vector3 imu_lin_acc(0, 0, 0);
+
+        if(imu_sensor_ != NULL)
+        {
+            imu_quat    = imu_sensor_->Orientation();
+            imu_ang_vel = imu_sensor_->AngularVelocity();
+            imu_lin_acc = imu_sensor_->LinearAcceleration();
+        }
+        else
+        {
+            imu_quat.w = gzPose.rot.w;
+            imu_quat.x = gzPose.rot.x;
+            imu_quat.y = gzPose.rot.y;
+            imu_quat.z = gzPose.rot.z;
+
+            imu_ang_vel.x = gzAngularVel.x;
+            imu_ang_vel.y = gzAngularVel.y;
+            imu_ang_vel.z = gzAngularVel.z;
+
+            imu_lin_acc.x =  base_ang_acc_[0];
+            imu_lin_acc.y =  base_ang_acc_[1];
+            imu_lin_acc.z =  base_ang_acc_[2];
+        }
+
+        imu_orientation_[0] = imu_quat.w;
+        imu_orientation_[1] = imu_quat.x;
+        imu_orientation_[2] = imu_quat.y;
+        imu_orientation_[3] = imu_quat.z;
+
+        imu_ang_vel_[0] = imu_ang_vel.x;
+        imu_ang_vel_[1] = imu_ang_vel.y;
+        imu_ang_vel_[2] = imu_ang_vel.z;
+
+        imu_lin_acc_[0] = imu_lin_acc.x;
+        imu_lin_acc_[1] = imu_lin_acc.y;
+        imu_lin_acc_[2] = imu_lin_acc.z;
 
         // FIXME We need the lowerleg links for the transfrom from the feet
         if(contact_sensors_.size() == 4) // We assume we are working only with the feet
