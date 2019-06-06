@@ -298,7 +298,7 @@ public:
         heading_rate_ = 0.0;
         height_ = 0.0;
 
-        trajectory_finished_ = false;
+        trajectory_finished_ = true;
     }
 
     void preview(std::vector<Eigen::Affine3d>& poses)
