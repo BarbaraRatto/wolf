@@ -25,7 +25,6 @@ Controller::Controller()
     ,pid_active_(true)
     ,tracking_active_(false)
     ,relative_tasks_active_(false)
-    ,use_qp_state_estimation_(false)
     ,stopping_(false)
 {
 }
@@ -47,7 +46,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
-    hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
     hardware_interface::ContactSwitchSensorInterface* cont_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
 
     nh_ = controller_nh;
@@ -60,11 +58,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     if(!imu_hw)
     {
         ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::ImuSensorInterface not found");
-        return false;
-    }
-    if(!gt_hw)
-    {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::GroundTruthInterface not found");
         return false;
     }
     if(!cont_hw)
@@ -90,11 +83,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     if (!controller_nh.getParam("imu_sensors", imu_names_))
     {
         ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
-        return false;
-    }
-    if (!controller_nh.getParam("state_estimators", state_estimator_names_))
-    {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"No state_estimators given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     if (!controller_nh.getParam("contact_sensors", contact_sensor_names_))
@@ -142,19 +130,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     assert(imu_sensors_.size()>0);
 
-    for (unsigned int i = 0; i < state_estimator_names_.size(); i++)
-    {
-        try
-        {
-            ROS_DEBUG_STREAM("Found state estimator: "<< state_estimator_names_[i]);
-            state_estimators_.push_back(gt_hw->getHandle(state_estimator_names_[i]));
-        }
-        catch(...)
-        {
-            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading state_estimators_");
-            return false;
-        }
-    }
     contact_sensors_.resize(4);
     try
     {
@@ -291,7 +266,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_position_ = Eigen::Vector3d::Zero();
     floating_base_orientation_.normalize();
     floating_base_velocity_ = Eigen::Vector6d::Zero();
-    floating_base_accelleration_ = Eigen::Vector6d::Zero();
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
     // Create the realtime publishers
@@ -347,7 +321,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
-    // STATE ESTIMATION RESET FIXME Move
+    // State estimation reset
     Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
     contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
     qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
@@ -360,7 +334,6 @@ void Controller::dynamicReconfigureUpdate()
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
     default_config_.toggle_relative_tasks = relative_tasks_active_;
-    default_config_.toggle_qp_estimation = use_qp_state_estimation_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -387,22 +360,19 @@ void Controller::dynamicReconfigureCallback(wb_controller::ControllerConfig &con
         toggleRelativeTasks();
         break;
     case 2:
-        toggleQPestimation();
-        break;
-    case 3:
         setDutyCycle(config.duty_cycle);
         break;
-    case 4:
+    case 3:
         setGaitType(config.gaits);
         break;
-    case 5:
+    case 4:
         setSwingFrequency(config.swing_frequency);
         break;
-    case 6:
+    case 5:
         cmds_->setMaxLinearVelocity(config.base_max_linear_vel);
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum velocity to "<< config.base_max_linear_vel);
         break;
-    case 7:
+    case 6:
         cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
         break;
@@ -479,16 +449,6 @@ void Controller::toggleSolver()
         ROS_INFO("Solver integration is OFF");
 }
 
-void Controller::toggleQPestimation()
-{
-    use_qp_state_estimation_=!use_qp_state_estimation_;
-
-    if(use_qp_state_estimation_)
-        ROS_INFO("QP estimation is ON");
-    else
-        ROS_INFO("QP estimation is OFF");
-}
-
 void Controller::toggleTracking()
 {
     tracking_active_=!tracking_active_;
@@ -497,18 +457,6 @@ void Controller::toggleTracking()
         ROS_INFO("Tracking is ON");
     else
         ROS_INFO("Tracking is OFF");
-}
-
-void Controller::readImu()
-{
-    // FIXME For now we select the first imu
-    unsigned int selected_imu = 0;
-    imu_accelerometer_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getLinearAcceleration());
-    imu_gyroscope_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getAngularVelocity());
-    imu_orientation_.w() = imu_sensors_[selected_imu].getOrientation()[0];
-    imu_orientation_.x() = imu_sensors_[selected_imu].getOrientation()[1];
-    imu_orientation_.y() = imu_sensors_[selected_imu].getOrientation()[2];
-    imu_orientation_.z() = imu_sensors_[selected_imu].getOrientation()[3];
 }
 
 void Controller::readJoints()
@@ -527,21 +475,22 @@ void Controller::readJoints()
     }
 }
 
+void Controller::readImu()
+{
+    // FIXME For now we select the first imu
+    unsigned int selected_imu = 0;
+    imu_accelerometer_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getLinearAcceleration());
+    imu_gyroscope_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getAngularVelocity());
+    imu_orientation_.w() = imu_sensors_[selected_imu].getOrientation()[0];
+    imu_orientation_.x() = imu_sensors_[selected_imu].getOrientation()[1];
+    imu_orientation_.y() = imu_sensors_[selected_imu].getOrientation()[2];
+    imu_orientation_.z() = imu_sensors_[selected_imu].getOrientation()[3];
+}
+
 void Controller::stateEstimation()
 {
-    // FIXME For now we select the first state estimator
-    unsigned int selected_se = 0;
-    floating_base_position_ = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearPosition());
-
-    floating_base_orientation_.w() = state_estimators_[selected_se].getOrientation()[0];
-    floating_base_orientation_.x() = state_estimators_[selected_se].getOrientation()[1];
-    floating_base_orientation_.y() = state_estimators_[selected_se].getOrientation()[2];
-    floating_base_orientation_.z() = state_estimators_[selected_se].getOrientation()[3];
-
-    floating_base_velocity_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularVelocity());
-
-    floating_base_accelleration_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearAcceleration());
-    floating_base_accelleration_.segment(3,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getAngularAcceleration());
+    // NOTE: Check if the imu is in the correct frame, here we assume that it is aligned with the trunk/base
+    floating_base_orientation_ = imu_orientation_;
 
     quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
 
@@ -553,13 +502,11 @@ void Controller::stateEstimation()
 
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
-    if(use_qp_state_estimation_)
-        floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    else
-        floating_base_velocity_.segment(0,3) = Eigen::Map<const Eigen::Vector3d>(state_estimators_[selected_se].getLinearVelocity());
+    floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 
-    floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
-    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
+    //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
+    floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
 }
 
@@ -580,7 +527,7 @@ void Controller::readContactsState()
         contacts_[i] = *contact_sensors_[i].getContactState();
         contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());
         // Note that feet and contact sensors are ordered in the same way
-        if(use_qp_state_estimation_)
+        if(tracking_active_)
         {
 #ifndef HAPTIC_CLOSED_LOOP
             qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
@@ -589,7 +536,7 @@ void Controller::readContactsState()
 #endif
         }
         else
-             qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state to true until we start using the qp state estimation
+             qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start using the qp state estimation
     }
 }
 

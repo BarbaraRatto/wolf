@@ -21,7 +21,6 @@
 #include <controller_interface/multi_interface_controller.h>
 // Hardware interfaces
 #include <dls_hardware_interface/joint_command_adv_interface.h>
-#include <dls_hardware_interface/ground_truth_interface.h>
 #include <dls_hardware_interface/contact_switch_sensor_interface.h>
 #include <hardware_interface/imu_sensor_interface.h>
 // ADVR
@@ -44,7 +43,6 @@ namespace wb_controller
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
         hardware_interface::ImuSensorInterface,
-        hardware_interface::GroundTruthInterface,
         hardware_interface::ContactSwitchSensorInterface>
 {
 public:
@@ -108,11 +106,6 @@ public:
     void toggleRelativeTasks();
 
     /**
-         * @brief Start/Stop the qp state estimation
-         */
-    void toggleQPestimation();
-
-    /**
          * @brief Set the duty cycle for the feet
          * @param const double duty_cycle
          */
@@ -146,8 +139,6 @@ private:
     std::vector<hardware_interface::JointCommandAdvHandle> joint_states_;
     /** @brief IMU sensors */
     std::vector<hardware_interface::ImuSensorHandle> imu_sensors_;
-    /** @brief State Estimation */
-    std::vector<hardware_interface::GroundTruthHandle> state_estimators_; // FIXME We should use a state estimator handle no matter if the robot is simulated or no
     /** @brief Contact sensors */
     std::vector<hardware_interface::ContactSwitchSensorHandle> contact_sensors_;
     /** @brief Joint positions */
@@ -200,8 +191,6 @@ private:
     Eigen::Vector3d com_position_;
     /** @brief Desired com position w.r.t world frame */
     Eigen::Vector3d  des_com_position_;
-    /** @brief  RT buffer for the desired poses of the id tasks */
-    //realtime_tools::RealtimeBuffer<TaskPosesMap> desired_tasks_pose_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
     /** @brief Activate pid gains */
@@ -210,8 +199,6 @@ private:
     std::atomic<bool> tracking_active_;
     /** @brief Activate relative tasks */
     std::atomic<bool> relative_tasks_active_;
-    /** @brief Use the qp state estimation */
-    std::atomic<bool> use_qp_state_estimation_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
@@ -238,8 +225,6 @@ private:
     Eigen::Vector6d floating_base_velocity_;
     /** @brief Floating base velocity, computed by the QP */
     Eigen::VectorXd floating_base_velocity_qp_;
-    /** @brief Floating base accelleration, computed by the state estimator */
-    Eigen::Vector6d floating_base_accelleration_;
     /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */
     Eigen::Affine3d floating_base_pose_;    
     /** @brief GRF normals */

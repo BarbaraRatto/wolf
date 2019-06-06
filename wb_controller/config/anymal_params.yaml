@@ -26,8 +26,6 @@ wb_controller:
   - rf_hip
   imu_sensors:
   - trunk_imu
-  state_estimators:
-  - ground_truth
   contact_sensors:
   - lf_foot_contact_sensor
   - rf_foot_contact_sensor

@@ -72,7 +72,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
         minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
     // Notice that we just control the orientation of the waist and the z
-    std::list<unsigned int> idw = {2,3,4,5};
+    std::list<unsigned int> idw = {3,4,5};
     std::list<unsigned int> idf = {0,1,2};
 
     _id_problem = ((_feet[contact_links[0]]%idf + _feet[contact_links[1]]%idf + _feet[contact_links[2]]%idf + _feet[contact_links[3]]%idf + _waist%idw)
