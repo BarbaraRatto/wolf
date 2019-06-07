@@ -4,16 +4,14 @@
 // ROS
 #include <ros/ros.h>
 #include <realtime_tools/realtime_publisher.h>
-#include <tf/transform_broadcaster.h>
-#include <sensor_msgs/JointState.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/WrenchStamped.h>
-#include <std_msgs/Int16MultiArray.h>
-#include <wb_controller/ControllerServices.h>
 #include <realtime_tools/realtime_buffer.h>
+#include <tf/transform_broadcaster.h>
+#include <geometry_msgs/WrenchStamped.h>
+#include <sensor_msgs/JointState.h>
+#include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
 #include <dynamic_reconfigure/server.h>
 #include <rviz_visual_tools/rviz_visual_tools.h>
-#include <wb_controller/ControllerConfig.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // ROS control
@@ -37,6 +35,8 @@
 #include <wb_controller/joy.h>
 #include <wb_controller/IDProblem.h>
 #include <wb_controller/ContactForces.h>
+#include <wb_controller/ControllerServices.h>
+#include <wb_controller/ControllerConfig.h>
 
 #include <Eigen/Geometry>
 
@@ -171,6 +171,8 @@ private:
     std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Real time publisher - desired joint states */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
+    /** @brief Real time publisher - IMU */
+    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_rt_pub_;
     /** @brief Real time publisher - estimated pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_;
     /** @brief Real time publisher - estimated qp pose */
@@ -300,6 +302,11 @@ private:
          * @brief update the contacts state
          */
     void readContactsState();
+
+    /**
+         * @brief init the ROS publishers
+         */
+    void initPublishers(const ros::NodeHandle& root_nh, const ros::NodeHandle& controller_nh);
 
     /**
          * @brief publish on ROS

@@ -268,42 +268,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_velocity_ = Eigen::Vector6d::Zero();
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
-    // Create the realtime publishers
-    ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4));
-    ci_joint_states_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.effort.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.name[0] = "x";
-    ci_joint_states_rt_pub_->msg_.name[1] = "y";
-    ci_joint_states_rt_pub_->msg_.name[2] = "z";
-    ci_joint_states_rt_pub_->msg_.name[3] = "r";
-    ci_joint_states_rt_pub_->msg_.name[4] = "p";
-    ci_joint_states_rt_pub_->msg_.name[5] = "y";
-    for (unsigned int i = 0; i < joint_names_.size(); i++)
-        ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
-
-    state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, controller_nh.getNamespace()+"/state_estimation", 4));
-    state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
-    state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
-
-    state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, controller_nh.getNamespace()+"/state_estimation_qp", 4));
-    state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
-    state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
-
-    contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, controller_nh.getNamespace()+"/contacts", 4));
-    contacts_rt_pub_->msg_.header.frame_id = "world";
-    contacts_rt_pub_->msg_.name.resize(4);
-    contacts_rt_pub_->msg_.contact.resize(4);
-    contacts_rt_pub_->msg_.contact_forces.resize(4);
-
-    grfs_rt_pub_.resize(feet_names_.size());
-    for(unsigned int i=0;i<feet_names_.size();i++)
-    {
-        grfs_rt_pub_[i].reset(new realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>(controller_nh, controller_nh.getNamespace()+"/"+feet_names_[i]+"_grf", 4));
-        grfs_rt_pub_[i]->msg_.header.frame_id = "world";
-    }
-
     for(unsigned int i=0;i<feet_names_.size();i++)
         visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("ci/world_odom",feet_names_[i]+"_rviz_visual_marker"));
 
@@ -331,7 +295,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Contact force estimation reset
     force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(xbot_model_));
 
-    // FIXME
+    // Contact estimation reset, FIXME to clean up
     std::vector<int> dofs = {0,1,2}; // x y z
     std::vector<std::string> chains;
     std::vector<std::string> chain(1);
@@ -343,6 +307,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         chain[0] = chains[i];
         force_torque_sensors_.push_back(force_estimation_->add_link(feet_names_[i],dofs,chain));
     }
+
+    initPublishers(root_nh,controller_nh);
+
+
     return true;
 }
 
@@ -566,7 +534,7 @@ void Controller::readContactsState()
 #endif
         }
         else
-             qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start using the qp state estimation
+            qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start using the qp state estimation
     }
 }
 
@@ -843,9 +811,7 @@ void Controller::rvizPublisher()
                 if(gait_generator_->isSwinging(feet_names_[i]))
                 {
                     gait_generator_->getTrajectoryPreview(feet_names_[i],poses);
-                    //visual_tools_->setBaseFrame(id_prob_->_feet[feet_names_[i]]->getBaseLink());
 
-                    //gait_generator_->getTrajectoryPtr(feet_names_[i])->preview(poses);
                     for(unsigned int j=0; j<n_points; j++)
                     {
                         path[j].position.x = poses[j].translation().x();
@@ -860,8 +826,6 @@ void Controller::rvizPublisher()
                 {
                     visual_tools_[feet_names_[i]]->deleteAllMarkers();
                 }
-
-                //visual_tools_[feet_names_[i]]->publishArrow(arrow_start,arrow_end);
 
                 visual_tools_[feet_names_[i]]->trigger();
             }
@@ -924,6 +888,48 @@ void Controller::odomPublisher()
     ROS_INFO("Stop the odomPublisher");
 }
 
+void Controller::initPublishers(const ros::NodeHandle& /*root_nh*/, const ros::NodeHandle& controller_nh)
+{
+    // Create the realtime publishers
+    ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(controller_nh, "ci/joint_states", 4));
+    ci_joint_states_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.effort.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    ci_joint_states_rt_pub_->msg_.name[0] = "x";
+    ci_joint_states_rt_pub_->msg_.name[1] = "y";
+    ci_joint_states_rt_pub_->msg_.name[2] = "z";
+    ci_joint_states_rt_pub_->msg_.name[3] = "r";
+    ci_joint_states_rt_pub_->msg_.name[4] = "p";
+    ci_joint_states_rt_pub_->msg_.name[5] = "y";
+    for (unsigned int i = 0; i < joint_names_.size(); i++)
+        ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
+
+    state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation", 4));
+    state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
+    state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
+
+    state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation_qp", 4));
+    state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
+    state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
+
+    contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contacts", 4));
+    contacts_rt_pub_->msg_.header.frame_id = "world";
+    contacts_rt_pub_->msg_.name.resize(4);
+    contacts_rt_pub_->msg_.contact.resize(4);
+    contacts_rt_pub_->msg_.contact_forces.resize(4);
+
+    grfs_rt_pub_.resize(feet_names_.size());
+    for(unsigned int i=0;i<feet_names_.size();i++)
+    {
+        grfs_rt_pub_[i].reset(new realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>(controller_nh, feet_names_[i]+"_grf", 4));
+        grfs_rt_pub_[i]->msg_.header.frame_id = "world";
+    }
+
+    imu_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::Imu>(controller_nh, "imu", 4));
+    imu_rt_pub_->msg_.header.frame_id = "trunk_imu"; // FIXME
+}
+
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
 {
 
@@ -932,7 +938,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
     for(unsigned int i=0;i<grfs_rt_pub_.size();i++)
     {
-        if(grfs_rt_pub_[i]->trylock())
+        if(grfs_rt_pub_[i].get() && grfs_rt_pub_[i]->trylock())
         {
             grfs_rt_pub_[i]->msg_.wrench.force.x  = ground_reaction_forces_.segment(6*i,3)(0);
             grfs_rt_pub_[i]->msg_.wrench.force.y  = ground_reaction_forces_.segment(6*i,3)(1);
@@ -942,7 +948,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         }
     }
 
-    if(ci_joint_states_rt_pub_->trylock())
+    if(ci_joint_states_rt_pub_.get() && ci_joint_states_rt_pub_->trylock())
     {
         for(unsigned int i = 0; i < joint_positions_.size(); i++)
         {
@@ -953,7 +959,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
             ci_joint_states_rt_pub_->unlockAndPublish();
         }
     }
-    if(state_estimation_rt_pub_->trylock())
+    if(state_estimation_rt_pub_.get() && state_estimation_rt_pub_->trylock())
     {
         state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
         state_estimation_rt_pub_->msg_.pose.pose.position.y     = floating_base_position_(1);
@@ -973,7 +979,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         state_estimation_rt_pub_->msg_.header.stamp = time;
         state_estimation_rt_pub_->unlockAndPublish();
     }
-    if(state_estimation_qp_rt_pub_->trylock())
+    if(state_estimation_qp_rt_pub_.get() && state_estimation_qp_rt_pub_->trylock())
     {
         state_estimation_qp_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_qp_(0);
         state_estimation_qp_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_qp_(1);
@@ -986,7 +992,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         state_estimation_qp_rt_pub_->unlockAndPublish();
     }
 
-    if(contacts_rt_pub_->trylock())
+    if(contacts_rt_pub_.get() && contacts_rt_pub_->trylock())
     {
         contacts_rt_pub_->msg_.header.stamp = time;
 
@@ -999,6 +1005,25 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
             contacts_rt_pub_->msg_.contact_forces[i].force.z = contact_forces_[i](2);
         }
         contacts_rt_pub_->unlockAndPublish();
+    }
+
+    if(imu_rt_pub_.get() && imu_rt_pub_->trylock())
+    {
+        imu_rt_pub_->msg_.header.stamp = time;
+        imu_rt_pub_->msg_.orientation.x = imu_orientation_.x();
+        imu_rt_pub_->msg_.orientation.y = imu_orientation_.y();
+        imu_rt_pub_->msg_.orientation.z = imu_orientation_.z();
+        imu_rt_pub_->msg_.orientation.w = imu_orientation_.w();
+
+        imu_rt_pub_->msg_.angular_velocity.x = imu_gyroscope_(0);
+        imu_rt_pub_->msg_.angular_velocity.y = imu_gyroscope_(1);
+        imu_rt_pub_->msg_.angular_velocity.z = imu_gyroscope_(2);
+
+        imu_rt_pub_->msg_.linear_acceleration.x = imu_accelerometer_(0);
+        imu_rt_pub_->msg_.linear_acceleration.y = imu_accelerometer_(1);
+        imu_rt_pub_->msg_.linear_acceleration.z = imu_accelerometer_(2);
+
+        imu_rt_pub_->unlockAndPublish();
     }
 }
 
