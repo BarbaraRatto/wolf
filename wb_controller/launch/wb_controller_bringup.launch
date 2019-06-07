@@ -49,6 +49,11 @@
        <param name="autorepeat_rate " value="500" />
     </node>
 
+    <!-- plotJuggler -->
+    <node pkg="plotjuggler" type="PlotJuggler" name="PlotJuggler" ns="/$(arg robot_name)/wb_controller"
+        args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
+    </node>
+
     <!-- Convert joint states to TF transforms for rviz, etc -->
     <node name="$(arg robot_name)_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
         <remap from="/joint_states" to="/$(arg robot_name)/joint_states"/>
