@@ -19,10 +19,10 @@
 // ROS control
 #include <controller_interface/controller.h>
 #include <controller_interface/multi_interface_controller.h>
-// Hardware interfaces
+#include <hardware_interface/imu_sensor_interface.h>
+// Hardware interfaces // FIXME Remove that crap
 #include <dls_hardware_interface/joint_command_adv_interface.h>
 #include <dls_hardware_interface/contact_switch_sensor_interface.h>
-#include <hardware_interface/imu_sensor_interface.h>
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
@@ -36,6 +36,7 @@
 #include <wb_controller/locomotion.h>
 #include <wb_controller/joy.h>
 #include <wb_controller/IDProblem.h>
+#include <wb_controller/ContactForces.h>
 
 #include <Eigen/Geometry>
 
@@ -166,6 +167,8 @@ private:
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
     /** @brief Contact estimation */
     XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
+    /** @brief Contact estimation */
+    std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Real time publisher - desired joint states */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
     /** @brief Real time publisher - estimated pose */
@@ -173,7 +176,7 @@ private:
     /** @brief Real time publisher - estimated qp pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
     /** @brief Real time publisher - contacts */
-    std::shared_ptr<realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>> contacts_rt_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contacts_rt_pub_;
     /** @brief Real time publisher - GRF */
     std::vector<std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>>> grfs_rt_pub_;
     /** @brief Ros subscriber for the desired tasks reference */

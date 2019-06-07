@@ -291,8 +291,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
 
-    contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>(controller_nh, controller_nh.getNamespace()+"/contacts", 4));
-    contacts_rt_pub_->msg_.data.resize(4);
+    contacts_rt_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, controller_nh.getNamespace()+"/contacts", 4));
+    contacts_rt_pub_->msg_.header.frame_id = "world";
+    contacts_rt_pub_->msg_.name.resize(4);
+    contacts_rt_pub_->msg_.contact.resize(4);
+    contacts_rt_pub_->msg_.contact_forces.resize(4);
 
     grfs_rt_pub_.resize(feet_names_.size());
     for(unsigned int i=0;i<feet_names_.size();i++)
@@ -329,19 +332,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(xbot_model_));
 
     // FIXME
-    /*std::vector<int> dofs = {3};
-    auto chains = xbot_model_->getChainNames();
+    std::vector<int> dofs = {0,1,2}; // x y z
+    std::vector<std::string> chains;
+    std::vector<std::string> chain(1);
+    chains = xbot_model_->getChainNames();
     chains.pop_back(); // Remove virtual_chain
     chains = sortByLegName(chains);
-
     for(unsigned int i=0;i<feet_names_.size();i++)
     {
-        std::cout << chains[i] << std::endl;
-        force_estimation_->add_link(feet_names_[i],dofs,chains[i]);
+        chain[0] = chains[i];
+        force_torque_sensors_.push_back(force_estimation_->add_link(feet_names_[i],dofs,chain));
     }
-
-    getchar();*/
-
     return true;
 }
 
@@ -493,7 +494,7 @@ void Controller::readJoints()
 
 void Controller::readImu()
 {
-    // FIXME For now we select the first imu
+    // FIXME For now we select the first available imu
     unsigned int selected_imu = 0;
     imu_accelerometer_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getLinearAcceleration());
     imu_gyroscope_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getAngularVelocity());
@@ -529,6 +530,7 @@ void Controller::stateEstimation()
 void Controller::updateXBotModel()
 {
     xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->setJointEffort(joint_efforts_);
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
@@ -537,11 +539,23 @@ void Controller::updateXBotModel()
 
 void Controller::readContactsState()
 {
+    force_estimation_->update();
+
     for(unsigned int i=0; i<contact_sensors_.size(); i++)
     {
-        normals_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getNormal());
+        /*normals_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getNormal());
         contacts_[i] = *contact_sensors_[i].getContactState();
-        contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());
+        contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());*/
+
+        xbot_model_->getPose(feet_names_[i],tmp_affine3d_); // tmp_affine3d_ = world_T_foot
+
+        force_torque_sensors_[i]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
+
+        tmp_vector3d_ = tmp_affine3d_ * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
+
+        contacts_[i] = (tmp_vector3d_.norm() >= 10.0 ? true : false);
+        contact_forces_[i] = tmp_vector3d_;
+
         // Note that feet and contact sensors are ordered in the same way
         if(tracking_active_)
         {
@@ -974,8 +988,16 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
     if(contacts_rt_pub_->trylock())
     {
-        for(unsigned int i=0; i<contacts_rt_pub_->msg_.data.size(); i++)
-            contacts_rt_pub_->msg_.data[i] = (*contact_sensors_[i].getContactState() ? 1 : 0);
+        contacts_rt_pub_->msg_.header.stamp = time;
+
+        for(unsigned int i=0; i <feet_names_.size(); i++)
+        {
+            contacts_rt_pub_->msg_.name[i]    = feet_names_[i];
+            contacts_rt_pub_->msg_.contact[i] = contacts_[i];
+            contacts_rt_pub_->msg_.contact_forces[i].force.x = contact_forces_[i](0);
+            contacts_rt_pub_->msg_.contact_forces[i].force.y = contact_forces_[i](1);
+            contacts_rt_pub_->msg_.contact_forces[i].force.z = contact_forces_[i](2);
+        }
         contacts_rt_pub_->unlockAndPublish();
     }
 }
