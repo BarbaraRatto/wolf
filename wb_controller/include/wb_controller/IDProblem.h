@@ -19,7 +19,7 @@
 #include <realtime_tools/realtime_publisher.h>
 #include <wb_controller/CartesianTask.h>
 #include <wb_controller/JointsTask.h>
-#include <wb_controller/TaskConfig.h>
+#include <wb_controller/taskConfig.h>
 
 namespace OpenSoT{
 
@@ -33,13 +33,13 @@ public:
    virtual ~TaskRosWrapperInterface(){}
 
    virtual void publish(const ros::Time& /*time*/) = 0;
-   virtual void dynamicReconfigureCallback(wb_controller::TaskConfig& /*config*/, uint32_t /*level*/) = 0;
+   virtual void dynamicReconfigureCallback(wb_controller::taskConfig& /*config*/, uint32_t /*level*/) = 0;
    virtual void dynamicReconfigureUpdate() = 0;
 
 protected:
 
-    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::TaskConfig>> server_;
-    wb_controller::TaskConfig default_config_;
+    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::taskConfig>> server_;
+    wb_controller::taskConfig default_config_;
 
     Eigen::Affine3d       tmp_affine3d_;
     Eigen::VectorXd       tmp_vectorxd_;
@@ -64,11 +64,11 @@ public:
 
         //ros::NodeHandle task_nh(nh.getNamespace()+"/"+task->getTaskID());
         ros::NodeHandle task_nh(task->getTaskID());
-        server_.reset(new dynamic_reconfigure::Server<wb_controller::TaskConfig>(task_nh));
+        server_.reset(new dynamic_reconfigure::Server<wb_controller::taskConfig>(task_nh));
         server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
    }
 
-   void dynamicReconfigureCallback(wb_controller::TaskConfig &config, uint32_t level)
+   void dynamicReconfigureCallback(wb_controller::taskConfig &config, uint32_t level)
    {
        switch(level)
        {

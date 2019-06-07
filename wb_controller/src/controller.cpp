@@ -274,7 +274,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     solver_reset_done_ = false;
 
     // Set the callback for the dynamic reconfigure server
-    server_ = new dynamic_reconfigure::Server<wb_controller::ControllerConfig>(controller_nh);
+    server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
     gait_generator_.reset(new GaitGenerator(0.8,feet_names_,hips_names_,"crawl","ellipse"));
@@ -334,7 +334,7 @@ void Controller::dynamicReconfigureUpdate()
         server_->updateConfig(default_config_);
 }
 
-void Controller::dynamicReconfigureCallback(wb_controller::ControllerConfig &config, uint32_t level)
+void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &config, uint32_t level)
 {
     switch(level)
     {
@@ -933,6 +933,7 @@ void Controller::initPublishers(const ros::NodeHandle& /*root_nh*/, const ros::N
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
 {
 
+    // FIXME it should not be there but for the moment I need it here because of the twist reset in the update of the solver:
     if(id_prob_)
         id_prob_->publish(time);
 

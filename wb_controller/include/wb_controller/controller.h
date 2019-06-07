@@ -36,7 +36,7 @@
 #include <wb_controller/IDProblem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/ControllerServices.h>
-#include <wb_controller/ControllerConfig.h>
+#include <wb_controller/controllerConfig.h>
 
 #include <Eigen/Geometry>
 
@@ -85,7 +85,7 @@ public:
     /**
          * @brief Ros dynamic reconfigure callback
          */
-    void dynamicReconfigureCallback(wb_controller::ControllerConfig &config, uint32_t level);
+    void dynamicReconfigureCallback(wb_controller::controllerConfig &config, uint32_t level);
 
     /**
          * @brief Start/Stop solver integration
@@ -210,9 +210,9 @@ private:
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
-    dynamic_reconfigure::Server<wb_controller::ControllerConfig>* server_;
+    dynamic_reconfigure::Server<wb_controller::controllerConfig>* server_;
     /** @brief ROS dynamic reconfigure config struct */
-    ControllerConfig default_config_;
+    controllerConfig default_config_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */

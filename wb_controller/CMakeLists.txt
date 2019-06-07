@@ -70,7 +70,7 @@ install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-if (CATKIN_ENABLE_TESTING)
+if (TEST)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
   find_package(cartesian_interface REQUIRED)
