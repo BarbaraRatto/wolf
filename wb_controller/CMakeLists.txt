@@ -70,6 +70,26 @@ install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
+install(FILES controller_plugin.xml
+DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})  
+
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY config/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY problems/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/problems
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY plot_juggler_files/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
+  PATTERN ".svn" EXCLUDE)
+
+
 if (TEST)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)

@@ -888,10 +888,10 @@ void Controller::odomPublisher()
     ROS_INFO("Stop the odomPublisher");
 }
 
-void Controller::initPublishers(const ros::NodeHandle& /*root_nh*/, const ros::NodeHandle& controller_nh)
+void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeHandle& controller_nh)
 {
     // Create the realtime publishers
-    ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(controller_nh, "ci/joint_states", 4));
+    ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4));
     ci_joint_states_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     ci_joint_states_rt_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
     ci_joint_states_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
