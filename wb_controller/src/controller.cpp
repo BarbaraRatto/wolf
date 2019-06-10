@@ -46,7 +46,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
-    hardware_interface::ContactSwitchSensorInterface* cont_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
 
     nh_ = controller_nh;
 
@@ -58,11 +57,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     if(!imu_hw)
     {
         ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::ImuSensorInterface not found");
-        return false;
-    }
-    if(!cont_hw)
-    {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
         return false;
     }
     if (!controller_nh.getParam("joints", joint_names_))
@@ -85,18 +79,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
-    if (!controller_nh.getParam("contact_sensors", contact_sensor_names_))
-    {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"No contact_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
-        return false;
-    }
-    // Assume we have a contact sensor for each foot
-    if(contact_sensor_names_.size()!=4)
-    {
-        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"Wrong number of contact sensors!");
-        return false;
-    }
-    contact_sensor_names_ = sortByLegName(contact_sensor_names_);
+
 
     // Setting up handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
@@ -129,27 +112,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
     }
     assert(imu_sensors_.size()>0);
-
-    contact_sensors_.resize(4);
-    try
-    {
-        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LF]);
-        contact_sensors_[leg_id::LF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LF]));
-
-        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RH]);
-        contact_sensors_[leg_id::RH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RH]));
-
-        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::RF]);
-        contact_sensors_[leg_id::RF] = (cont_hw->getHandle(contact_sensor_names_[leg_id::RF]));
-
-        ROS_DEBUG_STREAM("Found contact sensor: "<<contact_sensor_names_[leg_id::LH]);
-        contact_sensors_[leg_id::LH] = (cont_hw->getHandle(contact_sensor_names_[leg_id::LH]));
-    }
-    catch(...)
-    {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading contact_sensors_");
-        return false;
-    }
 
     des_joint_p_gain_.resize(joint_states_.size());
     des_joint_i_gain_.resize(joint_states_.size());
@@ -246,9 +208,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    normals_.resize(contact_sensors_.size());
-    contacts_.resize(contact_sensors_.size());
-    contact_forces_.resize(contact_sensors_.size());
+    contacts_.resize(4);
+    contact_forces_.resize(4);
     ground_reaction_forces_.resize(24); // 24 = 6 * 4 leg
     floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
 
@@ -509,7 +470,7 @@ void Controller::readContactsState()
 {
     force_estimation_->update();
 
-    for(unsigned int i=0; i<contact_sensors_.size(); i++)
+    for(unsigned int i=0; i<contacts_.size(); i++)
     {
         /*normals_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getNormal());
         contacts_[i] = *contact_sensors_[i].getContactState();

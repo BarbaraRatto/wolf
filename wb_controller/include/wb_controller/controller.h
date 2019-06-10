@@ -20,7 +20,6 @@
 #include <hardware_interface/imu_sensor_interface.h>
 // Hardware interfaces // FIXME Remove that crap
 #include <dls_hardware_interface/joint_command_adv_interface.h>
-#include <dls_hardware_interface/contact_switch_sensor_interface.h>
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
@@ -44,8 +43,7 @@ namespace wb_controller
 {
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
-        hardware_interface::ImuSensorInterface,
-        hardware_interface::ContactSwitchSensorInterface>
+                                                                         hardware_interface::ImuSensorInterface>
 {
 public:
     /** @brief Constructor function */
@@ -135,14 +133,10 @@ private:
     std::vector<std::string> imu_names_;
     /** @brief State estimator names */
     std::vector<std::string> state_estimator_names_;
-    /** @brief State estimator names */
-    std::vector<std::string> contact_sensor_names_;
     /** @brief Joint states for input and output */
     std::vector<hardware_interface::JointCommandAdvHandle> joint_states_;
     /** @brief IMU sensors */
     std::vector<hardware_interface::ImuSensorHandle> imu_sensors_;
-    /** @brief Contact sensors */
-    std::vector<hardware_interface::ContactSwitchSensorHandle> contact_sensors_;
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */
@@ -235,8 +229,6 @@ private:
     Eigen::VectorXd floating_base_velocity_qp_;
     /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */
     Eigen::Affine3d floating_base_pose_;    
-    /** @brief GRF normals */
-    std::vector<Eigen::Vector3d> normals_;
     /** @brief GRF contacts */
     std::vector<bool> contacts_;
     /** @brief GRF contact forces */
