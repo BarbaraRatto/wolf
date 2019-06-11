@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="teleop">
+
+<xacro:property name="model_name" value="IIT TELEOP" />
+<xacro:property name="model_version" value="0.1" />
+
+
+<!-- ************FLOATING BASE*************-->
+<!-- ******************************************-->
+<xacro:property name="TELEOP_FLOATING_BASE" value="false" />
+
+<!-- ************FIXED BASE*************-->
+<!-- ******************************************-->
+<xacro:property name="TELEOP_FIXED_BASE" value="false" />
+
+</robot>

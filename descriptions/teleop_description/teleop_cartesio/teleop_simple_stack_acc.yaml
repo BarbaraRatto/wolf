@@ -1,0 +1,40 @@
+solver_options:
+    regularization: 1e-3
+    back_end: "qpoases"
+    control_dt: 0.001
+
+stack:
+#     - ["ArmEE"]
+    - ["ArmPosition"]
+    - ["ArmOrientation"]
+#    - ["Postural"]
+
+    
+constraints: ["JointLimits"]
+
+ArmPosition:
+    type: "Cartesian"
+    distal_link: "teleop_link5"
+#    base_link: "base_link"
+    lambda: 0.1
+    indices: [0,1,2]
+
+ArmOrientation:
+    type: "Cartesian"
+    distal_link: "teleop_link5"
+#    base_link: "base_link"
+    lambda: 0.1
+    indices: [3,4,5]
+#    use_body_jacobian: true
+    
+
+ArmEE:
+    type: "Cartesian"
+    distal_link: "teleop_link5"
+#    base_link: "base_link"
+    lambda: 0.1
+
+Postural:
+    type: "Postural"
+    lambda: 0.01
+    
