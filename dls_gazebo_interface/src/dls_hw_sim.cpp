@@ -118,6 +118,7 @@ namespace dls_gazebo_interface
             registerInterface(&imu_sensor_interface_);
             registerInterface(&ground_truth_interface_);
             registerInterface(&contact_sensor_interface_);
+            registerInterface(&joint_effort_interface_);
         }
         return true;
     }
