@@ -20,7 +20,7 @@ find_package(catkin REQUIRED tf controller_interface dls_hardware_interface cont
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(PkgConfig)
-pkg_check_modules(rbdl rbdl>=2.5.0 REQUIRED)
+pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
@@ -56,13 +56,13 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
-    ${rbdl_INCLUDE_DIRS}
+    ${RBDL_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/IDProblem.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 
-target_link_libraries(${PROJECT_NAME} ${rbdl_LIBRARIES} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${RBDL_LIBRARIES} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})

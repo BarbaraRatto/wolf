@@ -7,6 +7,7 @@
     <arg name="task_period" default="0.001" />
     <arg name="gazebo_gui" default="true" />
     <arg name="gazebo" default="true" />
+    <arg name="arm" default="false" />
 
     <!-- export the task_period to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
@@ -19,6 +20,7 @@
 		<arg name="world_name" value="$(arg world_name)" />
 		<arg name="task_period" value="$(arg task_period)" />
 		<arg name="gui" value="$(arg gazebo_gui)"/>
+		<arg name="arm" value="$(arg arm)"/>
 		<!-- arg name="debug" value="true"/ -->
 	    </include>
     </group>
@@ -33,6 +35,14 @@
     <param name="$(arg robot_name)/wb_controller/problem_description" textfile="$(find wb_controller)/problems/$(arg problem).yaml"/>
     <!-- Loading joint states publisher configurations from YAML file to parameter server -->
     <rosparam file="$(find wb_controller)/config/joint_state_publisher.yaml" ns="/$(arg robot_name)" command="load"/>
+
+    <!-- Load controller config -->
+    <group if="$(arg arm)">
+        <rosparam command="load" file="$(find wb_controller)/config/$(arg robot_name)_arm_params.yaml" ns="$(arg robot_name)"/>
+    </group>
+    <group unless="$(arg arm)">
+        <rosparam command="load" file="$(find wb_controller)/config/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
+    </group>
 
     <!-- Spawn our controller and its friends -->
     <include file="$(find wb_controller)/launch/wb_controller_spawn.launch">

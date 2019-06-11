@@ -2,9 +2,6 @@
   <arg name="robot_name" default="hyq"/>
   <arg name="extra_controllers" default=""/>
 
-  <!-- Load controller config -->
-  <rosparam command="load" file="$(find wb_controller)/config/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
-
   <!-- Spawn controllers -->
   <node name="controller_spawner"
         ns="$(arg robot_name)"

@@ -256,21 +256,26 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Contact force estimation reset
     force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(xbot_model_));
 
-    // Contact estimation reset, FIXME to clean up
+    // Contact estimation reset, FIXME to clean up and add the ARM
     std::vector<int> dofs = {0,1,2}; // x y z
-    std::vector<std::string> chains;
+    std::vector<std::string> chains, feet_chains;
     std::vector<std::string> chain(1);
     chains = xbot_model_->getChainNames();
-    chains.pop_back(); // Remove virtual_chain
-    chains = sortByLegName(chains);
+
+    for(unsigned int i = 0; i < chains.size(); i++) // Remove virtual_chain and arm
+        if(chains[i].find("arm") == std::string::npos && chains[i].find("virtual_chain") == std::string::npos)
+        {
+            feet_chains.push_back(chains[i]);
+        }
+    assert(feet_chains.size() == 4);
+    feet_chains = sortByLegName(feet_chains);
     for(unsigned int i=0;i<feet_names_.size();i++)
     {
-        chain[0] = chains[i];
+        chain[0] = feet_chains[i];
         force_torque_sensors_.push_back(force_estimation_->add_link(feet_names_[i],dofs,chain));
     }
 
     initPublishers(root_nh,controller_nh);
-
 
     return true;
 }
