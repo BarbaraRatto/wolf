@@ -74,17 +74,22 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     if (!controller_nh.getParam("feet", feet_names_))
     {
-        ROS_ERROR("No feet given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"No feet given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
+    }
+    if (!controller_nh.getParam("arm_tip", arm_tip_name_))
+    {
+        ROS_WARN_NAMED(CONTROLLER_NAME,"No arm tip name given in the namespace: %s, proceeding without using the arm.", controller_nh.getNamespace().c_str());
+        arm_tip_name_ = std::string();
     }
     if (!controller_nh.getParam("hips", hips_names_))
     {
         ROS_ERROR_NAMED(CONTROLLER_NAME,"No hips given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
-    if (!controller_nh.getParam("imu_sensors", imu_names_))
+    if (!controller_nh.getParam("imu_sensor", imu_name_))
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensor given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
 
@@ -105,20 +110,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     assert(joint_states_.size()>0);
 
-    for (unsigned int i = 0; i < imu_names_.size(); i++)
+    try
     {
-        try
-        {
-            ROS_DEBUG_STREAM("Found imu sensor: "<<imu_names_[i]);
-            imu_sensors_.push_back(imu_hw->getHandle(imu_names_[i]));
-        }
-        catch(...)
-        {
-            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading imu_sensors_");
-            return false;
-        }
+        ROS_DEBUG_STREAM("Found imu sensor: "<<imu_name_);
+        imu_sensor_ = imu_hw->getHandle(imu_name_);
     }
-    assert(imu_sensors_.size()>0);
+    catch(...)
+    {
+        ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading imu_sensor_");
+        return false;
+    }
 
     des_joint_p_gain_.resize(joint_states_.size());
     des_joint_i_gain_.resize(joint_states_.size());
@@ -240,7 +241,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
     for(unsigned int i=0;i<feet_names_.size();i++)
-        visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("ci/world_odom",feet_names_[i]+"_rviz_visual_marker"));
+        visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("world",feet_names_[i]+"_rviz_visual_marker"));
 
     solver_reset_done_ = false;
 
@@ -438,14 +439,12 @@ void Controller::readJoints()
 
 void Controller::readImu()
 {
-    // FIXME For now we select the first available imu
-    unsigned int selected_imu = 0;
-    imu_accelerometer_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getLinearAcceleration());
-    imu_gyroscope_ = Eigen::Map<const Eigen::Vector3d>(imu_sensors_[selected_imu].getAngularVelocity());
-    imu_orientation_.w() = imu_sensors_[selected_imu].getOrientation()[0];
-    imu_orientation_.x() = imu_sensors_[selected_imu].getOrientation()[1];
-    imu_orientation_.y() = imu_sensors_[selected_imu].getOrientation()[2];
-    imu_orientation_.z() = imu_sensors_[selected_imu].getOrientation()[3];
+    imu_accelerometer_ = Eigen::Map<const Eigen::Vector3d>(imu_sensor_.getLinearAcceleration());
+    imu_gyroscope_ = Eigen::Map<const Eigen::Vector3d>(imu_sensor_.getAngularVelocity());
+    imu_orientation_.w() = imu_sensor_.getOrientation()[0];
+    imu_orientation_.x() = imu_sensor_.getOrientation()[1];
+    imu_orientation_.y() = imu_sensor_.getOrientation()[2];
+    imu_orientation_.z() = imu_sensor_.getOrientation()[3];
 }
 
 void Controller::stateEstimation()
@@ -576,7 +575,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(!solver_reset_done_)
         {
             ROS_INFO("Reset the solver");
-            id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,period.toSec(),feet_names_)); // FIXME NO-RT
+            id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,period.toSec(),feet_names_,arm_tip_name_)); // FIXME NO-RT
             solver_reset_done_ = true;
 
             // Set the initial feet poses
@@ -593,6 +592,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             dynamicReconfigureUpdate();
         }
+
+        // FIXME I should add something to the CommandsInterface!!!
+        // Get the external reference (interactive marker) for the arm if available
+        id_prob_->updateReference(arm_tip_name_);
 
         if(tracking_active_)
         {
@@ -859,7 +862,7 @@ void Controller::odomPublisher()
         quaternion = world_pose.linear();
         quaternion.normalize();
 
-        // Create the tf transform between /ci/base_link and /ci/world_odom
+        // Create the tf transform between /ci/base_link and /ci/world_odom (world)
         transform.setOrigin(tf::Vector3(position(0),position(1),position(2)));
 
         q.setX(quaternion.x());
@@ -867,7 +870,7 @@ void Controller::odomPublisher()
         q.setZ(quaternion.z());
         q.setW(quaternion.w());
         transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link" , "/ci/world_odom" ));
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link" , "/world" ));
 
         // Create the tf transform between /ci/base_link and /base_link
         transform.setOrigin(tf::Vector3(0,0,0));

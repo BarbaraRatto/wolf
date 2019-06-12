@@ -24,8 +24,7 @@ wb_controller:
   - lf_hip
   - lh_hip
   - rf_hip
-  imu_sensors:
-  - trunk_imu
+  imu_sensor: trunk_imu
   gains:
       lf_haa_joint: {p: 300.0, i: 0.0, d: 10.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 10.0}
