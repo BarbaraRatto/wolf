@@ -132,14 +132,14 @@ private:
     unsigned int num_joints_;
     /** @brief Joint names */
     std::vector<std::string> joint_names_;
-    /** @brief Imu sensor names */
-    std::vector<std::string> imu_names_;
+    /** @brief Imu sensor name */
+    std::string imu_name_;
     /** @brief Joint states for reading */
     //std::vector<hardware_interface::JointStateHandle> joint_states_;
     /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
     std::vector<hardware_interface::JointHandle> joint_states_;
     /** @brief IMU sensors */
-    std::vector<hardware_interface::ImuSensorHandle> imu_sensors_;
+    hardware_interface::ImuSensorHandle imu_sensor_;
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */
@@ -235,6 +235,8 @@ private:
     std::vector<Eigen::Vector3d> contact_forces_;
     /** @brief Feet names */
     std::vector<std::string> feet_names_;
+    /** @brief Arm tip name */
+    std::string arm_tip_name_;
     /** @brief Hips names */
     std::vector<std::string> hips_names_;
     /** @brief Thread for the odometry publisher */
