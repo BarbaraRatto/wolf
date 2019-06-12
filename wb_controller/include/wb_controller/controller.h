@@ -16,10 +16,13 @@
 #include <pluginlib/class_list_macros.hpp>
 // ROS control
 #include <controller_interface/controller.h>
+#include <control_toolbox/pid.h>
 #include <controller_interface/multi_interface_controller.h>
 #include <hardware_interface/imu_sensor_interface.h>
+#include <hardware_interface/joint_command_interface.h>
+#include <hardware_interface/joint_state_interface.h>
 // Hardware interfaces // FIXME Remove that crap
-#include <dls_hardware_interface/joint_command_adv_interface.h>
+//#include <dls_hardware_interface/joint_command_adv_interface.h>
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
@@ -42,7 +45,7 @@
 namespace wb_controller
 {
 
-class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
+class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
                                                                          hardware_interface::ImuSensorInterface>
 {
 public:
@@ -131,10 +134,10 @@ private:
     std::vector<std::string> joint_names_;
     /** @brief Imu sensor names */
     std::vector<std::string> imu_names_;
-    /** @brief State estimator names */
-    std::vector<std::string> state_estimator_names_;
-    /** @brief Joint states for input and output */
-    std::vector<hardware_interface::JointCommandAdvHandle> joint_states_;
+    /** @brief Joint states for reading */
+    //std::vector<hardware_interface::JointStateHandle> joint_states_;
+    /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
+    std::vector<hardware_interface::JointHandle> joint_states_;
     /** @brief IMU sensors */
     std::vector<hardware_interface::ImuSensorHandle> imu_sensors_;
     /** @brief Joint positions */
@@ -168,15 +171,13 @@ private:
     /** @brief Real time publisher - IMU */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_rt_pub_;
     /** @brief Real time publisher - estimated pose */
-    std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_; // FIXME to be removed
     /** @brief Real time publisher - estimated qp pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
     /** @brief Real time publisher - contacts */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contacts_rt_pub_;
     /** @brief Real time publisher - GRF */
     std::vector<std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>>> grfs_rt_pub_;
-    /** @brief Ros subscriber for the desired tasks reference */
-    ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */
@@ -189,10 +190,9 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-    /** @brief Actual com position w.r.t world frame */
-    Eigen::Vector3d com_position_;
-    /** @brief Desired com position w.r.t world frame */
-    Eigen::Vector3d  des_com_position_;
+
+    std::vector<control_toolbox::Pid> pids_;
+
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
     /** @brief Activate pid gains */
@@ -200,7 +200,7 @@ private:
     /** @brief Activate tracking */
     std::atomic<bool> tracking_active_;
     /** @brief Activate relative tasks */
-    std::atomic<bool> relative_tasks_active_;
+    std::atomic<bool> relative_tasks_active_; // FIXME to be removed
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
@@ -336,6 +336,7 @@ private:
          * @brief Update the dynamic reconfigure interface
          */
     void dynamicReconfigureUpdate();
+
 };
 
 
