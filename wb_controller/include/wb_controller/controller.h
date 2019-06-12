@@ -260,6 +260,8 @@ private:
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
 
+    ros::ServiceClient freeze_base_client;
+
     /**
          * @brief thread body for the odometry publisher
          */

@@ -10,6 +10,7 @@
  */
 
 #include <wb_controller/controller.h>
+#include <std_srvs/Empty.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -42,12 +43,19 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // getting the names of the joints from the ROS parameter server
     ROS_DEBUG_NAMED(CONTROLLER_NAME,"Initialize");
 
+
     assert(robot_hw);
 
     hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
 
     nh_ = controller_nh;
+
+
+    //unfreeze base
+    freeze_base_client = nh_.serviceClient<std_srvs::Empty>("/hyq/freeze_base");
+
+
 
     if(!jt_hw)
     {
@@ -525,6 +533,20 @@ void Controller::starting(const ros::Time&  /*time*/)
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
+
+    //Unfreeze at startup:
+    static int freeze_count = 0;
+    if (freeze_count == 250) {
+            std_srvs::Empty msgs;
+            if (!freeze_base_client.call(msgs))
+            {
+                ROS_ERROR("Failed to unfreeze base");
+            }
+            freeze_count++;
+    } else {
+            freeze_count++;
+    }
+
     // Read from the hardware interfaces:
     // 1) Joints
     readJoints();
