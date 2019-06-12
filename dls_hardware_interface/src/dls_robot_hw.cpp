@@ -68,6 +68,8 @@ bool DlsRobotHwInterface::initializeInterfaces(const std::vector<std::string>& j
                                             joint_state_adv_interface_.getHandle(joint_names_[j]), &joint_position_command_[j],
                                             &joint_velocity_command_[j], &joint_effort_command_[j],
                                             &joint_p_gain_command_[j], &joint_i_gain_command_[j], &joint_d_gain_command_[j]));
+
+        joint_effort_interface_.registerHandle(JointHandle(joint_state_interface_.getHandle(joint_names_[j]), &joint_effort_command_[j]));
     }
 
     // Devices hw interfaces

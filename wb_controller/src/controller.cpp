@@ -44,14 +44,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     assert(robot_hw);
 
-    hardware_interface::JointCommandAdvInterface* jt_hw = robot_hw->get<hardware_interface::JointCommandAdvInterface>();
+    hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
 
     nh_ = controller_nh;
 
     if(!jt_hw)
     {
-        ROS_ERROR("hardware_interface::JointCommandAdvInterface not found");
+        ROS_ERROR("hardware_interface::EffortJointInterface not found");
         return false;
     }
     if(!imu_hw)
@@ -79,7 +79,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
-
 
     // Setting up handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
@@ -119,6 +118,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_p_gain_.resize(joint_states_.size());
     joint_i_gain_.resize(joint_states_.size());
     joint_d_gain_.resize(joint_states_.size());
+    pids_.resize(joint_states_.size());
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
         // Getting PID gains
@@ -146,6 +146,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_DEBUG("P value for joint %i is: %f",i,joint_p_gain_[i]);
         ROS_DEBUG("I value for joint %i is: %f",i,joint_i_gain_[i]);
         ROS_DEBUG("D value for joint %i is: %f",i,joint_d_gain_[i]);
+
+        pids_[i].setGains(joint_p_gain_[i],joint_i_gain_[i],joint_d_gain_[i],0,0);
+        //pids_[i].initDynamicReconfig(controller_nh); // FIXME change namespace for the pids
+
     }
 
     // Assume we are working with a dog
@@ -218,12 +222,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    com_position_.fill(0.0);
     des_joint_positions_.fill(0.0);
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     x_.fill(0.0);
-    des_com_position_.fill(0.0);
     floating_base_position_ = Eigen::Vector3d::Zero();
     floating_base_orientation_.normalize();
     floating_base_velocity_ = Eigen::Vector6d::Zero();
@@ -661,10 +663,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
-        joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
+
+        pids_[i].setGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i],0,0);
+
+        joint_states_[i].setCommand( des_joint_efforts_(i+FLOATING_BASE_DOFS) + pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
+                                                                                                        -joint_velocities_(i+FLOATING_BASE_DOFS),period));
+
+        /*joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandVelocity(0.0);
-        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D
+        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D*/
     }
 
     // Publish

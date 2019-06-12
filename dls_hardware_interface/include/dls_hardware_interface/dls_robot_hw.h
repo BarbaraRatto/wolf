@@ -42,7 +42,7 @@ protected:
     hardware_interface::ImuSensorInterface imu_sensor_interface_;
     hardware_interface::GroundTruthInterface ground_truth_interface_;
     hardware_interface::ContactSwitchSensorInterface contact_sensor_interface_;
-    //hardware_interface::StateEstimation test_; // FIXME it would be cool
+    hardware_interface::EffortJointInterface joint_effort_interface_;
 
     unsigned int n_dof_;
     std::vector<std::string> joint_names_;
