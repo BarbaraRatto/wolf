@@ -20,6 +20,7 @@
 #include <controller_interface/multi_interface_controller.h>
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
+#include <hardware_interface/joint_state_interface.h>
 // Hardware interfaces // FIXME Remove that crap
 //#include <dls_hardware_interface/joint_command_adv_interface.h>
 // ADVR
@@ -133,9 +134,10 @@ private:
     std::vector<std::string> joint_names_;
     /** @brief Imu sensor names */
     std::vector<std::string> imu_names_;
-    /** @brief Joint states for input and output */
-    std::vector<hardware_interface::EffortJointInterface> joint_states_;
-    //std::vector<hardware_interface::JointCommandAdvHandle> joint_states_;
+    /** @brief Joint states for reading */
+    //std::vector<hardware_interface::JointStateHandle> joint_states_;
+    /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
+    std::vector<hardware_interface::JointHandle> joint_states_;
     /** @brief IMU sensors */
     std::vector<hardware_interface::ImuSensorHandle> imu_sensors_;
     /** @brief Joint positions */

@@ -51,7 +51,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     if(!jt_hw)
     {
-        ROS_ERROR("hardware_interface::JointCommandAdvInterface not found");
+        ROS_ERROR("hardware_interface::EffortJointInterface not found");
         return false;
     }
     if(!imu_hw)
@@ -79,7 +79,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensors given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
-
 
     // Setting up handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
@@ -149,7 +148,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_DEBUG("D value for joint %i is: %f",i,joint_d_gain_[i]);
 
         pids_[i].setGains(joint_p_gain_[i],joint_i_gain_[i],joint_d_gain_[i],0,0);
-        pids_[i].initDynamicReconfig(controller_nh);
+        //pids_[i].initDynamicReconfig(controller_nh); // FIXME change namespace for the pids
 
     }
 
@@ -660,10 +659,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
 
+        pids_[i].setGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i],0,0);
 
-
-        joint_states_[i].setCommandEffort( des_joint_efforts_(i+FLOATING_BASE_DOFS) + pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
-                                                                                                              -joint_velocities_(i+FLOATING_BASE_DOFS),period));
+        joint_states_[i].setCommand( des_joint_efforts_(i+FLOATING_BASE_DOFS) + pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
+                                                                                                        -joint_velocities_(i+FLOATING_BASE_DOFS),period));
 
         /*joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
         joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
