@@ -178,6 +178,8 @@ private:
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contacts_rt_pub_;
     /** @brief Real time publisher - GRF */
     std::vector<std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>>> grfs_rt_pub_;
+    /** @brief Ros subscriber for the desired tasks reference */
+    ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */

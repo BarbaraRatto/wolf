@@ -53,9 +53,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
 
     //unfreeze base
-    freeze_base_client = nh_.serviceClient<std_srvs::Empty>("/hyq/freeze_base");
-
-
+    //TODO replace with sim_model_->SetWorldPose(inital_pose);
+    std::string key;
+    std::string robot_name_;
+    if (nh_.searchParam("robot_name", key))
+    {
+      nh_.getParam(key, robot_name_);
+    }
+    freeze_base_client = nh_.serviceClient<std_srvs::Empty>("/" + robot_name_ +"/freeze_base");
 
     if(!jt_hw)
     {
