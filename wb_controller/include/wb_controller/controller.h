@@ -7,6 +7,7 @@
 #include <realtime_tools/realtime_buffer.h>
 #include <tf/transform_broadcaster.h>
 #include <geometry_msgs/WrenchStamped.h>
+
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
@@ -39,6 +40,7 @@
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/ControllerServices.h>
 #include <wb_controller/controllerConfig.h>
+//#include <wb_controller/WrenchArray.h>
 
 #include <Eigen/Geometry>
 
@@ -176,8 +178,8 @@ private:
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
     /** @brief Real time publisher - contacts */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contacts_rt_pub_;
-    /** @brief Real time publisher - GRF */
-    std::vector<std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>>> grfs_rt_pub_;
+    /** @brief Real time publisher - des GRF */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> des_grfs_pub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */
@@ -237,6 +239,8 @@ private:
     std::vector<Eigen::Vector3d> contact_forces_;
     /** @brief Feet names */
     std::vector<std::string> feet_names_;
+    /** @brief Feet names */
+    std::vector<Eigen::Vector3d> feet_positionsW_;
     /** @brief Arm tip name */
     std::string arm_tip_name_;
     /** @brief Hips names */

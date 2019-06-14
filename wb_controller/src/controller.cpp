@@ -228,6 +228,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     contacts_.resize(4);
     contact_forces_.resize(4);
+    feet_positionsW_.resize(4);
     ground_reaction_forces_.resize(24); // 24 = 6 * 4 leg
     floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
 
@@ -496,6 +497,8 @@ void Controller::readContactsState()
         contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());*/
 
         xbot_model_->getPose(feet_names_[i],tmp_affine3d_); // tmp_affine3d_ = world_T_foot
+
+        feet_positionsW_[i] = tmp_affine3d_.translation();
 
         force_torque_sensors_[i]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
 
@@ -923,12 +926,18 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     contacts_rt_pub_->msg_.contact.resize(4);
     contacts_rt_pub_->msg_.contact_forces.resize(4);
 
-    grfs_rt_pub_.resize(feet_names_.size());
-    for(unsigned int i=0;i<feet_names_.size();i++)
-    {
-        grfs_rt_pub_[i].reset(new realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>(controller_nh, feet_names_[i]+"_grf", 4));
-        grfs_rt_pub_[i]->msg_.header.frame_id = "world";
-    }
+//    des_grfs_pub_.resize(feet_names_.size());
+//    for(unsigned int i=0;i<feet_names_.size();i++)
+//    {
+//        des_grfs_pub_[i].reset(new realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>(controller_nh, feet_names_[i]+"_grf", 4));
+//        des_grfs_pub_[i]->msg_.header.frame_id = "world";
+//    }
+
+    des_grfs_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "des_grf", 4));
+    des_grfs_pub_->msg_.header.frame_id = "world";
+    des_grfs_pub_->msg_.name.resize(4);
+    des_grfs_pub_->msg_.contact_positions.resize(4);
+    des_grfs_pub_->msg_.contact_forces.resize(4);
 
     imu_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::Imu>(controller_nh, "imu", 4));
     imu_rt_pub_->msg_.header.frame_id = "trunk_imu"; // FIXME
@@ -941,16 +950,34 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
     if(id_prob_)
         id_prob_->publish(time);
 
-    for(unsigned int i=0;i<grfs_rt_pub_.size();i++)
+//    for(unsigned int i=0;i<des_grfs_pub_.size();i++)
+//    {
+//        if(des_grfs_pub_[i].get() && des_grfs_pub_[i]->trylock())
+//        {
+//            des_grfs_pub_[i]->msg_.wrench.force.x  = ground_reaction_forces_.segment(6*i,3)(0);
+//            des_grfs_pub_[i]->msg_.wrench.force.y  = ground_reaction_forces_.segment(6*i,3)(1);
+//            des_grfs_pub_[i]->msg_.wrench.force.z  = ground_reaction_forces_.segment(6*i,3)(2);
+//            des_grfs_pub_[i]->msg_.header.stamp = time;
+//            des_grfs_pub_[i]->unlockAndPublish();
+//        }
+//    }
+
+    if(des_grfs_pub_.get() && des_grfs_pub_->trylock())
     {
-        if(grfs_rt_pub_[i].get() && grfs_rt_pub_[i]->trylock())
+        des_grfs_pub_->msg_.header.stamp = time;
+
+        for(unsigned int i=0; i <feet_names_.size(); i++)
         {
-            grfs_rt_pub_[i]->msg_.wrench.force.x  = ground_reaction_forces_.segment(6*i,3)(0);
-            grfs_rt_pub_[i]->msg_.wrench.force.y  = ground_reaction_forces_.segment(6*i,3)(1);
-            grfs_rt_pub_[i]->msg_.wrench.force.z  = ground_reaction_forces_.segment(6*i,3)(2);
-            grfs_rt_pub_[i]->msg_.header.stamp = time;
-            grfs_rt_pub_[i]->unlockAndPublish();
+            des_grfs_pub_->msg_.name[i]    = feet_names_[i];
+            des_grfs_pub_->msg_.contact_positions[i].x = feet_positionsW_[i](0);
+            des_grfs_pub_->msg_.contact_positions[i].y = feet_positionsW_[i](1);
+            des_grfs_pub_->msg_.contact_positions[i].z = feet_positionsW_[i](2);
+
+            des_grfs_pub_->msg_.contact_forces[i].force.x = ground_reaction_forces_.segment(6*i,3)(0);
+            des_grfs_pub_->msg_.contact_forces[i].force.y = ground_reaction_forces_.segment(6*i,3)(1);
+            des_grfs_pub_->msg_.contact_forces[i].force.z = ground_reaction_forces_.segment(6*i,3)(2);
         }
+        des_grfs_pub_->unlockAndPublish();
     }
 
     if(ci_joint_states_rt_pub_.get() && ci_joint_states_rt_pub_->trylock())

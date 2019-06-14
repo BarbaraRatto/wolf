@@ -77,4 +77,6 @@
         <remap from="/joint_states" to="/$(arg robot_name)/ci/joint_states" />
     </node>
 
+    <include  file="$(find wb_controller)/launch/plot_node.launch"/>
+
 </launch>
