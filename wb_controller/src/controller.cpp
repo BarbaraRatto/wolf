@@ -24,7 +24,7 @@ Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
     ,tracking_active_(false)
-    ,relative_tasks_active_(false)
+    ,haptic_contact_loop_(false)
     ,stopping_(false)
 {
 }
@@ -287,7 +287,7 @@ void Controller::dynamicReconfigureUpdate()
 {
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
-    default_config_.toggle_relative_tasks = relative_tasks_active_;
+    default_config_.haptic_contact_loop = haptic_contact_loop_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -311,7 +311,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         toggleSolver();
         break;
     case 1:
-        toggleRelativeTasks();
+        toggleHapticContactLoop();
         break;
     case 2:
         setDutyCycle(config.duty_cycle);
@@ -383,14 +383,14 @@ bool Controller::setDutyCycle(const double& duty_cycle)
     }
 }
 
-void Controller::toggleRelativeTasks()
+void Controller::toggleHapticContactLoop()
 {
-    relative_tasks_active_=!relative_tasks_active_;
+    haptic_contact_loop_=!haptic_contact_loop_;
 
-    if(relative_tasks_active_)
-        ROS_INFO("Relative tasks are ON");
+    if(haptic_contact_loop_)
+        ROS_INFO("Haptic contact loop is ON");
     else
-        ROS_INFO("Relative tasks are OFF");
+        ROS_INFO("Haptic contact loop is OFF");
 }
 
 void Controller::toggleSolver()
@@ -494,14 +494,13 @@ void Controller::readContactsState()
         // Note that feet and contact sensors are ordered in the same way
         if(tracking_active_)
         {
-#ifndef HAPTIC_CLOSED_LOOP
-            qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
-#else
-            qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
-#endif
+            if(haptic_contact_loop_)
+                qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
+            else
+                qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
         }
         else
-            qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start using the qp state estimation
+            qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
     }
 }
 
@@ -540,6 +539,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Set Default values
     des_joint_positions_ = qhome_;
+
+    // Give to the gait_generator the contact status of the feet
+    if(haptic_contact_loop_)
+    {
+        gait_generator_->enableHapticContactLoop();
+        for(unsigned int i = 0; i<feet_names_.size(); i++)
+            gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
+    }
+    else
+        gait_generator_->disableHapticContactLoop();
 
     cmds_->update(period.toSec());
 
@@ -583,12 +592,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(tmp_affine3d_);
-
-#ifdef HAPTIC_CLOSED_LOOP
-            // Give to the gait_generator the contact status of the feet and the steps length
-            for(unsigned int i = 0; i<feet_names_.size(); i++)
-                gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
-#endif
 
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {

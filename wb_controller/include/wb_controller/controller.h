@@ -104,9 +104,9 @@ public:
     void toggleTracking();
 
     /**
-         * @brief Start/Stop the relative tasks
+         * @brief Start/Stop the haptic contact loop
          */
-    void toggleRelativeTasks();
+    void toggleHapticContactLoop();
 
     /**
          * @brief Set the duty cycle for the feet
@@ -199,8 +199,8 @@ private:
     std::atomic<bool> pid_active_;
     /** @brief Activate tracking */
     std::atomic<bool> tracking_active_;
-    /** @brief Activate relative tasks */
-    std::atomic<bool> relative_tasks_active_; // FIXME to be removed
+    /** @brief Activate the contact haptic loop */
+    std::atomic<bool> haptic_contact_loop_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */

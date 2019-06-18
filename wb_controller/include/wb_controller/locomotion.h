@@ -10,8 +10,6 @@
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
 
-//#define HAPTIC_CLOSED_LOOP
-
 namespace wb_controller
 {
 
@@ -118,18 +116,17 @@ public:
 
             active_time_ += period;
 
-
-#ifdef HAPTIC_CLOSED_LOOP
-            if(contact && cnt_++ > 10) // Use a cnt to keep swinging regardless of the contact info
-#else
+            //if(contact && cnt_>=1)
             if(contact)
-#endif
             {
                 calculateTimes();
                 state_ = states::STANCE;
             }
             else
                 state_ = states::SWING;
+
+            cnt_++;
+
             break;
 
         case states::STANCE:
@@ -473,13 +470,7 @@ protected:
 
         xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
-#ifdef HAPTIC_CLOSED_LOOP
-        xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time)); //- height_/10.0;
-#else
         xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
-#endif
-
-        //xyz = T_ * xyz;
 
         double c = std::cos(yaw);
         double s = std::sin(yaw);
@@ -580,6 +571,7 @@ public:
         change_gait_ = false;
         schedule_changed_ = true; // At the beginning is already changed no?
         activate_swing_ = false;
+        use_haptic_contact_loop_ = false;
 
         gait_type_ = gait_type;
     }
@@ -660,6 +652,16 @@ public:
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
             result = result || it->second.state_machine.isTouchDown();
         return result;
+    }
+
+    void enableHapticContactLoop()
+    {
+        use_haptic_contact_loop_ = true;
+    }
+
+    void disableHapticContactLoop()
+    {
+        use_haptic_contact_loop_ = false;
     }
 
     void setContact(const std::string& foot_name, const bool& contact)
@@ -791,9 +793,9 @@ public:
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
 
-#ifndef HAPTIC_CLOSED_LOOP
-            it->second.is_in_contact = it->second.trajectory->isFinished(); // OpenLoop
-#endif
+            if(!use_haptic_contact_loop_)
+                it->second.is_in_contact = it->second.trajectory->isFinished(); // OpenLoop
+
             it->second.state_machine.update(period,it->second.is_in_contact);
 
             if (it->second.state_machine.isSwing())
@@ -883,6 +885,8 @@ private:
     std::atomic<bool> change_gait_;
     std::atomic<bool> schedule_changed_;
     std::atomic<bool> activate_swing_;
+
+    bool use_haptic_contact_loop_;
 
     std::vector<std::string> feet_names_;
     std::vector<std::string> hips_names_;
@@ -1054,8 +1058,6 @@ public:
         const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
         const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
 
-        gait_generator_->activateSwing();
-
         for(unsigned int i=0; i<feet_names.size(); i++)
         {
             if(gait_generator_->isSwinging(feet_names[i]))
@@ -1142,7 +1144,7 @@ public:
         // FIXME: Look up in stop().
         // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
         // the base rotates w.r.t world. So I have to apply the current rotation to have a correct trajectory
-         gait_generator_->activateSwing();
+        gait_generator_->activateSwing();
     }
 
     void resetFeetStep()
