@@ -26,6 +26,7 @@ Controller::Controller()
     ,tracking_active_(false)
     ,haptic_contact_loop_(false)
     ,stopping_(false)
+    ,force_th_(50.0)
 {
 }
 
@@ -488,7 +489,7 @@ void Controller::readContactsState()
 
         tmp_vector3d_ = tmp_affine3d_ * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
 
-        contacts_[i] = (tmp_vector3d_.norm() >= 10.0 ? true : false);
+        contacts_[i] = (tmp_vector3d_.norm() >= force_th_ ? true : false);
         contact_forces_[i] = tmp_vector3d_;
 
         // Note that feet and contact sensors are ordered in the same way
