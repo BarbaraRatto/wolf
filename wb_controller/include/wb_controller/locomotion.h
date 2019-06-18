@@ -331,6 +331,7 @@ public:
         return initial_pose_;
     }
 
+    [[deprecated]]
     void setInitialPose(const Eigen::Affine3d& initial_pose)
     {
         initial_pose_ = initial_pose;
@@ -473,7 +474,7 @@ protected:
         xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
         xyz(1) = 0.0;
 #ifdef HAPTIC_CLOSED_LOOP
-        xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time)) - height_/10.0;
+        xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time)); //- height_/10.0;
 #else
         xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 #endif
@@ -564,6 +565,7 @@ public:
             feet_[feet_names[i]].state_machine = FootStateMachine(duty_cycle);
             feet_[feet_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
             feet_[feet_names[i]].is_in_contact = true;
+            feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
         }
 
         gait_buffer_.resize(2);
@@ -672,7 +674,8 @@ public:
 
     void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
     {
-        feet_[foot_name].trajectory->setInitialPose(initial_pose);
+        //feet_[foot_name].trajectory->setInitialPose(initial_pose);
+        feet_[foot_name].initial_pose = initial_pose;
     }
 
     double getDutyCycle(const std::string& foot_name)
@@ -807,7 +810,8 @@ public:
             {
                 if (it->second.state_machine.isTouchDown())
                 {
-                    it->second.trajectory->stop();
+                    //it->second.trajectory->stop(); // The next swing trajectory uses the last trajectory pose as next initial pose (OpenLoop)
+                    it->second.trajectory->stop(it->second.initial_pose); // The next swing trajectory uses the current pose of the foot for the next swing (ClosedLoop)
                 }
                 it->second.trajectory->standBy();
 
@@ -850,6 +854,7 @@ private:
         FootStateMachine state_machine;
         std::shared_ptr<TrajectoryInterface> trajectory;
         bool is_in_contact;
+        Eigen::Affine3d initial_pose;
     };
 
     TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
@@ -885,75 +890,6 @@ private:
     std::string gait_type_;
 
 };
-
-
-/*void TaskGlobals::updateVelBaseOdometry(const  JointState & qd_,
-                                        planning::Point3d & rel_base,
-                                        planning::Point3d & absolute_base,
-                                        Eigen::Vector3d & omega,
-                                        double & roll,
-                                        double & pitch,
-                                        double & yaw )
-{
-//	Eigen::Matrix<double, Eigen::Dynamic, jointsCount>  Jcq;
-//	Eigen::Matrix<double, Eigen::Dynamic, 6>  Jcb;
-//	computeJcb(Jcb, Rodometry, stance_legs_odometry, footPos);
-//	computeJcq(Jcq, Rodometry, stance_legs_odometry, *jacobians);
-//	//this is in the base frame
-//	rbd::VelocityVector basetwistOdometry = -commons::psdInv(Jcb, 1e-04)*(Jcq* qd_);
-//	compute_relative_base(rel_base);
-//	//compute Rdot
-//	Eigen::Matrix3d dR;
-//	dR.col(0) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(0)); // dR = w x R
-//	dR.col(1) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(1)); // dR = w x R
-//	dR.col(2) = rbd::angularPart(basetwistOdometry).cross(Rodometry.col(2)); // dR = w x R
-//
-//	if (frame_change == false){
-//		Rodometry -=dR/(double)(task_servo_rate);//TODO to understand the minus
-//		Eigen::Vector3d rpyOdometry = commons::rotTorpy(Rodometry);
-//		roll = rpyOdometry(0); pitch= rpyOdometry(1); yaw = rpyOdometry(2);
-//		absolute_base.x += Rodometry.transpose()*rbd::linearPart(basetwistOdometry)/(double)(task_servo_rate);//this shoul be in the world
-//		rel_base.xd = rbd::linearPart(basetwistOdometry);
-//		absolute_base.xd =Rodometry.transpose()*rel_base.xd;
-//		omega = rbd::angularPart(basetwistOdometry);//is already in the base
-//	} else{
-//		frame_change = false;
-//	}
-
-        compute_relative_base(rel_base);
-        if (frame_change == false){
-                rbd::VelocityVector basetwistOdometry;
-                computeOdometry(qd_, Rodometry, basetwistOdometry);
-                Eigen::Vector3d rpyOdometry = commons::rotTorpy(Rodometry);
-                roll = rpyOdometry(0); pitch= rpyOdometry(1); yaw = rpyOdometry(2);
-                absolute_base.x += Rodometry.transpose()*rbd::linearPart(basetwistOdometry)/(double)(task_servo_rate);//this shoul be in the world
-                rel_base.xd = rbd::linearPart(basetwistOdometry);
-                absolute_base.xd =Rodometry.transpose()*rel_base.xd;
-                omega = rbd::angularPart(basetwistOdometry);//is already in the base
-        } else{
-                frame_change = false;
-        }
-}
-
-void TaskGlobals::computeOdometry(const  JointState & qd_,
-                                                                  Eigen::Matrix3d & Rodom,
-                                                                  rbd::VelocityVector &  basetwistOdometry)
-{
-        Eigen::Matrix<double, Eigen::Dynamic, dog::jointsCount>  Jcq;
-        Eigen::Matrix<double, Eigen::Dynamic, 6>  Jcb;
-        computeJcb(Jcb, Rodom, stance_legs_odometry, footPos);
-        computeJcq(Jcq, Rodom, stance_legs_odometry, JFoot);
-        //this is in the base frame
-        basetwistOdometry = -commons::psdInv(Jcb, 1e-04)*(Jcq* qd_);
-        //compute Rdot
-        Eigen::Matrix3d dR;
-        dR.col(0) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(0)); // dR = w x R
-        dR.col(1) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(1)); // dR = w x R
-        dR.col(2) = rbd::angularPart(basetwistOdometry).cross(Rodom.col(2)); // dR = w x R
-        Rodom -=dR/(double)(task_servo_rate);//TODO to understand the minus
-}*/
-
-
 
 class CommandsInterface
 {
@@ -1197,6 +1133,9 @@ public:
                 steps_heading_[feet_names[i]]        = 0.0;
                 steps_height_[feet_names[i]]         = 0.0;
                 steps_heading_rate_[feet_names[i]]   = 0.0;
+
+                // Set the initial pose for the next swing... should it be done only one time?
+                gait_generator_->setInitialPose(feet_names[i],world_T_foot_);
             }
         }
 
