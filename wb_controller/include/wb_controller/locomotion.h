@@ -116,8 +116,8 @@ public:
 
             active_time_ += period;
 
-            //if(contact && cnt_>=1)
-            if(contact)
+            if(contact && cnt_>=1)
+            //if(contact)
             {
                 calculateTimes();
                 state_ = states::STANCE;
@@ -339,21 +339,16 @@ public:
         return trajectory_finished_;
     }
 
-    void start()
+    void start(const Eigen::Affine3d& initial_pose)
     {
         time_ = 0.0;
+        initial_pose_ = initial_pose;
+        twist_reference_.setZero();
         trajectory_finished_ = false;
     }
 
     void stop()
     {
-        initial_pose_ = pose_reference_;
-        twist_reference_.setZero();
-    }
-
-    void stop(const Eigen::Affine3d& initial_pose_next_swing)
-    {
-        initial_pose_ = initial_pose_next_swing;
         twist_reference_.setZero();
     }
 
@@ -802,7 +797,7 @@ public:
             {
                 if (it->second.state_machine.isLiftOff())
                 {
-                    it->second.trajectory->start();
+                    it->second.trajectory->start(it->second.initial_pose);
                 }
                 it->second.trajectory->update(period);
 
@@ -812,8 +807,7 @@ public:
             {
                 if (it->second.state_machine.isTouchDown())
                 {
-                    //it->second.trajectory->stop(); // The next swing trajectory uses the last trajectory pose as next initial pose (OpenLoop)
-                    it->second.trajectory->stop(it->second.initial_pose); // The next swing trajectory uses the current pose of the foot for the next swing (ClosedLoop)
+                    it->second.trajectory->stop();
                 }
                 it->second.trajectory->standBy();
 
@@ -1049,9 +1043,25 @@ public:
             gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
         }
 
+        // Set the initial pose for the next swing
+        initializeFeetPosition();
+
         // Update the gait_generator
         gait_generator_->update(period);
     }
+
+    void initializeFeetPosition()
+    {
+        const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+
+        for(unsigned int i=0; i<feet_names.size(); i++)
+        {
+            xbot_model_->getPose(feet_names[i],world_T_foot_);
+            gait_generator_->setInitialPose(feet_names[i],world_T_foot_);
+        }
+    }
+
+private:
 
     void calculateFeetStep()
     {
@@ -1135,15 +1145,9 @@ public:
                 steps_heading_[feet_names[i]]        = 0.0;
                 steps_height_[feet_names[i]]         = 0.0;
                 steps_heading_rate_[feet_names[i]]   = 0.0;
-
-                // Set the initial pose for the next swing... should it be done only one time?
-                gait_generator_->setInitialPose(feet_names[i],world_T_foot_);
             }
         }
 
-        // FIXME: Look up in stop().
-        // For translations I do not need to set the next step starting from the previous, (because the base does not translate w.r.t world) but
-        // the base rotates w.r.t world. So I have to apply the current rotation to have a correct trajectory
         gait_generator_->activateSwing();
     }
 
@@ -1235,6 +1239,8 @@ public:
         base_rotation_reference_.transposeInPlace();
     }
 
+public:
+
     // Sets
     void setCmd(const unsigned int cmd)   {cmd_ = cmd;}
     void setBasePosition(const Eigen::Vector3d& position)
@@ -1285,6 +1291,9 @@ public:
     {
         base_angular_velocity_max_ = max;
     }
+
+private:
+
     void setHipOffset()
     {
         if(!offset_applied_)
@@ -1321,6 +1330,8 @@ public:
             offset_applied_ = true;
         }
     }
+
+public:
 
     // Gets
     unsigned int getCmd()  {return cmd_;}

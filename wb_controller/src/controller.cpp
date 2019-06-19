@@ -572,11 +572,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,period.toSec(),feet_names_,arm_tip_name_)); // FIXME NO-RT
             solver_reset_done_ = true;
 
-            // Set the initial feet poses
-            setInitialPose(); //w.r.t to the frame selected in IDProblem
-
             // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
             // when the robot is grounded.
+            //cmds_->initializeFeetPosition();
             cmds_->setBasePosition(floating_base_position_);
             cmds_->setDefaultBasePosition(floating_base_position_);
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
@@ -593,7 +591,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(tracking_active_)
         {
-
             // Set the task reference for the waist
             id_prob_->_waist->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
@@ -685,49 +682,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Publish
     publish(time,period);
-}
-
-void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
-{
-    if(id_prob_)
-    {
-        if(id_prob_->_feet[contact_name]->setBaseLink(base_frame))
-        {
-            id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
-            id_prob_->_feet[contact_name]->getActualPose(tmp_affine3d_);
-            if(gait_generator_)
-                gait_generator_->setInitialPose(contact_name,tmp_affine3d_);
-        }
-        else
-            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
-    }
-}
-
-void Controller::setInitialPose(const std::string& base_frame)
-{
-    for(unsigned int i = 0;i<feet_names_.size(); i++)
-    {
-        if(id_prob_->_feet[feet_names_[i]]->setBaseLink(base_frame))
-        {
-            id_prob_->_feet[feet_names_[i]]->update(Eigen::VectorXd(1));
-        }
-        else
-            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
-    }
-    setInitialPose();
-}
-
-void Controller::setInitialPose()
-{
-    if(id_prob_)
-    {
-        for(unsigned int i = 0;i<feet_names_.size(); i++)
-        {
-            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp_affine3d_);
-            if(gait_generator_)
-                gait_generator_->setInitialPose(feet_names_[i],tmp_affine3d_);
-        }
-    }
 }
 
 void Controller::rvizPublisher()
