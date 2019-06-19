@@ -194,6 +194,9 @@ private:
     std::vector<control_toolbox::Pid> pids_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
+
+    std::atomic<double> force_th_;
+
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
     /** @brief Activate tracking */
