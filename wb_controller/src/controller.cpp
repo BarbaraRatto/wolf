@@ -540,6 +540,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set Default values
     des_joint_positions_ = qhome_;
 
+    // FIXME I don't like that...
     // Give to the gait_generator the contact status of the feet
     if(haptic_contact_loop_)
     {
@@ -674,59 +675,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         joint_states_[i].setCommand( des_joint_efforts_(i+FLOATING_BASE_DOFS) + pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
                                                                                                         -joint_velocities_(i+FLOATING_BASE_DOFS),period));
-
-        /*joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
-        joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
-        joint_states_[i].setCommandVelocity(0.0);
-        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D*/
     }
 
     // Publish
     publish(time,period);
 }
-
-void Controller::setRelativeTasks()
-{
-    for(unsigned int i=0; i<feet_names_.size(); i++)
-        if(gait_generator_->isSwinging(feet_names_[i]))
-            // Set the base frame of the swinging feet w.r.t the base_link.
-        {
-            if(gait_generator_->isLiftOff(feet_names_[i]))
-            {
-                setInitialPose("base_link",feet_names_[i]);
-            }
-        }
-    // Set the base frame of the feet in stance w.r.t the foot in touchDown.
-    // Set the base frame of the foot in touchDown w.r.t the base_link.
-    for(unsigned int i=0; i<feet_names_.size(); i++)
-        if(gait_generator_->isTouchDown(feet_names_[i]))
-        {
-            for(unsigned int j = 0; j<feet_names_.size(); j++)
-            {
-                if(j!=i)
-                {
-                    if(gait_generator_->isInStanceOrInit(feet_names_[j]))// Another foot is in stance
-                    {
-                        setInitialPose(feet_names_[i],feet_names_[j]);
-                        ROS_INFO_STREAM("Set "<< feet_names_[j] << " to respect to " << feet_names_[i]);
-                    }
-                }
-                else
-                {
-                    setInitialPose("base_link",feet_names_[j]);
-                    ROS_INFO_STREAM("Set "<< feet_names_[j] << " to respect to base_link");
-                }
-            }
-        }
-}
-
-void Controller::setWorldTasks()
-{
-    for(unsigned int i=0; i<feet_names_.size(); i++)
-        if(gait_generator_->isTouchDown(feet_names_[i]))
-            setInitialPose("world",feet_names_[i]);
-}
-
 
 void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
 {

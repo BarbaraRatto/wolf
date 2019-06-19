@@ -190,9 +190,8 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-
+    /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
-
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
     /** @brief Activate pid gains */
@@ -321,16 +320,6 @@ private:
          * @brief set the initial poses for the gait generator for each foot w.r.t to the current frame
          */
     void setInitialPose();
-
-    /**
-         * @brief set the relative tasks
-         */
-    void setRelativeTasks();
-
-    /**
-         * @brief set the world tasks
-         */
-    void setWorldTasks();
 
     /**
          * @brief Update the dynamic reconfigure interface
