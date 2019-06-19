@@ -26,7 +26,7 @@ Controller::Controller()
     ,tracking_active_(false)
     ,haptic_contact_loop_(false)
     ,stopping_(false)
-    ,force_th_(50.0)
+    ,contact_force_th_(50.0)
 {
 }
 
@@ -289,6 +289,7 @@ void Controller::dynamicReconfigureUpdate()
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
     default_config_.haptic_contact_loop = haptic_contact_loop_;
+    default_config_.contact_force_th = contact_force_th_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -330,6 +331,10 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
     case 6:
         cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
+        break;
+    case 7:
+        contact_force_th_ = config.contact_force_th;
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
     default:
         break;
@@ -489,7 +494,7 @@ void Controller::readContactsState()
 
         tmp_vector3d_ = tmp_affine3d_ * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
 
-        contacts_[i] = (tmp_vector3d_.norm() >= force_th_ ? true : false);
+        contacts_[i] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
         contact_forces_[i] = tmp_vector3d_;
 
         // Note that feet and contact sensors are ordered in the same way
