@@ -34,8 +34,9 @@
 #include <chrono>
 // Controller
 #include <wb_controller/locomotion.h>
+#include <wb_controller/commands_interface.h>
 #include <wb_controller/joy.h>
-#include <wb_controller/IDProblem.h>
+#include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/ControllerServices.h>
 #include <wb_controller/controllerConfig.h>

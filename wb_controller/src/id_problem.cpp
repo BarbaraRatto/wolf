@@ -1,4 +1,4 @@
-#include <wb_controller/IDProblem.h>
+#include <wb_controller/id_problem.h>
 #include <OpenSoT/utils/Affine.h>
 #include <OpenSoT/tasks/MinimizeVariable.h>
 
