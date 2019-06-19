@@ -25,8 +25,9 @@ Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
     ,tracking_active_(false)
-    ,relative_tasks_active_(false)
+    ,haptic_contact_loop_(false)
     ,stopping_(false)
+    ,contact_force_th_(50.0)
 {
 }
 
@@ -301,7 +302,8 @@ void Controller::dynamicReconfigureUpdate()
 {
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
-    default_config_.toggle_relative_tasks = relative_tasks_active_;
+    default_config_.haptic_contact_loop = haptic_contact_loop_;
+    default_config_.contact_force_th = contact_force_th_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -325,7 +327,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         toggleSolver();
         break;
     case 1:
-        toggleRelativeTasks();
+        toggleHapticContactLoop();
         break;
     case 2:
         setDutyCycle(config.duty_cycle);
@@ -343,6 +345,10 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
     case 6:
         cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
+        break;
+    case 7:
+        contact_force_th_ = config.contact_force_th;
+        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
     default:
         break;
@@ -397,14 +403,14 @@ bool Controller::setDutyCycle(const double& duty_cycle)
     }
 }
 
-void Controller::toggleRelativeTasks()
+void Controller::toggleHapticContactLoop()
 {
-    relative_tasks_active_=!relative_tasks_active_;
+    haptic_contact_loop_=!haptic_contact_loop_;
 
-    if(relative_tasks_active_)
-        ROS_INFO("Relative tasks are ON");
+    if(haptic_contact_loop_)
+        ROS_INFO("Haptic contact loop is ON");
     else
-        ROS_INFO("Relative tasks are OFF");
+        ROS_INFO("Haptic contact loop is OFF");
 }
 
 void Controller::toggleSolver()
@@ -504,20 +510,19 @@ void Controller::readContactsState()
 
         tmp_vector3d_ = tmp_affine3d_ * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
 
-        contacts_[i] = (tmp_vector3d_.norm() >= 10.0 ? true : false);
+        contacts_[i] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
         contact_forces_[i] = tmp_vector3d_;
 
         // Note that feet and contact sensors are ordered in the same way
         if(tracking_active_)
         {
-#ifndef HAPTIC_CLOSED_LOOP
-            qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
-#else
-            qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
-#endif
+            if(haptic_contact_loop_)
+                qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
+            else
+                qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
         }
         else
-            qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start using the qp state estimation
+            qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
     }
 }
 
@@ -571,6 +576,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set Default values
     des_joint_positions_ = qhome_;
 
+    // FIXME I don't like that...
+    // Give to the gait_generator the contact status of the feet
+    if(haptic_contact_loop_)
+    {
+        gait_generator_->enableHapticContactLoop();
+        for(unsigned int i = 0; i<feet_names_.size(); i++)
+            gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
+    }
+    else
+        gait_generator_->disableHapticContactLoop();
+
     cmds_->update(period.toSec());
 
     if(cmds_->getCmd() == CommandsInterface::HOLD)
@@ -586,11 +602,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,period.toSec(),feet_names_,arm_tip_name_)); // FIXME NO-RT
             solver_reset_done_ = true;
 
-            // Set the initial feet poses
-            setInitialPose(); //w.r.t to the frame selected in IDProblem
-
             // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
             // when the robot is grounded.
+            //cmds_->initializeFeetPosition();
             cmds_->setBasePosition(floating_base_position_);
             cmds_->setDefaultBasePosition(floating_base_position_);
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
@@ -607,18 +621,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(tracking_active_)
         {
-
             // Set the task reference for the waist
             id_prob_->_waist->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(tmp_affine3d_);
-
-#ifdef HAPTIC_CLOSED_LOOP
-            // Give to the gait_generator the contact status of the feet and the steps length
-            for(unsigned int i = 0; i<feet_names_.size(); i++)
-                gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
-#endif
 
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
@@ -701,101 +708,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         joint_states_[i].setCommand( des_joint_efforts_(i+FLOATING_BASE_DOFS) + pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
                                                                                                         -joint_velocities_(i+FLOATING_BASE_DOFS),period));
-
-        /*joint_states_[i].setCommandEffort(des_joint_efforts_(i+FLOATING_BASE_DOFS));
-        joint_states_[i].setCommandPosition(des_joint_positions_(i+FLOATING_BASE_DOFS));
-        joint_states_[i].setCommandVelocity(0.0);
-        joint_states_[i].setCommandGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i]); //Set Gains P I D*/
     }
 
     // Publish
     publish(time,period);
-}
-
-void Controller::setRelativeTasks()
-{
-    for(unsigned int i=0; i<feet_names_.size(); i++)
-        if(gait_generator_->isSwinging(feet_names_[i]))
-            // Set the base frame of the swinging feet w.r.t the base_link.
-        {
-            if(gait_generator_->isLiftOff(feet_names_[i]))
-            {
-                setInitialPose("base_link",feet_names_[i]);
-            }
-        }
-    // Set the base frame of the feet in stance w.r.t the foot in touchDown.
-    // Set the base frame of the foot in touchDown w.r.t the base_link.
-    for(unsigned int i=0; i<feet_names_.size(); i++)
-        if(gait_generator_->isTouchDown(feet_names_[i]))
-        {
-            for(unsigned int j = 0; j<feet_names_.size(); j++)
-            {
-                if(j!=i)
-                {
-                    if(gait_generator_->isInStanceOrInit(feet_names_[j]))// Another foot is in stance
-                    {
-                        setInitialPose(feet_names_[i],feet_names_[j]);
-                        ROS_INFO_STREAM("Set "<< feet_names_[j] << " to respect to " << feet_names_[i]);
-                    }
-                }
-                else
-                {
-                    setInitialPose("base_link",feet_names_[j]);
-                    ROS_INFO_STREAM("Set "<< feet_names_[j] << " to respect to base_link");
-                }
-            }
-        }
-}
-
-void Controller::setWorldTasks()
-{
-    for(unsigned int i=0; i<feet_names_.size(); i++)
-        if(gait_generator_->isTouchDown(feet_names_[i]))
-            setInitialPose("world",feet_names_[i]);
-}
-
-
-void Controller::setInitialPose(const std::string& base_frame, const std::string& contact_name)
-{
-    if(id_prob_)
-    {
-        if(id_prob_->_feet[contact_name]->setBaseLink(base_frame))
-        {
-            id_prob_->_feet[contact_name]->update(Eigen::VectorXd(1));
-            id_prob_->_feet[contact_name]->getActualPose(tmp_affine3d_);
-            if(gait_generator_)
-                gait_generator_->setInitialPose(contact_name,tmp_affine3d_);
-        }
-        else
-            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
-    }
-}
-
-void Controller::setInitialPose(const std::string& base_frame)
-{
-    for(unsigned int i = 0;i<feet_names_.size(); i++)
-    {
-        if(id_prob_->_feet[feet_names_[i]]->setBaseLink(base_frame))
-        {
-            id_prob_->_feet[feet_names_[i]]->update(Eigen::VectorXd(1));
-        }
-        else
-            ROS_ERROR_STREAM("Can not set base link: "<<base_frame);
-    }
-    setInitialPose();
-}
-
-void Controller::setInitialPose()
-{
-    if(id_prob_)
-    {
-        for(unsigned int i = 0;i<feet_names_.size(); i++)
-        {
-            id_prob_->_feet[feet_names_[i]]->getActualPose(tmp_affine3d_);
-            if(gait_generator_)
-                gait_generator_->setInitialPose(feet_names_[i],tmp_affine3d_);
-        }
-    }
 }
 
 void Controller::rvizPublisher()

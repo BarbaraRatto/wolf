@@ -104,84 +104,84 @@
     <range bottom="19.857464" left="-67.441000" top="19.861434" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lf_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/lf_haa_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lf_haa_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="0" row="1">
     <range bottom="19.444812" left="-67.441000" top="19.448430" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lh_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/lh_haa_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lh_haa_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="0" row="2">
     <range bottom="19.236374" left="-67.441000" top="19.240344" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rf_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/rf_haa_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rf_haa_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="0" row="3">
     <range bottom="19.141682" left="-67.441000" top="19.145199" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rh_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/rh_haa_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rh_haa_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="1" row="0">
     <range bottom="-4.402382" left="-67.441000" top="-4.401258" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lf_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/lf_hfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lf_hfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="1" row="1">
     <range bottom="4.101295" left="-67.441000" top="4.102351" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lh_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/lh_hfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lh_hfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="1" row="2">
     <range bottom="-0.332346" left="-67.441000" top="-0.331290" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rf_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/rf_hfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rf_hfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="1" row="3">
     <range bottom="-0.234717" left="-67.441000" top="-0.233707" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rh_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/rh_hfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rh_hfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="2" row="0">
     <range bottom="43.765292" left="-67.441000" top="43.765633" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lf_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/lf_kfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lf_kfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="2" row="1">
     <range bottom="-41.476008" left="-67.441000" top="-41.475633" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lh_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/lh_kfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lh_kfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="2" row="2">
     <range bottom="46.798672" left="-67.441000" top="46.799021" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rf_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/rf_kfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rf_kfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
    <plot col="2" row="3">
     <range bottom="-44.464479" left="-67.441000" top="-44.464078" right="-66.924000"/>
     <limitY/>
     <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rh_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/ci/joint_states/rh_kfe_joint/eff"/>
+    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rh_kfe_joint/eff"/>
     <transform value="noTransform"/>
    </plot>
   </plotmatrix>
@@ -369,7 +369,7 @@
    <no_params/>
   </DataLoad_ULog>
   <ROS_Topic_Streamer>
-   <selected_topics list="/hyq/joint_states;/hyq/wb_controller/ci/joint_states;/hyq/wb_controller/contacts;/hyq/wb_controller/imu;/hyq/wb_controller/lf_foot;/hyq/wb_controller/lh_foot;/hyq/wb_controller/Postural;/hyq/wb_controller/rf_foot;/hyq/wb_controller/rh_foot;/hyq/wb_controller/state_estimation;/hyq/wb_controller/state_estimation_qp;/hyq/wb_controller/waist"/>
+   <selected_topics list="/hyq/joint_states;/hyq/ci/joint_states;/hyq/wb_controller/contacts;/hyq/wb_controller/imu;/hyq/wb_controller/lf_foot;/hyq/wb_controller/lh_foot;/hyq/wb_controller/Postural;/hyq/wb_controller/rf_foot;/hyq/wb_controller/rh_foot;/hyq/wb_controller/state_estimation;/hyq/wb_controller/state_estimation_qp;/hyq/wb_controller/waist"/>
   </ROS_Topic_Streamer>
   <RosoutPublisherROS/>
   <TopicPublisherROS/>

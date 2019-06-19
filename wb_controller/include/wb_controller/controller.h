@@ -35,8 +35,9 @@
 #include <chrono>
 // Controller
 #include <wb_controller/locomotion.h>
+#include <wb_controller/commands_interface.h>
 #include <wb_controller/joy.h>
-#include <wb_controller/IDProblem.h>
+#include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/ControllerServices.h>
 #include <wb_controller/controllerConfig.h>
@@ -106,9 +107,9 @@ public:
     void toggleTracking();
 
     /**
-         * @brief Start/Stop the relative tasks
+         * @brief Start/Stop the haptic contact loop
          */
-    void toggleRelativeTasks();
+    void toggleHapticContactLoop();
 
     /**
          * @brief Set the duty cycle for the feet
@@ -194,17 +195,19 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-
+    /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
-
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
+    /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
+    is consired true */
+    std::atomic<double> contact_force_th_;
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
     /** @brief Activate tracking */
     std::atomic<bool> tracking_active_;
-    /** @brief Activate relative tasks */
-    std::atomic<bool> relative_tasks_active_; // FIXME to be removed
+    /** @brief Activate the contact haptic loop */
+    std::atomic<bool> haptic_contact_loop_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
@@ -314,31 +317,6 @@ private:
          * @brief publish on ROS
          */
     void publish(const ros::Time& time, const ros::Duration& period);
-
-    /**
-         * @brief set the initial poses for the gait generator for the specified foot w.r.t to base_frame
-         */
-    void setInitialPose(const std::string& base_frame, const std::string& contact_name);
-
-    /**
-         * @brief set the initial poses for the gait generator for each foot w.r.t to base_frame
-         */
-    void setInitialPose(const std::string& base_frame);
-
-    /**
-         * @brief set the initial poses for the gait generator for each foot w.r.t to the current frame
-         */
-    void setInitialPose();
-
-    /**
-         * @brief set the relative tasks
-         */
-    void setRelativeTasks();
-
-    /**
-         * @brief set the world tasks
-         */
-    void setWorldTasks();
 
     /**
          * @brief Update the dynamic reconfigure interface

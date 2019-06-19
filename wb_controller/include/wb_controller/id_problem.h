@@ -241,7 +241,8 @@ public:
             rt_pub_->msg_.twist_actual.angular.z = tmp_vector6d_(5);
 
             // REFERENCE VALUES
-            task_->getReference(tmp_affine3d_,tmp_vector6d_);
+            task_->getReference(tmp_affine3d_);
+            tmp_vector6d_ = task_->getCachedVelocityReference();
             // Transform the R matrix into a quaternion
             tmp_quaterniond_ = tmp_affine3d_.linear();
             // Pose - Translation
