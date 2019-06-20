@@ -1,8 +1,6 @@
 <?xml version="1.0" ?>
 <launch>
 	<arg name="robot_name" default="hyq" />
-        <param name="robot_name" type="str" value="$(arg robot_name)" />
-
-        <node name="plot_node" pkg="wb_controller" type="plot_node"   output="screen" />
+        <node name="plot_node" pkg="wb_controller" type="plot_node" output="screen" ns="$(arg robot_name)" />
 </launch>
 
