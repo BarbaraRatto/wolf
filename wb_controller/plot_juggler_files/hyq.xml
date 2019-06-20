@@ -1,361 +1,381 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <root>
  <tabbed_widget parent="main_window" name="Main Window">
-  <plotmatrix tab_name="contact_forces" columns="4" rows="4">
-   <plot col="0" row="0">
-    <range bottom="0.332667" left="-67.441000" top="0.332673" right="-66.924000"/>
+  <plotmatrix columns="4" tab_name="contact_forces" rows="4">
+   <plot row="0" col="0">
+    <range bottom="32.730695" top="33.923638" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/contacts/contact_forces.0/force/x"/>
-    <transform value="noTransform"/>
+    <curve B="255" G="0" name="/hyq/wb_controller/contacts/contact_forces.0/force/x" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="0" row="1">
-    <range bottom="-0.356713" left="-67.441000" top="-0.356708" right="-66.924000"/>
+   <plot row="1" col="0">
+    <range bottom="21.869249" top="22.588176" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="128" name="/hyq/wb_controller/contacts/contact_forces.1/force/x"/>
-    <transform value="noTransform"/>
+    <curve B="128" G="0" name="/hyq/wb_controller/contacts/contact_forces.1/force/x" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="0" row="2">
-    <range bottom="0.353560" left="-67.441000" top="0.353565" right="-66.924000"/>
+   <plot row="2" col="0">
+    <range bottom="27.284507" top="28.540444" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="128" G="0" B="0" name="/hyq/wb_controller/contacts/contact_forces.2/force/x"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/contacts/contact_forces.2/force/x" custom_transform="" R="128"/>
+    <transform value=""/>
    </plot>
-   <plot col="0" row="3">
-    <range bottom="-0.333904" left="-67.441000" top="-0.333899" right="-66.924000"/>
+   <plot row="3" col="0">
+    <range bottom="34.101259" top="34.947299" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="255" G="0" B="255" name="/hyq/wb_controller/contacts/contact_forces.3/force/x"/>
-    <transform value="noTransform"/>
+    <curve B="255" G="0" name="/hyq/wb_controller/contacts/contact_forces.3/force/x" custom_transform="" R="255"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="0">
-    <range bottom="0.308816" left="-67.441000" top="0.308836" right="-66.924000"/>
+   <plot row="0" col="1">
+    <range bottom="-5.537398" top="-5.224758" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="128" B="0" name="/hyq/wb_controller/contacts/contact_forces.0/force/y"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="128" name="/hyq/wb_controller/contacts/contact_forces.0/force/y" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="1">
-    <range bottom="-0.309071" left="-67.441000" top="-0.309053" right="-66.924000"/>
+   <plot row="1" col="1">
+    <range bottom="5.245233" top="5.418414" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="128" B="128" name="/hyq/wb_controller/contacts/contact_forces.1/force/y"/>
-    <transform value="noTransform"/>
+    <curve B="128" G="128" name="/hyq/wb_controller/contacts/contact_forces.1/force/y" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="2">
-    <range bottom="-0.304576" left="-67.441000" top="-0.304556" right="-66.924000"/>
+   <plot row="2" col="1">
+    <range bottom="-5.573881" top="-5.241218" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/contacts/contact_forces.2/force/y"/>
-    <transform value="noTransform"/>
+    <curve B="255" G="0" name="/hyq/wb_controller/contacts/contact_forces.2/force/y" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="3">
-    <range bottom="0.311248" left="-67.441000" top="0.311267" right="-66.924000"/>
+   <plot row="3" col="1">
+    <range bottom="4.426381" top="4.856838" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="128" name="/hyq/wb_controller/contacts/contact_forces.3/force/y"/>
-    <transform value="noTransform"/>
+    <curve B="128" G="0" name="/hyq/wb_controller/contacts/contact_forces.3/force/y" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="0">
-    <range bottom="210.593289" left="-67.441000" top="210.593492" right="-66.924000"/>
+   <plot row="0" col="2">
+    <range bottom="-58.701658" top="-56.991135" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/contacts/contact_forces.0/force/z"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/contacts/contact_forces.0/force/z" custom_transform="" R="255"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="1">
-    <range bottom="203.680240" left="-67.441000" top="203.680454" right="-66.924000"/>
+   <plot row="1" col="2">
+    <range bottom="12.952809" top="14.940834" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="160" G="160" B="164" name="/hyq/wb_controller/contacts/contact_forces.1/force/z"/>
-    <transform value="noTransform"/>
+    <curve B="164" G="160" name="/hyq/wb_controller/contacts/contact_forces.1/force/z" custom_transform="" R="160"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="2">
-    <range bottom="213.106389" left="-67.441000" top="213.106420" right="-66.924000"/>
+   <plot row="2" col="2">
+    <range bottom="-33.287625" top="-32.104122" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="128" B="0" name="/hyq/wb_controller/contacts/contact_forces.2/force/z"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="128" name="/hyq/wb_controller/contacts/contact_forces.2/force/z" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="3">
-    <range bottom="201.727223" left="-67.441000" top="201.727261" right="-66.924000"/>
+   <plot row="3" col="2">
+    <range bottom="20.843302" top="22.455922" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="128" B="128" name="/hyq/wb_controller/contacts/contact_forces.3/force/z"/>
-    <transform value="noTransform"/>
+    <curve B="128" G="128" name="/hyq/wb_controller/contacts/contact_forces.3/force/z" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="3" row="0">
-    <range bottom="0.900000" left="-67.441000" top="1.100000" right="-66.924000"/>
+   <plot row="0" col="3">
+    <range bottom="0.900000" top="1.100000" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="255" G="0" B="255" name="/hyq/wb_controller/contacts/contact.0"/>
-    <transform value="noTransform"/>
+    <curve B="255" G="0" name="/hyq/wb_controller/contacts/contact.0" custom_transform="" R="255"/>
+    <transform value=""/>
    </plot>
-   <plot col="3" row="1">
-    <range bottom="0.900000" left="-67.441000" top="1.100000" right="-66.924000"/>
+   <plot row="1" col="3">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="128" G="128" B="0" name="/hyq/wb_controller/contacts/contact.1"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="128" name="/hyq/wb_controller/contacts/contact.1" custom_transform="" R="128"/>
+    <transform value=""/>
    </plot>
-   <plot col="3" row="2">
-    <range bottom="0.900000" left="-67.441000" top="1.100000" right="-66.924000"/>
+   <plot row="2" col="3">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/contacts/contact.2"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/contacts/contact.2" custom_transform="" R="255"/>
+    <transform value=""/>
    </plot>
-   <plot col="3" row="3">
-    <range bottom="0.900000" left="-67.441000" top="1.100000" right="-66.924000"/>
+   <plot row="3" col="3">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="160" G="160" B="164" name="/hyq/wb_controller/contacts/contact.3"/>
-    <transform value="noTransform"/>
-   </plot>
-  </plotmatrix>
-  <plotmatrix tab_name="torques" columns="3" rows="4">
-   <plot col="0" row="0">
-    <range bottom="19.857464" left="-67.441000" top="19.861434" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lf_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lf_haa_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="0" row="1">
-    <range bottom="19.444812" left="-67.441000" top="19.448430" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lh_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lh_haa_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="0" row="2">
-    <range bottom="19.236374" left="-67.441000" top="19.240344" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rf_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rf_haa_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="0" row="3">
-    <range bottom="19.141682" left="-67.441000" top="19.145199" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rh_haa_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rh_haa_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="1" row="0">
-    <range bottom="-4.402382" left="-67.441000" top="-4.401258" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lf_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lf_hfe_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="1" row="1">
-    <range bottom="4.101295" left="-67.441000" top="4.102351" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lh_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lh_hfe_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="1" row="2">
-    <range bottom="-0.332346" left="-67.441000" top="-0.331290" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rf_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rf_hfe_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="1" row="3">
-    <range bottom="-0.234717" left="-67.441000" top="-0.233707" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rh_hfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rh_hfe_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="2" row="0">
-    <range bottom="43.765292" left="-67.441000" top="43.765633" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lf_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lf_kfe_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="2" row="1">
-    <range bottom="-41.476008" left="-67.441000" top="-41.475633" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/lh_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/lh_kfe_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="2" row="2">
-    <range bottom="46.798672" left="-67.441000" top="46.799021" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rf_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rf_kfe_joint/eff"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="2" row="3">
-    <range bottom="-44.464479" left="-67.441000" top="-44.464078" right="-66.924000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/joint_states/rh_kfe_joint/eff"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/ci/joint_states/rh_kfe_joint/eff"/>
-    <transform value="noTransform"/>
+    <curve B="164" G="160" name="/hyq/wb_controller/contacts/contact.3" custom_transform="" R="160"/>
+    <transform value=""/>
    </plot>
   </plotmatrix>
-  <plotmatrix tab_name="feet" columns="6" rows="4">
-   <plot col="0" row="0">
-    <range bottom="0.332011" left="1.068000" top="0.369593" right="6.068000"/>
+  <plotmatrix columns="3" tab_name="torques" rows="4">
+   <plot row="0" col="0">
+    <range bottom="-7.492297" top="0.182739" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lf_foot/pose_actual/position/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lf_foot/pose_reference/position/x"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/lf_haa_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/lf_haa_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="0" row="1">
-    <range bottom="-0.367874" left="1.068000" top="-0.332562" right="6.068000"/>
+   <plot row="1" col="0">
+    <range bottom="-0.076731" top="3.145980" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lh_foot/pose_actual/position/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lh_foot/pose_reference/position/x"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/lh_haa_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/lh_haa_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="0" row="2">
-    <range bottom="0.353559" left="1.068000" top="0.365154" right="6.068000"/>
+   <plot row="2" col="0">
+    <range bottom="-0.026988" top="1.106493" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rf_foot/pose_actual/position/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rf_foot/pose_reference/position/x"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/rf_haa_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/rf_haa_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="0" row="3">
-    <range bottom="-0.367060" left="1.068000" top="-0.356437" right="6.068000"/>
+   <plot row="3" col="0">
+    <range bottom="-4.088340" top="0.099716" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rh_foot/pose_actual/position/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rh_foot/pose_reference/position/x"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/rh_haa_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/rh_haa_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="0">
-    <range bottom="0.305541" left="1.068000" top="0.329151" right="6.068000"/>
+   <plot row="0" col="1">
+    <range bottom="-0.230628" top="9.455743" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lf_foot/pose_actual/position/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lf_foot/pose_reference/position/y"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/lf_hfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/lf_hfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="1">
-    <range bottom="0.308476" left="1.068000" top="0.326810" right="6.068000"/>
+   <plot row="1" col="1">
+    <range bottom="-0.365166" top="14.971797" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lh_foot/pose_actual/position/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lh_foot/pose_reference/position/y"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/lh_hfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/lh_hfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="2">
-    <range bottom="-0.324541" left="1.068000" top="-0.301285" right="6.068000"/>
+   <plot row="2" col="1">
+    <range bottom="-0.174118" top="7.138830" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rf_foot/pose_actual/position/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rf_foot/pose_reference/position/y"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/rf_hfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/rf_hfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="1" row="3">
-    <range bottom="-0.324520" left="1.068000" top="-0.306011" right="6.068000"/>
+   <plot row="3" col="1">
+    <range bottom="-0.292259" top="11.982637" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rh_foot/pose_actual/position/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rh_foot/pose_reference/position/y"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/rh_hfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/rh_hfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="0">
-    <range bottom="-0.582021" left="1.068000" top="-0.526172" right="6.068000"/>
+   <plot row="0" col="2">
+    <range bottom="-10.998324" top="0.268252" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lf_foot/pose_actual/position/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lf_foot/pose_reference/position/z"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/lf_kfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/lf_kfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="1">
-    <range bottom="-0.583060" left="1.068000" top="-0.483331" right="6.068000"/>
+   <plot row="1" col="2">
+    <range bottom="-0.064238" top="2.633765" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lh_foot/pose_actual/position/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lh_foot/pose_reference/position/z"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/lh_kfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/lh_kfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="2">
-    <range bottom="-0.582024" left="1.068000" top="-0.526171" right="6.068000"/>
+   <plot row="2" col="2">
+    <range bottom="-8.424751" top="0.205482" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rf_foot/pose_actual/position/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rf_foot/pose_reference/position/z"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/rf_kfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/rf_kfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
-   <plot col="2" row="3">
-    <range bottom="-0.582018" left="1.068000" top="-0.526166" right="6.068000"/>
+   <plot row="3" col="2">
+    <range bottom="-0.112239" top="4.601791" left="0.000000" right="4.999224"/>
     <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rh_foot/pose_actual/position/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rh_foot/pose_reference/position/z"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="3" row="0">
-    <range bottom="-0.000091" left="1.068000" top="0.000002" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lf_foot/twist_actual/linear/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lf_foot/twist_reference/linear/x"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="3" row="1">
-    <range bottom="-0.000002" left="1.068000" top="0.000090" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lh_foot/twist_actual/linear/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lh_foot/twist_reference/linear/x"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="3" row="2">
-    <range bottom="-0.000015" left="1.068000" top="0.000000" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rf_foot/twist_actual/linear/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rf_foot/twist_reference/linear/x"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="3" row="3">
-    <range bottom="-0.000002" left="1.068000" top="0.000093" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rh_foot/twist_actual/linear/x"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rh_foot/twist_reference/linear/x"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="4" row="0">
-    <range bottom="-0.000091" left="1.068000" top="0.000002" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lf_foot/twist_actual/linear/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lf_foot/twist_reference/linear/y"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="4" row="1">
-    <range bottom="-0.000087" left="1.068000" top="0.000002" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lh_foot/twist_actual/linear/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lh_foot/twist_reference/linear/y"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="4" row="2">
-    <range bottom="-0.000001" left="1.068000" top="0.000022" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rf_foot/twist_actual/linear/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rf_foot/twist_reference/linear/y"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="4" row="3">
-    <range bottom="-0.000000" left="1.068000" top="0.000019" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rh_foot/twist_actual/linear/y"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rh_foot/twist_reference/linear/y"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="5" row="0">
-    <range bottom="-0.000000" left="1.068000" top="0.000005" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lf_foot/twist_actual/linear/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lf_foot/twist_reference/linear/z"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="5" row="1">
-    <range bottom="-0.000041" left="1.068000" top="0.000001" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/lh_foot/twist_actual/linear/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/lh_foot/twist_reference/linear/z"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="5" row="2">
-    <range bottom="-0.000001" left="1.068000" top="0.000042" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rf_foot/twist_actual/linear/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rf_foot/twist_reference/linear/z"/>
-    <transform value="noTransform"/>
-   </plot>
-   <plot col="5" row="3">
-    <range bottom="-0.000006" left="1.068000" top="0.000000" right="6.068000"/>
-    <limitY/>
-    <curve custom_transform="noTransform" R="0" G="0" B="255" name="/hyq/wb_controller/rh_foot/twist_actual/linear/z"/>
-    <curve custom_transform="noTransform" R="255" G="0" B="0" name="/hyq/wb_controller/rh_foot/twist_reference/linear/z"/>
-    <transform value="noTransform"/>
+    <curve B="0" G="0" name="/hyq/ci/joint_states/rh_kfe_joint/eff" custom_transform="" R="255"/>
+    <curve B="255" G="0" name="/hyq/joint_states/rh_kfe_joint/eff" custom_transform="" R="0"/>
+    <transform value=""/>
    </plot>
   </plotmatrix>
-  <currentPlotMatrix index="2"/>
+  <plotmatrix columns="6" tab_name="feet" rows="4">
+   <plot row="0" col="0">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lf_foot/pose_actual/position/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lf_foot/pose_reference/position/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="1" col="0">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lh_foot/pose_actual/position/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lh_foot/pose_reference/position/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="2" col="0">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rf_foot/pose_actual/position/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rf_foot/pose_reference/position/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="3" col="0">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rh_foot/pose_actual/position/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rh_foot/pose_reference/position/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="0" col="1">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lf_foot/pose_actual/position/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lf_foot/pose_reference/position/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="1" col="1">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lh_foot/pose_actual/position/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lh_foot/pose_reference/position/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="2" col="1">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rf_foot/pose_actual/position/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rf_foot/pose_reference/position/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="3" col="1">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rh_foot/pose_actual/position/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rh_foot/pose_reference/position/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="0" col="2">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lf_foot/pose_actual/position/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lf_foot/pose_reference/position/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="1" col="2">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lh_foot/pose_actual/position/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lh_foot/pose_reference/position/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="2" col="2">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rf_foot/pose_actual/position/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rf_foot/pose_reference/position/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="3" col="2">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rh_foot/pose_actual/position/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rh_foot/pose_reference/position/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="0" col="3">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lf_foot/twist_actual/linear/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lf_foot/twist_reference/linear/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="1" col="3">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lh_foot/twist_actual/linear/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lh_foot/twist_reference/linear/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="2" col="3">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rf_foot/twist_actual/linear/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rf_foot/twist_reference/linear/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="3" col="3">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rh_foot/twist_actual/linear/x" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rh_foot/twist_reference/linear/x" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="0" col="4">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lf_foot/twist_actual/linear/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lf_foot/twist_reference/linear/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="1" col="4">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lh_foot/twist_actual/linear/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lh_foot/twist_reference/linear/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="2" col="4">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rf_foot/twist_actual/linear/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rf_foot/twist_reference/linear/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="3" col="4">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rh_foot/twist_actual/linear/y" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rh_foot/twist_reference/linear/y" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="0" col="5">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lf_foot/twist_actual/linear/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lf_foot/twist_reference/linear/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="1" col="5">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/lh_foot/twist_actual/linear/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/lh_foot/twist_reference/linear/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="2" col="5">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rf_foot/twist_actual/linear/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rf_foot/twist_reference/linear/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+   <plot row="3" col="5">
+    <range bottom="-0.100000" top="0.100000" left="0.000000" right="0.000000"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/rh_foot/twist_actual/linear/z" custom_transform="" R="0"/>
+    <curve B="0" G="0" name="/hyq/wb_controller/rh_foot/twist_reference/linear/z" custom_transform="" R="255"/>
+    <transform value=""/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix columns="3" tab_name="imu_gyroscope" rows="1">
+   <plot row="0" col="0">
+    <range bottom="-0.005346" top="0.005623" left="19.208464" right="24.206898"/>
+    <limitY/>
+    <curve B="0" G="128" name="/hyq/wb_controller/state_estimation/twist/twist/angular/x" custom_transform="" R="128"/>
+    <transform value=""/>
+   </plot>
+   <plot row="0" col="1">
+    <range bottom="-0.002404" top="0.009983" left="19.208464" right="24.206898"/>
+    <limitY/>
+    <curve B="0" G="0" name="/hyq/wb_controller/state_estimation/twist/twist/angular/y" custom_transform="" R="128"/>
+    <transform value=""/>
+   </plot>
+   <plot row="0" col="2">
+    <range bottom="-0.003283" top="0.008191" left="19.208464" right="24.206898"/>
+    <limitY/>
+    <curve B="255" G="0" name="/hyq/wb_controller/state_estimation/twist/twist/angular/z" custom_transform="" R="0"/>
+    <transform value=""/>
+   </plot>
+  </plotmatrix>
+  <currentPlotMatrix index="3"/>
  </tabbed_widget>
  <use_relative_time_offset enabled="1"/>
  <Plugins>
@@ -365,11 +385,8 @@
   <DataLoad_ROS_bags>
    <selected_topics list=""/>
   </DataLoad_ROS_bags>
-  <DataLoad_ULog>
-   <no_params/>
-  </DataLoad_ULog>
   <ROS_Topic_Streamer>
-   <selected_topics list="/hyq/joint_states;/hyq/ci/joint_states;/hyq/wb_controller/contacts;/hyq/wb_controller/imu;/hyq/wb_controller/lf_foot;/hyq/wb_controller/lh_foot;/hyq/wb_controller/Postural;/hyq/wb_controller/rf_foot;/hyq/wb_controller/rh_foot;/hyq/wb_controller/state_estimation;/hyq/wb_controller/state_estimation_qp;/hyq/wb_controller/waist"/>
+   <selected_topics list="/hyq/ci/joint_states;/hyq/joint_states;/hyq/wb_controller/contacts;/hyq/wb_controller/imu;/hyq/wb_controller/state_estimation;/hyq/wb_controller/state_estimation_qp"/>
   </ROS_Topic_Streamer>
   <RosoutPublisherROS/>
   <TopicPublisherROS/>
