@@ -41,7 +41,7 @@
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/ControllerServices.h>
 #include <wb_controller/controllerConfig.h>
-//#include <wb_controller/WrenchArray.h>
+#include <wb_controller/Efforts.h>
 
 #include <Eigen/Geometry>
 
@@ -155,8 +155,12 @@ private:
     Eigen::VectorXd des_joint_positions_;
     /** @brief Desired joint velocities */
     Eigen::VectorXd des_joint_velocities_;
-    /** @brief Desired joint efforts */
+    /** @brief Desired joint efforts sent to the hardware interface */
     Eigen::VectorXd des_joint_efforts_;
+    /** @brief Desired joint efforts computed by the solver */
+    Eigen::VectorXd des_joint_efforts_solver_;
+    /** @brief Desired joint efforts computed by the PIDs */
+    Eigen::VectorXd des_joint_efforts_pids_;
     /** @brief Solver's solution (i.e. efforts) */
     Eigen::VectorXd x_;
     /** @brief Xbot robot model */
@@ -177,8 +181,10 @@ private:
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_; // FIXME to be removed
     /** @brief Real time publisher - estimated qp pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
-    /** @brief Real time publisher - GRF */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> grfs_pub_;
+    /** @brief Real time publisher - contact forces */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
+    /** @brief Real time publisher - Efforts */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::Efforts>> efforts_pub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */

@@ -41,20 +41,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
                       ros::NodeHandle& root_nh,
                       ros::NodeHandle& controller_nh)
 {
-    // getting the names of the joints from the ROS parameter server
     ROS_DEBUG_NAMED(CONTROLLER_NAME,"Initialize");
-
 
     assert(robot_hw);
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
 
-    nh_ = controller_nh;
-
-
+    // FIXME Remove that abomination
     //unfreeze base
-    //TODO replace with sim_model_->SetWorldPose(inital_pose);
+    nh_ = controller_nh;
     std::string key;
     std::string robot_name_;
     if (nh_.searchParam("robot_name", key))
@@ -225,7 +221,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_efforts_solver_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_efforts_pids_.resize(static_cast<Eigen::Index>(joint_states_.size()));
+    des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     contacts_.resize(4);
     contact_forces_.resize(4);
@@ -675,13 +673,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->update();
 
         // Solve ID
-        x_ = des_joint_efforts_; // Store the old desired efforts, to apply in case the solver gets mad
+        x_ = des_joint_efforts_solver_; // Store the old desired efforts, to apply in case the solver gets mad
         if(!id_prob_->solve(x_))
         {
             ROS_ERROR("OpenSoT::IDProblem: unable to solve");
         }
         else
-            des_joint_efforts_ = x_;
+            des_joint_efforts_solver_ = x_;
 
         id_prob_->getGroundReactionForces(des_contact_forces_);
 
@@ -712,7 +710,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     if(pid_active_)
-        des_joint_efforts_.fill(0.0);
+        des_joint_efforts_solver_.fill(0.0);
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
@@ -720,8 +718,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         pids_[i].setGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i],0,0);
 
-        joint_states_[i].setCommand( des_joint_efforts_(i+FLOATING_BASE_DOFS) + pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
-                                                                                                        -joint_velocities_(i+FLOATING_BASE_DOFS),period));
+        des_joint_efforts_pids_(i) = pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
+                                                             -joint_velocities_(i+FLOATING_BASE_DOFS),
+                                                             period);
+
+        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + des_joint_efforts_pids_(i);
+
+        joint_states_[i].setCommand(des_joint_efforts_(i));
     }
 
     // Publish
@@ -850,16 +853,25 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
 
-    grfs_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "grf", 4));
-    grfs_pub_->msg_.header.frame_id = "world"; //FIXME
-    grfs_pub_->msg_.name.resize(4);
-    grfs_pub_->msg_.contact.resize(4);
-    grfs_pub_->msg_.contact_positions.resize(4);
-    grfs_pub_->msg_.contact_forces.resize(4);
-    grfs_pub_->msg_.des_contact_forces.resize(4);
+    contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
+    contact_forces_pub_->msg_.header.frame_id = "world"; //FIXME
+    contact_forces_pub_->msg_.name.resize(4);
+    contact_forces_pub_->msg_.contact.resize(4);
+    contact_forces_pub_->msg_.contact_positions.resize(4);
+    contact_forces_pub_->msg_.contact_forces.resize(4);
+    contact_forces_pub_->msg_.des_contact_forces.resize(4);
 
     imu_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::Imu>(controller_nh, "imu", 4));
     imu_rt_pub_->msg_.header.frame_id = "trunk_imu"; // FIXME
+
+    efforts_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::Efforts>(controller_nh, "efforts", 4));
+    efforts_pub_->msg_.name.resize(joint_states_.size());
+    efforts_pub_->msg_.solver_efforts.resize(joint_states_.size());
+    efforts_pub_->msg_.pids_efforts.resize(joint_states_.size());
+    efforts_pub_->msg_.des_efforts.resize(joint_states_.size());
+    efforts_pub_->msg_.efforts.resize(joint_states_.size());
+    for (unsigned int i = 0; i < joint_names_.size(); i++)
+        efforts_pub_->msg_.name[i] = joint_names_[i];
 }
 
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
@@ -868,27 +880,39 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
     if(id_prob_)
         id_prob_->publish(time);
 
-    if(grfs_pub_.get() && grfs_pub_->trylock())
+    if(efforts_pub_.get() && efforts_pub_->trylock())
     {
-        grfs_pub_->msg_.header.stamp = time;
+        for(unsigned int i=0; i <joint_names_.size(); i++)
+        {
+            efforts_pub_->msg_.solver_efforts[i] = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS);
+            efforts_pub_->msg_.pids_efforts[i] = des_joint_efforts_pids_(i);
+            efforts_pub_->msg_.des_efforts[i] = des_joint_efforts_(i);
+            efforts_pub_->msg_.efforts[i] = joint_efforts_(i);
+        }
+        efforts_pub_->msg_.header.stamp = time;
+        efforts_pub_->unlockAndPublish();
+    }
 
+    if(contact_forces_pub_.get() && contact_forces_pub_->trylock())
+    {
         for(unsigned int i=0; i <feet_names_.size(); i++)
         {
-            grfs_pub_->msg_.name[i] = feet_names_[i];
-            grfs_pub_->msg_.contact[i] = contacts_[i];
-            grfs_pub_->msg_.contact_positions[i].x = world_X_foot_[i](0);
-            grfs_pub_->msg_.contact_positions[i].y = world_X_foot_[i](1);
-            grfs_pub_->msg_.contact_positions[i].z = world_X_foot_[i](2);
+            contact_forces_pub_->msg_.name[i] = feet_names_[i];
+            contact_forces_pub_->msg_.contact[i] = contacts_[i];
+            contact_forces_pub_->msg_.contact_positions[i].x = world_X_foot_[i](0);
+            contact_forces_pub_->msg_.contact_positions[i].y = world_X_foot_[i](1);
+            contact_forces_pub_->msg_.contact_positions[i].z = world_X_foot_[i](2);
 
-            grfs_pub_->msg_.contact_forces[i].force.x = contact_forces_[i](0);
-            grfs_pub_->msg_.contact_forces[i].force.y = contact_forces_[i](1);
-            grfs_pub_->msg_.contact_forces[i].force.z = contact_forces_[i](2);
+            contact_forces_pub_->msg_.contact_forces[i].force.x = contact_forces_[i](0);
+            contact_forces_pub_->msg_.contact_forces[i].force.y = contact_forces_[i](1);
+            contact_forces_pub_->msg_.contact_forces[i].force.z = contact_forces_[i](2);
 
-            grfs_pub_->msg_.des_contact_forces[i].force.x = des_contact_forces_.segment(6*i,3)(0);
-            grfs_pub_->msg_.des_contact_forces[i].force.y = des_contact_forces_.segment(6*i,3)(1);
-            grfs_pub_->msg_.des_contact_forces[i].force.z = des_contact_forces_.segment(6*i,3)(2);
+            contact_forces_pub_->msg_.des_contact_forces[i].force.x = des_contact_forces_.segment(6*i,3)(0);
+            contact_forces_pub_->msg_.des_contact_forces[i].force.y = des_contact_forces_.segment(6*i,3)(1);
+            contact_forces_pub_->msg_.des_contact_forces[i].force.z = des_contact_forces_.segment(6*i,3)(2);
         }
-        grfs_pub_->unlockAndPublish();
+        contact_forces_pub_->msg_.header.stamp = time;
+        contact_forces_pub_->unlockAndPublish();
     }
 
     if(ci_joint_states_rt_pub_.get() && ci_joint_states_rt_pub_->trylock())
@@ -898,10 +922,11 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
             ci_joint_states_rt_pub_->msg_.position[i]  = des_joint_positions_(i);
             ci_joint_states_rt_pub_->msg_.velocity[i]  = des_joint_velocities_(i);
             ci_joint_states_rt_pub_->msg_.effort[i]    = des_joint_efforts_(i);
-            ci_joint_states_rt_pub_->msg_.header.stamp = time;
-            ci_joint_states_rt_pub_->unlockAndPublish();
         }
+        ci_joint_states_rt_pub_->msg_.header.stamp = time;
+        ci_joint_states_rt_pub_->unlockAndPublish();
     }
+
     if(state_estimation_rt_pub_.get() && state_estimation_rt_pub_->trylock())
     {
         state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
@@ -937,7 +962,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
     if(imu_rt_pub_.get() && imu_rt_pub_->trylock())
     {
-        imu_rt_pub_->msg_.header.stamp = time;
         imu_rt_pub_->msg_.orientation.x = imu_orientation_.x();
         imu_rt_pub_->msg_.orientation.y = imu_orientation_.y();
         imu_rt_pub_->msg_.orientation.z = imu_orientation_.z();
@@ -951,6 +975,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         imu_rt_pub_->msg_.linear_acceleration.y = imu_accelerometer_(1);
         imu_rt_pub_->msg_.linear_acceleration.z = imu_accelerometer_(2);
 
+        imu_rt_pub_->msg_.header.stamp = time;
         imu_rt_pub_->unlockAndPublish();
     }
 }

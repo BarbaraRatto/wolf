@@ -33,7 +33,8 @@ add_service_files(FILES
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
-                 ContactForces.msg)
+                 ContactForces.msg
+                 Efforts.msg)
 
 generate_messages(
     DEPENDENCIES
@@ -67,7 +68,6 @@ target_link_libraries(${PROJECT_NAME} ${RBDL_LIBRARIES} ${catkin_LIBRARIES} ${Op
 #piselloni node
 add_executable(plot_node src/plot_node.cpp)
 target_link_libraries(plot_node ${catkin_LIBRARIES})
-
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})

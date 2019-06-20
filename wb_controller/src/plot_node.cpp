@@ -21,8 +21,8 @@ namespace wb_controller
 /** @brief Visual tools */
 rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
 
-ros::Subscriber des_grf_subscriber_;
-void callbackGRF(const wb_controller::ContactForces &msg);
+ros::Subscriber subscriber_;
+void callbackContactForces(const wb_controller::ContactForces &msg);
 unsigned int decimate = 10;
 unsigned long long cnt = 0;
 Eigen::Affine3d pose;
@@ -36,8 +36,8 @@ bool init(ros::NodeHandle& nh)
     ROS_INFO("Init");
 
     // Create subscribers
-    des_grf_subscriber_ = nh.subscribe("grf", 1, callbackGRF);
-    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","grfs_visual_marker"));
+    subscriber_ = nh.subscribe("contact_forces", 1, callbackContactForces);
+    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","contact_forces_visual_marker"));
 
     return true;
 }
@@ -60,7 +60,7 @@ void createArrow(const geometry_msgs::Vector3& force, const geometry_msgs::Vecto
     visual_tools_->trigger();
 }
 
-void callbackGRF(const wb_controller::ContactForces& msg)
+void callbackContactForces(const wb_controller::ContactForces& msg)
 {
     if(cnt++%decimate==0)
     {
