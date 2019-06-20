@@ -147,6 +147,8 @@ private:
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */
     Eigen::VectorXd joint_velocities_;
+    /** @brief Joint velocities */
+    Eigen::VectorXd joint_velocities_filt_;
     /** @brief Joint accellerations */
     Eigen::VectorXd joint_accellerations_;
     /** @brief Joint efforts */
@@ -175,6 +177,8 @@ private:
     std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Real time publisher - desired joint states */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
+    /** @brief Real time publisher - desired joint states */
+    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> vel_filt_rt_pub_;
     /** @brief Real time publisher - IMU */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_rt_pub_;
     /** @brief Real time publisher - estimated pose */
@@ -271,6 +275,8 @@ private:
     /** @brief Command interface */
     CommandsInterface::Ptr cmds_;
     /** @brief Initial rotation of the imu w.r.t world */
+    Eigen::Matrix3d world_R_imu_init_;
+    /** @brief Actual rotation of the imu w.r.t world */
     Eigen::Matrix3d world_R_imu_;
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
@@ -278,6 +284,12 @@ private:
     Eigen::Vector3d tmp_vector3d_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
+    /** @brief p scale */
+    std::atomic<double> p_scale_;
+    /** @brief qdot_filter */
+    XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
+     /** @brief cutoff_hz_ */
+    std::atomic<double> cutoff_hz_;
 
     ros::ServiceClient freeze_base_client;
 

@@ -82,4 +82,8 @@
         <arg name="robot_name" value="$(arg robot_name)" />
     </include>
 
+    <!-- Rviz -->
+    <node pkg="rviz" type="rviz" name="rviz">
+    </node>
+
 </launch>

@@ -20,6 +20,7 @@ namespace wb_controller {
 #define FLOATING_BASE_DOFS 6
 #define THREADS_SLEEP_TIME_ms 4
 #define CONTROLLER_NAME "wb_controller"
+#define DT 0.001
 
 Controller::Controller()
     :solver_started_(false)
@@ -217,6 +218,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    joint_velocities_filt_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_accellerations_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -234,6 +236,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Initializations
     joint_positions_.fill(0.0);
     joint_velocities_.fill(0.0);
+    joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
     des_joint_positions_.fill(0.0);
@@ -245,13 +248,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_velocity_ = Eigen::Vector6d::Zero();
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
+    p_scale_ = 1.0;
+
     for(unsigned int i=0;i<feet_names_.size();i++)
         visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("world",feet_names_[i]+"_rviz_visual_marker"));
 
     solver_reset_done_ = false;
     imu_reset_done_ = false;
 
-    world_R_imu_ = Eigen::Matrix3d::Identity();
+    world_R_imu_ = world_R_imu_init_ = Eigen::Matrix3d::Identity();
 
     // Set the callback for the dynamic reconfigure server
     server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
@@ -296,6 +301,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     initPublishers(root_nh,controller_nh);
 
+    // initialize filter
+    cutoff_hz_ = 100.;
+    qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_);
+    qdot_filter_.setDamping(1.0);
+    qdot_filter_.setTimeStep(DT);
+
     return true;
 }
 
@@ -305,6 +316,8 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.toggle_solver = solver_started_;
     default_config_.haptic_contact_loop = haptic_contact_loop_;
     default_config_.contact_force_th = contact_force_th_;
+    default_config_.p_scale = p_scale_;
+    default_config_.cutoff_hz = cutoff_hz_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -350,6 +363,13 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
     case 7:
         contact_force_th_ = config.contact_force_th;
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set contact force threshold to "<< config.contact_force_th);
+        break;
+    case 8:
+        p_scale_ = config.p_scale;
+        break;
+    case 9:
+        cutoff_hz_ = config.cutoff_hz;
+        qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_);
         break;
     default:
         break;
@@ -438,6 +458,7 @@ void Controller::readJoints()
 {
     joint_positions_.setZero(joint_positions_.size());
     joint_velocities_.setZero(joint_positions_.size());
+    joint_velocities_filt_.setZero(joint_positions_.size());
     joint_accellerations_.setZero(joint_positions_.size());
     joint_efforts_.setZero(joint_positions_.size());
 
@@ -448,6 +469,9 @@ void Controller::readJoints()
         joint_accellerations_(i+FLOATING_BASE_DOFS) = 0.0; // FIXME
         joint_efforts_(i+FLOATING_BASE_DOFS) = joint_states_[i].getEffort();
     }
+
+    // Filter the qdot
+    joint_velocities_filt_ = qdot_filter_.process(joint_velocities_);
 }
 
 void Controller::readImu()
@@ -465,18 +489,18 @@ void Controller::stateEstimation()
     // NOTE: Check if the imu is in the correct frame, here we assume that it is aligned with the trunk/base
     floating_base_orientation_ = imu_orientation_;
 
-    quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
+    quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_); // R_imu
 
     // Reset the imu one time so that the world and the base are aligned
     if(!imu_reset_done_)
     {
-        world_R_imu_ = tmp_matrix3d_;
+        world_R_imu_init_ = tmp_matrix3d_; // R_imu0
         imu_reset_done_ = true;
     }
 
-    tmp_matrix3d_ = world_R_imu_.transpose() * tmp_matrix3d_;
+    tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
 
-    floating_base_pose_.linear() = tmp_matrix3d_.transpose();
+    floating_base_pose_.linear() = tmp_matrix3d_.transpose(); // world_R_imu
 
     rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
 
@@ -485,8 +509,8 @@ void Controller::stateEstimation()
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    //floating_base_velocity_.segment(3,3) = world_R_imu_.transpose() * imu_gyroscope_;
-    floating_base_velocity_.segment(3,3) = imu_gyroscope_;
+    floating_base_velocity_.segment(3,3) = tmp_matrix3d_.transpose() * imu_gyroscope_;
+    //floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 
     //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
     floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
@@ -495,7 +519,9 @@ void Controller::stateEstimation()
 
 void Controller::updateXBotModel()
 {
-    xbot_model_->setJointVelocity(joint_velocities_);
+    //Eigen::VectorXd joint_velocities_fake(joint_velocities_.size());
+    //joint_velocities_fake.setZero();
+    xbot_model_->setJointVelocity(joint_velocities_filt_);
     xbot_model_->setJointEffort(joint_efforts_);
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
@@ -703,9 +729,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
         {
-            des_joint_p_gain_[i] = 0.0;
+            des_joint_p_gain_[i] = p_scale_ * joint_p_gain_[i];
             des_joint_i_gain_[i] = 0.0;
-            des_joint_d_gain_[i] = 0.0;
+            des_joint_d_gain_[i] = joint_d_gain_[i];
+            //des_joint_d_gain_[i] = 0.0;
         }
     }
 
@@ -722,9 +749,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                                                              -joint_velocities_(i+FLOATING_BASE_DOFS),
                                                              period);
 
-        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + des_joint_efforts_pids_(i);
+        des_joint_efforts_(i) = (1.0 - p_scale_) * des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + des_joint_efforts_pids_(i);
 
         joint_states_[i].setCommand(des_joint_efforts_(i));
+
+
     }
 
     // Publish
@@ -845,6 +874,18 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
+    vel_filt_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/vel_filt", 4));
+    vel_filt_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    vel_filt_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
+    vel_filt_rt_pub_->msg_.name[0] = "x";
+    vel_filt_rt_pub_->msg_.name[1] = "y";
+    vel_filt_rt_pub_->msg_.name[2] = "z";
+    vel_filt_rt_pub_->msg_.name[3] = "r";
+    vel_filt_rt_pub_->msg_.name[4] = "p";
+    vel_filt_rt_pub_->msg_.name[5] = "y";
+    for (unsigned int i = 0; i < joint_names_.size(); i++)
+        vel_filt_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
+
     state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation", 4));
     state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
@@ -925,6 +966,16 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         }
         ci_joint_states_rt_pub_->msg_.header.stamp = time;
         ci_joint_states_rt_pub_->unlockAndPublish();
+    }
+
+    if(vel_filt_rt_pub_.get() && vel_filt_rt_pub_->trylock())
+    {
+        for(unsigned int i = 0; i < joint_velocities_filt_.size(); i++)
+        {
+            vel_filt_rt_pub_->msg_.velocity[i]  = joint_velocities_filt_(i);
+        }
+        vel_filt_rt_pub_->msg_.header.stamp = time;
+        vel_filt_rt_pub_->unlockAndPublish();
     }
 
     if(state_estimation_rt_pub_.get() && state_estimation_rt_pub_->trylock())

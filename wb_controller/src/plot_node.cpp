@@ -56,7 +56,7 @@ void createArrow(const geometry_msgs::Vector3& force, const geometry_msgs::Vecto
     pose.translation().y() = position.y;
     pose.translation().z() = position.z;
 
-    visual_tools_->publishArrow(pose, color, rviz_visual_tools::LARGE, 1.0);
+    visual_tools_->publishArrow(pose, color, rviz_visual_tools::LARGE, norm/500.0);
     visual_tools_->trigger();
 }
 
