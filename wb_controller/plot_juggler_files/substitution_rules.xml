@@ -1,0 +1,36 @@
+<SubstitutionRules>
+
+<RosType name="sensor_msgs/JointState">
+  <rule pattern="position.#" alias="name.#" substitution="@/pos" />
+  <rule pattern="velocity.#" alias="name.#" substitution="@/vel" />
+  <rule pattern="effort.#"   alias="name.#" substitution="@/eff" />
+</RosType>
+
+<RosType name="wb_controller/Efforts">
+  <rule pattern="solver_efforts.#" alias="name.#" substitution="@/solver" />
+  <rule pattern="pids_efforts.#" alias="name.#" substitution="@/pids" />
+  <rule pattern="des_efforts.#"   alias="name.#" substitution="@/des_eff" />
+  <rule pattern="efforts.#"   alias="name.#" substitution="@/eff" />
+</RosType>
+
+<RosType name="wb_controller/ContactForces">
+  <rule pattern="des_contact_forces.#" alias="name.#" substitution="@/des" />
+  <rule pattern="contact_forces.#" alias="name.#" substitution="@/est" />
+  <rule pattern="contact.#"   alias="name.#" substitution="@/contact" />
+</RosType>
+
+<RosType name="tf/tfMessage">  <rule pattern="transforms.#/header"                alias="transforms.#/child_frame_id"  substitution="@/header" />
+  <rule pattern="transforms.#/transform/rotation"    alias="transforms.#/child_frame_id"  substitution="@/rotation" />
+  <rule pattern="transforms.#/transform/translation" alias="transforms.#/child_frame_id"  substitution="@/translation" />
+</RosType>
+
+<RosType name="tf2_msgs/TFMessage">  <rule pattern="transforms.#/header"                alias="transforms.#/child_frame_id"  substitution="@/header" />
+  <rule pattern="transforms.#/transform/rotation"    alias="transforms.#/child_frame_id"  substitution="@/rotation" />
+  <rule pattern="transforms.#/transform/translation" alias="transforms.#/child_frame_id"  substitution="@/translation" />
+</RosType>
+
+<RosType name="pal_statistics_msgs/Statistics">
+  <rule pattern="statistics.#/value" alias="statistics.#/name" substitution="@" />
+</RosType>
+</SubstitutionRules>
+
