@@ -62,11 +62,10 @@ include_directories(
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/commands_interface.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
-
 target_link_libraries(${PROJECT_NAME} ${RBDL_LIBRARIES} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
-#piselloni node
 add_executable(plot_node src/plot_node.cpp)
+add_dependencies(plot_node ${wb_controller_EXPORTED_TARGETS})
 target_link_libraries(plot_node ${catkin_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/
