@@ -237,6 +237,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("world",feet_names_[i]+"_rviz_visual_marker"));
 
     solver_reset_done_ = false;
+    imu_reset_done_ = false;
+
+    world_R_imu_ = Eigen::Matrix3d::Identity();
 
     // Set the callback for the dynamic reconfigure server
     server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
@@ -452,6 +455,14 @@ void Controller::stateEstimation()
 
     quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_);
 
+    if(!imu_reset_done_)
+    {
+        world_R_imu_ = tmp_matrix3d_;
+        imu_reset_done_ = true;
+    }
+
+    tmp_matrix3d_ = world_R_imu_.transpose() * tmp_matrix3d_;
+
     floating_base_pose_.linear() = tmp_matrix3d_.transpose();
 
     rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
@@ -461,6 +472,7 @@ void Controller::stateEstimation()
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    //floating_base_velocity_.segment(3,3) = world_R_imu_.transpose() * imu_gyroscope_;
     floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 
     //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation

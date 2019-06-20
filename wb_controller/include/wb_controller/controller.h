@@ -248,6 +248,8 @@ private:
     std::shared_ptr<std::thread> rviz_publisher_thread_;
     /** @brief True if the solver has been resetted */
     bool solver_reset_done_;
+    /** @brief Align the imu frame (trunk) to the world */
+    bool imu_reset_done_;
     /** @brief Gait generator */
     wb_controller::GaitGenerator::Ptr gait_generator_;
     /** @brief Visual tools */
@@ -258,6 +260,8 @@ private:
     JoyHandler::Ptr joy_handler_;
     /** @brief Command interface */
     CommandsInterface::Ptr cmds_;
+    /** @brief Initial rotation of the imu w.r.t world */
+    Eigen::Matrix3d world_R_imu_;
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */
