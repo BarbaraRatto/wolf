@@ -217,6 +217,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    joint_positions_xbot_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    joint_velocities_xbot_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_velocities_filt_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_accellerations_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -255,6 +257,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     solver_reset_done_ = false;
     imu_reset_done_ = false;
+    init_done_ = false;
 
     world_R_imu_ = world_R_imu_init_ = Eigen::Matrix3d::Identity();
 
@@ -301,11 +304,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     initPublishers(root_nh,controller_nh);
 
-    // initialize filter
-    cutoff_hz_ = 100.;
-    qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_);
+    // initialize the filters
+    cutoff_hz_gyro_ = 10.;
+    cutoff_hz_qdot_ = 20.;
+
+    qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
     qdot_filter_.setDamping(1.0);
     qdot_filter_.setTimeStep(DT);
+
+    imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
+    imu_gyroscope_filter_.setDamping(1.0);
+    imu_gyroscope_filter_.setTimeStep(DT);
 
     return true;
 }
@@ -317,7 +326,8 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.haptic_contact_loop = haptic_contact_loop_;
     default_config_.contact_force_th = contact_force_th_;
     default_config_.p_scale = p_scale_;
-    default_config_.cutoff_hz = cutoff_hz_;
+    default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
+    default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -368,8 +378,12 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         p_scale_ = config.p_scale;
         break;
     case 9:
-        cutoff_hz_ = config.cutoff_hz;
-        qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_);
+        cutoff_hz_qdot_ = config.cutoff_hz_qdot;
+        qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
+        break;
+    case 10:
+        cutoff_hz_gyro_ = config.cutoff_hz_gyro;
+        imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
         break;
     default:
         break;
@@ -436,6 +450,16 @@ void Controller::toggleHapticContactLoop()
 
 void Controller::toggleSolver()
 {
+    if(!solver_reset_done_)
+    {
+        ROS_INFO("Reset the solver");
+        id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,DT,feet_names_,arm_tip_name_));
+
+        id_prob_->_postural->setReference(qhome_);
+
+        solver_reset_done_ = true;
+    }
+
     solver_started_=!solver_started_;
 
     if(solver_started_)
@@ -482,6 +506,9 @@ void Controller::readImu()
     imu_orientation_.x() = imu_sensor_.getOrientation()[1];
     imu_orientation_.y() = imu_sensor_.getOrientation()[2];
     imu_orientation_.z() = imu_sensor_.getOrientation()[3];
+
+    // Filter the imu velocities
+    imu_gyroscope_filt_ = imu_gyroscope_filter_.process(imu_gyroscope_);
 }
 
 void Controller::stateEstimation()
@@ -509,7 +536,7 @@ void Controller::stateEstimation()
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    floating_base_velocity_.segment(3,3) = tmp_matrix3d_.transpose() * imu_gyroscope_;
+    floating_base_velocity_.segment(3,3) = tmp_matrix3d_.transpose() * imu_gyroscope_filt_;
     //floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 
     //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
@@ -570,7 +597,7 @@ void Controller::starting(const ros::Time&  /*time*/)
     // Read from the hardware interfaces:
     // 1) Joints
     readJoints();
-    // 2) IMU
+    // 2) IMUtracking_active_
     readImu();
     // 3) Read contacts state
     readContactsState();
@@ -634,12 +661,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
-        if(!solver_reset_done_)
+        if(!init_done_)
         {
-            ROS_INFO("Reset the solver");
-            id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,period.toSec(),feet_names_,arm_tip_name_)); // FIXME NO-RT
-            solver_reset_done_ = true;
-
             // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
             // when the robot is grounded.
             //cmds_->initializeFeetPosition();
@@ -648,10 +671,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
             cmds_->setDefaultBaseOrientation(floating_base_orientation_rpy_);
 
-            id_prob_->_postural->setReference(qhome_);
 
             dynamicReconfigureUpdate();
+
+
+            init_done_ = true;
         }
+
 
         // FIXME I should add something to the CommandsInterface!!!
         // Get the external reference (interactive marker) for the arm if available
@@ -868,9 +894,9 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     ci_joint_states_rt_pub_->msg_.name[0] = "x";
     ci_joint_states_rt_pub_->msg_.name[1] = "y";
     ci_joint_states_rt_pub_->msg_.name[2] = "z";
-    ci_joint_states_rt_pub_->msg_.name[3] = "r";
-    ci_joint_states_rt_pub_->msg_.name[4] = "p";
-    ci_joint_states_rt_pub_->msg_.name[5] = "y";
+    ci_joint_states_rt_pub_->msg_.name[3] = "roll";
+    ci_joint_states_rt_pub_->msg_.name[4] = "pitch";
+    ci_joint_states_rt_pub_->msg_.name[5] = "yaw";
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
@@ -880,9 +906,9 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     vel_filt_rt_pub_->msg_.name[0] = "x";
     vel_filt_rt_pub_->msg_.name[1] = "y";
     vel_filt_rt_pub_->msg_.name[2] = "z";
-    vel_filt_rt_pub_->msg_.name[3] = "r";
-    vel_filt_rt_pub_->msg_.name[4] = "p";
-    vel_filt_rt_pub_->msg_.name[5] = "y";
+    vel_filt_rt_pub_->msg_.name[3] = "roll";
+    vel_filt_rt_pub_->msg_.name[4] = "pitch";
+    vel_filt_rt_pub_->msg_.name[5] = "yaw";
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         vel_filt_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
@@ -904,6 +930,9 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
 
     imu_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::Imu>(controller_nh, "imu", 4));
     imu_rt_pub_->msg_.header.frame_id = "trunk_imu"; // FIXME
+
+    imu_filt_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::Imu>(controller_nh, "imu_filt", 4));
+    imu_filt_rt_pub_->msg_.header.frame_id = "trunk_imu"; // FIXME
 
     efforts_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::Efforts>(controller_nh, "efforts", 4));
     efforts_pub_->msg_.name.resize(joint_states_.size());
@@ -958,11 +987,15 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
     if(ci_joint_states_rt_pub_.get() && ci_joint_states_rt_pub_->trylock())
     {
+
+        xbot_model_->getJointPosition(joint_positions_xbot_);
+        xbot_model_->getJointVelocity(joint_velocities_xbot_);
+
         for(unsigned int i = 0; i < joint_positions_.size(); i++)
         {
-            ci_joint_states_rt_pub_->msg_.position[i]  = des_joint_positions_(i);
-            ci_joint_states_rt_pub_->msg_.velocity[i]  = des_joint_velocities_(i);
-            ci_joint_states_rt_pub_->msg_.effort[i]    = des_joint_efforts_(i);
+            ci_joint_states_rt_pub_->msg_.position[i]  = joint_positions_xbot_(i);
+            ci_joint_states_rt_pub_->msg_.velocity[i]  = joint_velocities_xbot_(i);
+            ci_joint_states_rt_pub_->msg_.effort[i]    = des_joint_efforts_solver_(i);
         }
         ci_joint_states_rt_pub_->msg_.header.stamp = time;
         ci_joint_states_rt_pub_->unlockAndPublish();
@@ -1028,6 +1061,25 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
         imu_rt_pub_->msg_.header.stamp = time;
         imu_rt_pub_->unlockAndPublish();
+    }
+
+    if(imu_filt_rt_pub_.get() && imu_filt_rt_pub_->trylock())
+    {
+        imu_filt_rt_pub_->msg_.orientation.x = 0.0;
+        imu_filt_rt_pub_->msg_.orientation.y = 0.0;
+        imu_filt_rt_pub_->msg_.orientation.z = 0.0;
+        imu_filt_rt_pub_->msg_.orientation.w = 1.0;
+
+        imu_filt_rt_pub_->msg_.angular_velocity.x = imu_gyroscope_filt_(0);
+        imu_filt_rt_pub_->msg_.angular_velocity.y = imu_gyroscope_filt_(1);
+        imu_filt_rt_pub_->msg_.angular_velocity.z = imu_gyroscope_filt_(2);
+
+        imu_filt_rt_pub_->msg_.linear_acceleration.x = 0.0;
+        imu_filt_rt_pub_->msg_.linear_acceleration.y = 0.0;
+        imu_filt_rt_pub_->msg_.linear_acceleration.z = 0.0;
+
+        imu_filt_rt_pub_->msg_.header.stamp = time;
+        imu_filt_rt_pub_->unlockAndPublish();
     }
 }
 

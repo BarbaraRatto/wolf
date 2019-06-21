@@ -153,6 +153,10 @@ private:
     Eigen::VectorXd joint_accellerations_;
     /** @brief Joint efforts */
     Eigen::VectorXd joint_efforts_;
+    /** @brief XBOT joint positions */
+    Eigen::VectorXd joint_positions_xbot_;
+    /** @brief XBOT joint velocities */
+    Eigen::VectorXd joint_velocities_xbot_;
     /** @brief Desired joint positions */
     Eigen::VectorXd des_joint_positions_;
     /** @brief Desired joint velocities */
@@ -181,6 +185,8 @@ private:
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> vel_filt_rt_pub_;
     /** @brief Real time publisher - IMU */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_rt_pub_;
+    /** @brief Real time publisher - IMU Filtered */
+    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_filt_rt_pub_;
     /** @brief Real time publisher - estimated pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_; // FIXME to be removed
     /** @brief Real time publisher - estimated qp pose */
@@ -205,6 +211,8 @@ private:
     std::vector<double> joint_d_gain_;
     /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
+    /** @brief True if first update loop after the solver is started */
+    std::atomic<bool> init_done_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
     /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
@@ -226,6 +234,8 @@ private:
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
     Eigen::Vector3d imu_gyroscope_;
+    /** @brief IMU Gyroscope filtered */
+    Eigen::Vector3d imu_gyroscope_filt_;
     /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
     /** @brief Homing position, loaded from the srdf file */
@@ -288,8 +298,12 @@ private:
     std::atomic<double> p_scale_;
     /** @brief qdot_filter */
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
+    /** @brief imu_gyroscope_filter */
+    XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
      /** @brief cutoff_hz_ */
-    std::atomic<double> cutoff_hz_;
+    std::atomic<double> cutoff_hz_gyro_;
+    /** @brief cutoff_hz_ */
+    std::atomic<double> cutoff_hz_qdot_;
 
     ros::ServiceClient freeze_base_client;
 
