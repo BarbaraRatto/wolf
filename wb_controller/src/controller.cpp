@@ -764,8 +764,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             des_joint_p_gain_[i] = p_scale_ * joint_p_gain_[i];
             des_joint_i_gain_[i] = 0.0;
-            des_joint_d_gain_[i] = joint_d_gain_[i];
-            //des_joint_d_gain_[i] = 0.0;
+            des_joint_d_gain_[i] = p_scale_ * joint_d_gain_[i];
         }
     }
 

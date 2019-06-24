@@ -25,18 +25,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     {
         _feet[feet_names[i]].reset(new OpenSoT::tasks::acceleration::Cartesian(feet_names[i], *_model, feet_names[i],
                                                                                   "world", _id->getJointsAccelerationAffine()));
-        _feet[feet_names[i]]->setLambda(0.,0.);
+        _feet[feet_names[i]]->setLambda(0.,10.);
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
      //   --------------------------
     if(!arm_tip_name.empty())
     {
         ROS_INFO("Initialize ARM task");
-        //relative task
-//        _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
-//                                                                         "base_link", _id->getJointsAccelerationAffine()));
         _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
-                                                                         "world", _id->getJointsAccelerationAffine()));
+                                                                         "base_link", _id->getJointsAccelerationAffine()));
         _arm->setLambda(100.);
         _arm->setWeightIsDiagonalFlag(true);
 
@@ -49,11 +46,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     //   --------------------------
     _waist = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waist", *_model, "base_link",
                                                                          "world", _id->getJointsAccelerationAffine());
-    _waist->setLambda(0.,0.); //140. 10.
+    _waist->setLambda(100.);
     _waist->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural.reset(new OpenSoT::tasks::acceleration::Postural(*_model, _id->getJointsAccelerationAffine()));
-    _postural->setLambda(100.,1.);
+    _postural->setLambda(100.);
     _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
@@ -97,13 +94,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {
-//        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waist%idw )
-//                /(_arm)/(_postural)
-//                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
-
-        //on same level than others
-        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waist%idw+ _arm)
-                /(_postural)
+        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waist%idw)
+                /(_arm)/(_postural)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
     else
@@ -113,7 +105,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;*/
         //_id_problem /= (_postural)<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
 
-        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf+ _waist%idw)
+        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waist%idw)
                 /(_postural)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
