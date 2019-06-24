@@ -519,39 +519,46 @@ void Controller::stateEstimation()
     quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_); // R_imu
 
     // Reset the imu one time so that the world and the base are aligned
-    if(!imu_reset_done_)
+    /*if(!imu_reset_done_)
     {
         world_R_imu_init_ = tmp_matrix3d_; // R_imu0
         imu_reset_done_ = true;
-    }
+    }*/
 
-    tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
+    //tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
 
     floating_base_pose_.linear() = tmp_matrix3d_.transpose(); // world_R_imu
 
     rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
 
-    qp_estimation_->update();
+    floating_base_velocity_.segment(3,3) = tmp_matrix3d_.transpose() * imu_gyroscope_filt_;
 
+    xbot_model_->setJointVelocity(joint_velocities_filt_);
+    xbot_model_->setJointEffort(joint_efforts_);
+    xbot_model_->setJointPosition(joint_positions_);
+    xbot_model_->setFloatingBaseOrientation(floating_base_pose_.linear());
+    xbot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
+    qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    floating_base_velocity_.segment(3,3) = tmp_matrix3d_.transpose() * imu_gyroscope_filt_;
     //floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 
     //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
     floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
+
+    xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
 }
 
 void Controller::updateXBotModel()
 {
     //Eigen::VectorXd joint_velocities_fake(joint_velocities_.size());
     //joint_velocities_fake.setZero();
-    xbot_model_->setJointVelocity(joint_velocities_filt_);
-    xbot_model_->setJointEffort(joint_efforts_);
-    xbot_model_->setJointPosition(joint_positions_);
-    xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
+    //xbot_model_->setJointVelocity(joint_velocities_filt_);
+    //xbot_model_->setJointEffort(joint_efforts_);
+    //xbot_model_->setJointPosition(joint_positions_);
+    //xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
 }
@@ -1089,7 +1096,7 @@ void Controller::stopping(const ros::Time& /*time*/)
 
     stopping_ = true;
     odom_publisher_thread_->join();
-    rviz_publisher_thread_->join();
+    //rviz_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CONTROLLER_NAME,"Stopping Controller Completed");
 }
