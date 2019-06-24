@@ -305,8 +305,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     initPublishers(root_nh,controller_nh);
 
     // initialize the filters
-    cutoff_hz_gyro_ = 10.;
-    cutoff_hz_qdot_ = 20.;
+    cutoff_hz_gyro_ = 300.;
+    cutoff_hz_qdot_ = 300.;
 
     qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
     qdot_filter_.setDamping(1.0);
