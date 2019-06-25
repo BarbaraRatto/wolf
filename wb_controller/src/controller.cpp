@@ -130,6 +130,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_p_gain_.resize(joint_states_.size());
     joint_i_gain_.resize(joint_states_.size());
     joint_d_gain_.resize(joint_states_.size());
+
+    feet_lambda1_.resize(4);
+    feet_lambda2_.resize(4);
+
     pids_.resize(joint_states_.size());
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
@@ -458,6 +462,14 @@ void Controller::toggleSolver()
         id_prob_->_postural->setReference(qhome_);
 
         solver_reset_done_ = true;
+
+
+        for(unsigned int i=0; i<feet_names_.size();i++)
+        {
+            feet_lambda1_[i] = id_prob_->_feet[feet_names_[i]]->getLambda();
+            feet_lambda2_[i] = id_prob_->_feet[feet_names_[i]]->getLambda2();
+        }
+
     }
 
     solver_started_=!solver_started_;
@@ -601,7 +613,9 @@ void Controller::readContactsState()
 
         tmp_vector3d_ = tmp_affine3d_ * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
 
-        contacts_[i] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
+        Eigen::Vector3d terrain_normal(0,0,1); // TODO terrain estimation
+
+        contacts_[i] = (tmp_vector3d_.dot(terrain_normal) >= contact_force_th_ ? true : false); // Use only the z
         contact_forces_[i] = tmp_vector3d_;
 
         // Note that feet and contact sensors are ordered in the same way
@@ -726,13 +740,14 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
                 {
-                    //id_prob_->_feet[feet_names_[i]]->setLambda(0.,100.);
+
+                    id_prob_->_feet[feet_names_[i]]->setLambda(feet_lambda1_[i],feet_lambda2_[i]);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
                 }
                 else
                 {
-                    //id_prob_->_feet[feet_names_[i]]->setLambda(0.,0.);
+                    id_prob_->_feet[feet_names_[i]]->setLambda(0.,0.);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
                 }

@@ -209,6 +209,10 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
+    /** @brief Lambda1 */
+    std::vector<double> feet_lambda1_;
+    /** @brief Lambda2 */
+    std::vector<double> feet_lambda2_;
     /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
     /** @brief True if first update loop after the solver is started */
