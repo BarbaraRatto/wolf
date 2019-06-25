@@ -288,7 +288,7 @@ public:
         pose_reference_ = initial_pose_ = pose_ = Eigen::Affine3d::Identity();
         twist_reference_.setZero();
         twist_.setZero();
-        swing_frequency_ = 5.0;
+        swing_frequency_ = 3.3;
         time_ = 0.0;
         length_ = 0.0;
         heading_ = 0.0;
