@@ -209,10 +209,6 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-    /** @brief Lambda1 */
-    std::vector<double> feet_lambda1_;
-    /** @brief Lambda2 */
-    std::vector<double> feet_lambda2_;
     /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
     /** @brief True if first update loop after the solver is started */
@@ -308,6 +304,10 @@ private:
     std::atomic<double> cutoff_hz_gyro_;
     /** @brief cutoff_hz_ */
     std::atomic<double> cutoff_hz_qdot_;
+    /** @brief feet lambda1 */
+    std::atomic<double> feet_lambda1_;
+    /** @brief feet lambda2 */
+    std::atomic<double> feet_lambda2_;
 
     ros::ServiceClient freeze_base_client;
 

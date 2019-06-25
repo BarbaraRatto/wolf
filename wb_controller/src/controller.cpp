@@ -131,9 +131,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_i_gain_.resize(joint_states_.size());
     joint_d_gain_.resize(joint_states_.size());
 
-    feet_lambda1_.resize(4);
-    feet_lambda2_.resize(4);
-
     pids_.resize(joint_states_.size());
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
@@ -320,6 +317,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_gyroscope_filter_.setDamping(1.0);
     imu_gyroscope_filter_.setTimeStep(DT);
 
+    feet_lambda1_ = feet_lambda2_ = 0.0;
+
     return true;
 }
 
@@ -388,6 +387,14 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
     case 10:
         cutoff_hz_gyro_ = config.cutoff_hz_gyro;
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
+        break;
+    case 11:
+        feet_lambda1_ = config.feet_lambda1;
+        feet_lambda2_ = config.feet_lambda2;
+
+        ROS_INFO_STREAM("l1 "<<config.feet_lambda1);
+        ROS_INFO_STREAM("l2 "<<config.feet_lambda2);
+
         break;
     default:
         break;
@@ -462,14 +469,6 @@ void Controller::toggleSolver()
         id_prob_->_postural->setReference(qhome_);
 
         solver_reset_done_ = true;
-
-
-        for(unsigned int i=0; i<feet_names_.size();i++)
-        {
-            feet_lambda1_[i] = id_prob_->_feet[feet_names_[i]]->getLambda();
-            feet_lambda2_[i] = id_prob_->_feet[feet_names_[i]]->getLambda2();
-        }
-
     }
 
     solver_started_=!solver_started_;
@@ -740,14 +739,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
                 {
-
-                    id_prob_->_feet[feet_names_[i]]->setLambda(feet_lambda1_[i],feet_lambda2_[i]);
+                    id_prob_->_feet[feet_names_[i]]->setLambda(feet_lambda1_,feet_lambda2_);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
                 }
                 else
                 {
-                    id_prob_->_feet[feet_names_[i]]->setLambda(0.,0.);
+                    id_prob_->_feet[feet_names_[i]]->setLambda(0.,feet_lambda2_);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
                 }
