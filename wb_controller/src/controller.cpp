@@ -677,10 +677,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->setDefaultBasePosition(floating_base_position_);
             cmds_->setBaseOrientation(floating_base_orientation_rpy_);
             cmds_->setDefaultBaseOrientation(floating_base_orientation_rpy_);
-
+            cmds_->initializeFeetPosition();
 
             dynamicReconfigureUpdate();
-
 
             init_done_ = true;
         }
@@ -703,6 +702,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
                 id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
 
+                // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
                 {

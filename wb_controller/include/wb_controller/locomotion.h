@@ -328,10 +328,10 @@ public:
         return initial_pose_;
     }
 
-    [[deprecated]]
     void setInitialPose(const Eigen::Affine3d& initial_pose)
     {
         initial_pose_ = initial_pose;
+        pose_reference_ = initial_pose;
     }
 
     bool isFinished()
@@ -339,10 +339,9 @@ public:
         return trajectory_finished_;
     }
 
-    void start(const Eigen::Affine3d& initial_pose)
+    void start()
     {
         time_ = 0.0;
-        initial_pose_ = initial_pose;
         twist_reference_.setZero();
         trajectory_finished_ = false;
     }
@@ -354,7 +353,6 @@ public:
 
     void standBy()
     {
-        pose_reference_ = initial_pose_;
         twist_reference_.setZero();
     }
 
@@ -671,8 +669,8 @@ public:
 
     void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
     {
-        //feet_[foot_name].trajectory->setInitialPose(initial_pose);
-        feet_[foot_name].initial_pose = initial_pose;
+        feet_[foot_name].trajectory->setInitialPose(initial_pose);
+        //feet_[foot_name].initial_pose = initial_pose;
     }
 
     double getDutyCycle(const std::string& foot_name)
@@ -797,7 +795,7 @@ public:
             {
                 if (it->second.state_machine.isLiftOff())
                 {
-                    it->second.trajectory->start(it->second.initial_pose);
+                    it->second.trajectory->start();
                 }
                 it->second.trajectory->update(period);
 

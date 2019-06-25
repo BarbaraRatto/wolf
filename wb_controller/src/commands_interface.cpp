@@ -62,15 +62,18 @@ void CommandsInterface::update(const double& period) // OpenLoop
     update(period,base_position_,base_orientation_);
 }
 
+void CommandsInterface::initializeFootPosition(const std::string& foot_name)
+{
+    xbot_model_->getPose(foot_name,world_T_foot_);
+    gait_generator_->setInitialPose(foot_name,world_T_foot_);
+}
+
 void CommandsInterface::initializeFeetPosition()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
     for(unsigned int i=0; i<feet_names.size(); i++)
-    {
-        xbot_model_->getPose(feet_names[i],world_T_foot_);
-        gait_generator_->setInitialPose(feet_names[i],world_T_foot_);
-    }
+        initializeFootPosition(feet_names[i]);
 }
 
 void CommandsInterface::update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop
@@ -142,14 +145,15 @@ void CommandsInterface::update(const double& period, const Eigen::Vector3d& base
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
+        // Set the initial pose for the next swing
+        if(gait_generator_->isLiftOff(feet_names[i]))
+            initializeFootPosition(feet_names[i]);
+
         gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
         gait_generator_->setStepHeading(feet_names[i], steps_heading_[feet_names[i]]);
         gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
         gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
     }
-
-    // Set the initial pose for the next swing
-    initializeFeetPosition();
 
     // Update the gait_generator
     gait_generator_->update(period);

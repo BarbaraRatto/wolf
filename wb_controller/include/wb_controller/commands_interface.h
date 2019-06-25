@@ -40,6 +40,8 @@ public:
 
     void initializeFeetPosition();
 
+    void initializeFootPosition(const std::string& foot_name);
+
     // Sets
     void setCmd(const unsigned int cmd);
     void setBasePosition(const Eigen::Vector3d& position);
