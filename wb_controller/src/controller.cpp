@@ -538,14 +538,34 @@ void Controller::stateEstimation()
     xbot_model_->setJointPosition(joint_positions_);
     xbot_model_->setFloatingBaseOrientation(floating_base_pose_.linear());
     xbot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
-    qp_estimation_->update();
-    qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+    xbot_model_->update();
 
-    floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    //qp_estimation_->update();
+    //qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+
+    floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
+    //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
     //floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 
-    //floating_base_position_ << 0.0,0.0, floating_base_position_(2); // Remove x and y from the state estimation
-    floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
+    // Estimate z
+    double estimated_z = 0;
+    int feet_in_stance = 0;
+    for(unsigned int i = 0; i<feet_names_.size(); i++)
+    {
+        if(!gait_generator_->isSwinging(feet_names_[i]))
+        {
+            xbot_model_->getPose(feet_names_[i],"base_link",tmp_affine3d_);
+            feet_in_stance++;
+
+             tmp_affine3d_.translation() = tmp_matrix3d_.transpose() *  tmp_affine3d_.translation();
+
+            estimated_z +=  tmp_affine3d_.translation().z();
+        }
+    }
+    estimated_z /= feet_in_stance;
+
+    floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
+    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
     floating_base_pose_.translation() = floating_base_position_;
 
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
