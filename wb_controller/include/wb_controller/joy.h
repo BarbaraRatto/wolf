@@ -46,7 +46,7 @@ private:
 
         joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
         joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
-        joy_base_roll_scale_       = static_cast<double>(msg->axes[4]);
+        joy_base_roll_scale_        = -static_cast<double>(msg->axes[4]);
 
         joy_start_button_           = static_cast<bool>(msg->buttons[4]); // L1 button
         joy_reset_button_           = static_cast<bool>(msg->buttons[6]); // L2 button
