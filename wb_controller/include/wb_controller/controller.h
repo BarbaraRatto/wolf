@@ -22,8 +22,6 @@
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
-// Hardware interfaces // FIXME Remove that crap
-//#include <dls_hardware_interface/joint_command_adv_interface.h>
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
@@ -195,8 +193,10 @@ private:
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
     /** @brief Real time publisher - Efforts */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::Efforts>> efforts_pub_;
-    /** @brief Ros subscriber for the desired tasks reference */
-    ros::Subscriber tasks_desired_sub_;
+    /** @brief Real time publisher - des RPY */
+    std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::Vector3>> des_base_rpy_rt_pub_;
+    /** @brief Real time publisher - RPY */
+    std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::Vector3>> base_rpy_rt_pub_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */
@@ -244,10 +244,6 @@ private:
     Eigen::VectorXd des_contact_forces_;
     /** @brief Floating base position w.r.t the world frame, computed by the state estimator */
     Eigen::Vector3d floating_base_position_;
-    /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
-    Eigen::Vector3d floating_base_orientation_rpy_;
-    /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator */
-    Eigen::Quaterniond floating_base_orientation_;
     /** @brief Floating base velocity, computed by the state estimator */
     Eigen::Vector6d floating_base_velocity_;
     /** @brief Floating base velocity, computed by the QP */
@@ -308,6 +304,10 @@ private:
     std::atomic<double> feet_lambda1_;
     /** @brief feet lambda2 */
     std::atomic<double> feet_lambda2_;
+    /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
+    Eigen::Vector3d base_rpy_;
+     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY), desired value */
+    Eigen::Vector3d des_base_rpy_;
 
     ros::ServiceClient freeze_base_client;
 
@@ -335,11 +335,6 @@ private:
          * @brief update floating base state
          */
     void stateEstimation();
-
-    /**
-         * @brief update the virtual model
-         */
-    void updateXBotModel();
 
     /**
          * @brief update the contacts state

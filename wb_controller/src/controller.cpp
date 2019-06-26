@@ -247,7 +247,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_.fill(0.0);
     x_.fill(0.0);
     floating_base_position_ = Eigen::Vector3d::Zero();
-    floating_base_orientation_.normalize();
+    imu_orientation_.normalize();
     floating_base_velocity_ = Eigen::Vector6d::Zero();
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
@@ -303,8 +303,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         force_torque_sensors_.push_back(force_estimation_->add_link(feet_names_[i],dofs,chain));
     }
 
-    initPublishers(root_nh,controller_nh);
-
     // initialize the filters
     cutoff_hz_gyro_ = 300.;
     cutoff_hz_qdot_ = 300.;
@@ -318,6 +316,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_gyroscope_filter_.setTimeStep(DT);
 
     feet_lambda1_ = feet_lambda2_ = 0.0;
+
+    base_rpy_ = des_base_rpy_ = Eigen::Vector3d::Zero();
+
+    initPublishers(root_nh,controller_nh);
 
     return true;
 }
@@ -524,25 +526,34 @@ void Controller::readImu()
 
 void Controller::stateEstimation()
 {
-    // NOTE: Check if the imu is in the correct frame, here we assume that it is aligned with the trunk/base
-    floating_base_orientation_ = imu_orientation_;
+     Eigen::Matrix3d Ear, base_R_world;
+     Eigen::Vector3d raw_base_rpy;
 
-    quatToRotMat(floating_base_orientation_.normalized(),tmp_matrix3d_); // R_imu
-
-    // Reset the imu one time so that the world and the base are aligned
-    /*if(!imu_reset_done_)
-    {
-        world_R_imu_init_ = tmp_matrix3d_; // R_imu0
-        imu_reset_done_ = true;
-    }*/
+    // NOTE: Check if the imu is in the correct frame, here we assume that it is aligned with the trunk/bas
 
     //tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
 
-    floating_base_pose_.linear() = tmp_matrix3d_.transpose(); // world_R_imu
+    quatToRotMat(imu_orientation_.normalized(),tmp_matrix3d_);
+    rotTorpy(tmp_matrix3d_,raw_base_rpy);
 
-    rotTorpy(tmp_matrix3d_,floating_base_orientation_rpy_);
+    // Reset the imu one time so that the world and the base are aligned
+    if(!imu_reset_done_)
+    {
+        base_rpy_ = raw_base_rpy;
+        imu_reset_done_ = true;
+    }
 
-    floating_base_velocity_.segment(3,3) = tmp_matrix3d_.transpose() * imu_gyroscope_filt_;
+    //quatToRpy(floating_base_orientation_.normalized(),floating_base_orientation_rpy_);//take rpy measures
+
+    rpyToEarInv(base_rpy_,Ear);
+    //intergate gyro
+    base_rpy_ += (Ear.inverse() * imu_gyroscope_filt_)*DT; //maps base_omega into rpyderivatives
+    //overwrite measures
+    base_rpy_.head(2) = raw_base_rpy.head(2);
+
+    rpyToRot(base_rpy_, base_R_world);
+    floating_base_pose_.linear() = base_R_world.transpose();
+    floating_base_velocity_.segment(3,3) = base_R_world.transpose() * imu_gyroscope_filt_;
 
     xbot_model_->setJointVelocity(joint_velocities_filt_);
     xbot_model_->setJointEffort(joint_efforts_);
@@ -577,13 +588,14 @@ void Controller::stateEstimation()
 
     floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
     //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
+
     floating_base_pose_.translation() = floating_base_position_;
 
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
 }
 
-void Controller::updateXBotModel()
-{
+//void Controller::updateXBotModel()
+//{
     //Eigen::VectorXd joint_velocities_fake(joint_velocities_.size());
     //joint_velocities_fake.setZero();
     //xbot_model_->setJointVelocity(joint_velocities_filt_);
@@ -592,7 +604,7 @@ void Controller::updateXBotModel()
     //xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
     //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
     //xbot_model_->setFloatingBasePose(floating_base_pose_);
-}
+//}
 
 void Controller::readContactsState()
 {
@@ -643,8 +655,6 @@ void Controller::starting(const ros::Time&  /*time*/)
     readContactsState();
     // 4) State Estimation
     stateEstimation();
-    // 5) Virtual Model Update
-    updateXBotModel();
 
     ROS_DEBUG_NAMED(CONTROLLER_NAME,"Starting the Controller Completed");
 }
@@ -675,8 +685,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     readContactsState();
     // 4) State Estimation
     stateEstimation();
-    // 5) Virtual Model Update
-    updateXBotModel();
 
     // Set Default values
     des_joint_positions_ = qhome_;
@@ -708,8 +716,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             //cmds_->initializeFeetPosition();
             cmds_->setBasePosition(floating_base_position_);
             cmds_->setDefaultBasePosition(floating_base_position_);
-            cmds_->setBaseOrientation(floating_base_orientation_rpy_);
-            cmds_->setDefaultBaseOrientation(floating_base_orientation_rpy_);
+            cmds_->setBaseOrientation(base_rpy_);
+            cmds_->setDefaultBaseOrientation(base_rpy_);
             cmds_->initializeFeetPosition();
 
             dynamicReconfigureUpdate();
@@ -727,6 +735,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the task reference for the waist
             id_prob_->_waist->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
+            rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(tmp_affine3d_);
 
@@ -981,6 +990,9 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     efforts_pub_->msg_.efforts.resize(joint_states_.size());
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         efforts_pub_->msg_.name[i] = joint_names_[i];
+
+    base_rpy_rt_pub_.reset(new realtime_tools::RealtimePublisher<geometry_msgs::Vector3>(controller_nh, "base_rpy", 4));
+    des_base_rpy_rt_pub_.reset(new realtime_tools::RealtimePublisher<geometry_msgs::Vector3>(controller_nh, "des_base_rpy", 4));
 }
 
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
@@ -988,6 +1000,24 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
     // FIXME it should not be there but for the moment I need it here because of the twist reset in the update of the solver:
     if(id_prob_)
         id_prob_->publish(time);
+
+    if(base_rpy_rt_pub_.get() && base_rpy_rt_pub_->trylock())
+    {
+        base_rpy_rt_pub_->msg_.x = base_rpy_(0);
+        base_rpy_rt_pub_->msg_.y = base_rpy_(1);
+        base_rpy_rt_pub_->msg_.z = base_rpy_(2);
+
+        base_rpy_rt_pub_->unlockAndPublish();
+    }
+
+    if(des_base_rpy_rt_pub_.get() && des_base_rpy_rt_pub_->trylock())
+    {
+        des_base_rpy_rt_pub_->msg_.x = des_base_rpy_(0);
+        des_base_rpy_rt_pub_->msg_.y = des_base_rpy_(1);
+        des_base_rpy_rt_pub_->msg_.z = des_base_rpy_(2);
+
+        des_base_rpy_rt_pub_->unlockAndPublish();
+    }
 
     if(efforts_pub_.get() && efforts_pub_->trylock())
     {
@@ -1055,10 +1085,10 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
         state_estimation_rt_pub_->msg_.pose.pose.position.y     = floating_base_position_(1);
         state_estimation_rt_pub_->msg_.pose.pose.position.z     = floating_base_position_(2);
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.w  = floating_base_orientation_.w();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.x  = floating_base_orientation_.x();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.y  = floating_base_orientation_.y();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.z  = floating_base_orientation_.z();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.w  = imu_orientation_.w();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.x  = imu_orientation_.x();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.y  = imu_orientation_.y();
+        state_estimation_rt_pub_->msg_.pose.pose.orientation.z  = imu_orientation_.z();
 
         state_estimation_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_(0);
         state_estimation_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_(1);
