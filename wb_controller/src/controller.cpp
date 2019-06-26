@@ -546,6 +546,7 @@ void Controller::stateEstimation()
     //quatToRpy(floating_base_orientation_.normalized(),floating_base_orientation_rpy_);//take rpy measures
 
     rpyToEarInv(base_rpy_,Ear);
+    rpyToEar(base_rpy_,Ear);
     //intergate gyro
     base_rpy_ += (Ear.inverse() * imu_gyroscope_filt_)*DT; //maps base_omega into rpyderivatives
     //overwrite measures
