@@ -10,7 +10,6 @@
  */
 
 #include <wb_controller/controller.h>
-#include <std_srvs/Empty.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -48,17 +47,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
-
-    // FIXME Remove that abomination
-    //unfreeze base
-    nh_ = controller_nh;
-    std::string key;
-    std::string robot_name_;
-    if (nh_.searchParam("robot_name", key))
-    {
-      nh_.getParam(key, robot_name_);
-    }
-    freeze_base_client = nh_.serviceClient<std_srvs::Empty>("/" + robot_name_ +"/freeze_base");
 
     if(!jt_hw)
     {
@@ -580,7 +568,7 @@ void Controller::stateEstimation()
             xbot_model_->getPose(feet_names_[i],"base_link",tmp_affine3d_);
             feet_in_stance++;
 
-             tmp_affine3d_.translation() = tmp_matrix3d_.transpose() *  tmp_affine3d_.translation();
+            tmp_affine3d_.translation() = tmp_matrix3d_.transpose() *  tmp_affine3d_.translation();
 
             estimated_z +=  tmp_affine3d_.translation().z();
         }
@@ -662,20 +650,6 @@ void Controller::starting(const ros::Time&  /*time*/)
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
-
-    //FIXME... this is madness
-    //Unfreeze at startup:
-    static int freeze_count = 0;
-    if (freeze_count == 250) {
-            std_srvs::Empty msgs;
-            if (!freeze_base_client.call(msgs))
-            {
-                ROS_ERROR("Failed to unfreeze base");
-            }
-            freeze_count++;
-    } else {
-            freeze_count++;
-    }
 
     // Read from the hardware interfaces:
     // 1) Joints

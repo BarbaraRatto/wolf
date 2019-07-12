@@ -309,8 +309,6 @@ private:
      /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY), desired value */
     Eigen::Vector3d des_base_rpy_;
 
-    ros::ServiceClient freeze_base_client;
-
     /**
          * @brief thread body for the odometry publisher
          */
