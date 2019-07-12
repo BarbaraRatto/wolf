@@ -239,7 +239,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     floating_base_velocity_ = Eigen::Vector6d::Zero();
     floating_base_pose_ = Eigen::Affine3d::Identity();
 
-    p_scale_ = 1.0;
+    pid_scale_ = 1.0;
 
     for(unsigned int i=0;i<feet_names_.size();i++)
         visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("world",feet_names_[i]+"_rviz_visual_marker"));
@@ -318,7 +318,7 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.toggle_solver = solver_started_;
     default_config_.haptic_contact_loop = haptic_contact_loop_;
     default_config_.contact_force_th = contact_force_th_;
-    default_config_.p_scale = p_scale_;
+    default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
     if(gait_generator_)
@@ -368,7 +368,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
     case 8:
-        p_scale_ = config.p_scale;
+        pid_scale_ = config.pid_scale;
         break;
     case 9:
         cutoff_hz_qdot_ = config.cutoff_hz_qdot;
@@ -779,9 +779,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
         {
-            des_joint_p_gain_[i] = p_scale_ * joint_p_gain_[i];
+            des_joint_p_gain_[i] = pid_scale_ * joint_p_gain_[i];
             des_joint_i_gain_[i] = 0.0;
-            des_joint_d_gain_[i] = p_scale_ * joint_d_gain_[i];
+            des_joint_d_gain_[i] = pid_scale_ * joint_d_gain_[i];
         }
     }
 
@@ -798,7 +798,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                                                              -joint_velocities_(i+FLOATING_BASE_DOFS),
                                                              period);
 
-        des_joint_efforts_(i) = (1.0 - p_scale_) * des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + des_joint_efforts_pids_(i);
+        des_joint_efforts_(i) = (1.0 - pid_scale_) * des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + des_joint_efforts_pids_(i);
 
         joint_states_[i].setCommand(des_joint_efforts_(i));
 

@@ -290,8 +290,8 @@ private:
     Eigen::Vector3d tmp_vector3d_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
-    /** @brief p scale */
-    std::atomic<double> p_scale_;
+    /** @brief pid scale, range between 0 and 1. 0 the pid is deactivated, 1 the pid is providing full torque */
+    std::atomic<double> pid_scale_;
     /** @brief qdot_filter */
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
     /** @brief imu_gyroscope_filter */
