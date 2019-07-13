@@ -300,10 +300,6 @@ private:
     std::atomic<double> cutoff_hz_gyro_;
     /** @brief cutoff_hz_ */
     std::atomic<double> cutoff_hz_qdot_;
-    /** @brief feet lambda1 */
-    std::atomic<double> feet_lambda1_;
-    /** @brief feet lambda2 */
-    std::atomic<double> feet_lambda2_;
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
     Eigen::Vector3d base_rpy_;
      /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY), desired value */
