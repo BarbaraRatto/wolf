@@ -26,8 +26,6 @@ public:
      */
     typedef std::shared_ptr<const CommandsInterface> ConstPtr;
 
-#define CLASS_NAME "CommandsInterface"
-
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
     CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3);

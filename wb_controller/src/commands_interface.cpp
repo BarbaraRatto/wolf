@@ -2,6 +2,8 @@
 
 namespace wb_controller {
 
+#define CLASS_NAME "CommandsInterface"
+
 CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max, double step_height_max)
 {
 
