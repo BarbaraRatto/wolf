@@ -16,10 +16,7 @@ using namespace Cartesian;
 
 namespace wb_controller {
 
-#define FLOATING_BASE_DOFS 6
-#define THREADS_SLEEP_TIME_ms 4
-#define CONTROLLER_NAME "wb_controller"
-#define DT 0.001
+#define CLASS_NAME "Controller"
 
 Controller::Controller()
     :solver_started_(false)
@@ -41,7 +38,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
                       ros::NodeHandle& root_nh,
                       ros::NodeHandle& controller_nh)
 {
-    ROS_DEBUG_NAMED(CONTROLLER_NAME,"Initialize");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Initialize");
 
     assert(robot_hw);
 
@@ -55,32 +52,32 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     if(!imu_hw)
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"hardware_interface::ImuSensorInterface not found");
+        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ImuSensorInterface not found");
         return false;
     }
     if (!controller_nh.getParam("joints", joint_names_))
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CLASS_NAME,"No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     if (!controller_nh.getParam("feet", feet_names_))
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"No feet given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CLASS_NAME,"No feet given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     if (!controller_nh.getParam("arm_tip", arm_tip_name_))
     {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"No arm tip name given in the namespace: %s, proceeding without using the arm.", controller_nh.getNamespace().c_str());
+        ROS_WARN_NAMED(CLASS_NAME,"No arm tip name given in the namespace: %s, proceeding without using the arm.", controller_nh.getNamespace().c_str());
         arm_tip_name_ = std::string();
     }
     if (!controller_nh.getParam("hips", hips_names_))
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"No hips given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CLASS_NAME,"No hips given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
     if (!controller_nh.getParam("imu_sensor", imu_name_))
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"No imu_sensor given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CLASS_NAME,"No imu_sensor given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
 
@@ -95,7 +92,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
         catch(...)
         {
-            ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading joint_states_");
+            ROS_ERROR_NAMED(CLASS_NAME,"Error loading joint_states_");
             return false;
         }
     }
@@ -108,7 +105,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     catch(...)
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"Error loading imu_sensor_");
+        ROS_ERROR_NAMED(CLASS_NAME,"Error loading imu_sensor_");
         return false;
     }
 
@@ -125,17 +122,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         // Getting PID gains
         if (!controller_nh.getParam("gains/" + joint_names_[i] + "/p", joint_p_gain_[i]))
         {
-            ROS_ERROR_NAMED(CONTROLLER_NAME,"No P gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            ROS_ERROR_NAMED(CLASS_NAME,"No P gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
         if (!controller_nh.getParam("gains/" + joint_names_[i] + "/i", joint_i_gain_[i]))
         {
-            ROS_ERROR_NAMED(CONTROLLER_NAME,"No D gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            ROS_ERROR_NAMED(CLASS_NAME,"No D gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
         if (!controller_nh.getParam("gains/" + joint_names_[i] + "/d", joint_d_gain_[i]))
         {
-            ROS_ERROR_NAMED(CONTROLLER_NAME,"No I gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
+            ROS_ERROR_NAMED(CLASS_NAME,"No I gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
             return false;
         }
         // Check if the values are positive
@@ -156,12 +153,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Assume we are working with a dog
     if(hips_names_.size()!=4)
     {
-        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"Wrong number of hips!");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of hips!");
         return false;
     }
     if(feet_names_.size()!=4)
     {
-        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"Wrong number of feet!");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of feet!");
         return false;
     }
     hips_names_ = sortByLegName(hips_names_);
@@ -173,12 +170,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
     {
-        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"No robot_description given in namespace /");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot_description given in namespace /");
         return false;
     }
     if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
     {
-        ROS_ERROR_STREAM_NAMED(CONTROLLER_NAME,"No robot_semantic_description given in namespace /");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot_semantic_description given in namespace /");
         return false;
     }
     if(!opt.set_urdf(urdf))
@@ -635,7 +632,7 @@ void Controller::starting(const ros::Time&  /*time*/)
     // 4) State Estimation
     stateEstimation();
 
-    ROS_DEBUG_NAMED(CONTROLLER_NAME,"Starting the Controller Completed");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
@@ -1119,13 +1116,13 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
 void Controller::stopping(const ros::Time& /*time*/)
 {
-    ROS_DEBUG_NAMED(CONTROLLER_NAME,"Stopping the Controller");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping the Controller");
 
     stopping_ = true;
     odom_publisher_thread_->join();
     //rviz_publisher_thread_->join();
 
-    ROS_DEBUG_NAMED(CONTROLLER_NAME,"Stopping Controller Completed");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
 }
 
 } //namespace
