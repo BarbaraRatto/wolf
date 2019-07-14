@@ -26,7 +26,7 @@ public:
      */
     typedef std::shared_ptr<const StateEstimator> ConstPtr;
 
-    enum estimation_t {IMU_ORIENTATION=0,IMU_GYROSCOPE};
+    enum estimation_t {IMU_MAGNETOMETER=0,IMU_GYROSCOPE};
 
     StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model);
 
@@ -74,6 +74,11 @@ private:
     Eigen::VectorXd floating_base_velocity_qp_;
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
     Eigen::Vector3d base_rpy_;
+
+    Eigen::Matrix3d Ear_;
+
+    Eigen::Matrix3d base_R_world_;
+
     /** @brief Align the imu frame (trunk) to the world */
     bool imu_reset_done_;
 
