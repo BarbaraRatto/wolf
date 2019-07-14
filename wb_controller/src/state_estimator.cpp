@@ -31,6 +31,8 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     imu_orientation_.normalize();
     floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
 
+    estimation_ = estimation_t::IMU_ORIENTATION;
+
     imu_reset_done_ = false;
 }
 
@@ -86,49 +88,64 @@ void StateEstimator::update(const double& period)
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
-    Eigen::Matrix3d Ear, base_R_world;
-    Eigen::Vector3d raw_base_rpy;
+    unsigned int estimation = estimation_;
 
-   // NOTE: Check if the imu is in the correct frame, here we assume that it is aligned with the trunk/bas
+    // FIXME to move
+    Eigen::Matrix3d Ear_, base_R_world_;
 
-   //tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
+    // Note: we assume that the IMU is orientated as the base/waist of the robot
+    // if this is not the case, it is necessary to add a transfomation from the IMU frame to the
+    // base/waist frame
 
-   quatToRotMat(imu_orientation_.normalized(),tmp_matrix3d_);
-   rotTorpy(tmp_matrix3d_,raw_base_rpy);
+    if(!imu_reset_done_)
+    {
+        // Initialization for the integration
+        quatToRotMat(imu_orientation_.normalized(),base_R_world_);
+        rotTorpy(base_R_world_,base_rpy_);
+        imu_reset_done_ = true;
+    }
 
-   // Reset the imu one time so that the world and the base are aligned
-   if(!imu_reset_done_)
-   {
-       base_rpy_ = raw_base_rpy;
-       imu_reset_done_ = true;
-   }
+    switch(estimation)
+    {
+    case estimation_t::IMU_ORIENTATION:
+        quatToRotMat(imu_orientation_.normalized(),base_R_world_);
+        rotTorpy(base_R_world_,base_rpy_);
+        break;
+    // Intergate the gyroscope, useful if the magnetometer measure has interferences
+    case estimation_t::IMU_GYROSCOPE:
+        rpyToEar(base_rpy_,Ear_);
+        // Map the omegas in the base into rpy derivatives
+        base_rpy_ += (Ear_.inverse() * imu_gyroscope_) * period;
+        // Overwrite measures if one of them is more noisy
+        // base_rpy_.head(2) = raw_base_rpy_.head(2);
+        rpyToRot(base_rpy_, base_R_world_);
+        break;
+    default:
+        break;
+    };
 
-   //quatToRpy(floating_base_orientation_.normalized(),floating_base_orientation_rpy_);//take rpy measures
+   //// Reset the imu one time so that the world and the base are aligned
+   ////tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
+   ////quatToRpy(floating_base_orientation_.normalized(),floating_base_orientation_rpy_);//take rpy measures
 
-   //rpyToEarInv(base_rpy_,Ear);
-   rpyToEar(base_rpy_,Ear);
-   //intergate gyro
-   base_rpy_ += (Ear.inverse() * imu_gyroscope_)*period; //maps base_omega into rpyderivatives
-   //overwrite measures
-   base_rpy_.head(2) = raw_base_rpy.head(2);
-
-   rpyToRot(base_rpy_, base_R_world);
-   floating_base_pose_.linear() = base_R_world.transpose();
-   floating_base_velocity_.segment(3,3) = base_R_world.transpose() * imu_gyroscope_;
-
+   // Set the floating base orientation
+   floating_base_pose_.linear() = base_R_world_.transpose();
+   // Set the floating base angular velocity
+   floating_base_velocity_.segment(3,3) = base_R_world_.transpose() * imu_gyroscope_;
+   // Update the virtual model
    xbot_model_->setJointVelocity(joint_velocities_);
    xbot_model_->setJointEffort(joint_efforts_);
    xbot_model_->setJointPosition(joint_positions_);
    xbot_model_->setFloatingBaseOrientation(floating_base_pose_.linear());
    xbot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
    xbot_model_->update();
-
+   // Update the qp estimation based on the new virtual model state
    qp_estimation_->update();
    qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
-   floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
-   //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-   //floating_base_velocity_.segment(3,3) = imu_gyroscope_;
+   //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
+   floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+   //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
 
    // Estimate z
    double estimated_z = 0;
@@ -137,10 +154,10 @@ void StateEstimator::update(const double& period)
    {
        if(!gait_generator_->isSwinging(feet_names[i]))
        {
-           xbot_model_->getPose(feet_names[i],"base_link",tmp_affine3d_);
+           xbot_model_->getPose(feet_names[i],"base_link",tmp_affine3d_); // world_T_foot
            feet_in_stance++;
 
-           tmp_affine3d_.translation() = tmp_matrix3d_.transpose() *  tmp_affine3d_.translation();
+           tmp_affine3d_.translation() = base_R_world_.transpose() *  tmp_affine3d_.translation();
 
            estimated_z +=  tmp_affine3d_.translation().z();
        }
