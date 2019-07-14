@@ -25,7 +25,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     {
         _feet[feet_names[i]].reset(new OpenSoT::tasks::acceleration::Cartesian(feet_names[i], *_model, feet_names[i],
                                                                                   "world", _id->getJointsAccelerationAffine()));
-        _feet[feet_names[i]]->setLambda(60.,6.); // 0. 10.
+        _feet[feet_names[i]]->setLambda(0.,10.); // 60. 6.
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
      //   --------------------------
