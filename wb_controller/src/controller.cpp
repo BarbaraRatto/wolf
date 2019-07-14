@@ -349,14 +349,17 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         break;
     case 8:
         pid_scale_ = config.pid_scale;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set pid scale to "<< config.pid_scale);
         break;
     case 9:
         cutoff_hz_qdot_ = config.cutoff_hz_qdot;
         qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for qdot filter at "<< config.cutoff_hz_qdot);
         break;
     case 10:
         cutoff_hz_gyro_ = config.cutoff_hz_gyro;
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
         break;
     default:
         break;
