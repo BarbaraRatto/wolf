@@ -22,9 +22,9 @@ Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
     ,tracking_active_(false)
+    ,contact_force_th_(50.0)
     ,haptic_contact_loop_(false)
     ,stopping_(false)
-    ,contact_force_th_(50.0)
 {
 }
 
@@ -219,7 +219,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     contact_forces_.resize(4);
     world_X_foot_.resize(4);
     des_contact_forces_.resize(24); // 24 = 6 dofs * 4 leg
-    floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -231,18 +230,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     x_.fill(0.0);
-    floating_base_position_ = Eigen::Vector3d::Zero();
     imu_orientation_.normalize();
-    floating_base_velocity_ = Eigen::Vector6d::Zero();
-    floating_base_pose_ = Eigen::Affine3d::Identity();
 
     pid_scale_ = 1.0;
 
-    for(unsigned int i=0;i<feet_names_.size();i++)
-        visual_tools_[feet_names_[i]].reset(new rviz_visual_tools::RvizVisualTools("world",feet_names_[i]+"_rviz_visual_marker"));
-
     solver_reset_done_ = false;
-    imu_reset_done_ = false;
     init_done_ = false;
 
     world_R_imu_ = world_R_imu_init_ = Eigen::Matrix3d::Identity();
@@ -252,20 +244,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
     gait_generator_.reset(new GaitGenerator(0.8,feet_names_,hips_names_,"crawl","ellipse"));
-
-    // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
-    // Spawn the rviz publisher thread
-    //rviz_publisher_thread_.reset(new std::thread(&Controller::rvizPublisher,this));
-
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
+
+    state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
-    // State estimation reset
-    Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
-    contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-    qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names_,contact_matrix));
     // Contact force estimation reset
     force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(xbot_model_));
 
@@ -300,7 +284,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_gyroscope_filter_.setDamping(1.0);
     imu_gyroscope_filter_.setTimeStep(DT);
 
-    base_rpy_ = des_base_rpy_ = Eigen::Vector3d::Zero();
+    // Spawn the odom publisher thread
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     initPublishers(root_nh,controller_nh);
 
@@ -352,15 +337,15 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         break;
     case 5:
         cmds_->setMaxLinearVelocity(config.base_max_linear_vel);
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum velocity to "<< config.base_max_linear_vel);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum velocity to "<< config.base_max_linear_vel);
         break;
     case 6:
         cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
         break;
     case 7:
         contact_force_th_ = config.contact_force_th;
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"Set contact force threshold to "<< config.contact_force_th);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
     case 8:
         pid_scale_ = config.pid_scale;
@@ -385,7 +370,7 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
             gait_generator_->setSwingFrequency(feet_names_[i],swing_frequency);
     else
     {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
+        ROS_WARN_NAMED(CLASS_NAME,"gait_generator not initialized yet.");
         return false;
     }
     return true;
@@ -399,13 +384,13 @@ bool Controller::setGaitType(const std::string& gait_type)
             gait_generator_->setGaitType(gait_type);
         else
         {
-            ROS_WARN_NAMED(CONTROLLER_NAME,"gait_generator not initialized yet.");
+            ROS_WARN_NAMED(CLASS_NAME,"gait_generator not initialized yet.");
             return false;
         }
     }
     catch(...)
     {
-        ROS_ERROR_NAMED(CONTROLLER_NAME,"Wrong gait!");
+        ROS_ERROR_NAMED(CLASS_NAME,"Wrong gait!");
         return false;
     }
     return true;
@@ -416,12 +401,12 @@ bool Controller::setDutyCycle(const double& duty_cycle)
     if(duty_cycle>=0.0 && duty_cycle<=1.0 && gait_generator_)
     {
         gait_generator_->setDutyCycle(duty_cycle);
-        ROS_INFO_STREAM_NAMED(CONTROLLER_NAME,"setDutyCycle: set the duty cycle to "<<duty_cycle);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"setDutyCycle: set the duty cycle to "<<duty_cycle);
         return true;
     }
     else
     {
-        ROS_WARN_NAMED(CONTROLLER_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
+        ROS_WARN_NAMED(CLASS_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
         return false;
     }
 }
@@ -499,89 +484,6 @@ void Controller::readImu()
     imu_gyroscope_filt_ = imu_gyroscope_filter_.process(imu_gyroscope_);
 }
 
-void Controller::stateEstimation()
-{
-     Eigen::Matrix3d Ear, base_R_world;
-     Eigen::Vector3d raw_base_rpy;
-
-    // NOTE: Check if the imu is in the correct frame, here we assume that it is aligned with the trunk/bas
-
-    //tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
-
-    quatToRotMat(imu_orientation_.normalized(),tmp_matrix3d_);
-    rotTorpy(tmp_matrix3d_,raw_base_rpy);
-
-    // Reset the imu one time so that the world and the base are aligned
-    if(!imu_reset_done_)
-    {
-        base_rpy_ = raw_base_rpy;
-        imu_reset_done_ = true;
-    }
-
-    //quatToRpy(floating_base_orientation_.normalized(),floating_base_orientation_rpy_);//take rpy measures
-
-    rpyToEarInv(base_rpy_,Ear);
-    rpyToEar(base_rpy_,Ear);
-    //intergate gyro
-    base_rpy_ += (Ear.inverse() * imu_gyroscope_filt_)*DT; //maps base_omega into rpyderivatives
-    //overwrite measures
-    base_rpy_.head(2) = raw_base_rpy.head(2);
-
-    rpyToRot(base_rpy_, base_R_world);
-    floating_base_pose_.linear() = base_R_world.transpose();
-    floating_base_velocity_.segment(3,3) = base_R_world.transpose() * imu_gyroscope_filt_;
-
-    xbot_model_->setJointVelocity(joint_velocities_filt_);
-    xbot_model_->setJointEffort(joint_efforts_);
-    xbot_model_->setJointPosition(joint_positions_);
-    xbot_model_->setFloatingBaseOrientation(floating_base_pose_.linear());
-    xbot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
-    xbot_model_->update();
-
-    //qp_estimation_->update();
-    //qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-
-    floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
-    //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    //floating_base_velocity_.segment(3,3) = imu_gyroscope_;
-
-    // Estimate z
-    double estimated_z = 0;
-    int feet_in_stance = 0;
-    for(unsigned int i = 0; i<feet_names_.size(); i++)
-    {
-        if(!gait_generator_->isSwinging(feet_names_[i]))
-        {
-            xbot_model_->getPose(feet_names_[i],"base_link",tmp_affine3d_);
-            feet_in_stance++;
-
-            tmp_affine3d_.translation() = tmp_matrix3d_.transpose() *  tmp_affine3d_.translation();
-
-            estimated_z +=  tmp_affine3d_.translation().z();
-        }
-    }
-    estimated_z /= feet_in_stance;
-
-    floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
-    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
-
-    floating_base_pose_.translation() = floating_base_position_;
-
-    xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
-}
-
-//void Controller::updateXBotModel()
-//{
-    //Eigen::VectorXd joint_velocities_fake(joint_velocities_.size());
-    //joint_velocities_fake.setZero();
-    //xbot_model_->setJointVelocity(joint_velocities_filt_);
-    //xbot_model_->setJointEffort(joint_efforts_);
-    //xbot_model_->setJointPosition(joint_positions_);
-    //xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
-    //xbot_model_->setFloatingBaseOrientation(imu_orientation_.normalized().toRotationMatrix().transpose());
-    //xbot_model_->setFloatingBasePose(floating_base_pose_);
-//}
-
 void Controller::readContactsState()
 {
     force_estimation_->update();
@@ -609,18 +511,18 @@ void Controller::readContactsState()
         if(tracking_active_)
         {
             if(haptic_contact_loop_)
-                qp_estimation_->setContactState(feet_names_[i],contacts_[i]);
+                state_estimator_->setContactState(feet_names_[i],contacts_[i]);
             else
-                qp_estimation_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
+                state_estimator_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
         }
         else
-            qp_estimation_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
+            state_estimator_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
     }
 }
 
 void Controller::starting(const ros::Time&  /*time*/)
 {
-    ROS_DEBUG_NAMED(CONTROLLER_NAME,"Starting the Controller");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller");
 
     // Read from the hardware interfaces:
     // 1) Joints
@@ -629,15 +531,12 @@ void Controller::starting(const ros::Time&  /*time*/)
     readImu();
     // 3) Read contacts state
     readContactsState();
-    // 4) State Estimation
-    stateEstimation();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
 }
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
-
     // Read from the hardware interfaces:
     // 1) Joints
     readJoints();
@@ -645,8 +544,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     readImu();
     // 3) Read contacts state
     readContactsState();
-    // 4) State Estimation
-    stateEstimation();
+
+    state_estimator_->setJointPosition(joint_positions_);
+    state_estimator_->setJointVelocity(joint_velocities_filt_);
+    state_estimator_->setJointEffort(joint_efforts_);
+    state_estimator_->setImuOrientation(imu_orientation_);
+    state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
+    state_estimator_->update(period.toSec());
 
     // Set Default values
     des_joint_positions_ = qhome_;
@@ -676,10 +580,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
             // when the robot is grounded.
             //cmds_->initializeFeetPosition();
-            cmds_->setBasePosition(floating_base_position_);
-            cmds_->setDefaultBasePosition(floating_base_position_);
-            cmds_->setBaseOrientation(base_rpy_);
-            cmds_->setDefaultBaseOrientation(base_rpy_);
+            cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
+            cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
+            cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
+            cmds_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             cmds_->initializeFeetPosition();
 
             dynamicReconfigureUpdate();
@@ -697,7 +601,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the task reference for the waist
             id_prob_->_waist->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
-            rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
+            //rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(tmp_affine3d_);
 
@@ -710,13 +614,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
                 {
-                    id_prob_->_feet[feet_names_[i]]->setLambda(feet_lambda1_,feet_lambda2_);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
                 }
                 else
                 {
-                    id_prob_->_feet[feet_names_[i]]->setLambda(0.,feet_lambda2_);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
                 }
@@ -788,59 +690,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         des_joint_efforts_(i) = (1.0 - pid_scale_) * des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + des_joint_efforts_pids_(i);
 
         joint_states_[i].setCommand(des_joint_efforts_(i));
-
-
     }
 
     // Publish
     publish(time,period);
-}
-
-void Controller::rvizPublisher()
-{
-    ROS_INFO("Start the rvizPublisher");
-
-    unsigned int n_points = 30;
-    std::vector<Eigen::Affine3d> poses(n_points);
-    std::vector<geometry_msgs::Pose> path(n_points);
-    geometry_msgs::Point arrow_start;
-    geometry_msgs::Point arrow_end;
-
-    // Publish using rviz visual tools
-    while(!stopping_)
-    {
-        if(id_prob_ && visual_tools_.size()>0)
-        {
-            for(unsigned int i=0; i<feet_names_.size();i++)
-            {
-                if(gait_generator_->isSwinging(feet_names_[i]))
-                {
-                    gait_generator_->getTrajectoryPreview(feet_names_[i],poses);
-
-                    for(unsigned int j=0; j<n_points; j++)
-                    {
-                        path[j].position.x = poses[j].translation().x();
-                        path[j].position.y = poses[j].translation().y();
-                        path[j].position.z = poses[j].translation().z();
-                        //colors[j] = rviz_visual_tools::RED;
-                    }
-                    visual_tools_[feet_names_[i]]->publishPath(path);
-
-                }
-                else
-                {
-                    visual_tools_[feet_names_[i]]->deleteAllMarkers();
-                }
-
-                visual_tools_[feet_names_[i]]->trigger();
-            }
-
-
-        }
-
-        std::this_thread::sleep_for( std::chrono::milliseconds(1000) );
-    }
-    ROS_INFO("Stop the rvizPublisher");
 }
 
 void Controller::odomPublisher()
@@ -860,7 +713,7 @@ void Controller::odomPublisher()
         // Get floating base
         // FIXME It causes solver's failures, probably it is caused by the call to the robot model inside this thread.
         //xbot_model_->getFloatingBasePose(base_pose); // FIXME Is it thread safe?
-        base_pose = floating_base_pose_; //FIXME No Thread safe
+        base_pose = state_estimator_->getFloatingBasePose(); //FIXME No Thread safe
 
         // Do the inverse of it
         world_pose = base_pose.inverse();
@@ -963,7 +816,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
     if(id_prob_)
         id_prob_->publish(time);
 
-    if(base_rpy_rt_pub_.get() && base_rpy_rt_pub_->trylock())
+    /*if(base_rpy_rt_pub_.get() && base_rpy_rt_pub_->trylock())
     {
         base_rpy_rt_pub_->msg_.x = base_rpy_(0);
         base_rpy_rt_pub_->msg_.y = base_rpy_(1);
@@ -979,7 +832,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         des_base_rpy_rt_pub_->msg_.z = des_base_rpy_(2);
 
         des_base_rpy_rt_pub_->unlockAndPublish();
-    }
+    }*/
 
     if(efforts_pub_.get() && efforts_pub_->trylock())
     {
@@ -1042,7 +895,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         vel_filt_rt_pub_->unlockAndPublish();
     }
 
-    if(state_estimation_rt_pub_.get() && state_estimation_rt_pub_->trylock())
+    /*if(state_estimation_rt_pub_.get() && state_estimation_rt_pub_->trylock())
     {
         state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
         state_estimation_rt_pub_->msg_.pose.pose.position.y     = floating_base_position_(1);
@@ -1073,7 +926,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
         state_estimation_qp_rt_pub_->msg_.header.stamp = time;
         state_estimation_qp_rt_pub_->unlockAndPublish();
-    }
+    }*/
 
     if(imu_rt_pub_.get() && imu_rt_pub_->trylock())
     {
@@ -1120,7 +973,6 @@ void Controller::stopping(const ros::Time& /*time*/)
 
     stopping_ = true;
     odom_publisher_thread_->join();
-    //rviz_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
 }
