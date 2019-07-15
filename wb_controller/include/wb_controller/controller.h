@@ -254,10 +254,6 @@ private:
     CommandsInterface::Ptr cmds_;
     /** @brief State estimator */
     StateEstimator::Ptr state_estimator_;
-    /** @brief Initial rotation of the imu w.r.t world */
-    Eigen::Matrix3d world_R_imu_init_;
-    /** @brief Actual rotation of the imu w.r.t world */
-    Eigen::Matrix3d world_R_imu_;
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */

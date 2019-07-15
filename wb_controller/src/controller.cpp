@@ -237,8 +237,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     solver_reset_done_ = false;
     init_done_ = false;
 
-    world_R_imu_ = world_R_imu_init_ = Eigen::Matrix3d::Identity();
-
     // Set the callback for the dynamic reconfigure server
     server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
@@ -292,7 +290,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
     Logger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
     Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_",joint_velocities_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt_",joint_velocities_filt_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt",joint_velocities_filt_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/pid_scale",pid_scale_);
 
     return true;
 }

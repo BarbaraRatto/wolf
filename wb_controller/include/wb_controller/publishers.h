@@ -70,39 +70,76 @@ public:
     typedef Result Type;
 };
 
-template<typename data_t> struct IsEigen : std::is_base_of<Eigen::MatrixBase<typename std::decay<data_t>::type>, typename std::decay<data_t>::type > { };
+template<typename data_t> struct IsEigen  : std::is_base_of<Eigen::MatrixBase<typename std::decay<data_t>::type>, typename std::decay<data_t>::type > { };
+template<typename data_t> struct IsScalar : std::is_scalar<typename std::decay<data_t>::type> { };
+
+template<typename data_t> struct TTypeTraits
+{
+    enum { Eigen          = IsEigen<data_t>::value  };
+    enum { Scalar         = IsScalar<data_t>::value };
+    enum { NotImplemented = true };
+
+};
 
 template <typename data_t>
 class RealTimePublisher;
 
 template <typename data_t>
-inline typename TEnableIf<IsEigen<data_t>::value, void>::Type resize_imp(RealTimePublisher<data_t>* obj)
+inline typename TEnableIf<TTypeTraits<data_t>::Eigen, void>::Type resize_imp(RealTimePublisher<data_t>* obj)
 {
-    obj->getPubPtr()->msg_.data.resize(obj->getDataPtr()->size());
+    unsigned int cols = obj->getDataPtr()->cols();
+    unsigned int rows = obj->getDataPtr()->rows();
+    obj->getPubPtr()->msg_.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    obj->getPubPtr()->msg_.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    obj->getPubPtr()->msg_.layout.dim[0].label = "rows";
+    obj->getPubPtr()->msg_.layout.dim[1].label = "cols";
+    obj->getPubPtr()->msg_.layout.dim[0].size = rows;
+    obj->getPubPtr()->msg_.layout.dim[1].size = cols;
+    obj->getPubPtr()->msg_.layout.dim[0].stride = rows*cols;
+    obj->getPubPtr()->msg_.layout.dim[1].stride = cols;
+    obj->getPubPtr()->msg_.layout.data_offset = 0;
+    obj->getPubPtr()->msg_.data.resize(rows*cols);
 }
 
 template <typename data_t>
-inline typename TEnableIf<!IsEigen<data_t>::value, void>::Type resize_imp(RealTimePublisher<data_t>* obj)
+inline typename TEnableIf<TTypeTraits<data_t>::Scalar, void>::Type resize_imp(RealTimePublisher<data_t>* obj)
 {
+    obj->getPubPtr()->msg_.data.resize(1);
 }
 
 template <typename data_t>
-inline typename TEnableIf<IsEigen<data_t>::value, void>::Type publish_imp(RealTimePublisher<data_t>* obj)
+inline typename TEnableIf<TTypeTraits<data_t>::NotImplemented, void>::Type resize_imp(RealTimePublisher<data_t>* /*obj*/)
+{
+    ROS_WARN("Not implemented!");
+}
+
+template <typename data_t>
+inline typename TEnableIf<TTypeTraits<data_t>::Eigen, void>::Type publish_imp(RealTimePublisher<data_t>* obj)
 {
     if(obj->getPubPtr()->trylock() && obj->getDataPtr())
     {
-        for(unsigned int i = 0; i < obj->getDataPtr()->size(); i++)
-        {
-            obj->getPubPtr()->msg_.data[i] = obj->getDataPtr()->operator[](i);
-            obj->getPubPtr()->unlockAndPublish();
-        }
+        const unsigned int & cols = obj->getDataPtr()->cols();
+        const unsigned int & rows = obj->getDataPtr()->rows();
+        for(unsigned int i = 0; i < rows; i++)
+            for(unsigned int j = 0; j < cols; j++)
+                obj->getPubPtr()->msg_.data[i*cols + j] = static_cast<float>(obj->getDataPtr()->operator()(i,j));
+        obj->getPubPtr()->unlockAndPublish();
     }
 }
 
 template <typename data_t>
-inline typename TEnableIf<!IsEigen<data_t>::value, void>::Type publish_imp(RealTimePublisher<data_t>* obj)
+inline typename TEnableIf<TTypeTraits<data_t>::Scalar, void>::Type publish_imp(RealTimePublisher<data_t>* obj)
 {
-    ROS_WARN("Publisher for non Eigen types not defined yet!");
+    if(obj->getPubPtr()->trylock() && obj->getDataPtr())
+    {
+        obj->getPubPtr()->msg_.data[0] = static_cast<float>(*obj->getDataPtr());
+        obj->getPubPtr()->unlockAndPublish();
+    }
+}
+template <typename data_t>
+inline typename TEnableIf<TTypeTraits<data_t>::NotImplemented, void>::Type publish_imp(RealTimePublisher<data_t>* /*obj*/)
+{
+    ROS_WARN("Not implemented!");
 }
 
 template <typename data_t>
@@ -113,26 +150,14 @@ public:
     RealTimePublisher(const ros::NodeHandle& ros_nh, const std::string topic_name, data_t* const data)
         :RealTimePublisherBase<data_t,std_msgs::Float64MultiArray>(ros_nh,topic_name,data)
     {
-
         resize_imp<data_t>(this);
-        /*if(IsEigen<data_t>::value)
-            this->pub_ptr_->msg_.data.resize(this->data_->size());
-        else
-            this->pub_ptr_->msg_.data.resize(1);*/
     }
 
     /** Publish the topic. */
     inline void publish() override
     {
-        /*if(IsEigen<data_t>::value)
-            publish_imp();
-        else
-            publish_imp();*/
-
         publish_imp<data_t>(this);
     }
-
-
 };
 
 class RealTimePublishers
@@ -160,7 +185,7 @@ public:
     void addPublisher(std::shared_ptr<rt_publisher_interface_t> pub_ptr)
     {
         assert(pub_ptr!=false);
-        // Put it into the map with his friends
+        // Put it into the map with its friends
         map_[pub_ptr->getTopic()] = pub_ptr;
     }
 
@@ -170,8 +195,6 @@ public:
     {
         std::shared_ptr<RealTimePublisher<data_t>> new_pub_ptr;
         new_pub_ptr.reset(new RealTimePublisher<data_t>(nh_,topic_name,data_ptr));
-
-        //new_pub_ptr->init(nh_,topic_name,data_ptr);
 
         std::shared_ptr<rt_publisher_interface_t> pub_ptr =
                 std::static_pointer_cast<rt_publisher_interface_t>(new_pub_ptr);

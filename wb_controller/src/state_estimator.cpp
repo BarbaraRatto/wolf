@@ -40,7 +40,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
 
     Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_position",floating_base_position_);
     Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity",floating_base_velocity_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity_qp_",floating_base_velocity_qp_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity_qp",floating_base_velocity_qp_);
     Logger::getLogger().addPublisher(CLASS_NAME"/base_rpy",base_rpy_);
 }
 
