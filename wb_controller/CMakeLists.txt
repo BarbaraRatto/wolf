@@ -33,8 +33,7 @@ add_service_files(FILES
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
-                 ContactForces.msg
-                 Efforts.msg)
+                 ContactForces.msg)
 
 generate_messages(
     DEPENDENCIES

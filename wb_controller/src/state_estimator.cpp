@@ -34,10 +34,14 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     Ear_ = Eigen::Matrix3d::Identity();
     base_R_world_ = Eigen::Matrix3d::Identity();
 
-
     estimation_ = estimation_t::IMU_MAGNETOMETER;
 
     imu_reset_done_ = false;
+
+    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_position",floating_base_position_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity",floating_base_velocity_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity_qp_",floating_base_velocity_qp_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/base_rpy",base_rpy_);
 }
 
 void StateEstimator::setJointPosition(const Eigen::VectorXd& joint_positions)
@@ -170,6 +174,7 @@ void StateEstimator::update(const double& period)
     floating_base_pose_.translation() = floating_base_position_;
 
     xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
+
 }
 
 }

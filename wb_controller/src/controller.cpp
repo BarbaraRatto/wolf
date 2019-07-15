@@ -289,6 +289,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     initPublishers(root_nh,controller_nh);
 
+    Logger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_",joint_velocities_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt_",joint_velocities_filt_);
+
     return true;
 }
 
@@ -594,7 +599,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             init_done_ = true;
         }
 
-
         // FIXME I should add something to the CommandsInterface!!!
         // Get the external reference (interactive marker) for the arm if available
         id_prob_->updateReference(arm_tip_name_);
@@ -640,7 +644,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         // Solver Update
         id_prob_->update();
 
-        // Solve ID
+        // Get the solver solution
         x_ = des_joint_efforts_solver_; // Store the old desired efforts, to apply in case the solver gets mad
         if(!id_prob_->solve(x_))
         {
@@ -766,25 +770,13 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
-    vel_filt_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/vel_filt", 4));
-    vel_filt_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    vel_filt_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    vel_filt_rt_pub_->msg_.name[0] = "x";
-    vel_filt_rt_pub_->msg_.name[1] = "y";
-    vel_filt_rt_pub_->msg_.name[2] = "z";
-    vel_filt_rt_pub_->msg_.name[3] = "roll";
-    vel_filt_rt_pub_->msg_.name[4] = "pitch";
-    vel_filt_rt_pub_->msg_.name[5] = "yaw";
-    for (unsigned int i = 0; i < joint_names_.size(); i++)
-        vel_filt_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
-
-    state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation", 4));
+    /*state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation", 4));
     state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
     state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
 
     state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation_qp", 4));
     state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
-    state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";
+    state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";*/
 
     contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
     contact_forces_pub_->msg_.header.frame_id = "world"; //FIXME
@@ -793,24 +785,6 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     contact_forces_pub_->msg_.contact_positions.resize(4);
     contact_forces_pub_->msg_.contact_forces.resize(4);
     contact_forces_pub_->msg_.des_contact_forces.resize(4);
-
-    imu_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::Imu>(controller_nh, "imu", 4));
-    imu_rt_pub_->msg_.header.frame_id = "trunk_imu"; // FIXME
-
-    imu_filt_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::Imu>(controller_nh, "imu_filt", 4));
-    imu_filt_rt_pub_->msg_.header.frame_id = "trunk_imu"; // FIXME
-
-    efforts_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::Efforts>(controller_nh, "efforts", 4));
-    efforts_pub_->msg_.name.resize(joint_states_.size());
-    efforts_pub_->msg_.solver_efforts.resize(joint_states_.size());
-    efforts_pub_->msg_.pids_efforts.resize(joint_states_.size());
-    efforts_pub_->msg_.des_efforts.resize(joint_states_.size());
-    efforts_pub_->msg_.efforts.resize(joint_states_.size());
-    for (unsigned int i = 0; i < joint_names_.size(); i++)
-        efforts_pub_->msg_.name[i] = joint_names_[i];
-
-    base_rpy_rt_pub_.reset(new realtime_tools::RealtimePublisher<geometry_msgs::Vector3>(controller_nh, "base_rpy", 4));
-    des_base_rpy_rt_pub_.reset(new realtime_tools::RealtimePublisher<geometry_msgs::Vector3>(controller_nh, "des_base_rpy", 4));
 }
 
 void Controller::publish(const ros::Time& time, const ros::Duration& period)
@@ -818,37 +792,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
     // FIXME it should not be there but for the moment I need it here because of the twist reset in the update of the solver:
     if(id_prob_)
         id_prob_->publish(time);
-
-    /*if(base_rpy_rt_pub_.get() && base_rpy_rt_pub_->trylock())
-    {
-        base_rpy_rt_pub_->msg_.x = base_rpy_(0);
-        base_rpy_rt_pub_->msg_.y = base_rpy_(1);
-        base_rpy_rt_pub_->msg_.z = base_rpy_(2);
-
-        base_rpy_rt_pub_->unlockAndPublish();
-    }
-
-    if(des_base_rpy_rt_pub_.get() && des_base_rpy_rt_pub_->trylock())
-    {
-        des_base_rpy_rt_pub_->msg_.x = des_base_rpy_(0);
-        des_base_rpy_rt_pub_->msg_.y = des_base_rpy_(1);
-        des_base_rpy_rt_pub_->msg_.z = des_base_rpy_(2);
-
-        des_base_rpy_rt_pub_->unlockAndPublish();
-    }*/
-
-    if(efforts_pub_.get() && efforts_pub_->trylock())
-    {
-        for(unsigned int i=0; i <joint_names_.size(); i++)
-        {
-            efforts_pub_->msg_.solver_efforts[i] = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS);
-            efforts_pub_->msg_.pids_efforts[i] = des_joint_efforts_pids_(i);
-            efforts_pub_->msg_.des_efforts[i] = des_joint_efforts_(i);
-            efforts_pub_->msg_.efforts[i] = joint_efforts_(i);
-        }
-        efforts_pub_->msg_.header.stamp = time;
-        efforts_pub_->unlockAndPublish();
-    }
 
     if(contact_forces_pub_.get() && contact_forces_pub_->trylock())
     {
@@ -874,7 +817,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
 
     if(ci_joint_states_rt_pub_.get() && ci_joint_states_rt_pub_->trylock())
     {
-
         xbot_model_->getJointPosition(joint_positions_xbot_);
         xbot_model_->getJointVelocity(joint_velocities_xbot_);
 
@@ -888,86 +830,9 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         ci_joint_states_rt_pub_->unlockAndPublish();
     }
 
-    if(vel_filt_rt_pub_.get() && vel_filt_rt_pub_->trylock())
-    {
-        for(unsigned int i = 0; i < joint_velocities_filt_.size(); i++)
-        {
-            vel_filt_rt_pub_->msg_.velocity[i]  = joint_velocities_filt_(i);
-        }
-        vel_filt_rt_pub_->msg_.header.stamp = time;
-        vel_filt_rt_pub_->unlockAndPublish();
-    }
 
-    /*if(state_estimation_rt_pub_.get() && state_estimation_rt_pub_->trylock())
-    {
-        state_estimation_rt_pub_->msg_.pose.pose.position.x     = floating_base_position_(0);
-        state_estimation_rt_pub_->msg_.pose.pose.position.y     = floating_base_position_(1);
-        state_estimation_rt_pub_->msg_.pose.pose.position.z     = floating_base_position_(2);
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.w  = imu_orientation_.w();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.x  = imu_orientation_.x();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.y  = imu_orientation_.y();
-        state_estimation_rt_pub_->msg_.pose.pose.orientation.z  = imu_orientation_.z();
-
-        state_estimation_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_(0);
-        state_estimation_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_(1);
-        state_estimation_rt_pub_->msg_.twist.twist.linear.z     = floating_base_velocity_(2);
-        state_estimation_rt_pub_->msg_.twist.twist.angular.x    = floating_base_velocity_(3);
-        state_estimation_rt_pub_->msg_.twist.twist.angular.y    = floating_base_velocity_(4);
-        state_estimation_rt_pub_->msg_.twist.twist.angular.z    = floating_base_velocity_(5);
-
-        state_estimation_rt_pub_->msg_.header.stamp = time;
-        state_estimation_rt_pub_->unlockAndPublish();
-    }
-    if(state_estimation_qp_rt_pub_.get() && state_estimation_qp_rt_pub_->trylock())
-    {
-        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.x     = floating_base_velocity_qp_(0);
-        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.y     = floating_base_velocity_qp_(1);
-        state_estimation_qp_rt_pub_->msg_.twist.twist.linear.z     = floating_base_velocity_qp_(2);
-        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.x    = floating_base_velocity_qp_(3);
-        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.y    = floating_base_velocity_qp_(4);
-        state_estimation_qp_rt_pub_->msg_.twist.twist.angular.z    = floating_base_velocity_qp_(5);
-
-        state_estimation_qp_rt_pub_->msg_.header.stamp = time;
-        state_estimation_qp_rt_pub_->unlockAndPublish();
-    }*/
-
-    if(imu_rt_pub_.get() && imu_rt_pub_->trylock())
-    {
-        imu_rt_pub_->msg_.orientation.x = imu_orientation_.x();
-        imu_rt_pub_->msg_.orientation.y = imu_orientation_.y();
-        imu_rt_pub_->msg_.orientation.z = imu_orientation_.z();
-        imu_rt_pub_->msg_.orientation.w = imu_orientation_.w();
-
-        imu_rt_pub_->msg_.angular_velocity.x = imu_gyroscope_(0);
-        imu_rt_pub_->msg_.angular_velocity.y = imu_gyroscope_(1);
-        imu_rt_pub_->msg_.angular_velocity.z = imu_gyroscope_(2);
-
-        imu_rt_pub_->msg_.linear_acceleration.x = imu_accelerometer_(0);
-        imu_rt_pub_->msg_.linear_acceleration.y = imu_accelerometer_(1);
-        imu_rt_pub_->msg_.linear_acceleration.z = imu_accelerometer_(2);
-
-        imu_rt_pub_->msg_.header.stamp = time;
-        imu_rt_pub_->unlockAndPublish();
-    }
-
-    if(imu_filt_rt_pub_.get() && imu_filt_rt_pub_->trylock())
-    {
-        imu_filt_rt_pub_->msg_.orientation.x = 0.0;
-        imu_filt_rt_pub_->msg_.orientation.y = 0.0;
-        imu_filt_rt_pub_->msg_.orientation.z = 0.0;
-        imu_filt_rt_pub_->msg_.orientation.w = 1.0;
-
-        imu_filt_rt_pub_->msg_.angular_velocity.x = imu_gyroscope_filt_(0);
-        imu_filt_rt_pub_->msg_.angular_velocity.y = imu_gyroscope_filt_(1);
-        imu_filt_rt_pub_->msg_.angular_velocity.z = imu_gyroscope_filt_(2);
-
-        imu_filt_rt_pub_->msg_.linear_acceleration.x = 0.0;
-        imu_filt_rt_pub_->msg_.linear_acceleration.y = 0.0;
-        imu_filt_rt_pub_->msg_.linear_acceleration.z = 0.0;
-
-        imu_filt_rt_pub_->msg_.header.stamp = time;
-        imu_filt_rt_pub_->unlockAndPublish();
-    }
+    // Logger publishing
+    Logger::getLogger().publish(time);
 }
 
 void Controller::stopping(const ros::Time& /*time*/)

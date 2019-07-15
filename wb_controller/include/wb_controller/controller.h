@@ -38,7 +38,6 @@
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/ControllerServices.h>
 #include <wb_controller/controllerConfig.h>
-#include <wb_controller/Efforts.h>
 // Eigen
 #include <Eigen/Geometry>
 
@@ -176,24 +175,12 @@ private:
     std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Real time publisher - desired joint states */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
-    /** @brief Real time publisher - desired joint states */
-    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> vel_filt_rt_pub_;
-    /** @brief Real time publisher - IMU */
-    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_rt_pub_;
-    /** @brief Real time publisher - IMU Filtered */
-    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_filt_rt_pub_;
     /** @brief Real time publisher - estimated pose */
-    std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_; // FIXME to be removed
+    //std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_; // FIXME to be removed
     /** @brief Real time publisher - estimated qp pose */
-    std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
+    //std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
     /** @brief Real time publisher - contact forces */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
-    /** @brief Real time publisher - Efforts */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::Efforts>> efforts_pub_;
-    /** @brief Real time publisher - des RPY */
-    std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::Vector3>> des_base_rpy_rt_pub_;
-    /** @brief Real time publisher - RPY */
-    std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::Vector3>> base_rpy_rt_pub_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */

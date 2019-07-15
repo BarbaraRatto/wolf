@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <assert.h>
+#include <wb_controller/logger.h>
 
 namespace wb_controller
 {

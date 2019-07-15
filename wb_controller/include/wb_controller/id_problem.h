@@ -392,7 +392,8 @@ public:
 /**
  * @brief The IDProblem class wraps the tasks, constraints and the solver used to solve the ID
  */
-class IDProblem{
+class IDProblem
+{
 
 public:
     typedef boost::shared_ptr<IDProblem> Ptr;
