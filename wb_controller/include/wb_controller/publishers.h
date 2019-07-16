@@ -60,32 +60,29 @@ protected:
 
 };
 
-template <bool Predicate, typename Result = void>
-class TEnableIf;
+template<typename data_t> struct IsEigen     : std::is_base_of<Eigen::MatrixBase<typename std::decay<data_t>::type>, typename std::decay<data_t>::type > { };
+template<typename data_t> struct IsScalar    : std::is_scalar<typename std::decay<data_t>::type> { };
 
-template <typename Result>
-class TEnableIf<true, Result>
-{
-public:
-    typedef Result Type;
-};
+template<typename ...>
+using to_void = void; // maps everything to void, used in non-evaluated contexts
 
-template<typename data_t> struct IsEigen  : std::is_base_of<Eigen::MatrixBase<typename std::decay<data_t>::type>, typename std::decay<data_t>::type > { };
-template<typename data_t> struct IsScalar : std::is_scalar<typename std::decay<data_t>::type> { };
+template<typename T, typename = void>
+struct isStdContainer : std::false_type
+{};
 
-template<typename data_t> struct TTypeTraits
-{
-    enum { Eigen          = IsEigen<data_t>::value  };
-    enum { Scalar         = IsScalar<data_t>::value };
-    enum { NotImplemented = true };
-
-};
+template<typename T>
+struct isStdContainer<T,
+        to_void<decltype(std::declval<T>().begin()),
+                decltype(std::declval<T>().end()),
+                typename T::value_type
+        >> : std::true_type // will  be enabled for iterable objects
+{};
 
 template <typename data_t>
 class RealTimePublisher;
 
-template <typename data_t>
-inline typename TEnableIf<TTypeTraits<data_t>::Eigen, void>::Type resize_imp(RealTimePublisher<data_t>* obj)
+template <typename data_t, typename std::enable_if<IsEigen<data_t>::value,int>::type = 0>
+inline void resize_imp(RealTimePublisher<data_t>* obj)
 {
     unsigned int cols = obj->getDataPtr()->cols();
     unsigned int rows = obj->getDataPtr()->rows();
@@ -101,20 +98,26 @@ inline typename TEnableIf<TTypeTraits<data_t>::Eigen, void>::Type resize_imp(Rea
     obj->getPubPtr()->msg_.data.resize(rows*cols);
 }
 
-template <typename data_t>
-inline typename TEnableIf<TTypeTraits<data_t>::Scalar, void>::Type resize_imp(RealTimePublisher<data_t>* obj)
+template <typename data_t, typename std::enable_if<IsScalar<data_t>::value,int>::type = 1>
+inline void resize_imp(RealTimePublisher<data_t>* obj)
 {
     obj->getPubPtr()->msg_.data.resize(1);
 }
 
-template <typename data_t>
-inline typename TEnableIf<TTypeTraits<data_t>::NotImplemented, void>::Type resize_imp(RealTimePublisher<data_t>* /*obj*/)
+template <typename data_t, typename std::enable_if<isStdContainer<data_t>::value,int>::type = 2>
+inline void resize_imp(RealTimePublisher<data_t>* obj)
 {
-    ROS_WARN("Not implemented!");
+    obj->getPubPtr()->msg_.data.resize(obj->getDataPtr()->size());
 }
 
-template <typename data_t>
-inline typename TEnableIf<TTypeTraits<data_t>::Eigen, void>::Type publish_imp(RealTimePublisher<data_t>* obj)
+//template <typename data_t>
+//inline void resize_imp(RealTimePublisher<data_t>* /*obj*/)
+//{
+//    ROS_WARN("Not implemented!");
+//}
+
+template <typename data_t, typename std::enable_if<IsEigen<data_t>::value,int>::type = 0>
+inline void publish_imp(RealTimePublisher<data_t>* obj)
 {
     if(obj->getPubPtr()->trylock() && obj->getDataPtr())
     {
@@ -127,8 +130,8 @@ inline typename TEnableIf<TTypeTraits<data_t>::Eigen, void>::Type publish_imp(Re
     }
 }
 
-template <typename data_t>
-inline typename TEnableIf<TTypeTraits<data_t>::Scalar, void>::Type publish_imp(RealTimePublisher<data_t>* obj)
+template <typename data_t, typename std::enable_if<IsScalar<data_t>::value,int>::type = 1>
+inline void publish_imp(RealTimePublisher<data_t>* obj)
 {
     if(obj->getPubPtr()->trylock() && obj->getDataPtr())
     {
@@ -136,11 +139,24 @@ inline typename TEnableIf<TTypeTraits<data_t>::Scalar, void>::Type publish_imp(R
         obj->getPubPtr()->unlockAndPublish();
     }
 }
-template <typename data_t>
-inline typename TEnableIf<TTypeTraits<data_t>::NotImplemented, void>::Type publish_imp(RealTimePublisher<data_t>* /*obj*/)
+
+template <typename data_t, typename std::enable_if<isStdContainer<data_t>::value,int>::type = 2>
+inline void publish_imp(RealTimePublisher<data_t>* obj)
 {
-    ROS_WARN("Not implemented!");
+    if(obj->getPubPtr()->trylock() && obj->getDataPtr())
+    {
+        const unsigned int & size = obj->getDataPtr()->size();
+        for(unsigned int i = 0; i < size; i++)
+                obj->getPubPtr()->msg_.data[i] = static_cast<float>(obj->getDataPtr()->operator[](i));
+        obj->getPubPtr()->unlockAndPublish();
+    }
 }
+
+//template <typename data_t>
+//inline void publish_imp(RealTimePublisher<data_t>* /*obj*/)
+//{
+//    ROS_WARN("Not implemented!");
+//}
 
 template <typename data_t>
 class RealTimePublisher : public RealTimePublisherBase<data_t,std_msgs::Float64MultiArray>
