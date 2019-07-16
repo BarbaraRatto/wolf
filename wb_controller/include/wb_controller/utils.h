@@ -12,6 +12,8 @@ namespace wb_controller
 #define FLOATING_BASE_DOFS 6
 #define DT 0.001 // FIXME
 #define THREADS_SLEEP_TIME_ms 4
+#define ESTIMATE_Z
+#define OPEN_LOOP_TRAJECTORY
 
 template <typename T>
 inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)

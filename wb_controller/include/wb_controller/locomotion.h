@@ -330,8 +330,14 @@ public:
 
     void setInitialPose(const Eigen::Affine3d& initial_pose)
     {
+#ifdef OPEN_LOOP_TRAJECTORY
+        // Open loop trajectory
+        initial_pose_ = pose_reference_;
+#else
+        // Closed loop trajectory: to be used if the tracking is good
         initial_pose_ = initial_pose;
         pose_reference_ = initial_pose;
+#endif
     }
 
     bool isFinished()

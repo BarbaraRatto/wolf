@@ -143,13 +143,15 @@ void StateEstimator::update(const double& period)
     xbot_model_->setFloatingBaseOrientation(floating_base_pose_.linear());
     xbot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
     xbot_model_->update();
+
+#ifdef ESTIMATE_Z
+
     // Update the qp estimation based on the new virtual model state
     qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
-    //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
-    floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
+    floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
+    //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
 
     // Estimate z
     double estimated_z = 0;
@@ -169,7 +171,11 @@ void StateEstimator::update(const double& period)
     estimated_z /= feet_in_stance;
 
     floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
-    //floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
+#else
+    // The base does not move
+    floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
+    floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
+#endif
 
     floating_base_pose_.translation() = floating_base_position_;
 
