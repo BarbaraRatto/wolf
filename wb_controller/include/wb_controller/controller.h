@@ -127,8 +127,6 @@ public:
 
 private:
 
-    /** @brief Number of joints */
-    unsigned int num_joints_;
     /** @brief Joint names */
     std::vector<std::string> joint_names_;
     /** @brief Imu sensor name */
