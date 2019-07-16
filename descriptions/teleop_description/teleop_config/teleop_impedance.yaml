@@ -1,0 +1,267 @@
+RobotName: "teleop"
+
+GazeboXBotPlugin:
+  control_rate: 0.001
+  gains:
+    joint1:        {p: 1000, d: 10}
+    joint2:        {p: 1000, d: 10}
+    joint3:        {p: 1000, d: 10}
+    joint4:        {p: 1000, d: 10}
+    joint1:        {p: 1000, d: 10}
+    
+HALInterface:
+  lib_file: "libXBotEcat"
+  lib_name: "ETHERCAT"
+  IJoint: "libXBotEcat_Joint"
+  ISensors:
+
+x_bot_ecat:
+  name: XBotCore
+  sdo_xddp_prefix :
+  # periodic - priority if needed here
+
+#
+ec_board_ctrl :
+  eth_iface: rteth0
+  #eth_iface: eth1
+  #sync_cycle_time_ns: 500000
+  sync_cycle_time_ns: 1000000
+  #sync_cycle_time_ns: 2000000
+  #sync_cycle_time_ns: 5000000
+  #sync_cycle_time_ns: 10000000
+  #sync_cycle_time_ns: 100000000
+  #sync_cycle_time_ns: 0
+  sync_cycle_offset_ns: 1000000000
+  sync_point_ns : 500000
+  power_off_boards: false
+  reset_micro : true
+  
+ec_boards_base :
+  app_mode : run_mode #config_mode
+  #app_mode : config_mode
+  robot_name : NoNe
+  read_SDOs : false
+  use_pipes : true
+  log_level : 1
+  #fault_power_off : true
+  # only for TestESC
+  #use_ecat_pos_as_id : true
+  #
+  urdf_config_file: ../configs/centauro_urdf.yaml
+  joints_poses_file : ../configs/walkimon_poses.yaml
+  #joints_poses_file : ../configs/test_poses.yaml
+
+zmq_pub :
+  base_port : 9000
+  uri : "tcp://*:"
+  fd_timeout_us : 100000
+
+zmq_rep :
+  uri: "tcp://*:5555"
+  zmq_rcvtimeo_ms : 500
+  #pipe_prefix : "/tmp/nrt_pipes/"
+
+microCTRL_stuff: ../configs/microCTRL_config.yaml
+
+ati_config :
+  ati_ip_addr : 192.168.1.1
+  ft_ecat_pos : 1
+  save_calib_matrix : false
+  #calib_mat_file : ../examples/ati_ft6_calib/data/ones.txt
+  calib_mat_file : ../examples/ati_ft6_calib/data/Calib_matrix_Cogimon_right_Foot_ft_147_sens8.txt
+  dump_log : true
+
+
+#############################
+## GENERIC config
+#############################
+
+LpESC_X:
+  sign: 1
+  pos_offset: 0
+  control_mode : pos_3b
+  pid :
+    position: [100000.0 , 0.0 , 1.0]
+
+LpHandESC_X:
+  sign: 1
+  pos_offset: 0
+  control_mode : pos_3b
+  pid :
+    position: [100000.0 , 0.0 , 1.0]
+
+HeriHandESC_X:
+  sign: 1
+  pos_offset: 0
+  control_mode : pos_3b
+  pid :
+    position: [100000.0 , 0.0 , 1.0]
+    
+HpESC_X: &HpESC_X
+  sign: 1
+  pos_offset: 0
+  pid :
+    position: [250.0 , 0.0 , 5.0]
+    mix_position: [800.0, 0.0, 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    impedance:  [0.0, 0.0, 5.0, 0.01, 0.8]
+    
+CentAcESC_X: &CentAcESC_X
+  sign: 1
+  pos_offset: 0
+  max_current_A: 15.0
+  enable_sandbox: false
+  enable_pos_filter: false
+  control_mode : impedance_d4
+  pid :
+    position: [220.0 , 0.0 , 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    impedance:   [500.0, 5.0, 6.0, 0.01, 0.8]
+
+CentAcESC_11: &CentAcESC_X
+  sign: 1
+  pos_offset: 0
+  max_current_A: 10.0
+  enable_sandbox: false
+  enable_pos_filter: false
+  control_mode : impedance_d4
+  pid :
+    position: [220.0 , 0.0 , 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    impedance:   [500.0, 5.0, 6.0, 0.002, 0.8]
+
+CentAcESC_12: 
+  sign: -1
+  pos_offset: 0
+  max_current_A: 15.0
+  enable_sandbox: false
+  enable_pos_filter: false
+  control_mode : impedance_d4
+  pid :
+    position: [220.0 , 0.0 , 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    impedance:   [500.0, 5.0, 6.0, 0.002, 0.8] 
+
+CentAcESC_13: &CentAcESC_X
+  sign: 1
+  pos_offset: 0
+  max_current_A: 15.0
+  enable_sandbox: false
+  enable_pos_filter: false
+  control_mode : impedance_d4
+  pid :
+    position: [220.0 , 0.0 , 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    impedance:   [500.0, 5.0, 6.0, 0.002, 0.8]
+  upd_params : 
+    torqueFixedOffset : 1.  
+
+CentAcESC_14: &CentAcESC_X
+  sign: 1
+  pos_offset: 0
+  max_current_A: 10.0
+  enable_sandbox: false
+  enable_pos_filter: false
+  control_mode : impedance_d4
+  pid :
+    position: [220.0 , 0.0 , 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    impedance:   [500.0, 5.0, 6.0, 0.002, 0.8]
+  upd_params : 
+    torqueFixedOffset : 1.   
+    
+CentAcESC_15: 
+  sign: -1
+  pos_offset: 0
+  max_current_A: 10.0
+  enable_sandbox: false
+  enable_pos_filter: false
+  control_mode : impedance_d4
+  pid :
+    position: [220.0 , 0.0 , 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    impedance:   [500.0, 5.0, 6.55, 0.001, 1.0]     
+
+  aux_pdo : # names defined in SDO index 0x8002 
+     _rd :  [ pos_ref_fb ]
+     _rd :  [ pos_ref_fb, motor_enc_warn, motor_enc_err, link_enc_warn, link_enc_err ]
+     _rd :  [ iq_ref_fb, id_ref_fb ]
+     _wr :  [ ]
+     _wrd : [ "iq_offset&&iq_out_fb" ]
+     _wrd : [ "ts&&rtt" ]
+  
+  NO_upd_params :
+    # orange
+    #Hardware_config : 0x4236
+    #Motor_gear_ratio : 120
+    # A0
+    DOB_filterFrequencyHz : 10
+    voltageFeedforward : 1.0
+    backEmfCompensation : 0.8
+    directTorqueFeedbackGain : 1.0
+    sandBoxAngle : 0.05
+    sandBoxFriction : 0.5
+    gearedMotorInertia : 1.181
+    motorTorqueConstant : 0.078
+    windingResistance : 0.318
+
+  NO_upd_params :
+    posRefFilterFreq : 1
+    motorDirectInductance : 0
+    motorQuadratureInductance : 0
+    crossTermCCGain : 0
+
+Ft6Msp432ESC_X:
+  analog_sample_freq_HZ: 20000
+
+Ft6Msp432ESC_111:
+  analog_sample_freq_HZ: 20000
+
+#############################
+# TEST JOINT
+#############################
+
+CentAcESC_123:
+  #<<: *CentAcESC_X
+  sign: 1
+  pos_offset: 0
+  #max_current_A: 20.0
+  enable_sandbox: false
+  enable_pos_filter: false
+  #control_mode : 00_idle_ctrl
+  #control_mode : pos_3b
+  control_mode : D4_impedance_ctrl
+  ram _cmd : [0x0026]
+  pid :
+    position: [220.0 , 0.0 , 5.0]
+    #  .... tor_K divided by 10000 to respect the int range [0..65536]
+    #impedance:  [0.0, 0.0, 5.0, 0.01, 0.8]
+    impedance:   [250.0, 5.0, 2.0, 0.01, 0.8]
+  aux_pdo : # names defined in SDO index 0x8002 
+     rd :  [ pos_ref_fb ]
+  NO_upd_params:
+    sandBoxAngle : 0.05
+    sandBoxFriction : 0.5
+    
+        
+__CentAcESC_1:
+  sign: 1
+  pos_offset: 0
+  #<<: *CentAcESC_X
+  control_mode : D4_impedance_ctrl
+  pid :
+    # torque control
+    #impedance:  [0.0, 0.0, 5.0, 0.01, 0.8]
+    impedance:   [250.0, 5.0, 2.0, 0.01, 0.8]
+
+# B14
+HpESC_101:
+  <<: *HpESC_X
+  gear_ratio: GR_120
+
+# M17
+HpESC_102:
+  <<: *HpESC_X
+  pid :
+    position: [100.0 , 0.0 , 1.0]
+  gear_ratio: GR_100
