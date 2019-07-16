@@ -40,6 +40,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 {
     ROS_DEBUG_NAMED(CLASS_NAME,"Initialize");
 
+    nh_ = controller_nh;
+
     assert(robot_hw);
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
@@ -291,7 +293,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
     Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_",joint_velocities_);
     Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt",joint_velocities_filt_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/pid_scale",pid_scale_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_solver",des_joint_efforts_solver_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_pids",des_joint_efforts_pids_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
 
     return true;
 }
@@ -607,7 +612,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the task reference for the waist
             id_prob_->_waist->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
-            //rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
+            rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waist->setReference(tmp_affine3d_);
 
@@ -769,14 +774,6 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
     for (unsigned int i = 0; i < joint_names_.size(); i++)
         ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
 
-    /*state_estimation_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation", 4));
-    state_estimation_rt_pub_->msg_.header.frame_id = "world"; //FIXME
-    state_estimation_rt_pub_->msg_.child_frame_id  = "base_link";
-
-    state_estimation_qp_rt_pub_.reset(new realtime_tools::RealtimePublisher<nav_msgs::Odometry>(controller_nh, "state_estimation_qp", 4));
-    state_estimation_qp_rt_pub_->msg_.header.frame_id = "world"; //FIXME
-    state_estimation_qp_rt_pub_->msg_.child_frame_id  = "base_link";*/
-
     contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
     contact_forces_pub_->msg_.header.frame_id = "world"; //FIXME
     contact_forces_pub_->msg_.name.resize(4);
@@ -828,7 +825,6 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         ci_joint_states_rt_pub_->msg_.header.stamp = time;
         ci_joint_states_rt_pub_->unlockAndPublish();
     }
-
 
     // Logger publishing
     Logger::getLogger().publish(time);

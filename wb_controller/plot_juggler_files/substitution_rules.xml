@@ -6,13 +6,6 @@
   <rule pattern="effort.#"   alias="name.#" substitution="@/eff" />
 </RosType>
 
-<RosType name="wb_controller/Efforts">
-  <rule pattern="solver_efforts.#" alias="name.#" substitution="@/solver" />
-  <rule pattern="pids_efforts.#" alias="name.#" substitution="@/pids" />
-  <rule pattern="des_efforts.#"   alias="name.#" substitution="@/des_eff" />
-  <rule pattern="efforts.#"   alias="name.#" substitution="@/eff" />
-</RosType>
-
 <RosType name="wb_controller/ContactForces">
   <rule pattern="des_contact_forces.#" alias="name.#" substitution="@/des" />
   <rule pattern="contact_forces.#" alias="name.#" substitution="@/est" />
