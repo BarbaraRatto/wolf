@@ -10,10 +10,12 @@ namespace wb_controller
 {
 
 #define FLOATING_BASE_DOFS 6
+#define N_LEGS 4
 #define DT 0.001 // FIXME
 #define THREADS_SLEEP_TIME_ms 4
 #define ESTIMATE_Z
 #define OPEN_LOOP_TRAJECTORY
+
 
 template <typename T>
 inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)
@@ -28,12 +30,12 @@ enum leg_id {LF=0,RH,RF,LH};
 inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names)
 {
     // Sort the names following this convention:
-    assert(names.size() == 4);
+    assert(names.size() == N_LEGS);
     std::string lf="lf"; // 0
     std::string rh="rh"; // 1
     std::string rf="rf"; // 2
     std::string lh="lh"; // 3
-    std::vector<std::string> ordered_names(4);
+    std::vector<std::string> ordered_names(N_LEGS);
     for(unsigned int i=0;i<names.size();i++)
     {
         if(names[i].find(lf) != std::string::npos)

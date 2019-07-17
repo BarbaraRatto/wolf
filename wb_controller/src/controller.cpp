@@ -22,7 +22,6 @@ Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
     ,tracking_active_(false)
-    ,contact_force_th_(50.0)
     ,haptic_contact_loop_(false)
     ,stopping_(false)
 {
@@ -217,9 +216,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_pids_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    contacts_.resize(4);
-    contact_forces_.resize(4);
-    world_X_foot_.resize(4);
     des_contact_forces_.resize(24); // 24 = 6 dofs * 4 leg
 
     // Initializations
@@ -249,28 +245,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
-
-    // Contact force estimation reset
-    force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(xbot_model_));
-
-    // Contact estimation reset, FIXME to clean up and add the ARM
-    std::vector<int> dofs = {0,1,2}; // x y z
-    std::vector<std::string> chains, feet_chains;
-    std::vector<std::string> chain(1);
-    chains = xbot_model_->getChainNames();
-
-    for(unsigned int i = 0; i < chains.size(); i++) // Remove virtual_chain and arm
-        if(chains[i].find("arm") == std::string::npos && chains[i].find("virtual_chain") == std::string::npos)
-        {
-            feet_chains.push_back(chains[i]);
-        }
-    assert(feet_chains.size() == 4);
-    feet_chains = sortByLegName(feet_chains);
-    for(unsigned int i=0;i<feet_names_.size();i++)
-    {
-        chain[0] = feet_chains[i];
-        force_torque_sensors_.push_back(force_estimation_->add_link(feet_names_[i],dofs,chain));
-    }
 
     // initialize the filters
     cutoff_hz_gyro_ = 300.;
@@ -306,7 +280,6 @@ void Controller::dynamicReconfigureUpdate()
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
     default_config_.haptic_contact_loop = haptic_contact_loop_;
-    default_config_.contact_force_th = contact_force_th_;
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
@@ -321,6 +294,8 @@ void Controller::dynamicReconfigureUpdate()
         default_config_.base_max_linear_vel = cmds_->getMaxLinearVelocity();
         default_config_.base_max_angular_vel = cmds_->getMaxAngularVelocity();
     }
+    if(state_estimator_)
+        default_config_.contact_force_th = state_estimator_->getContactThreshold();
     if(server_)
         server_->updateConfig(default_config_);
 }
@@ -353,7 +328,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
         break;
     case 7:
-        contact_force_th_ = config.contact_force_th;
+        state_estimator_->setContactThreshold(config.contact_force_th);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
     case 8:
@@ -502,15 +477,12 @@ void Controller::readImu()
     imu_gyroscope_filt_ = imu_gyroscope_filter_.process(imu_gyroscope_);
 }
 
-void Controller::readContactsState()
+/*void Controller::readContactsState()
 {
     force_estimation_->update();
 
     for(unsigned int i=0; i<contacts_.size(); i++)
     {
-        /*normals_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getNormal());
-        contacts_[i] = *contact_sensors_[i].getContactState();
-        contact_forces_[i] = Eigen::Map<const Eigen::Vector3d>(contact_sensors_[i].getForce());*/
 
         xbot_model_->getPose(feet_names_[i],tmp_affine3d_); // tmp_affine3d_ = world_T_foot
 
@@ -536,7 +508,7 @@ void Controller::readContactsState()
         else
             state_estimator_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
     }
-}
+}*/
 
 void Controller::starting(const ros::Time&  /*time*/)
 {
@@ -547,8 +519,6 @@ void Controller::starting(const ros::Time&  /*time*/)
     readJoints();
     // 2) IMUtracking_active_
     readImu();
-    // 3) Read contacts state
-    readContactsState();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
 }
@@ -560,8 +530,18 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     readJoints();
     // 2) IMU
     readImu();
-    // 3) Read contacts state
-    readContactsState();
+
+    // Note that feet and contact sensors are ordered in the same way
+    /*if(tracking_active_)
+    {
+        if(haptic_contact_loop_)
+            state_estimator_->setContactState(feet_names_[i],contacts_[i]);
+        else
+            state_estimator_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
+    }
+    else
+        state_estimator_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
+        */
 
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
@@ -575,11 +555,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // FIXME I don't like that...
     // Give to the gait_generator the contact status of the feet
-    if(haptic_contact_loop_)
+    /*if(haptic_contact_loop_)
     {
         for(unsigned int i = 0; i<feet_names_.size(); i++)
             gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
-    }
+    }*/
 
     cmds_->update(period.toSec());
 
@@ -594,7 +574,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
             // when the robot is grounded.
-            //cmds_->initializeFeetPosition();
+            state_estimator_->toggleContactsEstimation();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
@@ -797,14 +777,14 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
         for(unsigned int i=0; i <feet_names_.size(); i++)
         {
             contact_forces_pub_->msg_.name[i] = feet_names_[i];
-            contact_forces_pub_->msg_.contact[i] = contacts_[i];
-            contact_forces_pub_->msg_.contact_positions[i].x = world_X_foot_[i](0);
-            contact_forces_pub_->msg_.contact_positions[i].y = world_X_foot_[i](1);
-            contact_forces_pub_->msg_.contact_positions[i].z = world_X_foot_[i](2);
+            contact_forces_pub_->msg_.contact[i] = state_estimator_->getContacts()[i];
+            contact_forces_pub_->msg_.contact_positions[i].x = state_estimator_->getFeetPositionInWorld()[i](0);
+            contact_forces_pub_->msg_.contact_positions[i].y = state_estimator_->getFeetPositionInWorld()[i](1);
+            contact_forces_pub_->msg_.contact_positions[i].z = state_estimator_->getFeetPositionInWorld()[i](2);
 
-            contact_forces_pub_->msg_.contact_forces[i].force.x = contact_forces_[i](0);
-            contact_forces_pub_->msg_.contact_forces[i].force.y = contact_forces_[i](1);
-            contact_forces_pub_->msg_.contact_forces[i].force.z = contact_forces_[i](2);
+            contact_forces_pub_->msg_.contact_forces[i].force.x = state_estimator_->getContactForces()[i](0);
+            contact_forces_pub_->msg_.contact_forces[i].force.y = state_estimator_->getContactForces()[i](1);
+            contact_forces_pub_->msg_.contact_forces[i].force.z = state_estimator_->getContactForces()[i](2);
 
             contact_forces_pub_->msg_.des_contact_forces[i].force.x = des_contact_forces_.segment(6*i,3)(0);
             contact_forces_pub_->msg_.des_contact_forces[i].force.y = des_contact_forces_.segment(6*i,3)(1);

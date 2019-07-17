@@ -7,6 +7,7 @@
 #include <atomic>
 #include <XBotInterface/ModelInterface.h>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
+#include <cartesian_interface/utils/estimation/ForceEstimation.h>
 #include <wb_controller/locomotion.h>
 
 namespace wb_controller
@@ -46,13 +47,33 @@ public:
 
     void setContactState(const std::string& foot_name, const bool& contact_state);
 
+    void setContactThreshold(const double& th);
+
     const Eigen::Affine3d& getFloatingBasePose() const;
 
     const Eigen::Vector3d& getFloatingBasePosition() const;
 
     const Eigen::Vector3d& getFloatingBaseOrientationRPY() const;
 
+    double getContactThreshold();
+
+    const std::vector<Eigen::Vector3d>& getContactForces() const;
+
+    const std::vector<bool>& getContacts() const;
+
+    const std::vector<Eigen::Vector3d>& getFeetPositionInWorld() const;
+
+    const std::vector<Eigen::Vector3d>& getFeetPositionInBase() const;
+
+    void resetContactState();
+
+    void toggleContactsEstimation();
+
 private:
+
+    void updateFloatingBase(const double& period);
+
+    void updateContactState();
 
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
@@ -74,6 +95,25 @@ private:
     Eigen::VectorXd floating_base_velocity_qp_;
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
     Eigen::Vector3d base_rpy_;
+    /** @brief Contact estimation */
+    XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
+    /** @brief Contact estimation */
+    std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
+    /** @brief Feet positions w.r.t base */
+    std::vector<Eigen::Vector3d> base_X_foot_;
+    /** @brief Feet positions w.r.t world */
+    std::vector<Eigen::Vector3d> world_X_foot_;
+    /** @brief GRF contacts */
+    std::vector<bool> contacts_;
+    /** @brief GRF contact forces */
+    std::vector<Eigen::Vector3d> contact_forces_;
+    /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
+    is consired true */
+    std::atomic<double> contact_force_th_;
+
+    std::atomic<bool> contacts_estimation_active_;
+
+    Eigen::Vector3d terrain_normal_;
 
     Eigen::Matrix3d Ear_;
 
@@ -85,6 +125,8 @@ private:
     Eigen::Matrix3d tmp_matrix3d_;
 
     Eigen::Affine3d tmp_affine3d_;
+
+    Eigen::Vector3d tmp_vector3d_;
 
     XBot::ModelInterface::Ptr xbot_model_;
 
