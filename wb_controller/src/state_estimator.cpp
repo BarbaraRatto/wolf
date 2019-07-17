@@ -150,8 +150,8 @@ void StateEstimator::update(const double& period)
     qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
 
-    floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
-    //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
+    floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
 
     // Estimate z
     double estimated_z = 0;
