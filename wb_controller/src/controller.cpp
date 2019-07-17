@@ -428,9 +428,15 @@ void Controller::toggleHapticContactLoop()
     haptic_contact_loop_=!haptic_contact_loop_;
 
     if(haptic_contact_loop_)
+    {
+        gait_generator_->enableHapticContactLoop();
         ROS_INFO("Haptic contact loop is ON");
+    }
     else
+    {
+        gait_generator_->disableHapticContactLoop();
         ROS_INFO("Haptic contact loop is OFF");
+    }
 }
 
 void Controller::toggleSolver()
@@ -571,12 +577,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Give to the gait_generator the contact status of the feet
     if(haptic_contact_loop_)
     {
-        gait_generator_->enableHapticContactLoop();
         for(unsigned int i = 0; i<feet_names_.size(); i++)
             gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
     }
-    else
-        gait_generator_->disableHapticContactLoop();
 
     cmds_->update(period.toSec());
 
