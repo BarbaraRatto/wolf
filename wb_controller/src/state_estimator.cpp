@@ -37,15 +37,19 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     contact_forces_.resize(N_LEGS);
     world_X_foot_.resize(N_LEGS);
     base_X_foot_.resize(N_LEGS);
+    world_T_foot_.resize(N_LEGS);
+    base_T_foot_.resize(N_LEGS);
 
     contacts_estimation_active_ = false;
 
-    resetContactState();
-
     for(unsigned int i=0;i<feet_names.size();i++)
     {
+        contacts_[i] = true;
+        contact_forces_[i] = Eigen::Vector3d::Zero();
         world_X_foot_[i] = Eigen::Vector3d::Zero();
         base_X_foot_[i] = Eigen::Vector3d::Zero();
+        world_T_foot_[i] = Eigen::Affine3d::Identity();
+        base_T_foot_[i] = Eigen::Affine3d::Identity();
     }
 
     Ear_ = Eigen::Matrix3d::Identity();
@@ -154,20 +158,19 @@ const std::vector<Eigen::Vector3d>& StateEstimator::getFeetPositionInBase() cons
     return base_X_foot_;
 }
 
-void StateEstimator::resetContactState()
+const std::vector<Eigen::Affine3d>& StateEstimator::getFeetPoseInWorld() const
 {
-    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+    return world_T_foot_;
+}
 
-    for(unsigned int i=0;i<feet_names.size();i++)
-    {
-        contacts_[i] = true;
-        contact_forces_[i] = Eigen::Vector3d::Zero();
-    }
+const std::vector<Eigen::Affine3d>& StateEstimator::getFeetPoseInBase() const
+{
+    return base_T_foot_;
 }
 
 void StateEstimator::toggleContactsEstimation()
 {
-    contacts_estimation_active_!=contacts_estimation_active_;
+    contacts_estimation_active_=!contacts_estimation_active_;
 
     if(contacts_estimation_active_)
         ROS_INFO("Contacts estimation is ON");
@@ -182,27 +185,16 @@ void StateEstimator::update(const double& period)
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
         // Feet position in world
-        xbot_model_->getPose(feet_names[i],tmp_affine3d_);
-        world_X_foot_[i] = tmp_affine3d_.translation();
+        xbot_model_->getPose(feet_names[i],world_T_foot_[i]);
+        world_X_foot_[i] = world_T_foot_[i].translation();
         // Feet position in base/trunk
-        xbot_model_->getPose(feet_names[i],"base_link",tmp_affine3d_);
-        base_X_foot_[i] = tmp_affine3d_.translation();
+        xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_[i]);
+        base_X_foot_[i] = base_T_foot_[i].translation();
     }
 
-    if(contacts_estimation_active_)
-        updateContactState();
-    else
-        resetContactState();
-
-    for(unsigned int i=0; i<contacts_.size(); i++)
-    {
-        // FIXME here we assume to be using the haptic loop
-        qp_estimation_->setContactState(feet_names[i],contacts_[i]);
-        gait_generator_->setContact(feet_names[i],contacts_[i]);
-    }
+    updateContactState();
 
     updateFloatingBase(period);
-
 }
 
 void StateEstimator::updateContactState()
@@ -216,11 +208,18 @@ void StateEstimator::updateContactState()
     {
         force_torque_sensors_[i]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
 
-        tmp_vector3d_ = tmp_affine3d_ * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
+        tmp_vector3d_ = world_T_foot_[i] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
 
-        contacts_[i] = (tmp_vector3d_.dot(terrain_normal_) >= contact_force_th_ ? true : false);
+        if(contacts_estimation_active_)
+            contacts_[i] = (tmp_vector3d_.dot(terrain_normal_) >= contact_force_th_ ? true : false);
+        else
+            contacts_[i] = true;
 
         contact_forces_[i] = tmp_vector3d_;
+
+        // FIXME here we assume to be using the haptic loop
+        qp_estimation_->setContactState(feet_names[i],contacts_[i]);
+        gait_generator_->setContact(feet_names[i],contacts_[i]);
     }
 }
 

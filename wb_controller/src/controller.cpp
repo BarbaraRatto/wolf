@@ -239,7 +239,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
     server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
-    gait_generator_.reset(new GaitGenerator(0.8,feet_names_,hips_names_,"crawl","ellipse"));
+    gait_generator_.reset(new GaitGenerator(feet_names_,hips_names_,"crawl","ellipse"));
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
 
     state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
@@ -402,14 +402,16 @@ void Controller::toggleHapticContactLoop()
 {
     haptic_contact_loop_=!haptic_contact_loop_;
 
+    state_estimator_->toggleContactsEstimation();
+
     if(haptic_contact_loop_)
     {
-        gait_generator_->enableHapticContactLoop();
+        //gait_generator_->enableHapticContactLoop();
         ROS_INFO("Haptic contact loop is ON");
     }
     else
     {
-        gait_generator_->disableHapticContactLoop();
+        //gait_generator_->disableHapticContactLoop();
         ROS_INFO("Haptic contact loop is OFF");
     }
 }
@@ -550,7 +552,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
     state_estimator_->update(period.toSec());
 
-    // Set Default values
+    // Set default values for the joints
     des_joint_positions_ = qhome_;
 
     // FIXME I don't like that...
@@ -574,7 +576,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
             // when the robot is grounded.
-            state_estimator_->toggleContactsEstimation();
+            //state_estimator_->toggleContactsEstimation();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());

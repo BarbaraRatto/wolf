@@ -65,7 +65,9 @@ public:
 
     const std::vector<Eigen::Vector3d>& getFeetPositionInBase() const;
 
-    void resetContactState();
+    const std::vector<Eigen::Affine3d>& getFeetPoseInWorld() const;
+
+    const std::vector<Eigen::Affine3d>& getFeetPoseInBase() const;
 
     void toggleContactsEstimation();
 
@@ -103,6 +105,10 @@ private:
     std::vector<Eigen::Vector3d> base_X_foot_;
     /** @brief Feet positions w.r.t world */
     std::vector<Eigen::Vector3d> world_X_foot_;
+    /** @brief Feet pose w.r.t base */
+    std::vector<Eigen::Affine3d> base_T_foot_;
+    /** @brief Feet pose w.r.t world */
+    std::vector<Eigen::Affine3d> world_T_foot_;
     /** @brief GRF contacts */
     std::vector<bool> contacts_;
     /** @brief GRF contact forces */
