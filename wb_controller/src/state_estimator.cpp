@@ -59,6 +59,8 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
 
     imu_reset_done_ = false;
 
+    haptic_contact_loop_active_ = false;
+
     contact_force_th_ = 50.0; // [N]
 
     // Contact force estimation reset
@@ -168,14 +170,29 @@ const std::vector<Eigen::Affine3d>& StateEstimator::getFeetPoseInBase() const
     return base_T_foot_;
 }
 
-void StateEstimator::toggleContactsEstimation()
+void StateEstimator::toggleHapticContactLoop()
 {
-    contacts_estimation_active_=!contacts_estimation_active_;
+    haptic_contact_loop_active_=!haptic_contact_loop_active_;
 
-    if(contacts_estimation_active_)
-        ROS_INFO("Contacts estimation is ON");
+    if(haptic_contact_loop_active_)
+        gait_generator_->enableHapticContactLoop();
     else
-        ROS_INFO("Contacts estimation is OFF");
+        gait_generator_->disableHapticContactLoop();
+}
+
+void StateEstimator::startContactsEstimation()
+{
+    contacts_estimation_active_ = true;
+
+    ROS_INFO("Start contact estimation");
+
+}
+
+void StateEstimator::stopContactsEstimation()
+{
+    contacts_estimation_active_ = false;
+
+    ROS_INFO("Stop contact estimation: the contacts state are forced to TRUE");
 }
 
 void StateEstimator::update(const double& period)
@@ -217,9 +234,13 @@ void StateEstimator::updateContactState()
 
         contact_forces_[i] = tmp_vector3d_;
 
-        // FIXME here we assume to be using the haptic loop
-        qp_estimation_->setContactState(feet_names[i],contacts_[i]);
-        gait_generator_->setContact(feet_names[i],contacts_[i]);
+        if(haptic_contact_loop_active_)
+        {
+            qp_estimation_->setContactState(feet_names[i],contacts_[i]);
+            gait_generator_->setContactState(feet_names[i],contacts_[i]);
+        }
+        else
+            qp_estimation_->setContactState(feet_names[i],gait_generator_->getContactState(feet_names[i]));
     }
 }
 

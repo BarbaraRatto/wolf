@@ -22,7 +22,7 @@ Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
     ,tracking_active_(false)
-    ,haptic_contact_loop_(false)
+    ,haptic_contact_loop_active_(false)
     ,stopping_(false)
 {
 }
@@ -279,7 +279,7 @@ void Controller::dynamicReconfigureUpdate()
 {
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
-    default_config_.haptic_contact_loop = haptic_contact_loop_;
+    default_config_.toggle_haptic = haptic_contact_loop_active_;
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
@@ -400,20 +400,14 @@ bool Controller::setDutyCycle(const double& duty_cycle)
 
 void Controller::toggleHapticContactLoop()
 {
-    haptic_contact_loop_=!haptic_contact_loop_;
+    haptic_contact_loop_active_=!haptic_contact_loop_active_;
 
-    state_estimator_->toggleContactsEstimation();
+    state_estimator_->toggleHapticContactLoop();
 
-    if(haptic_contact_loop_)
-    {
-        //gait_generator_->enableHapticContactLoop();
+    if(haptic_contact_loop_active_)
         ROS_INFO("Haptic contact loop is ON");
-    }
     else
-    {
-        //gait_generator_->disableHapticContactLoop();
         ROS_INFO("Haptic contact loop is OFF");
-    }
 }
 
 void Controller::toggleSolver()
@@ -479,39 +473,6 @@ void Controller::readImu()
     imu_gyroscope_filt_ = imu_gyroscope_filter_.process(imu_gyroscope_);
 }
 
-/*void Controller::readContactsState()
-{
-    force_estimation_->update();
-
-    for(unsigned int i=0; i<contacts_.size(); i++)
-    {
-
-        xbot_model_->getPose(feet_names_[i],tmp_affine3d_); // tmp_affine3d_ = world_T_foot
-
-        world_X_foot_[i] = tmp_affine3d_.translation(); //world_X_foot_
-
-        force_torque_sensors_[i]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
-
-        tmp_vector3d_ = tmp_affine3d_ * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
-
-        Eigen::Vector3d terrain_normal(0,0,1); // TODO terrain estimation
-
-        contacts_[i] = (tmp_vector3d_.dot(terrain_normal) >= contact_force_th_ ? true : false); // Use only the z
-        contact_forces_[i] = tmp_vector3d_;
-
-        // Note that feet and contact sensors are ordered in the same way
-        if(tracking_active_)
-        {
-            if(haptic_contact_loop_)
-                state_estimator_->setContactState(feet_names_[i],contacts_[i]);
-            else
-                state_estimator_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
-        }
-        else
-            state_estimator_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
-    }
-}*/
-
 void Controller::starting(const ros::Time&  /*time*/)
 {
     ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller");
@@ -519,7 +480,7 @@ void Controller::starting(const ros::Time&  /*time*/)
     // Read from the hardware interfaces:
     // 1) Joints
     readJoints();
-    // 2) IMUtracking_active_
+    // 2) IMU
     readImu();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
@@ -533,18 +494,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 2) IMU
     readImu();
 
-    // Note that feet and contact sensors are ordered in the same way
-    /*if(tracking_active_)
-    {
-        if(haptic_contact_loop_)
-            state_estimator_->setContactState(feet_names_[i],contacts_[i]);
-        else
-            state_estimator_->setContactState(feet_names_[i],gait_generator_->getContact(feet_names_[i]));
-    }
-    else
-        state_estimator_->setContactState(feet_names_[i],true); // Keep the contacts state true until we start the tracking
-        */
-
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
@@ -555,14 +504,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set default values for the joints
     des_joint_positions_ = qhome_;
 
-    // FIXME I don't like that...
-    // Give to the gait_generator the contact status of the feet
-    /*if(haptic_contact_loop_)
-    {
-        for(unsigned int i = 0; i<feet_names_.size(); i++)
-            gait_generator_->setContact(feet_names_[i],contacts_[i]); // Used to close the loop on the feet state machine with the haptic sensor
-    }*/
-
     cmds_->update(period.toSec());
 
     if(cmds_->getCmd() == CommandsInterface::HOLD)
@@ -572,11 +513,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     if(solver_started_) // Use the ID solver to calculate the torques
     {
-        if(!init_done_)
+        if(!init_done_) // FIXME Prepare a proper start up and rest procedure
         {
             // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
             // when the robot is grounded.
             //state_estimator_->toggleContactsEstimation();
+            state_estimator_->startContactsEstimation();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
@@ -665,7 +607,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
         {
             des_joint_p_gain_[i] = pid_scale_ * joint_p_gain_[i];
-            des_joint_i_gain_[i] = 0.0;
+            des_joint_i_gain_[i] = pid_scale_ * joint_i_gain_[i];
             des_joint_d_gain_[i] = pid_scale_ * joint_d_gain_[i];
         }
     }

@@ -69,7 +69,11 @@ public:
 
     const std::vector<Eigen::Affine3d>& getFeetPoseInBase() const;
 
-    void toggleContactsEstimation();
+    void startContactsEstimation();
+
+    void stopContactsEstimation();
+
+    void toggleHapticContactLoop();
 
 private:
 
@@ -118,6 +122,8 @@ private:
     std::atomic<double> contact_force_th_;
 
     std::atomic<bool> contacts_estimation_active_;
+
+    std::atomic<bool> haptic_contact_loop_active_;
 
     Eigen::Vector3d terrain_normal_;
 

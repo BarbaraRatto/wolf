@@ -130,8 +130,6 @@ private:
     std::vector<std::string> joint_names_;
     /** @brief Imu sensor name */
     std::string imu_name_;
-    /** @brief Joint states for reading */
-    //std::vector<hardware_interface::JointStateHandle> joint_states_;
     /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
     std::vector<hardware_interface::JointHandle> joint_states_;
     /** @brief IMU sensors */
@@ -193,7 +191,7 @@ private:
     /** @brief Activate tracking */
     std::atomic<bool> tracking_active_;
     /** @brief Activate the contact haptic loop */
-    std::atomic<bool> haptic_contact_loop_;
+    std::atomic<bool> haptic_contact_loop_active_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
@@ -277,11 +275,6 @@ private:
          * @brief update floating base state
          */
     void stateEstimation();
-
-    /**
-         * @brief update the contacts state
-         */
-    void readContactsState();
 
     /**
          * @brief init the ROS publishers

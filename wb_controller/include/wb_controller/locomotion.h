@@ -120,8 +120,8 @@ public:
 
             if(swing_frequency_>0)
                 half_swing_time = 1/(2*swing_frequency_);
-
-
+            // If swing frequency is geq than 0
+            // deactivate the contact sensing for half of the swing time
             if(contact && active_time_>=half_swing_time)
             {
                 calculateTimes();
@@ -566,7 +566,7 @@ public:
         change_gait_ = false;
         schedule_changed_ = true; // At the beginning is already changed no?
         activate_swing_ = false;
-        use_haptic_contact_loop_ = false;
+        haptic_contact_loop_active_ = false;
 
         gait_type_ = gait_type;
     }
@@ -651,20 +651,20 @@ public:
 
     void enableHapticContactLoop()
     {
-        use_haptic_contact_loop_ = true;
+        haptic_contact_loop_active_ = true;
     }
 
     void disableHapticContactLoop()
     {
-        use_haptic_contact_loop_ = false;
+        haptic_contact_loop_active_ = false;
     }
 
-    void setContact(const std::string& foot_name, const bool& contact)
+    void setContactState(const std::string& foot_name, const bool& contact)
     {
         feet_[foot_name].is_in_contact = contact;
     }
 
-    const bool& getContact(const std::string& foot_name)
+    const bool& getContactState(const std::string& foot_name)
     {
         return feet_[foot_name].is_in_contact;
     }
@@ -798,8 +798,8 @@ public:
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
 
-            //if(!use_haptic_contact_loop_)
-            //    it->second.is_in_contact = it->second.trajectory->isFinished(); // OpenLoop
+            if(!haptic_contact_loop_active_)
+                it->second.is_in_contact = it->second.trajectory->isFinished(); // OpenLoop
 
             it->second.state_machine->update(period,it->second.is_in_contact);
 
@@ -889,8 +889,7 @@ private:
     std::atomic<bool> change_gait_;
     std::atomic<bool> schedule_changed_;
     std::atomic<bool> activate_swing_;
-
-    bool use_haptic_contact_loop_;
+    std::atomic<bool> haptic_contact_loop_active_;
 
     std::vector<std::string> feet_names_;
     std::vector<std::string> hips_names_;
