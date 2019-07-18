@@ -213,15 +213,6 @@ public:
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
         }
-        else if(std::strcmp(gait_type.c_str(),"bound")==0)
-        {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RH],1));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RF],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LH],1));
-            next_feet_to_move_.resize(2);
-            max_priority_ = 1;
-        }
         else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
         {
             schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
