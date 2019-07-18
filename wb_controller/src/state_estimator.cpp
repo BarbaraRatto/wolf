@@ -61,7 +61,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
 
     haptic_contact_loop_active_ = false;
 
-    contact_force_th_ = 50.0; // [N]
+    contact_force_th_ = 0.0; // [N]
 
     // Contact force estimation reset
     force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(xbot_model_));

@@ -54,6 +54,8 @@ public:
     void setBaseVelocityScaleYaw(const double scale);
     void setMaxLinearVelocity(const double max);
     void setMaxAngularVelocity(const double max);
+    void setMaxStepHeight(const double max);
+    void setMaxStepLength(const double max);
 
     // Gets
     unsigned int getCmd();
@@ -65,6 +67,8 @@ public:
     const double& getBaseHeight() const ;
     double getMaxLinearVelocity() const ;
     double getMaxAngularVelocity() const ;
+    double getMaxStepHeight() const ;
+    double getMaxStepLength() const ;
 
 private:
 
@@ -98,6 +102,8 @@ private:
     std::atomic<double>  base_angular_velocity_scale_yaw_;
     std::atomic<double>  base_linear_velocity_max_;
     std::atomic<double>  base_angular_velocity_max_;
+    std::atomic<double>  step_height_max_;
+    std::atomic<double>  step_length_max_;
 
     /** @brief Base linear velocity w.r.t horizontal frame
      * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
@@ -150,8 +156,6 @@ private:
     std::vector<Eigen::Vector3d> hf_X_virtual_hips_;
 
     double yaw_base_;
-    double step_height_max_;
-    double step_length_max_;
     double step_length_;
     double step_height_;
 };

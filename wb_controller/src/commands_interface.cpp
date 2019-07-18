@@ -32,8 +32,8 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
     base_angular_velocity_scale_pitch_ = 0.0;
     base_angular_velocity_scale_yaw_ = 0.0;
 
-    base_linear_velocity_max_ = 0.2; // [m/s]
-    base_angular_velocity_max_ = 0.03; // [rad/s]
+    base_linear_velocity_max_ = 0.0; // [m/s]
+    base_angular_velocity_max_ = 0.0; // [rad/s]
 
     base_rotation_reference_ = Eigen::Matrix3d::Identity();
     base_position_ = base_orientation_ = Eigen::Vector3d::Zero();
@@ -212,7 +212,7 @@ void CommandsInterface::calculateFeetStep()
             step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
             // else
             //    step_length_ = 0.0;
-            step_height_ = 0.05; // FIXME
+            //step_height_ = 0.05; // FIXME
 
             if(step_length_ > step_length_max_)
             {
@@ -220,6 +220,7 @@ void CommandsInterface::calculateFeetStep()
                 ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step length is greater than: "<<step_length_max_);
             }
 
+            step_height_ = step_height_max_; // FIXME for the moment we set the step heigh at the max value
             if(step_height_ > step_height_max_)
             {
                 step_height_ = step_height_max_;
@@ -440,6 +441,16 @@ void CommandsInterface::setMaxAngularVelocity(const double max)
     base_angular_velocity_max_ = max;
 }
 
+void CommandsInterface::setMaxStepHeight(const double max)
+{
+    step_height_max_ = max;
+}
+
+void CommandsInterface::setMaxStepLength(const double max)
+{
+    step_length_max_ = max;
+}
+
 // Gets
 unsigned int CommandsInterface::getCmd()
 {
@@ -484,6 +495,16 @@ double CommandsInterface::getMaxLinearVelocity() const
 double CommandsInterface::getMaxAngularVelocity() const
 {
     return base_angular_velocity_max_;
+}
+
+double CommandsInterface::getMaxStepHeight() const
+{
+    return step_height_max_;
+}
+
+double CommandsInterface::getMaxStepLength() const
+{
+    return step_length_max_;
 }
 
 }; // namespace

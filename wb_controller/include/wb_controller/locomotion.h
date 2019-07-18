@@ -552,7 +552,7 @@ public:
             feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
         }
 
-        setSwingFrequency(3.3);
+        setSwingFrequency(0.0);
 
         gait_buffer_.resize(2);
 
