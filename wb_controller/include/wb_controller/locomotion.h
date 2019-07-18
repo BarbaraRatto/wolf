@@ -191,7 +191,7 @@ public:
     {
         ROS_INFO_STREAM("Selected " << gait_type << " gait");
 
-        assert(feet_names.size() == 4);
+        assert(feet_names.size() == N_LEGS);
 
         auto ordered_feet_names = sortByLegName(feet_names);
 
