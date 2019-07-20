@@ -23,6 +23,10 @@ public:
         swing_frequency_ = 0.0;
         reset();
         state_ = states::INIT;
+        // We assume that the state machine starts as it completed a full swing cycle
+        // i.e. swing + stance, in this way isCycleEnded returns true.
+        // This is useful to set the initial pose in the commands interface
+        prev_state_ = states::STANCE;
     }
 
     bool isSwing()
@@ -68,6 +72,14 @@ public:
     bool isLiftOff()
     {
         if(prev_state_ == states::INIT && state_ == states::SWING)
+            return true;
+        else
+            return false;
+    }
+
+    bool isCycleEnded()
+    {
+        if(prev_state_ == states::STANCE && state_ == states::INIT)
             return true;
         else
             return false;
@@ -626,6 +638,11 @@ public:
     bool isLiftOff(const std::string& foot_name)
     {
         return feet_[foot_name].state_machine->isLiftOff();
+    }
+
+    bool isCycleEnded(const std::string& foot_name)
+    {
+        return feet_[foot_name].state_machine->isCycleEnded();
     }
 
     bool isScheduleChanged()

@@ -148,7 +148,7 @@ void CommandsInterface::update(const double& period, const Eigen::Vector3d& base
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
         // Set the initial pose for the next swing
-        if(gait_generator_->isLiftOff(feet_names[i]))
+        if(gait_generator_->isCycleEnded(feet_names[i]))
             initializeFootPosition(feet_names[i]);
 
         gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
@@ -236,7 +236,6 @@ void CommandsInterface::calculateFeetStep()
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
-
         }
         else
         {
