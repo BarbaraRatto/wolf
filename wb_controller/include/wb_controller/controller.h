@@ -128,10 +128,10 @@ private:
 
     /** @brief Joint names */
     std::vector<std::string> joint_names_;
-    /** @brief Imu sensor name */
-    std::string imu_name_;
     /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
     std::vector<hardware_interface::JointHandle> joint_states_;
+    /** @brief IMU sensor name */
+    std::string imu_name_;
     /** @brief IMU sensors */
     hardware_interface::ImuSensorHandle imu_sensor_;
     /** @brief Joint positions */
@@ -234,12 +234,6 @@ private:
     CommandsInterface::Ptr cmds_;
     /** @brief State estimator */
     StateEstimator::Ptr state_estimator_;
-    /** @brief Support temporary Affine3d */
-    Eigen::Affine3d tmp_affine3d_;
-    /** @brief Support temporary Vector3d */
-    Eigen::Vector3d tmp_vector3d_;
-    /** @brief Support temporary Matrix3d */
-    Eigen::Matrix3d tmp_matrix3d_;
     /** @brief pid scale, range between 0 and 1. 0 the pid is deactivated, 1 the pid is providing full torque */
     std::atomic<double> pid_scale_;
     /** @brief qdot_filter */
@@ -250,6 +244,12 @@ private:
     std::atomic<double> cutoff_hz_gyro_;
     /** @brief cutoff_hz_ */
     std::atomic<double> cutoff_hz_qdot_;
+    /** @brief Support temporary Affine3d */
+    Eigen::Affine3d tmp_affine3d_;
+    /** @brief Support temporary Vector3d */
+    Eigen::Vector3d tmp_vector3d_;
+    /** @brief Support temporary Matrix3d */
+    Eigen::Matrix3d tmp_matrix3d_;
 
     /**
          * @brief thread body for the odometry publisher
