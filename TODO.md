@@ -1,11 +1,10 @@
 tests and profiling
-analyze atomic
 check the FIXME around the code clean up
 package opensot
-remove IK
-startup
+startup procedure and solver reset
 clean the descriptions, load the homing from the srdf
 remove sensors and clean up the urdfs!
-add logger
+matlab logger
 add com/cop to stabilize the robot at low freq swings
 add feet tasks in joint space
+remove arm
