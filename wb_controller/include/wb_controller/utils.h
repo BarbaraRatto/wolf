@@ -5,6 +5,9 @@
 #include <vector>
 #include <assert.h>
 #include <wb_controller/logger.h>
+#include <XBotInterface/TypedefAndEnums.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Twist.h>
 
 namespace wb_controller
 {
@@ -16,6 +19,46 @@ namespace wb_controller
 #define ESTIMATE_Z
 #define OPEN_LOOP_TRAJECTORY
 
+inline void affine3dToPose(const Eigen::Affine3d& affine3d, geometry_msgs::Pose& pose)
+{
+    // Translation
+    pose.position.x = affine3d.translation().x();
+    pose.position.y = affine3d.translation().y();
+    pose.position.z = affine3d.translation().z();
+    // Note unfortunately affine3d can not be converted in quaternion directly...
+    // Rotation
+    pose.orientation.x = static_cast<Eigen::Quaterniond>(affine3d.linear()).x();
+    pose.orientation.y = static_cast<Eigen::Quaterniond>(affine3d.linear()).y();
+    pose.orientation.z = static_cast<Eigen::Quaterniond>(affine3d.linear()).z();
+    pose.orientation.w = static_cast<Eigen::Quaterniond>(affine3d.linear()).w();    
+}
+
+inline void vector3dToPosePosition(const Eigen::Vector3d& vector3d, geometry_msgs::Pose& pose)
+{
+    // Translation
+    pose.position.x = vector3d.x();
+    pose.position.y = vector3d.y();
+    pose.position.z = vector3d.z();
+}
+
+inline void quaterniondToPoseOrientation(const Eigen::Quaterniond& quaterniond, geometry_msgs::Pose& pose)
+{
+    // Rotation
+    pose.orientation.x = quaterniond.x();
+    pose.orientation.y = quaterniond.y();
+    pose.orientation.z = quaterniond.z();
+    pose.orientation.w = quaterniond.w();
+}
+
+inline void vector6dToTwist(const Eigen::Vector6d& vector6d, geometry_msgs::Twist& twist)
+{
+    twist.linear.x  = vector6d(0);
+    twist.linear.y  = vector6d(1);
+    twist.linear.z  = vector6d(2);
+    twist.angular.x = vector6d(3);
+    twist.angular.y = vector6d(4);
+    twist.angular.z = vector6d(5);
+}
 
 template <typename T>
 inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)
@@ -26,6 +69,7 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
 } 
 
 enum leg_id {LF=0,RH,RF,LH};
+static std::vector<std::string> feet_names_global = {"lf_foot","rh_foot","rf_foot","lh_foot"};
 
 inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names)
 {
