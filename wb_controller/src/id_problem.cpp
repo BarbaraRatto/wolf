@@ -88,15 +88,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> minfs;
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
         minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
-#ifdef ESTIMATE_Z
-    std::list<unsigned int> idw = {2,3,4,5};
-#else
-    // Notice that we just control the orientation of the waist
-    // In this case, the floating base linear velocity and position has to be zero
-    std::list<unsigned int> idw = {3,4,5};
-#endif
-    std::list<unsigned int> idf = {0,1,2};
 
+    std::list<unsigned int> idw = {2,3,4,5}; //z,r,p,y
+    //std::list<unsigned int> idw = {3,4,5}; //r,p,y
+
+    std::list<unsigned int> idf = {0,1,2};
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {

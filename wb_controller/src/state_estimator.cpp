@@ -55,7 +55,8 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     Ear_ = Eigen::Matrix3d::Identity();
     base_R_world_ = Eigen::Matrix3d::Identity();
 
-    estimation_ = estimation_t::IMU_MAGNETOMETER;
+    estimation_orientation_ = estimation_t::GROUND_TRUTH;
+    estimation_position_ = estimation_t::GROUND_TRUTH;
 
     imu_reset_done_ = false;
 
@@ -90,6 +91,22 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     Logger::getLogger().addPublisher(CLASS_NAME"/base_rpy",base_rpy_);
 }
 
+void StateEstimator::setEstimationType(unsigned int position_t, unsigned int orientation_t)
+{
+    estimation_orientation_ = orientation_t;
+    estimation_position_ = position_t;
+}
+
+void StateEstimator::setPositionEstimationType(unsigned int position_t)
+{
+    estimation_position_ = position_t;
+}
+
+void StateEstimator::setOrientationEstimationType(unsigned int orientation_t)
+{
+    estimation_orientation_ = orientation_t;
+}
+
 void StateEstimator::setJointPosition(const Eigen::VectorXd& joint_positions)
 {
     joint_positions_ = joint_positions;
@@ -115,6 +132,26 @@ void StateEstimator::setImuGyroscope(const Eigen::Vector3d& imu_gyroscope)
     imu_gyroscope_ = imu_gyroscope;
 }
 
+void StateEstimator::setGroundTruthBasePosition(const Eigen::Vector3d& gt_position)
+{
+    gt_position_ = gt_position;
+}
+
+void StateEstimator::setGroundTruthBaseOrientation(const Eigen::Quaterniond& gt_orientation)
+{
+    gt_orientation_ = gt_orientation;
+}
+
+void StateEstimator::setGroundTruthBaseLinearVelocity(const Eigen::Vector3d& gt_linear_velocity)
+{
+    gt_linear_velocity_ = gt_linear_velocity;
+}
+
+void StateEstimator::setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt_angular_velocity)
+{
+    gt_angular_velocity_ = gt_angular_velocity;
+}
+
 void StateEstimator::setContactThreshold(const double& th)
 {
     contact_force_th_ = th;
@@ -123,6 +160,16 @@ void StateEstimator::setContactThreshold(const double& th)
 double StateEstimator::getContactThreshold()
 {
     return contact_force_th_;
+}
+
+unsigned int StateEstimator::getPositionEstimationType()
+{
+    return estimation_position_;
+}
+
+unsigned int StateEstimator::getOrientationEstimationType()
+{
+    return estimation_orientation_;
 }
 
 const Eigen::Affine3d& StateEstimator::getFloatingBasePose() const
@@ -246,22 +293,32 @@ void StateEstimator::updateContactState()
 
 void StateEstimator::updateFloatingBase(const double& period)
 {
-    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+    unsigned int estimation_orientation = estimation_orientation_;
+    unsigned int estimation_position = estimation_position_;
 
-    unsigned int estimation = estimation_;
+    // Update the joints information of the virtual model
+    xbot_model_->setJointVelocity(joint_velocities_);
+    xbot_model_->setJointEffort(joint_efforts_);
+    xbot_model_->setJointPosition(joint_positions_);
 
     // Note: we assume that the IMU is orientated as the base/waist of the robot
     // if this is not the case, it is necessary to add a transfomation from the IMU frame to the
     // base/waist frame
 
-    switch(estimation)
+    switch(estimation_orientation)
     {
-    case estimation_t::IMU_MAGNETOMETER:
+    case estimation_t::NONE:
+        // The base does not rotate
+        floating_base_pose_.linear() = Eigen::Matrix3d::Identity();
+        floating_base_velocity_.segment(3,3) << 0.0, 0.0, 0.0;
+        break;
+    case estimation_t::IMU_MAGNETOMETER: // Use directly the orientation information from the IMU
         quatToRotMat(imu_orientation_.normalized(),base_R_world_);
         rotTorpy(base_R_world_,base_rpy_);
+        floating_base_pose_.linear() = base_R_world_.transpose();
+        floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
         break;
-        // Intergate the gyroscope, useful if the magnetometer measure has interferences
-    case estimation_t::IMU_GYROSCOPE:
+    case estimation_t::IMU_GYROSCOPE: // Intergate the gyroscope, useful if the magnetometer measure has interferences
         if(!imu_reset_done_)
         {
             // Initialization for the integration
@@ -275,8 +332,19 @@ void StateEstimator::updateFloatingBase(const double& period)
         // Overwrite measures if one of them is more noisy
         // base_rpy_.head(2) = raw_base_rpy_.head(2);
         rpyToRot(base_rpy_, base_R_world_);
+        floating_base_pose_.linear() = base_R_world_.transpose();
+        floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
+        break;
+    case estimation_t::GROUND_TRUTH:
+        quatToRotMat(gt_orientation_.normalized(),base_R_world_);
+        rotTorpy(base_R_world_,base_rpy_);
+        floating_base_pose_.linear() = base_R_world_.transpose();
+        floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * gt_angular_velocity_;
         break;
     default:
+        // The base does not rotate
+        floating_base_pose_.linear() = Eigen::Matrix3d::Identity();
+        floating_base_velocity_.segment(3,3) << 0.0, 0.0, 0.0;
         break;
     };
 
@@ -284,54 +352,59 @@ void StateEstimator::updateFloatingBase(const double& period)
     ////tmp_matrix3d_ = world_R_imu_init_.transpose() * tmp_matrix3d_; // imu_R_world = R_imu0' * R_imu
     ////quatToRpy(floating_base_orientation_.normalized(),floating_base_orientation_rpy_);//take rpy measures
 
-    // Set the floating base orientation
-    floating_base_pose_.linear() = base_R_world_.transpose();
-    // Set the floating base angular velocity
-    floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
-    // Update the virtual model
-    xbot_model_->setJointVelocity(joint_velocities_);
-    xbot_model_->setJointEffort(joint_efforts_);
-    xbot_model_->setJointPosition(joint_positions_);
+    // Update the orientation part of the floating base
+    // This is necessary if we are going to use the qp estimator for the floating base linear velocities
     xbot_model_->setFloatingBaseOrientation(floating_base_pose_.linear());
     xbot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
     xbot_model_->update();
 
-#ifdef ESTIMATE_Z
+    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
-    // Update the qp estimation based on the new virtual model state
-    qp_estimation_->update();
-    qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-
-    //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
-    floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-
-    // Estimate z
-    double estimated_z = 0;
+    double estimated_z = 0.0;
     int feet_in_stance = 0;
-    for(unsigned int i = 0; i<feet_names.size(); i++)
+
+    switch(estimation_position)
     {
-        if(!gait_generator_->isSwinging(feet_names[i]))
+    case estimation_t::NONE:
+        // The base does not move
+        floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
+        floating_base_position_ << 0.0,0.0,0.0;
+        break;
+    case estimation_t::ESTIMATED_Z:
+        // Estimate z using the legs position
+        for(unsigned int i = 0; i<feet_names.size(); i++)
         {
-            feet_in_stance++;
-
-            tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[i];
-
-            estimated_z +=  tmp_affine3d_.translation().z();
+            if(!gait_generator_->isSwinging(feet_names[i]))
+            {
+                feet_in_stance++;
+                tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[i];
+                estimated_z +=  tmp_affine3d_.translation().z();
+            }
         }
-    }
-    estimated_z /= feet_in_stance;
+        estimated_z /= feet_in_stance;
+        // Update the qp estimation based on the new virtual model state
+        qp_estimation_->update();
+        qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+        //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0; // Does not work, the robot fall!
+        //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2); // Does not work, the robot fall!
+        floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+        floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
+        break;
+    case estimation_t::GROUND_TRUTH:
+        floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
+        floating_base_position_ << gt_position_;
+        break;
+    default:
+        // The base does not move
+        floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
+        floating_base_position_ << 0.0,0.0,0.0;
+        break;
+    };
 
-    floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
-#else
-    // The base does not move
-    floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
-    floating_base_position_ << 0.0,0.0,0.0; // Remove x y and z from the state estimation
-#endif
 
+    // Finally update the floating base with the full pose and velocities
     floating_base_pose_.translation() = floating_base_position_;
-
-    xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_);
-
+    xbot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_); // This should trigger the update of the model
 }
 
 }

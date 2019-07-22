@@ -27,13 +27,19 @@ public:
      */
     typedef std::shared_ptr<const StateEstimator> ConstPtr;
 
-    enum estimation_t {IMU_MAGNETOMETER=0,IMU_GYROSCOPE};
+    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z};
 
     StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model);
 
     //~StateEstimator()
 
     void update(const double& period);
+
+    void setEstimationType(unsigned int position_t, unsigned int orientation_t);
+
+    void setPositionEstimationType(unsigned int position_t);
+
+    void setOrientationEstimationType(unsigned int orientation_t);
 
     void setJointPosition(const Eigen::VectorXd& joint_positions);
 
@@ -44,6 +50,14 @@ public:
     void setImuOrientation(const Eigen::Quaterniond& imu_orientation);
 
     void setImuGyroscope(const Eigen::Vector3d& imu_gyroscope);
+
+    void setGroundTruthBasePosition(const Eigen::Vector3d& gt_position);
+
+    void setGroundTruthBaseOrientation(const Eigen::Quaterniond& gt_orientation);
+
+    void setGroundTruthBaseLinearVelocity(const Eigen::Vector3d& gt_linear_velocity);
+
+    void setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt_angular_velocity);
 
     void setContactState(const std::string& foot_name, const bool& contact_state);
 
@@ -56,6 +70,10 @@ public:
     const Eigen::Vector3d& getFloatingBaseOrientationRPY() const;
 
     double getContactThreshold();
+
+    unsigned int getPositionEstimationType();
+
+    unsigned int getOrientationEstimationType();
 
     const std::vector<Eigen::Vector3d>& getContactForces() const;
 
@@ -91,6 +109,15 @@ private:
     Eigen::Vector3d imu_gyroscope_;
     /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
+
+    Eigen::Vector3d gt_position_;
+
+    Eigen::Quaterniond gt_orientation_;
+
+    Eigen::Vector3d gt_linear_velocity_;
+
+    Eigen::Vector3d gt_angular_velocity_;
+
     /** @brief Floating base pose w.r.t world */
     Eigen::Affine3d floating_base_pose_;
     /** @brief Floating base position (x,y,z) w.r.t world */
@@ -144,7 +171,9 @@ private:
 
     GaitGenerator::Ptr gait_generator_;
 
-    std::atomic<unsigned int> estimation_;
+    std::atomic<unsigned int> estimation_orientation_;
+
+    std::atomic<unsigned int> estimation_position_;
 
     /** @brief Base estimation */
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
