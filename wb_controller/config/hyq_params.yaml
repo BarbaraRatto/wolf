@@ -25,9 +25,9 @@ wb_controller:
   - lh_hipassembly
   - rf_hipassembly
   imu_sensor: trunk_imu
-  default_swing_frequency: 5.0
-  default_contact_threshold: 10.0
-  default_base_linear_velocity_max: 0.35
+  default_swing_frequency: 3.3
+  default_contact_threshold: 5.0
+  default_base_linear_velocity_max: 0.2
   default_base_angular_velocity_max: 0.2
   default_step_height_max: 0.05
   default_step_length_max: 0.3
