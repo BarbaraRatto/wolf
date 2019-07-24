@@ -285,16 +285,12 @@ public:
             // ACTUAL VALUES
             task_->getActualPose(tmp_vector3d_);
             // Pose - Translation
-            rt_pub_->msg_.pose_actual.position.x = tmp_vector3d_(0);
-            rt_pub_->msg_.pose_actual.position.y = tmp_vector3d_(1);
-            rt_pub_->msg_.pose_actual.position.z = tmp_vector3d_(2);
+            wb_controller::vector3dToPosePosition(tmp_vector3d_,rt_pub_->msg_.pose_actual);
 
             // REFERENCE VALUES
             task_->getReference(tmp_vector3d_);
             // Pose - Translation
-            rt_pub_->msg_.pose_reference.position.x = tmp_vector3d_(0);
-            rt_pub_->msg_.pose_reference.position.y = tmp_vector3d_(1);
-            rt_pub_->msg_.pose_reference.position.z = tmp_vector3d_(2);
+            wb_controller::vector3dToPosePosition(tmp_vector3d_,rt_pub_->msg_.pose_reference);
 
             rt_pub_->unlockAndPublish();
         }
