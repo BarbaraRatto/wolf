@@ -70,9 +70,9 @@ public:
     double getMaxStepHeight() const ;
     double getMaxStepLength() const ;
 
-private:
-
     void setHipOffset();
+
+private:
 
     void calculateFeetStep();
 

@@ -562,10 +562,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
         {
-            // We need to set these values here because the robot is starting in the air with the simulation. Be sure to start the solver
-            // when the robot is grounded.
-            //state_estimator_->toggleContactsEstimation();
+            // We need to set these values here because the robot is starting in the air with the simulation.
+            // Be sure to start the solver and the contact estimation when the robot is grounded.
             state_estimator_->startContactsEstimation();
+            cmds_->setHipOffset();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
