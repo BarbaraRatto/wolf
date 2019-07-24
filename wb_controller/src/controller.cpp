@@ -464,7 +464,6 @@ void Controller::toggleSolver()
         ROS_INFO("Reset the solver");
         id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,DT,feet_names_,arm_tip_name_));
 
-        id_prob_->_postural->setReference(qhome_);
 
         solver_reset_done_ = true;
     }
@@ -572,6 +571,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             cmds_->initializeFeetPosition();
 
+            id_prob_->_postural->setReference(qhome_);
             dynamicReconfigureUpdate();
 
             init_done_ = true;
