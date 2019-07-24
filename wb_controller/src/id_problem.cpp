@@ -26,7 +26,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     {
         _feet[feet_names[i]].reset(new OpenSoT::tasks::acceleration::Cartesian(feet_names[i], *_model, feet_names[i],
                                                                                   "world", _id->getJointsAccelerationAffine()));
-        _feet[feet_names[i]]->setLambda(0.,10.); // 60. 6.
+        _feet[feet_names[i]]->setLambda(6.,12.); // 60. 6.
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
      //   --------------------------
@@ -91,7 +91,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
 
     std::list<unsigned int> idw = {2,3,4,5}; //z,r,p,y
     //std::list<unsigned int> idw = {3,4,5}; //r,p,y
-
     std::list<unsigned int> idf = {0,1,2};
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
