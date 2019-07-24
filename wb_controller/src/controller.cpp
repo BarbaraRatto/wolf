@@ -45,6 +45,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
+    //hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
+    hardware_interface::GroundTruthInterface* gt_hw = NULL;
 
     if(!jt_hw)
     {
@@ -280,6 +282,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
     state_estimator_->setContactThreshold(default_contact_threshold);
+    if(gt_hw)
+    {
+        ground_truth_ = gt_hw->getHandle("ground_truth");
+        state_estimator_->setEstimationType(StateEstimator::GROUND_TRUTH,StateEstimator::GROUND_TRUTH);
+    }
+    else
+    {
+        state_estimator_->setEstimationType(StateEstimator::ESTIMATED_Z,StateEstimator::IMU_GYROSCOPE);
+    }
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
 
@@ -464,7 +475,6 @@ void Controller::toggleSolver()
         ROS_INFO("Reset the solver");
         id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,DT,feet_names_,arm_tip_name_));
 
-
         solver_reset_done_ = true;
     }
 
@@ -543,8 +553,22 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
-    state_estimator_->setImuOrientation(imu_orientation_);
-    state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
+    if(state_estimator_->getPositionEstimationType() == StateEstimator::GROUND_TRUTH)
+    {
+        state_estimator_->setGroundTruthBasePosition(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearPosition()));
+        state_estimator_->setGroundTruthBaseLinearVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearVelocity()));
+    }
+    if(state_estimator_->getOrientationEstimationType() == StateEstimator::GROUND_TRUTH)
+    {
+        state_estimator_->setGroundTruthBaseOrientation(imu_orientation_);
+        state_estimator_->setGroundTruthBaseAngularVelocity(imu_gyroscope_filt_);
+    }
+    else
+    {
+        state_estimator_->setImuOrientation(imu_orientation_);
+        state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
+    }
+
     state_estimator_->update(period.toSec());
 
     // Set default values for the joints
@@ -572,6 +596,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->initializeFeetPosition();
 
             id_prob_->_postural->setReference(qhome_);
+
             dynamicReconfigureUpdate();
 
             init_done_ = true;
