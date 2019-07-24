@@ -168,10 +168,11 @@ void CommandsInterface::calculateFeetStep()
 
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
+        //if(gait_generator_->isLiftOff(feet_names[i]))
         if(gait_generator_->isSwinging(feet_names[i]))
         {
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"*********");
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging foot "<<feet_names[i]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"CalculateFeetStep for foot "<<feet_names[i]);
 
             xbot_model_->getPose(feet_names[i],world_T_foot_);
             xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_);
@@ -237,7 +238,7 @@ void CommandsInterface::calculateFeetStep()
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
         }
-        else
+        else // if(gait_generator_->isTouchDown(feet_names[i]))
         {
             steps_length_[feet_names[i]]         = 0.0;
             steps_heading_[feet_names[i]]        = 0.0;
