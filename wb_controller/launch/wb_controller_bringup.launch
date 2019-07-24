@@ -6,6 +6,7 @@
     <arg name="internal_wrench" default="false" />
     <arg name="world_name" default="empty.world" />
     <arg name="task_period" default="0.001" />
+    <arg name="gazebo_debug" default="false" />
     <arg name="gazebo_gui" default="true" />
     <arg name="gazebo" default="true" />
     <arg name="arm" default="false" />
@@ -23,7 +24,7 @@
 		<arg name="task_period" value="$(arg task_period)" />
 		<arg name="gui" value="$(arg gazebo_gui)"/>
 		<arg name="arm" value="$(arg arm)"/>
-		<!-- arg name="debug" value="true"/ -->
+                <arg name="debug" value="$(arg gazebo_debug)">
 	    </include>
     </group>
 
