@@ -27,9 +27,6 @@ generate_dynamic_reconfigure_options(
   cfg/task.cfg
 )
 
-add_service_files(FILES
-  ControllerServices.srv)
-
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
