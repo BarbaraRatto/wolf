@@ -1,5 +1,0 @@
-#TODO for the moment this is just a mock up
-
-solver_options:
-    regularization: 1e-6
-    back_end: "qpoases"
