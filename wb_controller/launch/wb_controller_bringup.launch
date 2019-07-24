@@ -23,7 +23,7 @@
 		<arg name="task_period" value="$(arg task_period)" />
 		<arg name="gui" value="$(arg gazebo_gui)"/>
 		<arg name="arm" value="$(arg arm)"/>
-                <arg name="debug" value="$(arg gazebo_debug)">
+                <arg name="debug" value="$(arg gazebo_debug)"/>
 	    </include>
     </group>
 
