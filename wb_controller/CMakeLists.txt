@@ -14,11 +14,13 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface dls_hardware_interface
+find_package(catkin REQUIRED tf controller_interface dls_hardware_interface control_toolbox
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
+find_package(PkgConfig)
+pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
@@ -30,7 +32,8 @@ add_service_files(FILES
 
 add_message_files(FILES
                  CartesianTask.msg
-                 JointsTask.msg)
+                 JointsTask.msg
+                 ContactForces.msg)
 
 generate_messages(
     DEPENDENCIES
@@ -53,23 +56,49 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
+    ${RBDL_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/controller.cpp src/IDProblem.cpp)
+add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/commands_interface.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${RBDL_LIBRARIES} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+
+#piselloni node
+add_executable(plot_node src/plot_node.cpp)
+target_link_libraries(plot_node ${catkin_LIBRARIES})
+
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} plot_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-if (CATKIN_ENABLE_TESTING)
+install(FILES controller_plugin.xml
+DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})  
+
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY config/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY problems/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/problems
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY plot_juggler_files/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
+  PATTERN ".svn" EXCLUDE)
+
+
+if (TEST)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
   find_package(cartesian_interface REQUIRED)

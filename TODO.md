@@ -12,3 +12,4 @@ startup
 filter state estimation
 where do I get z?
 clean the descriptions, load the homing from the srdf
+remove sensors and clean up the urdfs!

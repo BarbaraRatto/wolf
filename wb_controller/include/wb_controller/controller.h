@@ -4,28 +4,29 @@
 // ROS
 #include <ros/ros.h>
 #include <realtime_tools/realtime_publisher.h>
-#include <tf/transform_broadcaster.h>
-#include <sensor_msgs/JointState.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/WrenchStamped.h>
-#include <std_msgs/Int16MultiArray.h>
-#include <wb_controller/ControllerServices.h>
 #include <realtime_tools/realtime_buffer.h>
+#include <tf/transform_broadcaster.h>
+#include <geometry_msgs/WrenchStamped.h>
+
+#include <sensor_msgs/JointState.h>
+#include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
 #include <dynamic_reconfigure/server.h>
 #include <rviz_visual_tools/rviz_visual_tools.h>
-#include <wb_controller/ControllerConfig.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // ROS control
 #include <controller_interface/controller.h>
+#include <control_toolbox/pid.h>
 #include <controller_interface/multi_interface_controller.h>
-// Hardware interfaces
-#include <dls_hardware_interface/joint_command_adv_interface.h>
-#include <dls_hardware_interface/ground_truth_interface.h>
-#include <dls_hardware_interface/contact_switch_sensor_interface.h>
 #include <hardware_interface/imu_sensor_interface.h>
+#include <hardware_interface/joint_command_interface.h>
+#include <hardware_interface/joint_state_interface.h>
+// Hardware interfaces // FIXME Remove that crap
+//#include <dls_hardware_interface/joint_command_adv_interface.h>
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
+#include <cartesian_interface/utils/estimation/ForceEstimation.h>
 #include <XBotCoreModel/XBotCoreModel.h>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
 // STD
@@ -34,18 +35,21 @@
 #include <chrono>
 // Controller
 #include <wb_controller/locomotion.h>
+#include <wb_controller/commands_interface.h>
 #include <wb_controller/joy.h>
-#include <wb_controller/IDProblem.h>
+#include <wb_controller/id_problem.h>
+#include <wb_controller/ContactForces.h>
+#include <wb_controller/ControllerServices.h>
+#include <wb_controller/controllerConfig.h>
+//#include <wb_controller/WrenchArray.h>
 
 #include <Eigen/Geometry>
 
 namespace wb_controller
 {
 
-class Controller : public controller_interface::MultiInterfaceController<hardware_interface::JointCommandAdvInterface,
-        hardware_interface::ImuSensorInterface,
-        hardware_interface::GroundTruthInterface,
-        hardware_interface::ContactSwitchSensorInterface>
+class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
+                                                                         hardware_interface::ImuSensorInterface>
 {
 public:
     /** @brief Constructor function */
@@ -85,7 +89,7 @@ public:
     /**
          * @brief Ros dynamic reconfigure callback
          */
-    void dynamicReconfigureCallback(wb_controller::ControllerConfig &config, uint32_t level);
+    void dynamicReconfigureCallback(wb_controller::controllerConfig &config, uint32_t level);
 
     /**
          * @brief Start/Stop solver integration
@@ -103,14 +107,9 @@ public:
     void toggleTracking();
 
     /**
-         * @brief Start/Stop the relative tasks
+         * @brief Start/Stop the haptic contact loop
          */
-    void toggleRelativeTasks();
-
-    /**
-         * @brief Start/Stop the qp state estimation
-         */
-    void toggleQPestimation();
+    void toggleHapticContactLoop();
 
     /**
          * @brief Set the duty cycle for the feet
@@ -136,20 +135,14 @@ private:
     unsigned int num_joints_;
     /** @brief Joint names */
     std::vector<std::string> joint_names_;
-    /** @brief Imu sensor names */
-    std::vector<std::string> imu_names_;
-    /** @brief State estimator names */
-    std::vector<std::string> state_estimator_names_;
-    /** @brief State estimator names */
-    std::vector<std::string> contact_sensor_names_;
-    /** @brief Joint states for input and output */
-    std::vector<hardware_interface::JointCommandAdvHandle> joint_states_;
+    /** @brief Imu sensor name */
+    std::string imu_name_;
+    /** @brief Joint states for reading */
+    //std::vector<hardware_interface::JointStateHandle> joint_states_;
+    /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
+    std::vector<hardware_interface::JointHandle> joint_states_;
     /** @brief IMU sensors */
-    std::vector<hardware_interface::ImuSensorHandle> imu_sensors_;
-    /** @brief State Estimation */
-    std::vector<hardware_interface::GroundTruthHandle> state_estimators_; // FIXME We should use a state estimator handle no matter if the robot is simulated or no
-    /** @brief Contact sensors */
-    std::vector<hardware_interface::ContactSwitchSensorHandle> contact_sensors_;
+    hardware_interface::ImuSensorHandle imu_sensor_;
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */
@@ -170,18 +163,24 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
     OpenSoT::IDProblem::Ptr id_prob_;
-     /** @brief Base estimation */
+    /** @brief Base estimation */
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
+    /** @brief Contact estimation */
+    XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
+    /** @brief Contact estimation */
+    std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Real time publisher - desired joint states */
     std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
+    /** @brief Real time publisher - IMU */
+    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::Imu>> imu_rt_pub_;
     /** @brief Real time publisher - estimated pose */
-    std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_rt_pub_; // FIXME to be removed
     /** @brief Real time publisher - estimated qp pose */
     std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> state_estimation_qp_rt_pub_;
     /** @brief Real time publisher - contacts */
-    std::shared_ptr<realtime_tools::RealtimePublisher<std_msgs::Int16MultiArray>> contacts_rt_pub_;
-    /** @brief Real time publisher - GRF */
-    std::vector<std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped>>> grfs_rt_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contacts_rt_pub_;
+    /** @brief Real time publisher - des GRF */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> des_grfs_pub_;
     /** @brief Ros subscriber for the desired tasks reference */
     ros::Subscriber tasks_desired_sub_;
     /** @brief Desired P value for the joints PID controller */
@@ -196,28 +195,25 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
-    /** @brief Actual com position w.r.t world frame */
-    Eigen::Vector3d com_position_;
-    /** @brief Desired com position w.r.t world frame */
-    Eigen::Vector3d  des_com_position_;
-    /** @brief  RT buffer for the desired poses of the id tasks */
-    //realtime_tools::RealtimeBuffer<TaskPosesMap> desired_tasks_pose_;
+    /** @brief Vector containing the pids for the joints */
+    std::vector<control_toolbox::Pid> pids_;
     /** @brief Integrate the solver solution and apply it to the desired joints state */
     std::atomic<bool> solver_started_;
+    /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
+    is consired true */
+    std::atomic<double> contact_force_th_;
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
     /** @brief Activate tracking */
     std::atomic<bool> tracking_active_;
-    /** @brief Activate relative tasks */
-    std::atomic<bool> relative_tasks_active_;
-    /** @brief Use the qp state estimation */
-    std::atomic<bool> use_qp_state_estimation_;
+    /** @brief Activate the contact haptic loop */
+    std::atomic<bool> haptic_contact_loop_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
-    dynamic_reconfigure::Server<wb_controller::ControllerConfig>* server_;
+    dynamic_reconfigure::Server<wb_controller::controllerConfig>* server_;
     /** @brief ROS dynamic reconfigure config struct */
-    ControllerConfig default_config_;
+    controllerConfig default_config_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
@@ -238,18 +234,18 @@ private:
     Eigen::Vector6d floating_base_velocity_;
     /** @brief Floating base velocity, computed by the QP */
     Eigen::VectorXd floating_base_velocity_qp_;
-    /** @brief Floating base accelleration, computed by the state estimator */
-    Eigen::Vector6d floating_base_accelleration_;
     /** @brief Floating base pose w.r.t the world frame, computed by the state estimator */
     Eigen::Affine3d floating_base_pose_;    
-    /** @brief GRF normals */
-    std::vector<Eigen::Vector3d> normals_;
     /** @brief GRF contacts */
     std::vector<bool> contacts_;
     /** @brief GRF contact forces */
     std::vector<Eigen::Vector3d> contact_forces_;
     /** @brief Feet names */
     std::vector<std::string> feet_names_;
+    /** @brief Feet names */
+    std::vector<Eigen::Vector3d> feet_positionsW_;
+    /** @brief Arm tip name */
+    std::string arm_tip_name_;
     /** @brief Hips names */
     std::vector<std::string> hips_names_;
     /** @brief Thread for the odometry publisher */
@@ -274,6 +270,8 @@ private:
     Eigen::Vector3d tmp_vector3d_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
+
+    ros::ServiceClient freeze_base_client;
 
     /**
          * @brief thread body for the odometry publisher
@@ -311,39 +309,20 @@ private:
     void readContactsState();
 
     /**
+         * @brief init the ROS publishers
+         */
+    void initPublishers(const ros::NodeHandle& root_nh, const ros::NodeHandle& controller_nh);
+
+    /**
          * @brief publish on ROS
          */
     void publish(const ros::Time& time, const ros::Duration& period);
 
     /**
-         * @brief set the initial poses for the gait generator for the specified foot w.r.t to base_frame
-         */
-    void setInitialPose(const std::string& base_frame, const std::string& contact_name);
-
-    /**
-         * @brief set the initial poses for the gait generator for each foot w.r.t to base_frame
-         */
-    void setInitialPose(const std::string& base_frame);
-
-    /**
-         * @brief set the initial poses for the gait generator for each foot w.r.t to the current frame
-         */
-    void setInitialPose();
-
-    /**
-         * @brief set the relative tasks
-         */
-    void setRelativeTasks();
-
-    /**
-         * @brief set the world tasks
-         */
-    void setWorldTasks();
-
-    /**
          * @brief Update the dynamic reconfigure interface
          */
     void dynamicReconfigureUpdate();
+
 };
 
 

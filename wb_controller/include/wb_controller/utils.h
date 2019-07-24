@@ -18,7 +18,7 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
 
 enum leg_id {LF=0,RH,RF,LH};
 
-std::vector<std::string> sortByLegName(const std::vector<std::string>& names)
+inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names)
 {
     // Sort the names following this convention:
     assert(names.size() == 4);

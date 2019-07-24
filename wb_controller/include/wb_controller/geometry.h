@@ -19,7 +19,7 @@ namespace wb_controller
  *  Angles, Unit Quaternions, and Rotation Vectors"</a> by James Diebel.
  * @date July 2005
  */
-void quatToRotMat(const Eigen::Quaterniond& q, Eigen::Matrix3d& R)
+inline void quatToRotMat(const Eigen::Quaterniond& q, Eigen::Matrix3d& R)
 {
     R.setZero();
     R(0, 0) = -1.0 + 2.0 * (q.w() * q.w()) + 2.0 * (q.x() * q.x());
@@ -42,7 +42,7 @@ void quatToRotMat(const Eigen::Quaterniond& q, Eigen::Matrix3d& R)
  * orientation of frame B
  * @sa rpyToRot()
  */
-void rotTorpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
+inline void rotTorpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
 {
     rpy(0) = std::atan2(R(1,2),R(2,2));
     rpy(1) = -std::asin(R(0,2));
@@ -69,7 +69,7 @@ void rotTorpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
  * @return the matrix \f${}_B R_A\f$
  *
 */
-void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
+inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
 
     R.setZero();
     const double& roll = rpy(0);
@@ -121,7 +121,7 @@ void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
  * after the pitch we will have the roll axis after yaw and pitch rotation to
  * be x'' = cos(pitch)*x' -sin(pitch)*[0;0;1] where x' = [cos(yaw);sin(yaw);0]
 */
-void rpyToEarInv(const Eigen::Vector3d& rpy, Eigen::Matrix3d& EarInv){
+inline void rpyToEarInv(const Eigen::Vector3d& rpy, Eigen::Matrix3d& EarInv){
 
     const double& pitch = rpy(1);
     const double& yaw = rpy(2);
@@ -144,7 +144,7 @@ void rpyToEarInv(const Eigen::Vector3d& rpy, Eigen::Matrix3d& EarInv){
  * @param rpy
  * @return
  */
-void rpyToEar(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
+inline void rpyToEar(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
 
     const double& roll = rpy(0);
     const double& pitch = rpy(1);

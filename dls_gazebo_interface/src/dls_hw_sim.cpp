@@ -88,7 +88,7 @@ namespace dls_gazebo_interface
         // Hardware interfaces: Base IMU sensors
         imu_sensor_ = std::dynamic_pointer_cast<gazebo::sensors::ImuSensor>(sensor_manager->GetSensor("trunk_imu"));
         if (!this->imu_sensor_)
-            ROS_ERROR_NAMED(HW_NAME,"Could not find base IMU sensor, using the ground truth to fill the IMU data instead.");
+            ROS_WARN_NAMED(HW_NAME,"Could not find base IMU sensor, using the ground truth to fill the IMU data instead.");
 
         // Hardware interfaces: Contact sensors
         for(unsigned int i=0; i < contact_sensor_names_.size(); i++)
@@ -118,6 +118,7 @@ namespace dls_gazebo_interface
             registerInterface(&imu_sensor_interface_);
             registerInterface(&ground_truth_interface_);
             registerInterface(&contact_sensor_interface_);
+            registerInterface(&joint_effort_interface_);
         }
         return true;
     }

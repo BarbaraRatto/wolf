@@ -16,10 +16,15 @@
 // ROS
 #include <ros/ros.h>
 #include <dynamic_reconfigure/server.h>
+#include <interactive_markers/interactive_marker_server.h>
 #include <realtime_tools/realtime_publisher.h>
+#include <realtime_tools/realtime_buffer.h>
 #include <wb_controller/CartesianTask.h>
 #include <wb_controller/JointsTask.h>
-#include <wb_controller/TaskConfig.h>
+#include <wb_controller/taskConfig.h>
+
+// WB
+#include <wb_controller/geometry.h>
 
 namespace OpenSoT{
 
@@ -28,24 +33,30 @@ class TaskRosWrapperInterface
 
 public:
 
-   typedef std::shared_ptr<TaskRosWrapperInterface> Ptr;
+    typedef std::shared_ptr<TaskRosWrapperInterface> Ptr;
 
-   virtual ~TaskRosWrapperInterface(){}
+    TaskRosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
+    virtual ~TaskRosWrapperInterface(){spinner_->stop();}
 
-   virtual void publish(const ros::Time& /*time*/) = 0;
-   virtual void dynamicReconfigureCallback(wb_controller::TaskConfig& /*config*/, uint32_t /*level*/) = 0;
-   virtual void dynamicReconfigureUpdate() = 0;
+    virtual void publish(const ros::Time& /*time*/) = 0;
+    virtual void dynamicReconfigureCallback(wb_controller::taskConfig& /*config*/, uint32_t /*level*/) = 0;
+    virtual void dynamicReconfigureUpdate() = 0;
+    virtual void updateReference() {}
 
 protected:
 
-    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::TaskConfig>> server_;
-    wb_controller::TaskConfig default_config_;
+    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::taskConfig>> server_;
+    std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_;
+    wb_controller::taskConfig default_config_;
+    std::shared_ptr<ros::AsyncSpinner> spinner_;
 
     Eigen::Affine3d       tmp_affine3d_;
     Eigen::VectorXd       tmp_vectorxd_;
     Eigen::Vector3d       tmp_vector3d_;
     Eigen::Vector6d       tmp_vector6d_;
     Eigen::Quaterniond    tmp_quaterniond_;
+
+    realtime_tools::RealtimeBuffer<Eigen::Affine3d> rt_affine3d_;
 
 };
 
@@ -55,8 +66,8 @@ class TaskRosWrapperBase : public TaskRosWrapperInterface
 
 public:
 
-   TaskRosWrapperBase(ros::NodeHandle& nh, task_ptr_t task)
-   {
+    TaskRosWrapperBase(ros::NodeHandle& nh, task_ptr_t task)
+    {
         assert(task);
         task_ = task;
 
@@ -64,28 +75,28 @@ public:
 
         //ros::NodeHandle task_nh(nh.getNamespace()+"/"+task->getTaskID());
         ros::NodeHandle task_nh(task->getTaskID());
-        server_.reset(new dynamic_reconfigure::Server<wb_controller::TaskConfig>(task_nh));
+        server_.reset(new dynamic_reconfigure::Server<wb_controller::taskConfig>(task_nh));
         server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
-   }
+    }
 
-   void dynamicReconfigureCallback(wb_controller::TaskConfig &config, uint32_t level)
-   {
-       switch(level)
-       {
-       case 0:
-           task_->setLambda(config.lambda1,config.lambda2);
-           break;
-       }
-   }
+    void dynamicReconfigureCallback(wb_controller::taskConfig &config, uint32_t level)
+    {
+        switch(level)
+        {
+        case 0:
+            task_->setLambda(config.lambda1,config.lambda2);
+            break;
+        }
+    }
 
-   void dynamicReconfigureUpdate()
-   {
+    void dynamicReconfigureUpdate()
+    {
         default_config_.lambda1 = task_->getLambda();
         default_config_.lambda2 = task_->getLambda2();
         if(server_) server_->updateConfig(default_config_);
-   }
+    }
 
-   virtual void publish(const ros::Time& /*time*/) = 0;
+    virtual void publish(const ros::Time& /*time*/) = 0;
 
 protected:
 
@@ -111,7 +122,94 @@ class TaskRosWrapper<tasks::acceleration::Cartesian::Ptr,wb_controller::Cartesia
 public:
 
     TaskRosWrapper(ros::NodeHandle& nh, tasks::acceleration::Cartesian::Ptr task):
-        TaskRosWrapperBase<tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>(nh,task){}
+        TaskRosWrapperBase<tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>(nh,task)
+    {
+
+        task_->getActualPose(tmp_affine3d_);
+
+        rt_affine3d_.initRT(tmp_affine3d_);
+
+        tmp_quaterniond_ = tmp_affine3d_.linear();
+
+        marker_.reset(new interactive_markers::InteractiveMarkerServer(task_->getTaskID()));
+
+        // create an interactive marker for our server
+        visualization_msgs::InteractiveMarker int_marker;
+        int_marker.header.frame_id = task_->getBaseLink();
+        int_marker.name = task_->getTaskID();
+        int_marker.description = task_->getTaskID();
+        int_marker.pose.position.x = tmp_affine3d_.translation().x();
+        int_marker.pose.position.y = tmp_affine3d_.translation().y();
+        int_marker.pose.position.z = tmp_affine3d_.translation().z();
+        int_marker.pose.orientation.x = tmp_quaterniond_.x();
+        int_marker.pose.orientation.y = tmp_quaterniond_.y();
+        int_marker.pose.orientation.z = tmp_quaterniond_.z();
+        int_marker.pose.orientation.w = tmp_quaterniond_.w();
+
+        // create a grey box marker
+        visualization_msgs::Marker box_marker;
+        box_marker.type = visualization_msgs::Marker::SPHERE;
+        box_marker.scale.x = 0.2;
+        box_marker.scale.y = 0.2;
+        box_marker.scale.z = 0.2;
+        box_marker.color.r = 0.5;
+        box_marker.color.g = 0.5;
+        box_marker.color.b = 0.5;
+        box_marker.color.a = 0.5;
+
+        // create a non-interactive control which contains the box
+        visualization_msgs::InteractiveMarkerControl box_control;
+        box_control.always_visible = true;
+        box_control.markers.push_back( box_marker );
+
+        // add the control to the interactive marker
+        int_marker.controls.push_back( box_control );
+
+        visualization_msgs::InteractiveMarkerControl control;
+
+        control.orientation_mode = visualization_msgs::InteractiveMarkerControl::FIXED;
+
+        control.orientation.w = 1;
+        control.orientation.x = 1;
+        control.orientation.y = 0;
+        control.orientation.z = 0;
+        control.name = "rotate_x";
+        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+        int_marker.controls.push_back(control);
+        control.name = "move_x";
+        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+        int_marker.controls.push_back(control);
+
+        control.orientation.w = 1;
+        control.orientation.x = 0;
+        control.orientation.y = 1;
+        control.orientation.z = 0;
+        control.name = "rotate_z";
+        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+        int_marker.controls.push_back(control);
+        control.name = "move_z";
+        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+        int_marker.controls.push_back(control);
+
+        control.orientation.w = 1;
+        control.orientation.x = 0;
+        control.orientation.y = 0;
+        control.orientation.z = 1;
+        control.name = "rotate_y";
+        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+        int_marker.controls.push_back(control);
+        control.name = "move_y";
+        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+        int_marker.controls.push_back(control);
+
+        // add the interactive marker to our collection &
+        // tell the server to call processFeedback() when feedback arrives for it
+        marker_->insert(int_marker, boost::bind(&TaskRosWrapper::processFeedback, this, _1));
+
+        // 'commit' changes and send to all clients
+        marker_->applyChanges();
+
+    }
 
     virtual void publish(const ros::Time& time)
     {
@@ -143,7 +241,8 @@ public:
             rt_pub_->msg_.twist_actual.angular.z = tmp_vector6d_(5);
 
             // REFERENCE VALUES
-            task_->getReference(tmp_affine3d_,tmp_vector6d_);
+            task_->getReference(tmp_affine3d_);
+            tmp_vector6d_ = task_->getCachedVelocityReference();
             // Transform the R matrix into a quaternion
             tmp_quaterniond_ = tmp_affine3d_.linear();
             // Pose - Translation
@@ -165,6 +264,40 @@ public:
 
             rt_pub_->unlockAndPublish();
         }
+    }
+
+    virtual void updateReference()
+    {
+        // Set the task reference for the cartesian task
+        task_->setReference(*rt_affine3d_.readFromRT());
+    }
+
+protected:
+
+    virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+    {
+        ROS_INFO_STREAM( feedback->marker_name << " is now at "
+                         << feedback->pose.position.x << ", " << feedback->pose.position.y
+                         << ", " << feedback->pose.position.z );
+
+        Eigen::Vector3d translation_reference(feedback->pose.position.x,feedback->pose.position.y,feedback->pose.position.z);
+        Eigen::Quaterniond orientation_reference(feedback->pose.orientation.w,feedback->pose.orientation.x,feedback->pose.orientation.y,feedback->pose.orientation.z);
+        Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
+        Eigen::Matrix3d R;
+
+        wb_controller::quatToRotMat(orientation_reference,R);
+
+        pose_reference.translation() = translation_reference;
+        pose_reference.linear() = R;
+
+        /*quaternion.x() = feedback->pose.orientation.x;
+        quaternion.y() = feedback->pose.orientation.y;
+        quaternion.z() = feedback->pose.orientation.z;
+        quaternion.w() = feedback->pose.orientation.w;
+        quatToRotMat(quaternion,world_R_task);*/
+
+        // FIXME no orientation yet
+        rt_affine3d_.writeFromNonRT(pose_reference);
     }
 };
 
@@ -231,7 +364,7 @@ public:
             rt_pub_->msg_.header.frame_id = "Joints";
             rt_pub_->msg_.header.stamp = time;
 
-             // FIXME Is it RT safe with the move operator?
+            // FIXME Is it RT safe with the move operator?
             auto position_actual = task_->getActualPositions();
             auto position_reference = task_->getReference();
             auto velocity_error = task_->getVelocityError();
@@ -274,7 +407,7 @@ public:
      * @param dT control loop
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string>& contact_links);
+    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string> feet_names, std::string arm_tip_name = std::string());
     ~IDProblem();
 
     /**
@@ -297,6 +430,12 @@ public:
     void update();
 
     /**
+     * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
+     * @param task name to update
+     */
+    void updateReference(const std::string& task_name);
+
+    /**
      * @brief log to log solver and autostaack status
      * @param logger a pointer to a MatLogger
      */
@@ -312,13 +451,14 @@ public:
      * @brief Cartesian tasks
      */
     std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
+    tasks::acceleration::Cartesian::Ptr _arm;
     tasks::acceleration::Cartesian::Ptr _waist;
     tasks::acceleration::CoM::Ptr _com;
 
     /**
      * @brief Expose the tasks to ROS
      */
-    std::vector<TaskRosWrapperInterface::Ptr> _tasks_ros;
+    std::map<std::string,TaskRosWrapperInterface::Ptr> _tasks_ros;
 
     /**
      * @brief _posture a postural task
@@ -372,6 +512,9 @@ private:
     Eigen::VectorXd _x;
 
     Eigen::VectorXd _qddot;
+
+
+    unsigned int idx_grfs_start_;
 
 };
 
