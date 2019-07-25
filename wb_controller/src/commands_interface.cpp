@@ -48,8 +48,11 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
         hf_X_virtual_hips_[i].setZero();
     }
 
+    step_height_scale_ = 0.0;
+
     step_length_ = 0.0;
     step_height_ = 0.0;
+    step_height_ext_ = 0.05;
 
     offset_applied_ = false;
 }
@@ -221,12 +224,18 @@ void CommandsInterface::calculateFeetStep()
                 ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step length is greater than: "<<step_length_max_);
             }
 
-            step_height_ = step_height_max_; // FIXME for the moment we set the step heigh at the max value
-            if(step_height_ > step_height_max_)
+            if(step_height_ext_ > step_height_max_)
             {
                 step_height_ = step_height_max_;
                 ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is greater than: "<<step_height_max_);
             }
+            else if(step_height_ext_ <= 0.0)
+            {
+                step_height_ = 0.0;
+                ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is less equal than: 0.0");
+            }
+            else
+                step_height_ = step_height_ext_;
 
             steps_length_[feet_names[i]]         = step_length_;
             steps_heading_[feet_names[i]]        = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
@@ -430,6 +439,22 @@ void CommandsInterface::setBaseVelocityScaleYaw(const double scale)
 {
     base_angular_velocity_scale_yaw_ = scale;
 }
+
+void CommandsInterface::setStepHeightScale(const double scale)
+{
+    if(std::abs(scale)>0.0 && step_height_scale_!=scale) // Trigger
+    {
+        if(scale>=1.0)
+            step_height_ext_ = step_height_ext_ + 0.01; // Increase step height
+        else if (scale<=-1.0)
+            step_height_ext_ = step_height_ext_ - 0.02; // Decrease step height
+
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Step height: "<<step_height_ext_);
+    }
+
+    step_height_scale_ = scale;
+}
+
 
 void CommandsInterface::setMaxLinearVelocity(const double max)
 {

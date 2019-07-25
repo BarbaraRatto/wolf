@@ -4,7 +4,7 @@
 #include <ros/ros.h>
 #include <atomic>
 #include <sensor_msgs/Joy.h>
-#include <wb_controller/locomotion.h>
+#include <wb_controller/commands_interface.h>
 
 class JoyHandler
 {
@@ -25,8 +25,11 @@ public:
     {
         joy_base_velocity_x_scale_     = 0.0;
         joy_base_velocity_y_scale_     = 0.0;
+        joy_base_velocity_z_scale_     = 0.0;
         joy_base_yaw_scale_            = 0.0;
         joy_base_pitch_scale_          = 0.0;
+        joy_base_roll_scale_           = 0.0;
+        joy_step_height_scale_         = 0.0;
         joy_start_button_              = false;
         joy_reset_button_              = false;
 
@@ -47,41 +50,44 @@ private:
         joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
         joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
         joy_base_roll_scale_        = -static_cast<double>(msg->axes[4]);
+        joy_step_height_scale_      = static_cast<double>(msg->axes[5]);
 
         joy_start_button_           = static_cast<bool>(msg->buttons[4]); // L1 button
         joy_reset_button_           = static_cast<bool>(msg->buttons[6]); // L2 button
 
-       if(joy_start_button_)
-       {
-           cmds_->setCmd(wb_controller::CommandsInterface::LINEAR_AND_ANGULAR); // Start the swing
-           cmds_->setBaseVelocityScaleX(joy_base_velocity_x_scale_);
-           cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
-           cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
-           cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
-           cmds_->setBaseVelocityScalePitch(joy_base_pitch_scale_);
-           cmds_->setBaseVelocityScaleRoll(joy_base_roll_scale_);
-       }
-       else if(joy_reset_button_)
-       {
-           cmds_->setCmd(wb_controller::CommandsInterface::RESET_BASE); // Reset the base orientation and position (height)
-       }
-       else if(std::abs(joy_base_velocity_z_scale_)>0 ||
-               std::abs(joy_base_yaw_scale_)       >0 ||
-               std::abs(joy_base_pitch_scale_)     >0 ||
-               std::abs(joy_base_roll_scale_)      >0  )
-       {
-           cmds_->setCmd(wb_controller::CommandsInterface::BASE_ONLY); // Move the base orientation
-           cmds_->setBaseVelocityScaleX(0.0);
-           cmds_->setBaseVelocityScaleY(0.0);
-           cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
-           cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
-           cmds_->setBaseVelocityScalePitch(joy_base_pitch_scale_);
-           cmds_->setBaseVelocityScaleRoll(joy_base_roll_scale_);
-       }
-       else
-       {
+        cmds_->setStepHeightScale(joy_step_height_scale_);
+
+        if(joy_start_button_)
+        {
+            cmds_->setCmd(wb_controller::CommandsInterface::LINEAR_AND_ANGULAR); // Start the swing
+            cmds_->setBaseVelocityScaleX(joy_base_velocity_x_scale_);
+            cmds_->setBaseVelocityScaleY(joy_base_velocity_y_scale_);
+            cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
+            cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
+            cmds_->setBaseVelocityScalePitch(joy_base_pitch_scale_);
+            cmds_->setBaseVelocityScaleRoll(joy_base_roll_scale_);
+        }
+        else if(joy_reset_button_)
+        {
+            cmds_->setCmd(wb_controller::CommandsInterface::RESET_BASE); // Reset the base orientation and position (height)
+        }
+        else if(std::abs(joy_base_velocity_z_scale_)>0 ||
+                std::abs(joy_base_yaw_scale_)       >0 ||
+                std::abs(joy_base_pitch_scale_)     >0 ||
+                std::abs(joy_base_roll_scale_)      >0  )
+        {
+            cmds_->setCmd(wb_controller::CommandsInterface::BASE_ONLY); // Move the base orientation
+            cmds_->setBaseVelocityScaleX(0.0);
+            cmds_->setBaseVelocityScaleY(0.0);
+            cmds_->setBaseVelocityScaleZ(joy_base_velocity_z_scale_);
+            cmds_->setBaseVelocityScaleYaw(joy_base_yaw_scale_);
+            cmds_->setBaseVelocityScalePitch(joy_base_pitch_scale_);
+            cmds_->setBaseVelocityScaleRoll(joy_base_roll_scale_);
+        }
+        else
+        {
             cmds_->setCmd(wb_controller::CommandsInterface::HOLD); // HODOR!
-       }
+        }
     }
 
     /** @brief Ros subscriber for joypad */
@@ -93,6 +99,7 @@ private:
     double joy_base_yaw_scale_;
     double joy_base_pitch_scale_;
     double joy_base_roll_scale_;
+    double joy_step_height_scale_;
     bool   joy_start_button_;
     bool   joy_reset_button_;
 };
