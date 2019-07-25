@@ -418,7 +418,8 @@ public:
      */
     std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
     tasks::acceleration::Cartesian::Ptr _arm;
-    tasks::acceleration::Cartesian::Ptr _waist;
+    tasks::acceleration::Cartesian::Ptr _waistRPY;
+    tasks::acceleration::Cartesian::Ptr _waistZ;
     tasks::acceleration::CoM::Ptr _com;
 
     /**

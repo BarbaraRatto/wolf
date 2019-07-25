@@ -587,11 +587,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(tracking_active_)
         {
             // Set the task reference for the waist
-            id_prob_->_waist->getReference(tmp_affine3d_);
+            id_prob_->_waistRPY->getReference(tmp_affine3d_);
             tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
             rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
-            id_prob_->_waist->setReference(tmp_affine3d_);
+            id_prob_->_waistRPY->setReference(tmp_affine3d_);
+            id_prob_->_waistZ->setReference(tmp_affine3d_);
 
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
