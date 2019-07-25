@@ -55,8 +55,8 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     Ear_ = Eigen::Matrix3d::Identity();
     base_R_world_ = Eigen::Matrix3d::Identity();
 
-    estimation_orientation_ = estimation_t::GROUND_TRUTH;
-    estimation_position_ = estimation_t::GROUND_TRUTH;
+    estimation_orientation_ = estimation_t::IMU_MAGNETOMETER;
+    estimation_position_ = estimation_t::ESTIMATED_Z;
 
     imu_reset_done_ = false;
 
