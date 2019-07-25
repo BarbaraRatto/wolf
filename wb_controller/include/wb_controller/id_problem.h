@@ -391,6 +391,11 @@ public:
     void update();
 
     /**
+     * @brief reset the tasks
+     */
+    void reset();
+
+    /**
      * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
      * @param task name to update
      */

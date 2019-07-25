@@ -138,6 +138,17 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
          tmp_map.second->dynamicReconfigureUpdate();
 }
 
+void IDProblem::reset()
+{
+    _postural->reset();
+    _waist->reset();
+    _com->resetReference();
+    if(_arm)
+        _arm->reset();
+    for (auto& tmp_map : _feet)
+        tmp_map.second->reset();
+}
+
 void IDProblem::update()
 {
     _id_problem->update(Eigen::VectorXd(1));

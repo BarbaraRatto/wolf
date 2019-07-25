@@ -223,7 +223,7 @@ private:
     /** @brief Thread for the rviz publisher */
     std::shared_ptr<std::thread> rviz_publisher_thread_;
     /** @brief True if the solver has been resetted */
-    bool solver_reset_done_;
+    bool solver_created_;
     /** @brief Gait generator */
     wb_controller::GaitGenerator::Ptr gait_generator_;
     /** @brief Ros node handle */

@@ -262,7 +262,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     pid_scale_ = 1.0;
 
-    solver_reset_done_ = false;
+    solver_created_ = false;
     init_done_ = false;
 
     // Set the callback for the dynamic reconfigure server
@@ -459,14 +459,15 @@ void Controller::toggleHapticContactLoop()
 
 void Controller::toggleSolver()
 {
-    if(!solver_reset_done_)
+    if(!solver_created_)
     {
         ROS_INFO("Reset the solver");
         id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,DT,feet_names_,arm_tip_name_));
-
-
-        solver_reset_done_ = true;
+        solver_created_ = true;
     }
+
+    // Perform the init procedure
+    init_done_ = false;
 
     solver_started_=!solver_started_;
 
@@ -570,6 +571,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             cmds_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             cmds_->initializeFeetPosition();
+
+            id_prob_->reset();
 
             id_prob_->_postural->setReference(qhome_);
             dynamicReconfigureUpdate();
