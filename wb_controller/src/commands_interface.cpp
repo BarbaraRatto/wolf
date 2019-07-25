@@ -151,7 +151,7 @@ void CommandsInterface::update(const double& period, const Eigen::Vector3d& base
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
         // Set the initial pose for the next swing
-        if(gait_generator_->isCycleEnded(feet_names[i]))
+        if(gait_generator_->isLiftOff(feet_names[i]))
             initializeFootPosition(feet_names[i]);
 
         gait_generator_->setStepLength(feet_names[i], steps_length_[feet_names[i]]);
@@ -212,11 +212,7 @@ void CommandsInterface::calculateFeetStep()
 
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_delta_foot_: "<<world_delta_foot_.transpose());
 
-            // if(std::abs(hf_base_linear_velocity_(0))!=0.0 || std::abs(hf_base_linear_velocity_(1))!=0.0)
             step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
-            // else
-            //    step_length_ = 0.0;
-            //step_height_ = 0.05; // FIXME
 
             if(step_length_ > step_length_max_)
             {
