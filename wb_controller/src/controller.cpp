@@ -23,6 +23,7 @@ Controller::Controller()
     ,pid_active_(true)
     ,tracking_active_(false)
     ,haptic_contact_loop_active_(false)
+    ,base_height_control_active_(false)
     ,stopping_(false)
 {
 }
@@ -317,6 +318,7 @@ void Controller::dynamicReconfigureUpdate()
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
     default_config_.toggle_haptic = haptic_contact_loop_active_;
+    default_config_.toggle_base_height_control = base_height_control_active_;
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
@@ -350,44 +352,47 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         toggleHapticContactLoop();
         break;
     case 2:
-        setDutyCycle(config.duty_cycle);
+        toggleBaseHeightControl();
         break;
     case 3:
-        setGaitType(config.gaits);
+        setDutyCycle(config.duty_cycle);
         break;
     case 4:
-        setSwingFrequency(config.swing_frequency);
+        setGaitType(config.gaits);
         break;
     case 5:
+        setSwingFrequency(config.swing_frequency);
+        break;
+    case 6:
         cmds_->setMaxLinearVelocity(config.base_max_linear_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum velocity to "<< config.base_max_linear_vel);
         break;
-    case 6:
+    case 7:
         cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
         break;
-    case 7:
+    case 8:
         cmds_->setMaxStepHeight(config.max_step_height);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum step height to "<< config.max_step_height);
         break;
-    case 8:
+    case 9:
         cmds_->setMaxStepLength(config.max_step_length);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum step length to "<< config.max_step_length);
         break;
-    case 9:
+    case 10:
         state_estimator_->setContactThreshold(config.contact_force_th);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
-    case 10:
+    case 11:
         pid_scale_ = config.pid_scale;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set pid scale to "<< config.pid_scale);
         break;
-    case 11:
+    case 12:
         cutoff_hz_qdot_ = config.cutoff_hz_qdot;
         qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for qdot filter at "<< config.cutoff_hz_qdot);
         break;
-    case 12:
+    case 13:
         cutoff_hz_gyro_ = config.cutoff_hz_gyro;
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
@@ -443,6 +448,26 @@ bool Controller::setDutyCycle(const double& duty_cycle)
         ROS_WARN_NAMED(CLASS_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
         return false;
     }
+}
+
+void Controller::toggleBaseHeightControl()
+{
+
+    if(state_estimator_->getPositionEstimationType() == StateEstimator::ESTIMATED_Z)
+    {
+        base_height_control_active_=!base_height_control_active_;
+
+        if(base_height_control_active_)
+            ROS_INFO("Base height control is ON");
+        else
+            ROS_INFO("Base height control is OFF");
+    }
+    else
+    {
+        base_height_control_active_ = false;
+        ROS_WARN("Can not activate the base height control, the state estimator is not configured to do so!");
+    }
+
 }
 
 void Controller::toggleHapticContactLoop()
@@ -593,6 +618,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
             id_prob_->_waistRPY->setReference(tmp_affine3d_);
             id_prob_->_waistZ->setReference(tmp_affine3d_);
+
+            if(base_height_control_active_)
+                id_prob_->_waistZ->setActive(true);
+            else
+                id_prob_->_waistZ->setActive(false);
 
             for(unsigned int i = 0; i<feet_names_.size(); i++)
             {

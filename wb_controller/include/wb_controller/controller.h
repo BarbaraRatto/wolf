@@ -107,6 +107,11 @@ public:
     void toggleHapticContactLoop();
 
     /**
+         * @brief Start/Stop the base height control
+         */
+    void toggleBaseHeightControl();
+
+    /**
          * @brief Set the duty cycle for the feet
          * @param const double duty_cycle
          */
@@ -192,6 +197,8 @@ private:
     std::atomic<bool> tracking_active_;
     /** @brief Activate the contact haptic loop */
     std::atomic<bool> haptic_contact_loop_active_;
+    /** @brief Activate the control of the base height */
+    std::atomic<bool> base_height_control_active_;
     /** @brief Variable used to signal that the controller is stopping */
     std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
