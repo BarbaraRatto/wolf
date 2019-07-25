@@ -502,16 +502,6 @@ void Controller::toggleSolver()
         ROS_INFO("Solver integration is OFF");
 }
 
-void Controller::toggleTracking()
-{
-    tracking_active_=!tracking_active_;
-
-    if(tracking_active_)
-        ROS_INFO("Tracking is ON");
-    else
-        ROS_INFO("Tracking is OFF");
-}
-
 void Controller::readJoints()
 {
     joint_positions_.setZero(joint_positions_.size());

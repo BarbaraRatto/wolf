@@ -92,16 +92,6 @@ public:
     void toggleSolver();
 
     /**
-         * @brief Start/Stop the PIDs
-         */
-    void togglePid();
-
-    /**
-         * @brief Start/Stop the tracking for the tasks
-         */
-    void toggleTracking();
-
-    /**
          * @brief Start/Stop the haptic contact loop
          */
     void toggleHapticContactLoop();
