@@ -131,7 +131,7 @@ public:
             active_time_ += period;
 
             if(swing_frequency_>0)
-                half_swing_time = 1/(2*swing_frequency_);
+                half_swing_time = 1/(2*swing_frequency_); // NOTE: since we use f'=2f, we should divide by 4 and not by 2.
             // If swing frequency is geq than 0
             // deactivate the contact sensing for half of the swing time
             if(contact && active_time_>=half_swing_time)
@@ -560,7 +560,8 @@ public:
         {
             feet_[feet_names[i]].state_machine.reset(new FootStateMachine());
             feet_[feet_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
-            feet_[feet_names[i]].is_in_contact = true;
+            feet_[feet_names[i]].contact_state = false;
+            feet_[feet_names[i]].trigger_stance = false;
             feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
         }
 
@@ -578,7 +579,6 @@ public:
         change_gait_ = false;
         schedule_changed_ = true; // At the beginning is already changed no?
         activate_swing_ = false;
-        haptic_contact_loop_active_ = false;
 
         gait_type_ = gait_type;
     }
@@ -666,30 +666,19 @@ public:
         return result;
     }
 
-    void enableHapticContactLoop()
-    {
-        haptic_contact_loop_active_ = true;
-    }
-
-    void disableHapticContactLoop()
-    {
-        haptic_contact_loop_active_ = false;
-    }
-
     void setContactState(const std::string& foot_name, const bool& contact)
     {
-        feet_[foot_name].is_in_contact = contact;
+        feet_[foot_name].contact_state = contact;
     }
 
     const bool& getContactState(const std::string& foot_name)
     {
-        return feet_[foot_name].is_in_contact;
+        return feet_[foot_name].contact_state;
     }
 
     void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
     {
         feet_[foot_name].trajectory->setInitialPose(initial_pose);
-        //feet_[foot_name].initial_pose = initial_pose;
     }
 
     double getDutyCycle(const std::string& foot_name)
@@ -797,6 +786,11 @@ public:
         activate_swing_ = false;
     }
 
+    bool isTrajectoryFinished(const std::string& foot_name)
+    {
+        return feet_[foot_name].trajectory->isFinished();
+    }
+
     void update(const double& period)
     {
         // 1) Check if the scheduled feet are all in Init and start the swing if this is the case.
@@ -815,10 +809,9 @@ public:
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
 
-            if(!haptic_contact_loop_active_)
-                it->second.is_in_contact = it->second.trajectory->isFinished(); // OpenLoop
+            it->second.trigger_stance = it->second.contact_state || it->second.trajectory->isFinished(); //CloseLoop with trajectory end
 
-            it->second.state_machine->update(period,it->second.is_in_contact);
+            it->second.state_machine->update(period,it->second.trigger_stance);
 
             if (it->second.state_machine->isSwing())
             {
@@ -876,7 +869,8 @@ private:
     {
         std::shared_ptr<FootStateMachine> state_machine;
         std::shared_ptr<TrajectoryInterface> trajectory;
-        bool is_in_contact;
+        bool contact_state;
+        bool trigger_stance;
         Eigen::Affine3d initial_pose;
     };
 
@@ -906,7 +900,6 @@ private:
     std::atomic<bool> change_gait_;
     std::atomic<bool> schedule_changed_;
     std::atomic<bool> activate_swing_;
-    std::atomic<bool> haptic_contact_loop_active_;
 
     std::vector<std::string> feet_names_;
     std::vector<std::string> hips_names_;

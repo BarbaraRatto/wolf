@@ -220,11 +220,6 @@ const std::vector<Eigen::Affine3d>& StateEstimator::getFeetPoseInBase() const
 void StateEstimator::toggleHapticContactLoop()
 {
     haptic_contact_loop_active_=!haptic_contact_loop_active_;
-
-    if(haptic_contact_loop_active_)
-        gait_generator_->enableHapticContactLoop();
-    else
-        gait_generator_->disableHapticContactLoop();
 }
 
 void StateEstimator::startContactsEstimation()
@@ -287,7 +282,10 @@ void StateEstimator::updateContactState()
             gait_generator_->setContactState(feet_names[i],contacts_[i]);
         }
         else
-            qp_estimation_->setContactState(feet_names[i],gait_generator_->getContactState(feet_names[i]));
+        {
+            qp_estimation_->setContactState(feet_names[i],gait_generator_->isTrajectoryFinished(feet_names[i]));
+            gait_generator_->setContactState(feet_names[i],false);
+        }
     }
 }
 
