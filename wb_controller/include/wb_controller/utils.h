@@ -69,10 +69,8 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
     return varOutputSecondFilter;
 } 
 
-enum leg_id {LF=0,RH,RF,LH};
-
 // FIXME this is ugly and hardcoded....
-class IDHelper
+/*class IDHelper
 {
 public:
     IDHelper()
@@ -102,30 +100,23 @@ private:
     typedef std::map<std::string,unsigned int> map_t;
     map_t rbdl_;
     map_t dls_;
-};
+};*/
 
-static IDHelper _id_helper;
+//static IDHelper _id_helper;
 
-inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names)
+// NOTE: by default we use the same leg order as RBDL (alphabetic order)
+enum leg_id {LF=0,LH,RF,RH};
+inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
-    // Sort the names following this convention:
+    // Sort the names following order
     assert(names.size() == N_LEGS);
-    std::string lf="lf"; // 0
-    std::string rh="rh"; // 1
-    std::string rf="rf"; // 2
-    std::string lh="lh"; // 3
+    assert(order.size() == N_LEGS);
     std::vector<std::string> ordered_names(N_LEGS);
     for(unsigned int i=0;i<names.size();i++)
-    {
-        if(names[i].find(lf) != std::string::npos)
-            ordered_names[leg_id::LF] = names[i]; //LF
-        if(names[i].find(rh) != std::string::npos)
-            ordered_names[leg_id::RH] = names[i]; //RH
-        if(names[i].find(rf) != std::string::npos)
-            ordered_names[leg_id::RF] = names[i]; //RF
-        if(names[i].find(lh) != std::string::npos)
-            ordered_names[leg_id::LH] = names[i]; //LH
-    }
+        for(unsigned int j=0;j<names.size();j++)
+            if(names[i].find(order[j]) != std::string::npos)
+                ordered_names[j] = names[i];
+
     return ordered_names;
 }
 

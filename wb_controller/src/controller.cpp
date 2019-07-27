@@ -467,7 +467,6 @@ bool Controller::setDutyCycle(const double& duty_cycle)
 
 void Controller::toggleBaseHeightControl()
 {
-
     if(state_estimator_->getPositionEstimationType() == StateEstimator::ESTIMATED_Z)
     {
         base_height_control_active_=!base_height_control_active_;
@@ -482,7 +481,6 @@ void Controller::toggleBaseHeightControl()
         base_height_control_active_ = false;
         ROS_WARN("Can not activate the base height control, the state estimator is not configured to do so!");
     }
-
 }
 
 void Controller::toggleHapticContactLoop()
@@ -601,7 +599,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             id_prob_->reset();
 
-            //id_prob_->_postural->setReference(qhome_);
             dynamicReconfigureUpdate();
 
             des_joint_positions_ = qhome_;
@@ -634,9 +631,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
                 id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
 
-                const unsigned int & rbdl_id = _id_helper.rbdlID(feet_names_[i]);
-
-
                 // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
@@ -644,11 +638,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
                     xbot_model_->getJacobian(feet_names_[i],J_);
 
-                    J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*rbdl_id);
+                    J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*i);
 
                     if(!des_joints_reset_done_[i])
                     {
-                        des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3);
+                        des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
                         des_joints_reset_done_[i] = true;
                     }
 
@@ -656,9 +650,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
                     x_err_ = gait_generator_->getReference(feet_names_[i]).translation() - state_estimator_->getFeetPoseInWorld()[i].translation();
 
-                    des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = J_foot_.inverse() * (xdot_des_ + x_err_gain_ * x_err_);
+                    des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (xdot_des_ + x_err_gain_ * x_err_);
 
-                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3);
+                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                     id_prob_->_feet[feet_names_[i]]->setActive(false);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
@@ -667,8 +661,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 else
                 {
 
-                    des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3).fill(0.0);
-                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = qhome_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3);
+                    des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);
+                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                     des_joints_reset_done_[i] = false;
 
