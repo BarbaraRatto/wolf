@@ -108,6 +108,42 @@ inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
 
 }
 
+inline void yawToRot(const double& yaw, Eigen::Matrix3d& R)
+{
+    R.setZero();
+    double c_y = std::cos(yaw);
+    double s_y = std::sin(yaw);
+
+    R << c_y  ,  s_y ,		0,
+         -s_y ,  c_y ,  		0,
+         0    ,     0     ,       1;
+}
+
+inline void rollToRot(const double& roll, Eigen::Matrix3d& R)
+{
+    R.setZero();
+    double c_r = std::cos(roll);
+    double s_r = std::sin(roll);
+
+    R <<    1   ,    0     	  ,  	  0,
+            0   ,    c_r ,  s_r,
+            0   ,    -s_r,  c_r;
+
+}
+
+inline void pitchToRot(const double& pitch, Eigen::Matrix3d& R)
+{
+    R.setZero();
+    double c_p = std::cos(pitch);
+    double s_p = std::sin(pitch);
+
+
+    R << c_p 	,	 0  ,   -s_p,
+            0       ,    1  ,   0,
+           s_p 	,	0   ,  c_p;
+
+}
+
 /** \brief Function to compute the linear tranformation matrix between euler
  * rates (in ZYX convention) and omega vector, where omega is expressed in world
  * coordinates to get the component expressed in the world ortogonal frame.
