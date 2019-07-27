@@ -248,6 +248,14 @@ private:
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
 
+    // FIXME to be moved
+    std::vector<bool> des_joints_reset_done_;
+    Eigen::MatrixXd J_;
+    Eigen::MatrixXd J_foot_;
+    Eigen::Vector3d xdot_des_;
+    Eigen::Vector3d x_err_;
+    std::atomic<double> x_err_gain_;
+
     /**
          * @brief thread body for the odometry publisher
          */

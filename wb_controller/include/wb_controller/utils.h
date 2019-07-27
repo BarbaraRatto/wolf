@@ -31,7 +31,7 @@ inline void affine3dToPose(const Eigen::Affine3d& affine3d, geometry_msgs::Pose&
     pose.orientation.x = static_cast<Eigen::Quaterniond>(affine3d.linear()).x();
     pose.orientation.y = static_cast<Eigen::Quaterniond>(affine3d.linear()).y();
     pose.orientation.z = static_cast<Eigen::Quaterniond>(affine3d.linear()).z();
-    pose.orientation.w = static_cast<Eigen::Quaterniond>(affine3d.linear()).w();    
+    pose.orientation.w = static_cast<Eigen::Quaterniond>(affine3d.linear()).w();
 }
 
 inline void vector3dToPosePosition(const Eigen::Vector3d& vector3d, geometry_msgs::Pose& pose)
@@ -70,7 +70,41 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
 } 
 
 enum leg_id {LF=0,RH,RF,LH};
-static std::vector<std::string> feet_names_global = {"lf_foot","rh_foot","rf_foot","lh_foot"};
+
+// FIXME this is ugly and hardcoded....
+class IDHelper
+{
+public:
+    IDHelper()
+    {
+        rbdl_["lf_foot"] = 0;
+        rbdl_["lh_foot"] = 1;
+        rbdl_["rf_foot"] = 2;
+        rbdl_["rh_foot"] = 3;
+
+        dls_["lf_foot"] = 0;
+        dls_["rh_foot"] = 1;
+        dls_["rf_foot"] = 2;
+        dls_["lh_foot"] = 3;
+    }
+
+    unsigned int rbdlID(const std::string& chain_name)
+    {
+        return rbdl_[chain_name];
+    }
+
+    unsigned int dlsID(const std::string& chain_name)
+    {
+        return dls_[chain_name];
+    }
+
+private:
+    typedef std::map<std::string,unsigned int> map_t;
+    map_t rbdl_;
+    map_t dls_;
+};
+
+static IDHelper _id_helper;
 
 inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names)
 {

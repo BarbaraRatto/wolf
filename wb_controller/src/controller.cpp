@@ -310,6 +310,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
 
+    // FIXME to be moved
+    des_joints_reset_done_.resize(4);
+    for(unsigned int i=0; i<des_joints_reset_done_.size(); i++)
+        des_joints_reset_done_[i] = false;
+
+    J_.resize(6,xbot_model_->getJointNum());
+    J_foot_.resize(3,3);
+
+    x_err_gain_ = 1.0;
+
+
     return true;
 }
 
@@ -322,6 +333,7 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
+    default_config_.x_err_gain = x_err_gain_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -397,6 +409,9 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
         break;
+    case 14:
+        x_err_gain_ = config.x_err_gain;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.x_err_gain);
     default:
         break;
     }
@@ -563,9 +578,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
     state_estimator_->update(period.toSec());
 
-    // Set default values for the joints
-    des_joint_positions_ = qhome_;
-
     cmds_->update(period.toSec());
 
     if(cmds_->getCmd() == CommandsInterface::HOLD)
@@ -589,8 +601,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             id_prob_->reset();
 
-            id_prob_->_postural->setReference(qhome_);
+            //id_prob_->_postural->setReference(qhome_);
             dynamicReconfigureUpdate();
+
+            des_joint_positions_ = qhome_;
+            des_joint_velocities_.fill(0.0);
 
             init_done_ = true;
         }
@@ -619,15 +634,45 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
                 id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
 
+                const unsigned int & rbdl_id = _id_helper.rbdlID(feet_names_[i]);
+
+
                 // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
                 // Set the wrench limits to enstablish the contacts
                 if(gait_generator_->isSwinging(feet_names_[i]))
                 {
+
+                    xbot_model_->getJacobian(feet_names_[i],J_);
+
+                    J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*rbdl_id);
+
+                    if(!des_joints_reset_done_[i])
+                    {
+                        des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3);
+                        des_joints_reset_done_[i] = true;
+                    }
+
+                    xdot_des_ = gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3);
+
+                    x_err_ = gait_generator_->getReference(feet_names_[i]).translation() - state_estimator_->getFeetPoseInWorld()[i].translation();
+
+                    des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = J_foot_.inverse() * (xdot_des_ + x_err_gain_ * x_err_);
+
+                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3);
+
+                    id_prob_->_feet[feet_names_[i]]->setActive(false);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                     ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
                 }
                 else
                 {
+
+                    des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3).fill(0.0);
+                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3) = qhome_.segment(FLOATING_BASE_DOFS+3*rbdl_id,3);
+
+                    des_joints_reset_done_[i] = false;
+
+                    id_prob_->_feet[feet_names_[i]]->setActive(true);
                     id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                     ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
                 }
@@ -642,6 +687,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
             }
         }
+
+        // Set the postural desired pose
+        id_prob_->_postural->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Solver Update
         id_prob_->update();
@@ -684,7 +732,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     if(pid_active_)
+    {
+        des_joint_positions_ = qhome_;
         des_joint_efforts_solver_.fill(0.0);
+    }
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
@@ -704,6 +755,31 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Publish
     publish(time,period);
 }
+
+/*Eigen::VectorXd& Controller::computeIk(const std::string& foot_name, const double& period)
+{
+
+    Eigen::MatrixXd J, J_foot;
+    Eigen::Vector3d xdot_des;
+    Eigen::Vector3d x_err;
+
+    xbot_model_->getJacobian(foot_name,J);
+
+    J_foot = J.block<3,3>(0,FLOATING_BASE_DOFS+3*_id_helper.rbdlID(foot_name));
+
+    //if(!des_joints_reset_done_[i])
+    //{
+    //    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
+    //    des_joints_reset_done_[i] = true;
+    //}
+
+    xdot_des = gait_generator_->getReferenceDot(foot_name).segment(0,3);
+
+    x_err = gait_generator_->getReference(foot_name).translation() - state_estimator_->getFeetPoseInWorld()[_id_helper.dlsID(foot_name)].translation();
+
+    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*_id_helper.rbdlID(foot_name),3) = (J_foot.inverse() * (xdot_des + 100.0 * x_err))*period + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*_id_helper.rbdlID(foot_name),3);
+
+}*/
 
 void Controller::odomPublisher()
 {
