@@ -67,42 +67,7 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
     varOutputFirstFilter = (1- gain) * varOutputFirstFilter + gain * varNew;
     varOutputSecondFilter = (1 - gain) * varOutputSecondFilter + gain * varOutputFirstFilter;
     return varOutputSecondFilter;
-} 
-
-// FIXME this is ugly and hardcoded....
-/*class IDHelper
-{
-public:
-    IDHelper()
-    {
-        rbdl_["lf_foot"] = 0;
-        rbdl_["lh_foot"] = 1;
-        rbdl_["rf_foot"] = 2;
-        rbdl_["rh_foot"] = 3;
-
-        dls_["lf_foot"] = 0;
-        dls_["rh_foot"] = 1;
-        dls_["rf_foot"] = 2;
-        dls_["lh_foot"] = 3;
-    }
-
-    unsigned int rbdlID(const std::string& chain_name)
-    {
-        return rbdl_[chain_name];
-    }
-
-    unsigned int dlsID(const std::string& chain_name)
-    {
-        return dls_[chain_name];
-    }
-
-private:
-    typedef std::map<std::string,unsigned int> map_t;
-    map_t rbdl_;
-    map_t dls_;
-};*/
-
-//static IDHelper _id_helper;
+}
 
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
 enum leg_id {LF=0,LH,RF,RH};
@@ -119,6 +84,23 @@ inline std::vector<std::string> sortByLegName(const std::vector<std::string>& na
 
     return ordered_names;
 }
+
+class Trigger
+{
+public:
+    Trigger()
+    {
+        old_value = false;
+    }
+    bool update(const bool& value)
+    {
+        bool res = (value && old_value != value ? true : false);
+        old_value = value;
+        return res;
+    }
+private:
+    bool old_value;
+};
 
 } // namespace
 

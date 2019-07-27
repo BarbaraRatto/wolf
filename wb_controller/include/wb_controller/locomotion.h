@@ -225,7 +225,7 @@ public:
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
         }
-        else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
+        /*else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
         {
             schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
             next_feet_to_move_.resize(1);
@@ -248,7 +248,7 @@ public:
             schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LH],0));
             next_feet_to_move_.resize(1);
             max_priority_ = 0;
-        }
+        }*/
         else
         {
             throw std::runtime_error("Wrong gait type!");

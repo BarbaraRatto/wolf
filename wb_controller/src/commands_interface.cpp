@@ -528,4 +528,9 @@ double CommandsInterface::getMaxStepLength() const
     return step_length_max_;
 }
 
+GaitGenerator* const CommandsInterface::getGaitGenerator() const
+{
+    return gait_generator_.get();
+}
+
 }; // namespace

@@ -102,9 +102,9 @@ inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
     double c_p = std::cos(pitch);
     double s_p = std::sin(pitch);
 
-    R << c_p*cos(yaw)          ,  c_p*s_y                     ,  -s_p,
-         s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*cos(yaw)  ,  s_r*c_p,
-         c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*cos(yaw)  ,  c_r*c_p;
+    R << c_p*c_y               ,  c_p*s_y                ,  -s_p,
+         s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*c_y  ,  s_r*c_p,
+         c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*c_y  ,  c_r*c_p;
 
 }
 
