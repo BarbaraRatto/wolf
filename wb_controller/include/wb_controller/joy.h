@@ -12,6 +12,8 @@ class JoyHandler
 
 public:
 
+    typedef std::function<void ()> funct_t;
+
     /**
      * @brief Shared pointer to JoyHandler
      */
@@ -22,7 +24,7 @@ public:
      */
     typedef std::shared_ptr<const JoyHandler> ConstPtr;
 
-    JoyHandler(ros::NodeHandle& node, std::shared_ptr<wb_controller::CommandsInterface> cmds)
+    JoyHandler(ros::NodeHandle& node, wb_controller::CommandsInterface::Ptr cmds)
     {
         joy_base_velocity_x_scale_     = 0.0;
         joy_base_velocity_y_scale_     = 0.0;
@@ -38,6 +40,16 @@ public:
 
         assert(cmds);
         cmds_ = cmds;
+    }
+
+    void addStartButtonHandler(funct_t f)
+    {
+        f_start_ = f;
+    }
+
+    void addSelectButtonHandler(funct_t f)
+    {
+        f_select_ = f;
     }
 
 private:
@@ -58,11 +70,17 @@ private:
 
         cmds_->setStepHeightScale(joy_step_height_scale_);
 
-        if(joy_select_gait_trigger_.update(static_cast<bool>(msg->buttons[8])))
+        if(f_start_ && joy_start_button_trigger_.update(static_cast<bool>(msg->buttons[9])))
+            f_start_();
+
+        if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
+            f_select_();
+
+        /*if(joy_select_gait_trigger_.update(static_cast<bool>(msg->buttons[8])))
             if(cmds_->getGaitGenerator()->getGaitType() == "trot")
                 cmds_->getGaitGenerator()->setGaitType("crawl");
             else
-                cmds_->getGaitGenerator()->setGaitType("trot");
+                cmds_->getGaitGenerator()->setGaitType("trot");*/
 
         if(joy_start_swing_button_)
         {
@@ -99,7 +117,7 @@ private:
 
     /** @brief Ros subscriber for joypad */
     ros::Subscriber     joy_sub_;
-    std::shared_ptr<wb_controller::CommandsInterface> cmds_;
+    wb_controller::CommandsInterface::Ptr cmds_;
     double joy_base_velocity_x_scale_;
     double joy_base_velocity_y_scale_;
     double joy_base_velocity_z_scale_;
@@ -110,7 +128,11 @@ private:
     bool   joy_start_swing_button_;
     bool   joy_reset_base_button_;
 
-    wb_controller::Trigger joy_select_gait_trigger_;
+    funct_t f_select_;
+    funct_t f_start_;
+
+    wb_controller::Trigger joy_select_button_trigger_;
+    wb_controller::Trigger joy_start_button_trigger_;
 
 };
 

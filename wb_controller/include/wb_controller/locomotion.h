@@ -568,6 +568,14 @@ public:
         gait_type_ = gait_type;
     }
 
+    void switchGait()
+    {
+        if(gait_type_ == "trot")
+            setGaitType("crawl");
+        else
+            setGaitType("trot");
+    }
+
     void setGaitType(const std::string& gait_type)
     {
         gait_buffer_[next_gait_idx_].reset(new Gait(feet_names_,gait_type));
