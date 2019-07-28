@@ -105,7 +105,7 @@ void CommandsInterface::update(const double& period, const Eigen::Vector3d& base
     ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base_" << world_R_base_);
     ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base_" << hf_R_base_);
 
-    //setHipOffset();
+    setHipOffset();
 
     switch(cmd)
     {

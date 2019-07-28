@@ -575,8 +575,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
     state_estimator_->update(period.toSec());
 
-    cmds_->update(period.toSec());
-
     if(solver_started_) // Use the ID solver to calculate the torques
     {
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
@@ -584,7 +582,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // We need to set these values here because the robot is starting in the air with the simulation.
             // Be sure to start the solver and the contact estimation when the robot is grounded.
             state_estimator_->startContactsEstimation();
-            //cmds_->setHipOffset();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
@@ -601,6 +598,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             init_done_ = true;
         }
 
+        cmds_->update(period.toSec());
         // FIXME I should add something to the CommandsInterface!!!
         // Get the external reference (interactive marker) for the arm if available
         id_prob_->updateReference(arm_tip_name_);
