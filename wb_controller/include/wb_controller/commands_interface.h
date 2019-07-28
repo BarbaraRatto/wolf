@@ -70,7 +70,6 @@ public:
     double getMaxAngularVelocity() const ;
     double getMaxStepHeight() const ;
     double getMaxStepLength() const ;
-    GaitGenerator* const getGaitGenerator() const;
 
     void setHipOffset();
 
