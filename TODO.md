@@ -1,5 +1,5 @@
-add feet tasks in joint space
-debug haptic
+start button
+joint limits
 push recovery
 tests and profiling
 check the FIXME around the code clean up

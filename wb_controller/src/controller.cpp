@@ -21,7 +21,6 @@ namespace wb_controller {
 Controller::Controller()
     :solver_started_(false)
     ,pid_active_(true)
-    ,tracking_active_(false)
     ,haptic_contact_loop_active_(false)
     ,base_height_control_active_(false)
     ,stopping_(false)
@@ -310,6 +309,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
 
+    // FIXME to be moved
+    des_joints_reset_done_.resize(4);
+    for(unsigned int i=0; i<des_joints_reset_done_.size(); i++)
+        des_joints_reset_done_[i] = false;
+
+    J_.resize(6,xbot_model_->getJointNum());
+    J_foot_.resize(3,3);
+
+    x_err_gain_ = 1.0;
+
+
     return true;
 }
 
@@ -322,6 +332,7 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
+    default_config_.x_err_gain = x_err_gain_;
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -397,6 +408,9 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
         break;
+    case 14:
+        x_err_gain_ = config.x_err_gain;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.x_err_gain);
     default:
         break;
     }
@@ -452,7 +466,6 @@ bool Controller::setDutyCycle(const double& duty_cycle)
 
 void Controller::toggleBaseHeightControl()
 {
-
     if(state_estimator_->getPositionEstimationType() == StateEstimator::ESTIMATED_Z)
     {
         base_height_control_active_=!base_height_control_active_;
@@ -467,7 +480,6 @@ void Controller::toggleBaseHeightControl()
         base_height_control_active_ = false;
         ROS_WARN("Can not activate the base height control, the state estimator is not configured to do so!");
     }
-
 }
 
 void Controller::toggleHapticContactLoop()
@@ -563,16 +575,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
     state_estimator_->update(period.toSec());
 
-    // Set default values for the joints
-    des_joint_positions_ = qhome_;
-
-    cmds_->update(period.toSec());
-
-    if(cmds_->getCmd() == CommandsInterface::HOLD)
-        tracking_active_ = false;
-    else
-        tracking_active_ = true;
-
     if(solver_started_) // Use the ID solver to calculate the torques
     {
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
@@ -580,68 +582,89 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // We need to set these values here because the robot is starting in the air with the simulation.
             // Be sure to start the solver and the contact estimation when the robot is grounded.
             state_estimator_->startContactsEstimation();
-            cmds_->setHipOffset();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             cmds_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             cmds_->initializeFeetPosition();
 
+            // Reset the tasks
             id_prob_->reset();
 
-            id_prob_->_postural->setReference(qhome_);
+            des_joint_positions_ = qhome_;
+            des_joint_velocities_.fill(0.0);
+
             dynamicReconfigureUpdate();
 
             init_done_ = true;
         }
 
+        cmds_->update(period.toSec());
+
         // FIXME I should add something to the CommandsInterface!!!
         // Get the external reference (interactive marker) for the arm if available
         id_prob_->updateReference(arm_tip_name_);
 
-        if(tracking_active_)
-        {
-            // Set the task reference for the waist
-            id_prob_->_waistRPY->getReference(tmp_affine3d_);
-            tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
-            rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
-            tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
-            id_prob_->_waistRPY->setReference(tmp_affine3d_);
-            id_prob_->_waistZ->setReference(tmp_affine3d_);
+        // Set the task reference for the waist
+        id_prob_->_waistRPY->getReference(tmp_affine3d_);
+        tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
+        rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
+        tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
+        id_prob_->_waistRPY->setReference(tmp_affine3d_);
 
-            if(base_height_control_active_)
-                id_prob_->_waistZ->setActive(true);
+        double delta_z = cmds_->getBaseHeight() - state_estimator_->getFloatingBasePosition()(2);
+
+        for(unsigned int i = 0; i<feet_names_.size(); i++)
+        {
+            id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
+
+            xbot_model_->getJacobian(feet_names_[i],J_);
+
+            J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*i);
+
+            // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
+            // Set the wrench limits to enstablish the contacts
+            if(gait_generator_->isSwinging(feet_names_[i]))
+            {
+                // At the first cycle of swing, set the des joints position at the current measured joints position
+                if(gait_generator_->isLiftOff(feet_names_[i]))
+                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
+
+                xdot_des_ = gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3);
+
+                x_err_ = gait_generator_->getReference(feet_names_[i]).translation() - state_estimator_->getFeetPoseInWorld()[i].translation();
+
+                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (xdot_des_ + x_err_gain_ * x_err_);
+
+                des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
+
+                id_prob_->_feet[feet_names_[i]]->setActive(false);
+                id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
+                ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
+            }
             else
-                id_prob_->_waistZ->setActive(false);
-
-            for(unsigned int i = 0; i<feet_names_.size(); i++)
             {
+                 // At the first cycle of stance, set the des joints position at the current homing position
+                 if(gait_generator_->isTouchDown(feet_names_[i]))
+                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
-                id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
+                // Don't generate velocities for the feet in stance
+                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);
 
-                // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
-                // Set the wrench limits to enstablish the contacts
-                if(gait_generator_->isSwinging(feet_names_[i]))
-                {
-                    id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
-                    ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
-                }
-                else
-                {
-                    id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
-                    ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
-                }
-            }
-        }
-        else
-        {
-            // Force the contact to each foot
-            for(unsigned int i = 0; i<feet_names_.size(); i++)
-            {
-                //id_prob_->_feet[feet_names_[i]]->setLambda(0.,0.);
+                x_err_ << 0, 0, -delta_z;
+
+                qhome_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (x_err_gain_ * x_err_) * period.toSec() + qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+
+                des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+
+                id_prob_->_feet[feet_names_[i]]->setActive(true);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
+                ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
             }
         }
+
+        // Set the postural desired positions and velocities
+        id_prob_->_postural->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Solver Update
         id_prob_->update();
@@ -684,7 +707,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     if(pid_active_)
+    {
+        des_joint_positions_ = qhome_;
         des_joint_efforts_solver_.fill(0.0);
+    }
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)

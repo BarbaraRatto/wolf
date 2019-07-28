@@ -26,7 +26,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     {
         _feet[feet_names[i]].reset(new OpenSoT::tasks::acceleration::Cartesian(feet_names[i], *_model, feet_names[i],
                                                                                   "world", _id->getJointsAccelerationAffine()));
-        _feet[feet_names[i]]->setLambda(6.,12.); // 60. 6.
+        _feet[feet_names[i]]->setLambda(0.,0.); // 60. 6.
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
      //   --------------------------
@@ -56,7 +56,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     _waistZ->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural.reset(new OpenSoT::tasks::acceleration::Postural(*_model, _id->getJointsAccelerationAffine()));
-    _postural->setLambda(100.);
+    _postural->setLambda(200.,40.);
     _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
@@ -106,8 +106,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     }
     else
     {
-        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _waistZ%idw_Z)
-                /(_postural)
+        // NOTE: a stack with only one level is way faster and it makes the robot move smoothly. Two levels is safer since the contacts would be at a higher priority but the
+        // computation gets heaverier and the robot moves badly.
+        _id_problem /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural)
+             //   / (_waistRPY%idw_RPY + _waistZ%idw_Z + _postural)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
 

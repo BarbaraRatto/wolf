@@ -31,7 +31,7 @@ inline void affine3dToPose(const Eigen::Affine3d& affine3d, geometry_msgs::Pose&
     pose.orientation.x = static_cast<Eigen::Quaterniond>(affine3d.linear()).x();
     pose.orientation.y = static_cast<Eigen::Quaterniond>(affine3d.linear()).y();
     pose.orientation.z = static_cast<Eigen::Quaterniond>(affine3d.linear()).z();
-    pose.orientation.w = static_cast<Eigen::Quaterniond>(affine3d.linear()).w();    
+    pose.orientation.w = static_cast<Eigen::Quaterniond>(affine3d.linear()).w();
 }
 
 inline void vector3dToPosePosition(const Eigen::Vector3d& vector3d, geometry_msgs::Pose& pose)
@@ -67,33 +67,40 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
     varOutputFirstFilter = (1- gain) * varOutputFirstFilter + gain * varNew;
     varOutputSecondFilter = (1 - gain) * varOutputSecondFilter + gain * varOutputFirstFilter;
     return varOutputSecondFilter;
-} 
+}
 
-enum leg_id {LF=0,RH,RF,LH};
-static std::vector<std::string> feet_names_global = {"lf_foot","rh_foot","rf_foot","lh_foot"};
-
-inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names)
+// NOTE: by default we use the same leg order as RBDL (alphabetic order)
+enum leg_id {LF=0,LH,RF,RH};
+inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
-    // Sort the names following this convention:
+    // Sort the names following order
     assert(names.size() == N_LEGS);
-    std::string lf="lf"; // 0
-    std::string rh="rh"; // 1
-    std::string rf="rf"; // 2
-    std::string lh="lh"; // 3
+    assert(order.size() == N_LEGS);
     std::vector<std::string> ordered_names(N_LEGS);
     for(unsigned int i=0;i<names.size();i++)
-    {
-        if(names[i].find(lf) != std::string::npos)
-            ordered_names[leg_id::LF] = names[i]; //LF
-        if(names[i].find(rh) != std::string::npos)
-            ordered_names[leg_id::RH] = names[i]; //RH
-        if(names[i].find(rf) != std::string::npos)
-            ordered_names[leg_id::RF] = names[i]; //RF
-        if(names[i].find(lh) != std::string::npos)
-            ordered_names[leg_id::LH] = names[i]; //LH
-    }
+        for(unsigned int j=0;j<names.size();j++)
+            if(names[i].find(order[j]) != std::string::npos)
+                ordered_names[j] = names[i];
+
     return ordered_names;
 }
+
+class Trigger
+{
+public:
+    Trigger()
+    {
+        old_value = false;
+    }
+    bool update(const bool& value)
+    {
+        bool res = (value && old_value != value ? true : false);
+        old_value = value;
+        return res;
+    }
+private:
+    bool old_value;
+};
 
 } // namespace
 

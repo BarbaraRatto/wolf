@@ -70,6 +70,7 @@ public:
     double getMaxAngularVelocity() const ;
     double getMaxStepHeight() const ;
     double getMaxStepLength() const ;
+    GaitGenerator* const getGaitGenerator() const;
 
     void setHipOffset();
 
@@ -142,7 +143,6 @@ private:
 
     bool offset_applied_;
 
-    double base_height_;
     typedef std::map<std::string,double> map_t;
     map_t steps_length_;
     map_t steps_heading_;
