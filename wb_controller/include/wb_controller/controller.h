@@ -183,8 +183,6 @@ private:
     std::atomic<bool> solver_started_;
     /** @brief Activate pid gains */
     std::atomic<bool> pid_active_;
-    /** @brief Activate tracking */
-    std::atomic<bool> tracking_active_;
     /** @brief Activate the contact haptic loop */
     std::atomic<bool> haptic_contact_loop_active_;
     /** @brief Activate the control of the base height */
