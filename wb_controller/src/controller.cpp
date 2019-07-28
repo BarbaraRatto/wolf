@@ -588,12 +588,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             cmds_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             cmds_->initializeFeetPosition();
 
+            // Reset the tasks
             id_prob_->reset();
-
-            dynamicReconfigureUpdate();
 
             des_joint_positions_ = qhome_;
             des_joint_velocities_.fill(0.0);
+
+            dynamicReconfigureUpdate();
 
             init_done_ = true;
         }
@@ -615,7 +616,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         for(unsigned int i = 0; i<feet_names_.size(); i++)
         {
-
             id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
 
             xbot_model_->getJacobian(feet_names_[i],J_);
@@ -626,12 +626,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Set the wrench limits to enstablish the contacts
             if(gait_generator_->isSwinging(feet_names_[i]))
             {
-
-                if(!des_joints_reset_done_[i])
-                {
+                // At the first cycle of swing, set the des joints position at the current measured joints position
+                if(gait_generator_->isLiftOff(feet_names_[i]))
                     des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
-                    des_joints_reset_done_[i] = true;
-                }
 
                 xdot_des_ = gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3);
 
@@ -647,26 +644,18 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             }
             else
             {
-                if(des_joints_reset_done_[i])
-                {
+                 // At the first cycle of stance, set the des joints position at the current homing position
+                 if(gait_generator_->isTouchDown(feet_names_[i]))
                     des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
-                    des_joints_reset_done_[i] = false;
-                }
 
+                // Don't generate velocities for the feet in stance
                 des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);
 
+                x_err_ << 0, 0, -delta_z;
 
-                x_err_ = Eigen::Vector3d(0,0,-delta_z);
-
-                Eigen::Vector3d qdot_des_z;
-                qdot_des_z = J_foot_.inverse() * (x_err_gain_ * x_err_);
-
-                qhome_.segment(FLOATING_BASE_DOFS+3*i,3) = qdot_des_z * period.toSec() + qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
-
-                //des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
+                qhome_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (x_err_gain_ * x_err_) * period.toSec() + qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                 des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
-
 
                 id_prob_->_feet[feet_names_[i]]->setActive(true);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
@@ -674,7 +663,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             }
         }
 
-        // Set the postural desired pose
+        // Set the postural desired positions and velocities
         id_prob_->_postural->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Solver Update
@@ -741,31 +730,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Publish
     publish(time,period);
 }
-
-/*Eigen::VectorXd& Controller::computeIk(const std::string& foot_name, const double& period)
-{
-
-    Eigen::MatrixXd J, J_foot;
-    Eigen::Vector3d xdot_des;
-    Eigen::Vector3d x_err;
-
-    xbot_model_->getJacobian(foot_name,J);
-
-    J_foot = J.block<3,3>(0,FLOATING_BASE_DOFS+3*_id_helper.rbdlID(foot_name));
-
-    //if(!des_joints_reset_done_[i])
-    //{
-    //    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
-    //    des_joints_reset_done_[i] = true;
-    //}
-
-    xdot_des = gait_generator_->getReferenceDot(foot_name).segment(0,3);
-
-    x_err = gait_generator_->getReference(foot_name).translation() - state_estimator_->getFeetPoseInWorld()[_id_helper.dlsID(foot_name)].translation();
-
-    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*_id_helper.rbdlID(foot_name),3) = (J_foot.inverse() * (xdot_des + 100.0 * x_err))*period + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*_id_helper.rbdlID(foot_name),3);
-
-}*/
 
 void Controller::odomPublisher()
 {
