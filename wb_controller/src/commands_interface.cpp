@@ -293,8 +293,6 @@ void CommandsInterface::resetBasePosition()
 {
     for(unsigned int i=0;i<3;i++)
         base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
-
-    base_height_ = base_position_(2);
 }
 
 void CommandsInterface::resetBaseOrientation()
@@ -322,7 +320,7 @@ void CommandsInterface::calculateBasePosition(const double& period, const Eigen:
     base_position_ = world_R_hf_ * hf_base_linear_velocity_ * period + base_position_;
 
     // This is the base height computed w.r.t world
-    base_height_ = base_position_(2);
+    //base_position_(2);
 }
 
 void CommandsInterface::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
@@ -505,7 +503,7 @@ const double& CommandsInterface::getStepHeadingRate(const std::string& foot_name
 
 const double& CommandsInterface::getBaseHeight() const
 {
-    return base_height_;
+    return base_position_(2);
 }
 
 double CommandsInterface::getMaxLinearVelocity() const
