@@ -56,7 +56,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     base_R_world_ = Eigen::Matrix3d::Identity();
 
     estimation_orientation_ = estimation_t::IMU_MAGNETOMETER;
-    estimation_position_ = estimation_t::NONE;
+    estimation_position_ = estimation_t::ESTIMATED_Z;
 
     imu_reset_done_ = false;
 
@@ -314,7 +314,8 @@ void StateEstimator::updateFloatingBase(const double& period)
         quatToRotMat(imu_orientation_.normalized(),base_R_world_);
         rotTorpy(base_R_world_,base_rpy_);
         floating_base_pose_.linear() = base_R_world_.transpose();
-        floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
+        //floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_; // This line is making the robot crash
+        floating_base_velocity_.segment(3,3) = imu_gyroscope_;
         break;
     case estimation_t::IMU_GYROSCOPE: // Intergate the gyroscope, useful if the magnetometer measure has interferences
         if(!imu_reset_done_)
@@ -331,7 +332,8 @@ void StateEstimator::updateFloatingBase(const double& period)
         // base_rpy_.head(2) = raw_base_rpy_.head(2);
         rpyToRot(base_rpy_, base_R_world_);
         floating_base_pose_.linear() = base_R_world_.transpose();
-        floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
+        //floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_; // This line is making the robot crash
+        floating_base_velocity_.segment(3,3) = imu_gyroscope_;
         break;
     case estimation_t::GROUND_TRUTH:
         quatToRotMat(gt_orientation_.normalized(),base_R_world_);
@@ -383,9 +385,9 @@ void StateEstimator::updateFloatingBase(const double& period)
         // Update the qp estimation based on the new virtual model state
         qp_estimation_->update();
         qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-        //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0; // Does not work, the robot fall!
+        floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0; // Does not work, the robot fall!
         //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2); // Does not work, the robot fall!
-        floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+        //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
         floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
         break;
     case estimation_t::GROUND_TRUTH:

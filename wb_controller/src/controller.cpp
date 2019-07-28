@@ -599,10 +599,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
 
         cmds_->update(period.toSec());
+
         // FIXME I should add something to the CommandsInterface!!!
         // Get the external reference (interactive marker) for the arm if available
         id_prob_->updateReference(arm_tip_name_);
-
 
         // Set the task reference for the waist
         id_prob_->_waistRPY->getReference(tmp_affine3d_);
@@ -610,26 +610,22 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
         tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
         id_prob_->_waistRPY->setReference(tmp_affine3d_);
-        id_prob_->_waistZ->setReference(tmp_affine3d_);
 
-        if(base_height_control_active_)
-            id_prob_->_waistZ->setActive(true);
-        else
-            id_prob_->_waistZ->setActive(false);
+        double delta_z = cmds_->getBaseHeight() - state_estimator_->getFloatingBasePosition()(2);
 
         for(unsigned int i = 0; i<feet_names_.size(); i++)
         {
 
             id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
 
+            xbot_model_->getJacobian(feet_names_[i],J_);
+
+            J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*i);
+
             // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
             // Set the wrench limits to enstablish the contacts
             if(gait_generator_->isSwinging(feet_names_[i]))
             {
-
-                xbot_model_->getJacobian(feet_names_[i],J_);
-
-                J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*i);
 
                 if(!des_joints_reset_done_[i])
                 {
@@ -651,11 +647,26 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             }
             else
             {
+                if(des_joints_reset_done_[i])
+                {
+                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+                    des_joints_reset_done_[i] = false;
+                }
 
                 des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);
+
+
+                x_err_ = Eigen::Vector3d(0,0,-delta_z);
+
+                Eigen::Vector3d qdot_des_z;
+                qdot_des_z = J_foot_.inverse() * (x_err_gain_ * x_err_);
+
+                qhome_.segment(FLOATING_BASE_DOFS+3*i,3) = qdot_des_z * period.toSec() + qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+
+                //des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
+
                 des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
-                des_joints_reset_done_[i] = false;
 
                 id_prob_->_feet[feet_names_[i]]->setActive(true);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
