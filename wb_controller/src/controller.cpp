@@ -19,7 +19,9 @@ namespace wb_controller {
 #define CLASS_NAME "Controller"
 
 Controller::Controller()
-    :solver_started_(false)
+    :solver_created_(false)
+    ,solver_started_(false)
+    ,init_done_(false)
     ,pid_active_(true)
     ,haptic_contact_loop_active_(false)
     ,base_height_control_active_(false)
@@ -262,8 +264,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     pid_scale_ = 1.0;
 
-    solver_created_ = false;
-    init_done_ = false;
 
     // Set the callback for the dynamic reconfigure server
     server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);

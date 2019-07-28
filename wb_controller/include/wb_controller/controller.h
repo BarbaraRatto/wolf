@@ -203,18 +203,6 @@ private:
     std::vector<double> joint_d_gain_;
     /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
-    /** @brief True if first update loop after the solver is started */
-    std::atomic<bool> init_done_;
-    /** @brief Integrate the solver solution and apply it to the desired joints state */
-    std::atomic<bool> solver_started_;
-    /** @brief Activate pid gains */
-    std::atomic<bool> pid_active_;
-    /** @brief Activate the contact haptic loop */
-    std::atomic<bool> haptic_contact_loop_active_;
-    /** @brief Activate the control of the base height */
-    std::atomic<bool> base_height_control_active_;
-    /** @brief Variable used to signal that the controller is stopping */
-    std::atomic<bool> stopping_;
     /** @brief ROS dynamic reconfigure */
     dynamic_reconfigure::Server<wb_controller::controllerConfig>* server_;
     /** @brief ROS dynamic reconfigure config struct */
@@ -243,8 +231,6 @@ private:
     std::shared_ptr<std::thread> odom_publisher_thread_;
     /** @brief Thread for the rviz publisher */
     std::shared_ptr<std::thread> rviz_publisher_thread_;
-    /** @brief True if the solver has been resetted */
-    bool solver_created_;
     /** @brief Gait generator */
     wb_controller::GaitGenerator::Ptr gait_generator_;
     /** @brief Ros node handle */
@@ -265,6 +251,21 @@ private:
     std::atomic<double> cutoff_hz_gyro_;
     /** @brief cutoff_hz_ */
     std::atomic<double> cutoff_hz_qdot_;
+    /** @brief True if the solver istance has been created */
+    bool solver_created_;
+    /** @brief True if the solver is started */
+    std::atomic<bool> solver_started_;
+    /** @brief True if the initialization phase is done */
+    std::atomic<bool> init_done_;
+    /** @brief True if the pid control is active */
+    std::atomic<bool> pid_active_;
+    /** @brief True if the haptic contact loop is active */
+    std::atomic<bool> haptic_contact_loop_active_;
+    /** @brief True if the control of the base height is active */
+    std::atomic<bool> base_height_control_active_;
+    /** @brief True if the controller is stopping */
+    std::atomic<bool> stopping_;
+
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */
