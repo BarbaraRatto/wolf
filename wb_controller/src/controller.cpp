@@ -249,6 +249,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_contact_forces_.resize(24); // 24 = 6 dofs * 4 leg
+    J_.resize(6,xbot_model_->getJointNum());
+    J_foot_.resize(3,3);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -261,13 +263,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_.fill(0.0);
     x_.fill(0.0);
     imu_orientation_.normalize();
-
+    x_err_gain_ = 1.0;
     pid_scale_ = 1.0;
-
 
     // Set the callback for the dynamic reconfigure server
     server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
-    server_->setCallback( boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
+    server_->setCallback(boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
     gait_generator_.reset(new GaitGenerator(feet_names_,hips_names_,"crawl","ellipse"));
     gait_generator_->setSwingFrequency(default_swing_frequency);
@@ -282,6 +283,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimator_->setContactThreshold(default_contact_threshold);
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
+    joy_handler_->addStartButtonHandler(boost::bind(&Controller::toggleSolver,this));
+    joy_handler_->addSelectButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()));
 
     // initialize the filters
     cutoff_hz_gyro_ = 300.;
@@ -308,17 +311,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_pids",des_joint_efforts_pids_);
     Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
-
-    // FIXME to be moved
-    des_joints_reset_done_.resize(4);
-    for(unsigned int i=0; i<des_joints_reset_done_.size(); i++)
-        des_joints_reset_done_[i] = false;
-
-    J_.resize(6,xbot_model_->getJointNum());
-    J_foot_.resize(3,3);
-
-    x_err_gain_ = 1.0;
-
 
     return true;
 }
@@ -512,6 +504,7 @@ void Controller::toggleSolver()
         ROS_INFO("Solver integration is ON");
     else
         ROS_INFO("Solver integration is OFF");
+
 }
 
 void Controller::readJoints()
@@ -630,11 +623,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 if(gait_generator_->isLiftOff(feet_names_[i]))
                     des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
 
-                xdot_des_ = gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3);
-
                 x_err_ = gait_generator_->getReference(feet_names_[i]).translation() - state_estimator_->getFeetPoseInWorld()[i].translation();
 
-                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (xdot_des_ + x_err_gain_ * x_err_);
+                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3) + x_err_gain_ * x_err_);
 
                 des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
 
@@ -645,15 +636,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             else
             {
                  // At the first cycle of stance, set the des joints position at the current homing position
-                 if(gait_generator_->isTouchDown(feet_names_[i]))
-                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+                 //if(gait_generator_->isTouchDown(feet_names_[i]))
+                 //   des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                 // Don't generate velocities for the feet in stance
                 des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);
 
-                x_err_ << 0, 0, -delta_z;
-
-                qhome_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (x_err_gain_ * x_err_) * period.toSec() + qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+                if(base_height_control_active_)
+                {
+                    x_err_ << 0, 0, -delta_z;
+                    qhome_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (x_err_gain_ * x_err_) * period.toSec() + qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+                }
 
                 des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
