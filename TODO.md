@@ -1,3 +1,5 @@
+LICENSE!
+readme with joy image
 start button
 joint limits
 push recovery
