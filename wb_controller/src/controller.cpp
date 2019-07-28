@@ -863,4 +863,20 @@ void Controller::stopping(const ros::Time& /*time*/)
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
 }
 
+GaitGenerator* Controller::getGaitGenerator() const
+{
+    return gait_generator_.get();
+}
+
+StateEstimator* Controller::getStateEstimator() const
+{
+    return state_estimator_.get();
+}
+
+CommandsInterface* Controller::getCommandsInterface() const
+{
+    return cmds_.get();
+}
+
+
 } //namespace

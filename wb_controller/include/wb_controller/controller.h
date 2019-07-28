@@ -11,7 +11,6 @@
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <dynamic_reconfigure/server.h>
-#include <rviz_visual_tools/rviz_visual_tools.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // ROS control
@@ -47,6 +46,18 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
                                                                          hardware_interface::ImuSensorInterface>
 {
 public:
+
+    /**
+     * @brief Shared pointer to Controller
+     */
+    typedef std::shared_ptr<Controller> Ptr;
+
+    /**
+     * @brief Shared pointer to const Controller
+     */
+    typedef std::shared_ptr<const Controller> ConstPtr;
+
+
     /** @brief Constructor function */
     Controller();
 
@@ -118,6 +129,21 @@ public:
          * @param const double& swing_frequency
          */
     bool setSwingFrequency(const double& swing_frequency);
+
+    /**
+         * @brief Get the gait generator pointer
+         */
+    GaitGenerator* getGaitGenerator() const;
+
+    /**
+         * @brief Get the gait commands interface pointer
+         */
+    CommandsInterface* getCommandsInterface() const;
+
+    /**
+         * @brief Get the state estimator pointer
+         */
+    StateEstimator* getStateEstimator() const;
 
 private:
 
