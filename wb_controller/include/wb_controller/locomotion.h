@@ -304,21 +304,6 @@ public:
         trajectory_finished_ = true;
     }
 
-    void preview(std::vector<Eigen::Affine3d>& poses)
-    {
-        assert(swing_frequency_ > 0.0);
-        assert(poses.size() > 0);
-
-        double total_time = 1.0/(swing_frequency_);
-        double period = total_time/poses.size();
-        double time = 0.0;
-        for(unsigned int i=0; i<poses.size(); i++)
-        {
-            poses[i] = trajectoryFunction(time);
-            time += period;
-        }
-    }
-
     const Eigen::Affine3d& getReference()
     {
         return pose_reference_;
@@ -588,11 +573,6 @@ public:
         gait_buffer_[next_gait_idx_].reset(new Gait(feet_names_,gait_type));
         change_gait_ = true;
         gait_type_ = gait_type;
-    }
-
-    void getTrajectoryPreview(const std::string& foot_name, std::vector<Eigen::Affine3d>& poses)
-    {
-        feet_[foot_name].trajectory->preview(poses);
     }
 
     const Eigen::Affine3d& getReference(const std::string& foot_name)
