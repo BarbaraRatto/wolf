@@ -1,7 +1,4 @@
 LICENSE!
-readme with joy image
-start button
-joint limits
 push recovery
 tests and profiling
 check the FIXME around the code clean up
@@ -12,4 +9,3 @@ remove sensors and clean up the urdfs!
 matlab/txt files logger
 add com/icp to stabilize the robot at low freq swings (Michele)
 Merge Kp Kd
-generate gaits with default values
