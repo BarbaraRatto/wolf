@@ -25,6 +25,7 @@
 
 // WB
 #include <wb_controller/geometry.h>
+#include <wb_controller/utils.h>
 
 namespace OpenSoT{
 
@@ -138,13 +139,8 @@ public:
         int_marker.header.frame_id = task_->getBaseLink();
         int_marker.name = task_->getTaskID();
         int_marker.description = task_->getTaskID();
-        int_marker.pose.position.x = tmp_affine3d_.translation().x();
-        int_marker.pose.position.y = tmp_affine3d_.translation().y();
-        int_marker.pose.position.z = tmp_affine3d_.translation().z();
-        int_marker.pose.orientation.x = tmp_quaterniond_.x();
-        int_marker.pose.orientation.y = tmp_quaterniond_.y();
-        int_marker.pose.orientation.z = tmp_quaterniond_.z();
-        int_marker.pose.orientation.w = tmp_quaterniond_.w();
+
+        wb_controller::affine3dToPose(tmp_affine3d_,int_marker.pose);
 
         // create a grey box marker
         visualization_msgs::Marker box_marker;
@@ -221,46 +217,14 @@ public:
             // ACTUAL VALUES
             task_->getActualPose(tmp_affine3d_);
             task_->getActualTwist(tmp_vector6d_);
-            // Transform the R matrix into a quaternion
-            tmp_quaterniond_ = tmp_affine3d_.linear();
-            // Pose - Translation
-            rt_pub_->msg_.pose_actual.position.x = tmp_affine3d_.translation().x();
-            rt_pub_->msg_.pose_actual.position.y = tmp_affine3d_.translation().y();
-            rt_pub_->msg_.pose_actual.position.z = tmp_affine3d_.translation().z();
-            // Pose - Linear
-            rt_pub_->msg_.pose_actual.orientation.x = tmp_quaterniond_.x();
-            rt_pub_->msg_.pose_actual.orientation.y = tmp_quaterniond_.y();
-            rt_pub_->msg_.pose_actual.orientation.z = tmp_quaterniond_.z();
-            rt_pub_->msg_.pose_actual.orientation.w = tmp_quaterniond_.w();
-            // Twist
-            rt_pub_->msg_.twist_actual.linear.x  = tmp_vector6d_(0);
-            rt_pub_->msg_.twist_actual.linear.y  = tmp_vector6d_(1);
-            rt_pub_->msg_.twist_actual.linear.z  = tmp_vector6d_(2);
-            rt_pub_->msg_.twist_actual.angular.x = tmp_vector6d_(3);
-            rt_pub_->msg_.twist_actual.angular.y = tmp_vector6d_(4);
-            rt_pub_->msg_.twist_actual.angular.z = tmp_vector6d_(5);
+            wb_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_actual);
+            wb_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_actual);
 
             // REFERENCE VALUES
             task_->getReference(tmp_affine3d_);
             tmp_vector6d_ = task_->getCachedVelocityReference();
-            // Transform the R matrix into a quaternion
-            tmp_quaterniond_ = tmp_affine3d_.linear();
-            // Pose - Translation
-            rt_pub_->msg_.pose_reference.position.x = tmp_affine3d_.translation().x();
-            rt_pub_->msg_.pose_reference.position.y = tmp_affine3d_.translation().y();
-            rt_pub_->msg_.pose_reference.position.z = tmp_affine3d_.translation().z();
-            // Pose - Linear
-            rt_pub_->msg_.pose_reference.orientation.x = tmp_quaterniond_.x();
-            rt_pub_->msg_.pose_reference.orientation.y = tmp_quaterniond_.y();
-            rt_pub_->msg_.pose_reference.orientation.z = tmp_quaterniond_.z();
-            rt_pub_->msg_.pose_reference.orientation.w = tmp_quaterniond_.w();
-            // Twist
-            rt_pub_->msg_.twist_reference.linear.x  = tmp_vector6d_(0);
-            rt_pub_->msg_.twist_reference.linear.y  = tmp_vector6d_(1);
-            rt_pub_->msg_.twist_reference.linear.z  = tmp_vector6d_(2);
-            rt_pub_->msg_.twist_reference.angular.x = tmp_vector6d_(3);
-            rt_pub_->msg_.twist_reference.angular.y = tmp_vector6d_(4);
-            rt_pub_->msg_.twist_reference.angular.z = tmp_vector6d_(5);
+            wb_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_reference);
+            wb_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_reference);
 
             rt_pub_->unlockAndPublish();
         }
@@ -321,16 +285,12 @@ public:
             // ACTUAL VALUES
             task_->getActualPose(tmp_vector3d_);
             // Pose - Translation
-            rt_pub_->msg_.pose_actual.position.x = tmp_vector3d_(0);
-            rt_pub_->msg_.pose_actual.position.y = tmp_vector3d_(1);
-            rt_pub_->msg_.pose_actual.position.z = tmp_vector3d_(2);
+            wb_controller::vector3dToPosePosition(tmp_vector3d_,rt_pub_->msg_.pose_actual);
 
             // REFERENCE VALUES
             task_->getReference(tmp_vector3d_);
             // Pose - Translation
-            rt_pub_->msg_.pose_reference.position.x = tmp_vector3d_(0);
-            rt_pub_->msg_.pose_reference.position.y = tmp_vector3d_(1);
-            rt_pub_->msg_.pose_reference.position.z = tmp_vector3d_(2);
+            wb_controller::vector3dToPosePosition(tmp_vector3d_,rt_pub_->msg_.pose_reference);
 
             rt_pub_->unlockAndPublish();
         }
@@ -392,7 +352,8 @@ public:
 /**
  * @brief The IDProblem class wraps the tasks, constraints and the solver used to solve the ID
  */
-class IDProblem{
+class IDProblem
+{
 
 public:
     typedef boost::shared_ptr<IDProblem> Ptr;
@@ -430,6 +391,11 @@ public:
     void update();
 
     /**
+     * @brief reset the tasks
+     */
+    void reset();
+
+    /**
      * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
      * @param task name to update
      */
@@ -452,7 +418,8 @@ public:
      */
     std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
     tasks::acceleration::Cartesian::Ptr _arm;
-    tasks::acceleration::Cartesian::Ptr _waist;
+    tasks::acceleration::Cartesian::Ptr _waistRPY;
+    tasks::acceleration::Cartesian::Ptr _waistZ;
     tasks::acceleration::CoM::Ptr _com;
 
     /**

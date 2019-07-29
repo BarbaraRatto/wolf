@@ -102,9 +102,45 @@ inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
     double c_p = std::cos(pitch);
     double s_p = std::sin(pitch);
 
-    R << c_p*cos(yaw)          ,  c_p*s_y                     ,  -s_p,
-         s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*cos(yaw)  ,  s_r*c_p,
-         c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*cos(yaw)  ,  c_r*c_p;
+    R << c_p*c_y               ,  c_p*s_y                ,  -s_p,
+         s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*c_y  ,  s_r*c_p,
+         c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*c_y  ,  c_r*c_p;
+
+}
+
+inline void yawToRot(const double& yaw, Eigen::Matrix3d& R)
+{
+    R.setZero();
+    double c_y = std::cos(yaw);
+    double s_y = std::sin(yaw);
+
+    R << c_y  ,  s_y ,		0,
+         -s_y ,  c_y ,  		0,
+         0    ,     0     ,       1;
+}
+
+inline void rollToRot(const double& roll, Eigen::Matrix3d& R)
+{
+    R.setZero();
+    double c_r = std::cos(roll);
+    double s_r = std::sin(roll);
+
+    R <<    1   ,    0     	  ,  	  0,
+            0   ,    c_r ,  s_r,
+            0   ,    -s_r,  c_r;
+
+}
+
+inline void pitchToRot(const double& pitch, Eigen::Matrix3d& R)
+{
+    R.setZero();
+    double c_p = std::cos(pitch);
+    double s_p = std::sin(pitch);
+
+
+    R << c_p 	,	 0  ,   -s_p,
+            0       ,    1  ,   0,
+           s_p 	,	0   ,  c_p;
 
 }
 

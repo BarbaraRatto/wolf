@@ -17,18 +17,16 @@ class FootStateMachine
 {
 public:
 
-    FootStateMachine(const double& duty_cycle)
-    {
-        assert(duty_cycle > 0 && duty_cycle <=1);
-        dc_ = duty_cycle;
-        reset();
-        cnt_ = 0;
-        state_ = states::INIT;
-    }
-
     FootStateMachine()
-        :FootStateMachine(0.5)
     {
+        dc_ = 0.8;
+        swing_frequency_ = 0.0;
+        reset();
+        state_ = states::INIT;
+        // We assume that the state machine starts as it completed a full swing cycle
+        // i.e. swing + stance, in this way isCycleEnded returns true.
+        // This is useful to set the initial pose in the commands interface
+        prev_state_ = states::STANCE;
     }
 
     bool isSwing()
@@ -79,6 +77,14 @@ public:
             return false;
     }
 
+    bool isCycleEnded()
+    {
+        if(prev_state_ == states::STANCE && state_ == states::INIT)
+            return true;
+        else
+            return false;
+    }
+
     void triggerSwing()
     {
         trigger_swing_ = true;
@@ -90,6 +96,12 @@ public:
         dc_ = duty_cycle;
     }
 
+    void setSwingFrequency(double swing_frequency)
+    {
+        assert(swing_frequency >= 0);
+        swing_frequency_ = swing_frequency;
+    }
+
     double getDutyCycle()
     {
         return dc_;
@@ -99,6 +111,8 @@ public:
     {
 
         prev_state_ = state_;
+
+        double half_swing_time = 0.0;
 
         switch (state_)
         {
@@ -116,16 +130,17 @@ public:
 
             active_time_ += period;
 
-            //if(contact && cnt_>=1)
-            if(contact)
+            if(swing_frequency_>0)
+                half_swing_time = 1/(2*swing_frequency_); // NOTE: since we use f'=2f, we should divide by 4 and not by 2.
+            // If swing frequency is geq than 0
+            // deactivate the contact sensing for half of the swing time
+            if(contact && active_time_>=half_swing_time)
             {
                 calculateTimes();
                 state_ = states::STANCE;
             }
             else
                 state_ = states::SWING;
-
-            cnt_++;
 
             break;
 
@@ -151,12 +166,13 @@ public:
     }
 
 private:
-    double dc_;
+
     double active_time_;
     double total_time_;
     double wait_time_;
-    unsigned int cnt_;
     bool trigger_swing_;
+    std::atomic<double> swing_frequency_;
+    std::atomic<double> dc_;
 
     enum states {INIT=0,SWING,STANCE};
     unsigned int state_;
@@ -167,7 +183,6 @@ private:
         wait_time_ = 0.0;
         active_time_ = 0.0;
         total_time_ = 0.0;
-        cnt_ = 0;
         trigger_swing_ = false;
     }
 
@@ -188,7 +203,7 @@ public:
     {
         ROS_INFO_STREAM("Selected " << gait_type << " gait");
 
-        assert(feet_names.size() == 4);
+        assert(feet_names.size() == N_LEGS);
 
         auto ordered_feet_names = sortByLegName(feet_names);
 
@@ -210,16 +225,7 @@ public:
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
         }
-        else if(std::strcmp(gait_type.c_str(),"bound")==0)
-        {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RH],1));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RF],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LH],1));
-            next_feet_to_move_.resize(2);
-            max_priority_ = 1;
-        }
-        else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
+        /*else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
         {
             schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
             next_feet_to_move_.resize(1);
@@ -242,7 +248,7 @@ public:
             schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LH],0));
             next_feet_to_move_.resize(1);
             max_priority_ = 0;
-        }
+        }*/
         else
         {
             throw std::runtime_error("Wrong gait type!");
@@ -288,7 +294,7 @@ public:
         pose_reference_ = initial_pose_ = pose_ = Eigen::Affine3d::Identity();
         twist_reference_.setZero();
         twist_.setZero();
-        swing_frequency_ = 5.0;
+        swing_frequency_ = 0.0;
         time_ = 0.0;
         length_ = 0.0;
         heading_ = 0.0;
@@ -296,21 +302,6 @@ public:
         height_ = 0.0;
 
         trajectory_finished_ = true;
-    }
-
-    void preview(std::vector<Eigen::Affine3d>& poses)
-    {
-        assert(swing_frequency_ > 0.0);
-        assert(poses.size() > 0);
-
-        double total_time = 1.0/(swing_frequency_);
-        double period = total_time/poses.size();
-        double time = 0.0;
-        for(unsigned int i=0; i<poses.size(); i++)
-        {
-            poses[i] = trajectoryFunction(time);
-            time += period;
-        }
     }
 
     const Eigen::Affine3d& getReference()
@@ -328,10 +319,16 @@ public:
         return initial_pose_;
     }
 
-    [[deprecated]]
     void setInitialPose(const Eigen::Affine3d& initial_pose)
     {
+#ifdef OPEN_LOOP_TRAJECTORY
+        // Open loop trajectory
+        initial_pose_ = pose_reference_;
+#else
+        // Closed loop trajectory: to be used if the tracking is good
         initial_pose_ = initial_pose;
+        pose_reference_ = initial_pose;
+#endif
     }
 
     bool isFinished()
@@ -339,10 +336,9 @@ public:
         return trajectory_finished_;
     }
 
-    void start(const Eigen::Affine3d& initial_pose)
+    void start()
     {
         time_ = 0.0;
-        initial_pose_ = initial_pose;
         twist_reference_.setZero();
         trajectory_finished_ = false;
     }
@@ -354,7 +350,6 @@ public:
 
     void standBy()
     {
-        pose_reference_ = initial_pose_;
         twist_reference_.setZero();
     }
 
@@ -540,19 +535,22 @@ public:
      */
     typedef std::shared_ptr<const GaitGenerator> ConstPtr;
 
-    GaitGenerator(const double& duty_cycle, const std::vector<std::string>& feet_names, const std::vector<std::string>& hips_names, const std::string& gait_type, const std::string& trajectory_type)
+    GaitGenerator(const std::vector<std::string>& feet_names, const std::vector<std::string>& hips_names, const std::string& gait_type, const std::string& trajectory_type)
     {
-        assert(feet_names.size()==4);// We assume we are working with a dog
-        assert(hips_names.size()==4);
+        assert(feet_names.size()==N_LEGS);// We assume we are working with a dog
+        assert(hips_names.size()==N_LEGS);
         feet_names_ = feet_names;
         hips_names_ = hips_names;
         for(unsigned int i = 0; i<feet_names.size(); i++)
         {
-            feet_[feet_names[i]].state_machine = FootStateMachine(duty_cycle);
+            feet_[feet_names[i]].state_machine.reset(new FootStateMachine());
             feet_[feet_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
-            feet_[feet_names[i]].is_in_contact = true;
+            feet_[feet_names[i]].contact_state = false;
+            feet_[feet_names[i]].trigger_stance = false;
             feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
         }
+
+        setSwingFrequency(0.0);
 
         gait_buffer_.resize(2);
 
@@ -566,9 +564,16 @@ public:
         change_gait_ = false;
         schedule_changed_ = true; // At the beginning is already changed no?
         activate_swing_ = false;
-        use_haptic_contact_loop_ = false;
 
         gait_type_ = gait_type;
+    }
+
+    void switchGait()
+    {
+        if(gait_type_ == "trot")
+            setGaitType("crawl");
+        else
+            setGaitType("trot");
     }
 
     void setGaitType(const std::string& gait_type)
@@ -576,11 +581,6 @@ public:
         gait_buffer_[next_gait_idx_].reset(new Gait(feet_names_,gait_type));
         change_gait_ = true;
         gait_type_ = gait_type;
-    }
-
-    void getTrajectoryPreview(const std::string& foot_name, std::vector<Eigen::Affine3d>& poses)
-    {
-        feet_[foot_name].trajectory->preview(poses);
     }
 
     const Eigen::Affine3d& getReference(const std::string& foot_name)
@@ -595,37 +595,42 @@ public:
 
     bool isSwinging(const std::string& foot_name)
     {
-        return feet_[foot_name].state_machine.isSwing();
+        return feet_[foot_name].state_machine->isSwing();
     }
 
     bool isInStance(const std::string& foot_name)
     {
-        return feet_[foot_name].state_machine.isStance();
+        return feet_[foot_name].state_machine->isStance();
     }
 
     bool isInStanceOrInit(const std::string& foot_name)
     {
-        return (feet_[foot_name].state_machine.isStance() || feet_[foot_name].state_machine.isInit());
+        return (feet_[foot_name].state_machine->isStance() || feet_[foot_name].state_machine->isInit());
     }
 
     bool isInInit(const std::string& foot_name)
     {
-        return feet_[foot_name].state_machine.isInit();
+        return feet_[foot_name].state_machine->isInit();
     }
 
     bool isStateChanged(const std::string& foot_name)
     {
-        return feet_[foot_name].state_machine.isStateChanged();
+        return feet_[foot_name].state_machine->isStateChanged();
     }
 
     bool isTouchDown(const std::string& foot_name)
     {
-        return feet_[foot_name].state_machine.isTouchDown();
+        return feet_[foot_name].state_machine->isTouchDown();
     }
 
     bool isLiftOff(const std::string& foot_name)
     {
-        return feet_[foot_name].state_machine.isLiftOff();
+        return feet_[foot_name].state_machine->isLiftOff();
+    }
+
+    bool isCycleEnded(const std::string& foot_name)
+    {
+        return feet_[foot_name].state_machine->isCycleEnded();
     }
 
     bool isScheduleChanged()
@@ -637,7 +642,7 @@ public:
     {
         bool result = false;
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-            result = result || it->second.state_machine.isLiftOff();
+            result = result || it->second.state_machine->isLiftOff();
         return result;
     }
 
@@ -645,55 +650,54 @@ public:
     {
         bool result = false;
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-            result = result || it->second.state_machine.isTouchDown();
+            result = result || it->second.state_machine->isTouchDown();
         return result;
     }
 
-    void enableHapticContactLoop()
+    void setContactState(const std::string& foot_name, const bool& contact)
     {
-        use_haptic_contact_loop_ = true;
+        feet_[foot_name].contact_state = contact;
     }
 
-    void disableHapticContactLoop()
+    const bool& getContactState(const std::string& foot_name)
     {
-        use_haptic_contact_loop_ = false;
-    }
-
-    void setContact(const std::string& foot_name, const bool& contact)
-    {
-        feet_[foot_name].is_in_contact = contact;
-    }
-
-    const bool& getContact(const std::string& foot_name)
-    {
-        return feet_[foot_name].is_in_contact;
+        return feet_[foot_name].contact_state;
     }
 
     void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
     {
-        //feet_[foot_name].trajectory->setInitialPose(initial_pose);
-        feet_[foot_name].initial_pose = initial_pose;
+        feet_[foot_name].trajectory->setInitialPose(initial_pose);
     }
 
     double getDutyCycle(const std::string& foot_name)
     {
-        return feet_[foot_name].state_machine.getDutyCycle();
+        return feet_[foot_name].state_machine->getDutyCycle();
     }
 
     void setDutyCycle(const double& duty_cycle)
     {
         for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-            it->second.state_machine.setDutyCycle(duty_cycle);
+            it->second.state_machine->setDutyCycle(duty_cycle);
     }
 
     void setDutyCycle(const std::string& foot_name, const double& duty_cycle)
     {
-        feet_[foot_name].state_machine.setDutyCycle(duty_cycle);
+        feet_[foot_name].state_machine->setDutyCycle(duty_cycle);
+    }
+
+    void setSwingFrequency(const double& swing_frequency)
+    {
+        for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+        {
+            it->second.trajectory->setSwingFrequency(swing_frequency);
+            it->second.state_machine->setSwingFrequency(swing_frequency);
+        }
     }
 
     void setSwingFrequency(const std::string& foot_name, const double& swing_frequency)
     {
         feet_[foot_name].trajectory->setSwingFrequency(swing_frequency);
+        feet_[foot_name].state_machine->setSwingFrequency(swing_frequency);
     }
 
     double getSwingFrequency(const std::string& foot_name)
@@ -770,34 +774,38 @@ public:
         activate_swing_ = false;
     }
 
+    bool isTrajectoryFinished(const std::string& foot_name)
+    {
+        return feet_[foot_name].trajectory->isFinished();
+    }
+
     void update(const double& period)
     {
         // 1) Check if the scheduled feet are all in Init and start the swing if this is the case.
         bool scheduled_feet_are_init = true;
         for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-            if(!feet_[scheduled_feet_[i]].state_machine.isInit())
+            if(!feet_[scheduled_feet_[i]].state_machine->isInit())
             {
                 scheduled_feet_are_init = false;
                 break;
             }
         if(scheduled_feet_are_init && activate_swing_)
             for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-                feet_[scheduled_feet_[i]].state_machine.triggerSwing();
+                feet_[scheduled_feet_[i]].state_machine->triggerSwing();
 
         // 2) Update the trajectories for each foot depending on the state machine status
         for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
         {
 
-            if(!use_haptic_contact_loop_)
-                it->second.is_in_contact = it->second.trajectory->isFinished(); // OpenLoop
+            it->second.trigger_stance = it->second.contact_state || it->second.trajectory->isFinished(); //CloseLoop with trajectory end
 
-            it->second.state_machine.update(period,it->second.is_in_contact);
+            it->second.state_machine->update(period,it->second.trigger_stance);
 
-            if (it->second.state_machine.isSwing())
+            if (it->second.state_machine->isSwing())
             {
-                if (it->second.state_machine.isLiftOff())
+                if (it->second.state_machine->isLiftOff())
                 {
-                    it->second.trajectory->start(it->second.initial_pose);
+                    it->second.trajectory->start();
                 }
                 it->second.trajectory->update(period);
 
@@ -805,7 +813,7 @@ public:
             }
             else
             {
-                if (it->second.state_machine.isTouchDown())
+                if (it->second.state_machine->isTouchDown())
                 {
                     it->second.trajectory->stop();
                 }
@@ -818,7 +826,7 @@ public:
         // 3) If the scheduled feet are all in Init, change the schedule to the next one (i.e. move to the next feet)
         unsigned int cnt = 0;
         for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-            if(feet_[scheduled_feet_[i]].state_machine.isInit())
+            if(feet_[scheduled_feet_[i]].state_machine->isInit())
                 cnt++;
         if(cnt == scheduled_feet_.size())
         {
@@ -847,9 +855,10 @@ private:
 
     struct feet_status_t
     {
-        FootStateMachine state_machine;
+        std::shared_ptr<FootStateMachine> state_machine;
         std::shared_ptr<TrajectoryInterface> trajectory;
-        bool is_in_contact;
+        bool contact_state;
+        bool trigger_stance;
         Eigen::Affine3d initial_pose;
     };
 
@@ -879,8 +888,6 @@ private:
     std::atomic<bool> change_gait_;
     std::atomic<bool> schedule_changed_;
     std::atomic<bool> activate_swing_;
-
-    bool use_haptic_contact_loop_;
 
     std::vector<std::string> feet_names_;
     std::vector<std::string> hips_names_;

@@ -1,15 +1,10 @@
+push recovery
 tests and profiling
-analyze atomic
 check the FIXME around the code clean up
-create locomotion .cpp
-move to github
 package opensot
-merge the ids and ik problems
-HAL
-add subscribers and markers in the ROS wrappers
-change name of the controller
-startup
-filter state estimation
-where do I get z?
+startup procedure and solver reset
 clean the descriptions, load the homing from the srdf
 remove sensors and clean up the urdfs!
+matlab/txt files logger
+add com/icp to stabilize the robot at low freq swings (Michele)
+Merge Kp Kd

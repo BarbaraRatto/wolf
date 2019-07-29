@@ -26,8 +26,6 @@ public:
      */
     typedef std::shared_ptr<const CommandsInterface> ConstPtr;
 
-#define CLASS_NAME "CommandsInterface"
-
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
     CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3);
@@ -40,6 +38,8 @@ public:
 
     void initializeFeetPosition();
 
+    void initializeFootPosition(const std::string& foot_name);
+
     // Sets
     void setCmd(const unsigned int cmd);
     void setBasePosition(const Eigen::Vector3d& position);
@@ -49,11 +49,14 @@ public:
     void setBaseVelocityScaleX(const double scale);
     void setBaseVelocityScaleY(const double scale);
     void setBaseVelocityScaleZ(const double scale);
+    void setStepHeightScale(const double scale);
     void setBaseVelocityScaleRoll(const double scale);
     void setBaseVelocityScalePitch(const double scale);
     void setBaseVelocityScaleYaw(const double scale);
     void setMaxLinearVelocity(const double max);
     void setMaxAngularVelocity(const double max);
+    void setMaxStepHeight(const double max);
+    void setMaxStepLength(const double max);
 
     // Gets
     unsigned int getCmd();
@@ -65,10 +68,12 @@ public:
     const double& getBaseHeight() const ;
     double getMaxLinearVelocity() const ;
     double getMaxAngularVelocity() const ;
-
-private:
+    double getMaxStepHeight() const ;
+    double getMaxStepLength() const ;
 
     void setHipOffset();
+
+private:
 
     void calculateFeetStep();
 
@@ -98,6 +103,10 @@ private:
     std::atomic<double>  base_angular_velocity_scale_yaw_;
     std::atomic<double>  base_linear_velocity_max_;
     std::atomic<double>  base_angular_velocity_max_;
+    std::atomic<double>  step_height_scale_;
+    std::atomic<double>  step_height_ext_;
+    std::atomic<double>  step_height_max_;
+    std::atomic<double>  step_length_max_;
 
     /** @brief Base linear velocity w.r.t horizontal frame
      * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
@@ -133,7 +142,6 @@ private:
 
     bool offset_applied_;
 
-    double base_height_;
     typedef std::map<std::string,double> map_t;
     map_t steps_length_;
     map_t steps_heading_;
@@ -150,8 +158,6 @@ private:
     std::vector<Eigen::Vector3d> hf_X_virtual_hips_;
 
     double yaw_base_;
-    double step_height_max_;
-    double step_length_max_;
     double step_length_;
     double step_height_;
 };

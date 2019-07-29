@@ -1,14 +1,15 @@
 <?xml version="1.0" ?>
 <launch>
-   <arg name="robot_name" default="hyq"/>
-   <arg name="problem" default="ik"/>
-   <arg name="sensors" default="false" />
-   <arg name="internal_wrench" default="false" />
-   <arg name="world_name" default="empty.world" />
-   <arg name="task_period" default="0.001" />
-   <arg name="gazebo_gui" default="true" />
-   <arg name="gazebo" default="true" />
-   <arg name="arm" default="false" />
+
+    <arg name="robot_name" default="hyq"/>
+    <arg name="sensors" default="false" />
+    <arg name="internal_wrench" default="false" />
+    <arg name="world_name" default="empty.world" />
+    <arg name="task_period" default="0.001" />
+    <arg name="gazebo_debug" default="false" />
+    <arg name="gazebo_gui" default="true" />
+    <arg name="gazebo" default="true" />
+    <arg name="arm" default="false" />
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
@@ -16,15 +17,15 @@
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">
-        <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
-            <arg name="sensors" value="$(arg sensors)" />
-            <arg name="internal_wrench" value="$(arg internal_wrench)" />
-            <arg name="world_name" value="$(arg world_name)" />
-            <arg name="task_period" value="$(arg task_period)" />
-            <arg name="gui" value="$(arg gazebo_gui)"/>
-            <!-- <arg name="arm" value="$(arg arm)"/> -->
-            <!-- arg name="debug" value="true"/ -->
-        </include>
+	    <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
+		<arg name="sensors" value="$(arg sensors)" />
+		<arg name="internal_wrench" value="$(arg internal_wrench)" />
+		<arg name="world_name" value="$(arg world_name)" />
+		<arg name="task_period" value="$(arg task_period)" />
+		<arg name="gui" value="$(arg gazebo_gui)"/>
+		<arg name="arm" value="$(arg arm)"/>
+                <arg name="debug" value="$(arg gazebo_debug)"/>
+	    </include>
     </group>
 
     <group unless="$(arg gazebo)">
@@ -33,8 +34,6 @@
        </include>
    </group>
 
-    <!-- Loading the problem description for the solver from YAML file to parameter server -->
-    <param name="$(arg robot_name)/wb_controller/problem_description" textfile="$(find wb_controller)/problems/$(arg problem).yaml"/>
     <!-- Loading joint states publisher configurations from YAML file to parameter server -->
     <rosparam file="$(find wb_controller)/config/joint_state_publisher.yaml" ns="/$(arg robot_name)" command="load"/>
 
@@ -77,6 +76,13 @@
         <remap from="/joint_states" to="/$(arg robot_name)/ci/joint_states" />
     </node>
 
-    <include  file="$(find wb_controller)/launch/plot_node.launch"/>
+    <!-- plot node launch -->
+    <include  file="$(find wb_controller)/launch/plot_node.launch">
+        <arg name="robot_name" value="$(arg robot_name)" />
+    </include>
+
+    <!-- Rviz -->
+    <node pkg="rviz" type="rviz" name="rviz">
+    </node>
 
 </launch>
