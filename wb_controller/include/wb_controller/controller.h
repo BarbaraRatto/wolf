@@ -34,7 +34,6 @@
 #include <wb_controller/joy.h>
 #include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
-#include <wb_controller/ControllerServices.h>
 #include <wb_controller/controllerConfig.h>
 // Eigen
 #include <Eigen/Geometry>
