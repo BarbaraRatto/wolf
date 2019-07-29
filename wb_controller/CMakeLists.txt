@@ -14,7 +14,7 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface dls_hardware_interface control_toolbox
+find_package(catkin REQUIRED tf controller_interface control_toolbox
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
@@ -93,7 +93,7 @@ install(DIRECTORY plot_juggler_files/
   PATTERN ".svn" EXCLUDE)
 
 
-if (TEST)
+if (CATKIN_ENABLE_TESTING)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
   find_package(cartesian_interface REQUIRED)
