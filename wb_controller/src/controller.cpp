@@ -233,6 +233,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Set home position defined in the srdf
     xbot_model_->getRobotState("home", qhome_);
     xbot_model_->setJointPosition(qhome_);
+    qstance_ = qhome_;
+    qswing_ = qhome_;
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -585,6 +587,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->reset();
 
             des_joint_positions_ = qhome_;
+            qswing_ = qhome_;
+            qstance_ = qhome_;
             des_joint_velocities_.fill(0.0);
 
             dynamicReconfigureUpdate();
@@ -621,13 +625,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             {
                 // At the first cycle of swing, set the des joints position at the current measured joints position
                 if(gait_generator_->isLiftOff(feet_names_[i]))
-                    des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
+                    qswing_.segment(FLOATING_BASE_DOFS+3*i,3) = joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                 x_err_ = gait_generator_->getReference(feet_names_[i]).translation() - state_estimator_->getFeetPoseInWorld()[i].translation();
 
                 des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3) + x_err_gain_ * x_err_);
 
-                des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3);
+                qswing_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + qswing_.segment(FLOATING_BASE_DOFS+3*i,3);
+
+                des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qswing_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                 id_prob_->_feet[feet_names_[i]]->setActive(false);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
@@ -639,16 +645,14 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                  //if(gait_generator_->isTouchDown(feet_names_[i]))
                  //   des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
-                // Don't generate velocities for the feet in stance
-                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);
-
                 if(base_height_control_active_)
                 {
                     x_err_ << 0, 0, -delta_z;
-                    qhome_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (x_err_gain_ * x_err_) * period.toSec() + qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+                    qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (x_err_gain_ * x_err_) * period.toSec() + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
                 }
 
-                des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);  // Don't generate velocities for the feet in stance
+                des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                 id_prob_->_feet[feet_names_[i]]->setActive(true);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
