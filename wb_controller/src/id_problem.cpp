@@ -122,6 +122,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     _x.setZero(_id->getSerializer()->getSize());
 
     _qddot.setZero(_model->getJointNum());
+    _contact_wrenches.reserve(feet_names.size());
 
 
     // Add some ROS magic
@@ -174,7 +175,7 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
     bool a = _solver->solve(_x);
     if(!a)
         return false;
-    a = _id->computedTorque(_x, tau, _qddot);
+    a = _id->computedTorque(_x, tau, _qddot, _contact_wrenches);
 
     return a;
 }
