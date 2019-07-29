@@ -235,6 +235,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     xbot_model_->setJointPosition(qhome_);
     qstance_ = qhome_;
     qswing_ = qhome_;
+    xbot_model_->getJointLimits(qmin_, qmax_);
+
+    // Check if qhome is between qmin and qmax
+    if(jointLimitsCheck(qhome_,qmin_,qmax_))
+         return false;
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -315,6 +320,29 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
 
     return true;
+}
+
+bool Controller::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd& qmin, const Eigen::VectorXd& qmax)
+{
+    assert(q.size() == qmin.size());
+    assert(qmin.size() == qmax.size());
+    bool violated_limits = false;
+    for(unsigned int i=0;i<q.size();i++)
+    {
+        if(q(i)<qmin(i))
+        {
+            q(i) = qmin(i);
+            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<i<<") violates the minimum limit of "<<qmin(i));
+            violated_limits = true;
+        }
+        if(q(i)>qmax(i))
+        {
+            q(i) = qmax(i);
+            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<i<<") violates the maximum limit of "<<qmax(i));
+            violated_limits = true;
+        }
+    }
+    return violated_limits;
 }
 
 void Controller::dynamicReconfigureUpdate()
@@ -661,6 +689,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
 
         // Set the postural desired positions and velocities
+        jointLimitsCheck(des_joint_positions_,qmin_,qmax_);
+
         id_prob_->_postural->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Solver Update
