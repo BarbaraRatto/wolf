@@ -1,7 +1,7 @@
 #include <dls_gazebo_interface/dls_hw_sim.h>
 
 #include <gazebo/sensors/SensorManager.hh>
-#include <gazebo/math/Vector3.hh>
+#include <ignition/math/Vector3.hh>
 
 PLUGINLIB_EXPORT_CLASS(dls_gazebo_interface::DlsRobotHwSim, gazebo_ros_control::RobotHWSim)
 
@@ -82,7 +82,7 @@ namespace dls_gazebo_interface
 
         }
 
-        inital_pose = sim_model_->GetWorldPose();
+        inital_pose = sim_model_->WorldPose();
         robot_name_ = sim_model_->GetName();
 
         // Hardware interfaces: Base IMU sensors
@@ -145,20 +145,20 @@ namespace dls_gazebo_interface
         for (unsigned int j=0; j < n_dof_; j++) {
             // Gazebo has an interesting API...
             if (joint_types_[j] == urdf::Joint::PRISMATIC) {
-                joint_position_[j] = sim_joints_[j]->GetAngle(0).Radian();
+                joint_position_[j] = sim_joints_[j]->Position(0);
             } else {
                 joint_position_[j] += angles::shortest_angular_distance(joint_position_[j],
-                                                                        sim_joints_[j]->GetAngle(0).Radian());
+                                                                        sim_joints_[j]->Position(0));
             }
             joint_velocity_[j] = sim_joints_[j]->GetVelocity(0);
             joint_effort_[j] = sim_joints_[j]->GetForce((unsigned int)(0));
         }
 
         //Ground truth:
-        gazebo::math::Vector3  gzLinearVel = sim_model_->GetWorldLinearVel();
-        base_lin_vel_[0] = gzLinearVel.x;
-        base_lin_vel_[1] = gzLinearVel.y;
-        base_lin_vel_[2] = gzLinearVel.z;
+        ignition::math::Vector3d  gzLinearVel = sim_model_->WorldLinearVel();
+        base_lin_vel_[0] = gzLinearVel.X();
+        base_lin_vel_[1] = gzLinearVel.Y();
+        base_lin_vel_[2] = gzLinearVel.Z();
 
         //gazebo::math::Vector3  gzLinearAcc = sim_model_->GetLink("base_link")->GetLinearAccel(); //not working
         base_lin_acc_[0] = (base_lin_vel_[0] - base_lin_vel_old_[0])/period.toSec();
@@ -168,10 +168,10 @@ namespace dls_gazebo_interface
         base_lin_vel_old_[1] = base_lin_vel_[1];
         base_lin_vel_old_[2] = base_lin_vel_[2];
 
-        gazebo::math::Vector3  gzAngularVel = sim_model_->GetWorldAngularVel();
-        base_ang_vel_[0] = gzAngularVel.x;
-        base_ang_vel_[1] = gzAngularVel.y;
-        base_ang_vel_[2] = gzAngularVel.z;
+        ignition::math::Vector3d  gzAngularVel = sim_model_->WorldAngularVel();
+        base_ang_vel_[0] = gzAngularVel.X();
+        base_ang_vel_[1] = gzAngularVel.Y();
+        base_ang_vel_[2] = gzAngularVel.Z();
 
         //gazebo::math::Vector3  gzAngularAcc = sim_model_->GetWorldAngularAccel(); //not working
         base_ang_acc_[0] = (base_ang_vel_[0] - base_ang_vel_old_[0])/period.toSec();
@@ -181,20 +181,20 @@ namespace dls_gazebo_interface
         base_ang_vel_old_[1] = base_lin_vel_[1];
         base_ang_vel_old_[2] = base_lin_vel_[2];
 
-        gazebo::math::Pose gzPose = sim_model_->GetWorldPose();
-        base_lin_pos_[0] = gzPose.pos.x;
-        base_lin_pos_[1] = gzPose.pos.y;
-        base_lin_pos_[2] = gzPose.pos.z;
-        base_orientation_[0] = gzPose.rot.w;
-        base_orientation_[1] = gzPose.rot.x;
-        base_orientation_[2] = gzPose.rot.y;
-        base_orientation_[3] = gzPose.rot.z;
+        ignition::math::Pose3d gzPose = sim_model_->WorldPose();
+        base_lin_pos_[0] = gzPose.Pos().X();
+        base_lin_pos_[1] = gzPose.Pos().Y();
+        base_lin_pos_[2] = gzPose.Pos().Z();
+        base_orientation_[0] = gzPose.Rot().W();
+        base_orientation_[1] = gzPose.Rot().X();
+        base_orientation_[2] = gzPose.Rot().Y();
+        base_orientation_[3] = gzPose.Rot().Z();
 
 
         //IMU data:
-        gazebo::math::Quaternion imu_quat(1, 0, 0, 0);
-        gazebo::math::Vector3 imu_ang_vel(0, 0, 0);
-        gazebo::math::Vector3 imu_lin_acc(0, 0, 0);
+        ignition::math::Quaterniond imu_quat(1, 0, 0, 0);
+        ignition::math::Vector3d imu_ang_vel(0, 0, 0);
+        ignition::math::Vector3d imu_lin_acc(0, 0, 0);
 
         if(imu_sensor_ != NULL)
         {
@@ -204,32 +204,32 @@ namespace dls_gazebo_interface
         }
         else
         {
-            imu_quat.w = gzPose.rot.w;
-            imu_quat.x = gzPose.rot.x;
-            imu_quat.y = gzPose.rot.y;
-            imu_quat.z = gzPose.rot.z;
+            imu_quat.W() = gzPose.Rot().W();
+            imu_quat.X() = gzPose.Rot().X();
+            imu_quat.Y() = gzPose.Rot().Y();
+            imu_quat.Z() = gzPose.Rot().Z();
 
-            imu_ang_vel.x = gzAngularVel.x;
-            imu_ang_vel.y = gzAngularVel.y;
-            imu_ang_vel.z = gzAngularVel.z;
+            imu_ang_vel.X() = gzAngularVel.X();
+            imu_ang_vel.Y() = gzAngularVel.Y();
+            imu_ang_vel.Z() = gzAngularVel.Z();
 
-            imu_lin_acc.x =  base_ang_acc_[0];
-            imu_lin_acc.y =  base_ang_acc_[1];
-            imu_lin_acc.z =  base_ang_acc_[2];
+            imu_lin_acc.X() =  base_ang_acc_[0];
+            imu_lin_acc.Y() =  base_ang_acc_[1];
+            imu_lin_acc.Z() =  base_ang_acc_[2];
         }
 
-        imu_orientation_[0] = imu_quat.w;
-        imu_orientation_[1] = imu_quat.x;
-        imu_orientation_[2] = imu_quat.y;
-        imu_orientation_[3] = imu_quat.z;
+        imu_orientation_[0] = imu_quat.W();
+        imu_orientation_[1] = imu_quat.X();
+        imu_orientation_[2] = imu_quat.Y();
+        imu_orientation_[3] = imu_quat.Z();
 
-        imu_ang_vel_[0] = imu_ang_vel.x;
-        imu_ang_vel_[1] = imu_ang_vel.y;
-        imu_ang_vel_[2] = imu_ang_vel.z;
+        imu_ang_vel_[0] = imu_ang_vel.X();
+        imu_ang_vel_[1] = imu_ang_vel.Y();
+        imu_ang_vel_[2] = imu_ang_vel.Z();
 
-        imu_lin_acc_[0] = imu_lin_acc.x;
-        imu_lin_acc_[1] = imu_lin_acc.y;
-        imu_lin_acc_[2] = imu_lin_acc.z;
+        imu_lin_acc_[0] = imu_lin_acc.X();
+        imu_lin_acc_[1] = imu_lin_acc.Y();
+        imu_lin_acc_[2] = imu_lin_acc.Z();
 
         // FIXME We need the lowerleg links for the transfrom from the feet
         if(contact_sensors_.size() == 4) // We assume we are working only with the feet
@@ -251,16 +251,16 @@ namespace dls_gazebo_interface
                     contact_[i] = true;
                     //FIXME the wrench is in the last link where the foot is lumped that is the lowerleg! so it is expressed in the lowerleg
                     //map from lowerleg frame to world
-                    gazebo::math::Pose link_pose = lowerleg_link[i]->GetWorldPose();
-                    gazebo::math::Vector3 forceW = link_pose.rot.RotateVector(
-                    gazebo::math::Vector3(contacts.contact(0).wrench(0).body_1_wrench().force().x(),
+                    ignition::math::Pose3d link_pose = lowerleg_link[i]->WorldPose();
+                    ignition::math::Vector3d forceW = link_pose.Rot().RotateVector(
+                    ignition::math::Vector3d(contacts.contact(0).wrench(0).body_1_wrench().force().x(),
                                           contacts.contact(0).wrench(0).body_1_wrench().force().y(),
                                           contacts.contact(0).wrench(0).body_1_wrench().force().z()));
 
                     // These forces are in the world frame!
-                    force_[i][0] = forceW.x;
-                    force_[i][1] = forceW.y;
-                    force_[i][2] = forceW.z;
+                    force_[i][0] = forceW.X();
+                    force_[i][1] = forceW.Y();
+                    force_[i][2] = forceW.Z();
                     // The normal is expressed in the world frame!
                     normal_[i][0]  = contacts.contact(0).normal(0).x();
                     normal_[i][1]  = contacts.contact(0).normal(0).y();
@@ -294,10 +294,10 @@ namespace dls_gazebo_interface
             gazebo::physics::LinkPtr base_link = sim_model_->GetLink("base_link");
             if(base_link != NULL){
                 //Set velocities and accelerations only for the base link:
-                base_link->SetLinearVel(gazebo::math::Vector3::Zero);
-                base_link->SetLinearAccel(gazebo::math::Vector3::Zero);
-                base_link->SetAngularVel(gazebo::math::Vector3::Zero);
-                base_link->SetAngularAccel(gazebo::math::Vector3::Zero);
+                base_link->SetLinearVel(ignition::math::Vector3d::Zero);
+                base_link->SetLinearAccel(ignition::math::Vector3d::Zero);
+                base_link->SetAngularVel(ignition::math::Vector3d::Zero);
+                base_link->SetAngularAccel(ignition::math::Vector3d::Zero);
             }
         }
 
