@@ -70,6 +70,24 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
 }
 
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
+static std::vector<std::string> _dofs_names = {  "x"
+                                                ,"y"
+                                                ,"z"
+                                                ,"r"
+                                                ,"p"
+                                                ,"y"
+                                                ,"lf_haa_joint"
+                                                ,"lf_hfe_joint"
+                                                ,"lf_kfe_joint"
+                                                ,"lh_haa_joint"
+                                                ,"lh_hfe_joint"
+                                                ,"lh_kfe_joint"
+                                                ,"rf_haa_joint"
+                                                ,"rf_hfe_joint"
+                                                ,"rf_kfe_joint"
+                                                ,"rh_haa_joint"
+                                                ,"rh_hfe_joint"
+                                                ,"rh_kfe_joint"};
 enum leg_id {LF=0,LH,RF,RH};
 inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {

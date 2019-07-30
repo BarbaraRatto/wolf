@@ -26,6 +26,7 @@
 // WB
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
+#include <wb_controller/Gains.h>
 
 namespace OpenSoT{
 
@@ -50,6 +51,7 @@ protected:
     std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_;
     wb_controller::taskConfig default_config_;
     std::shared_ptr<ros::AsyncSpinner> spinner_;
+    ros::ServiceServer service_;
 
     Eigen::Affine3d       tmp_affine3d_;
     Eigen::VectorXd       tmp_vectorxd_;
@@ -78,6 +80,8 @@ public:
         ros::NodeHandle task_nh(task->getTaskID());
         server_.reset(new dynamic_reconfigure::Server<wb_controller::taskConfig>(task_nh));
         server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
+
+        service_ = nh.advertiseService(task->getTaskID()+"/set_gains",&TaskRosWrapperBase::setGains,this);
     }
 
     void dynamicReconfigureCallback(wb_controller::taskConfig &config, uint32_t level)
@@ -95,6 +99,12 @@ public:
         default_config_.lambda1 = task_->getLambda();
         default_config_.lambda2 = task_->getLambda2();
         if(server_) server_->updateConfig(default_config_);
+    }
+
+    virtual bool setGains(wb_controller::Gains::Request  &req, wb_controller::Gains::Response &res)
+    {
+        ROS_WARN("setGains not implemented yet.");
+        return false;
     }
 
     virtual void publish(const ros::Time& /*time*/) = 0;
@@ -304,17 +314,24 @@ class TaskRosWrapper<tasks::acceleration::Postural::Ptr,wb_controller::JointsTas
 
 public:
 
+    typedef std::pair<double,double> gains_t;
+
     TaskRosWrapper(ros::NodeHandle& nh, tasks::acceleration::Postural::Ptr task):
         TaskRosWrapperBase<tasks::acceleration::Postural::Ptr,wb_controller::JointsTask>(nh,task)
     {
         const unsigned int& size = task_->getActualPositions().size();
         tmp_vectorxd_.resize(size);
+        rt_pub_->msg_.name.resize(size);
         rt_pub_->msg_.position_actual.resize(size);
         rt_pub_->msg_.velocity_actual.resize(size);
         rt_pub_->msg_.position_reference.resize(size);
         rt_pub_->msg_.velocity_reference.resize(size);
         rt_pub_->msg_.position_error.resize(size);
         rt_pub_->msg_.velocity_error.resize(size);
+
+        // NOTE: by default we use the same leg order as RBDL (alphabetic order)
+        for(unsigned int i=0; i<wb_controller::_dofs_names.size(); i++)
+            joints_map_[wb_controller::_dofs_names[i]] = gains_t(1.0,1.0);
     }
 
     virtual void publish(const ros::Time& time)
@@ -332,6 +349,7 @@ public:
 
             for(unsigned int i = 0;i<tmp_vectorxd_.size();i++)
             {
+                rt_pub_->msg_.name[i] = wb_controller::_dofs_names[i];
                 rt_pub_->msg_.position_actual[i] = position_actual(i);
                 rt_pub_->msg_.position_reference[i] = position_reference(i);
                 rt_pub_->msg_.velocity_actual[i] = 0.0;
@@ -340,11 +358,65 @@ public:
                 rt_pub_->msg_.velocity_error[i] = velocity_error(i);
             }
 
-
             rt_pub_->unlockAndPublish();
 
         }
     }
+
+    virtual bool setGains(wb_controller::Gains::Request  &req, wb_controller::Gains::Response &res)
+    {
+        bool ret = true;
+        for(unsigned int i=0; i<req.name.size();i++)
+        {
+            if(joints_map_.find(req.name[i]) != joints_map_.end())
+            {
+
+                if(req.Kp[i]>=0 && req.Kd[i]>=0)
+                {
+                    joints_map_[req.name[i]] = gains_t(req.Kp[i],req.Kd[i]);
+                }
+                else
+                {
+                    ROS_WARN_STREAM("Joint: "<<req.name[i]<<" Kp and Kd have to be positive!");
+                    ret = false;
+                }
+
+
+            }
+            else
+            {
+                ROS_WARN_STREAM("Joint: "<<req.name[i] << " does not exist!");
+                ret = false;
+            }
+        }
+
+
+        res.name.resize(joints_map_.size());
+        res.Kp.resize(joints_map_.size());
+        res.Kd.resize(joints_map_.size());
+        unsigned int idx = 0;
+        const unsigned int& size = task_->getActualPositions().size();
+        Eigen::MatrixXd Kp = Eigen::MatrixXd::Zero(size,size);
+        Eigen::MatrixXd Kd = Eigen::MatrixXd::Zero(size,size);
+
+
+        for (auto& tmp_map : joints_map_)
+        {
+            Kp(idx,idx) = tmp_map.second.first;
+            Kd(idx,idx) = tmp_map.second.second;
+            res.name[idx] = tmp_map.first;
+            res.Kp[idx] = Kp(idx,idx);
+            res.Kd[idx] = Kd(idx,idx);
+            idx++;
+        }
+
+        task_->setGains(Kp,Kd);
+
+        return ret;
+    }
+
+private:
+    std::map<std::string,gains_t> joints_map_;
 
 };
 
