@@ -479,6 +479,7 @@ private:
     Eigen::VectorXd _x;
 
     Eigen::VectorXd _qddot;
+    std::vector<Eigen::Vector6d> _contact_wrenches;
 
 
     unsigned int idx_grfs_start_;
