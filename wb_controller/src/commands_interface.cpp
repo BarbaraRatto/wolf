@@ -32,8 +32,8 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
     base_angular_velocity_scale_pitch_ = 0.0;
     base_angular_velocity_scale_yaw_ = 0.0;
 
-    base_linear_velocity_max_ = 0.0; // [m/s]
-    base_angular_velocity_max_ = 0.0; // [rad/s]
+    base_linear_velocity_ = 0.0; // [m/s]
+    base_angular_velocity_ = 0.0; // [rad/s]
 
     base_rotation_reference_ = Eigen::Matrix3d::Identity();
     base_position_ = base_orientation_ = Eigen::Vector3d::Zero();
@@ -49,7 +49,7 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
     }
 
     step_length_ = 0.0;
-    step_height_ = 0.05;
+    step_height_ = 0.0;
 
     offset_applied_ = false;
 }
@@ -294,9 +294,9 @@ void CommandsInterface::calculateBasePosition(const double& period, const Eigen:
 {
     base_position_ = base_position;
 
-    hf_base_linear_velocity_ref_(0) = base_linear_velocity_max_ * base_linear_velocity_scale_x_;
-    hf_base_linear_velocity_ref_(1) = base_linear_velocity_max_ * base_linear_velocity_scale_y_;
-    hf_base_linear_velocity_ref_(2) = base_linear_velocity_max_ * base_linear_velocity_scale_z_;
+    hf_base_linear_velocity_ref_(0) = base_linear_velocity_ * base_linear_velocity_scale_x_;
+    hf_base_linear_velocity_ref_(1) = base_linear_velocity_ * base_linear_velocity_scale_y_;
+    hf_base_linear_velocity_ref_(2) = base_linear_velocity_ * base_linear_velocity_scale_z_;
 
     for(unsigned int i=0;i<3;i++)
         hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
@@ -311,9 +311,9 @@ void CommandsInterface::calculateBaseOrientation(const double& period, const Eig
 {
     base_orientation_ = base_orientation;
 
-    hf_base_angular_velocity_ref_(0) = base_angular_velocity_max_ * base_angular_velocity_scale_roll_;
-    hf_base_angular_velocity_ref_(1) = base_angular_velocity_max_ * base_angular_velocity_scale_pitch_;
-    hf_base_angular_velocity_ref_(2) = base_angular_velocity_max_ * base_angular_velocity_scale_yaw_;
+    hf_base_angular_velocity_ref_(0) = base_angular_velocity_ * base_angular_velocity_scale_roll_;
+    hf_base_angular_velocity_ref_(1) = base_angular_velocity_ * base_angular_velocity_scale_pitch_;
+    hf_base_angular_velocity_ref_(2) = base_angular_velocity_ * base_angular_velocity_scale_yaw_;
 
     for(unsigned int i=0;i<3;i++)
         hf_base_angular_velocity_(i) = secondOrderFilter(hf_base_angular_velocity_(i),hf_base_angular_velocity_filt_(i),hf_base_angular_velocity_ref_(i),0.5);
@@ -420,52 +420,62 @@ void CommandsInterface::setBaseVelocityScaleYaw(const double scale)
 
 void CommandsInterface::increaseStepHeight()
 {
-    double step_height = step_height_ + 0.01; // Increase step height
-
-    if(step_height > step_height_max_) // Check if it is ok
-    {
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is greater than: "<<step_height_max_);
-    }
-    else
-    {
-        step_height_ = step_height;
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Step height: "<<step_height);
-    }
+    setStepHeight(step_height_ + 0.01); // Increase step height
 }
 
 void CommandsInterface::decreaseStepHeight()
 {
-    double step_height = step_height_ - 0.01; // Decrease step height
+  setStepHeight(step_height_ - 0.01); // Decrease step height
+}
 
-    if(step_height <= 0.0) // Check if it is ok
+void CommandsInterface::setLinearVelocity(const double linear)
+{
+    base_linear_velocity_ = linear;
+}
+
+void CommandsInterface::setAngularVelocity(const double angular)
+{
+    base_angular_velocity_ = angular;
+}
+
+void CommandsInterface::setStepHeight(const double height)
+{
+    if(height > step_height_max_) // Check if it is ok
     {
+        double height_max = step_height_max_;
+        step_height_ = height_max;
+        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is greater than: "<<height_max);
+    }
+    else if(height <= 0.0)
+    {
+        step_height_ = 0.0;
         ROS_WARN_NAMED(CLASS_NAME,"Step height is less equal than: 0.0");
     }
     else
     {
-        step_height_ = step_height;
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Step height: "<<step_height);
+        step_height_ = height;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set step height to: "<<height);
     }
-}
-
-void CommandsInterface::setMaxLinearVelocity(const double max)
-{
-    base_linear_velocity_max_ = max;
-}
-
-void CommandsInterface::setMaxAngularVelocity(const double max)
-{
-    base_angular_velocity_max_ = max;
 }
 
 void CommandsInterface::setMaxStepHeight(const double max)
 {
-    step_height_max_ = max;
+    if(max >= 0.0) // Check if it is ok
+    {
+        step_height_max_ = max;
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Max step height is less equal than: 0.0");
 }
 
 void CommandsInterface::setMaxStepLength(const double max)
 {
-    step_length_max_ = max;
+    if(max >= 0.0) // Check if it is ok
+    {
+        step_length_max_ = max;
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Max step length is less equal than: 0.0");
 }
 
 // Gets
@@ -504,24 +514,24 @@ const double& CommandsInterface::getBaseHeight() const
     return base_position_(2);
 }
 
-double CommandsInterface::getMaxLinearVelocity() const
+double CommandsInterface::getLinearVelocity() const
 {
-    return base_linear_velocity_max_;
+    return base_linear_velocity_;
 }
 
-double CommandsInterface::getMaxAngularVelocity() const
+double CommandsInterface::getAngularVelocity() const
 {
-    return base_angular_velocity_max_;
+    return base_angular_velocity_;
 }
 
-double CommandsInterface::getMaxStepHeight() const
+double CommandsInterface::getStepHeight() const
 {
-    return step_height_max_;
+    return step_height_;
 }
 
-double CommandsInterface::getMaxStepLength() const
+double CommandsInterface::getStepLength() const
 {
-    return step_length_max_;
+    return step_length_;
 }
 
 }; // namespace

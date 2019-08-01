@@ -49,15 +49,18 @@ public:
     void setBaseVelocityScaleX(const double scale);
     void setBaseVelocityScaleY(const double scale);
     void setBaseVelocityScaleZ(const double scale);
-    void increaseStepHeight();
-    void decreaseStepHeight();
     void setBaseVelocityScaleRoll(const double scale);
     void setBaseVelocityScalePitch(const double scale);
     void setBaseVelocityScaleYaw(const double scale);
-    void setMaxLinearVelocity(const double max);
-    void setMaxAngularVelocity(const double max);
+    void setLinearVelocity(const double linear);
+    void setAngularVelocity(const double angular);
+    void setStepHeight(const double height);
     void setMaxStepHeight(const double max);
     void setMaxStepLength(const double max);
+    void increaseStepHeight();
+    void decreaseStepHeight();
+    void increaseSwingFrequency();
+    void decreaseSwingFrequency();
 
     // Gets
     unsigned int getCmd();
@@ -67,10 +70,10 @@ public:
     const double& getStepHeight(const std::string& foot_name);
     const double& getStepHeadingRate(const std::string& foot_name);
     const double& getBaseHeight() const ;
-    double getMaxLinearVelocity() const ;
-    double getMaxAngularVelocity() const ;
-    double getMaxStepHeight() const ;
-    double getMaxStepLength() const ;
+    double getLinearVelocity() const ;
+    double getAngularVelocity() const ;
+    double getStepHeight() const ;
+    double getStepLength() const ;
 
     void setHipOffset();
 
@@ -102,10 +105,11 @@ private:
     std::atomic<double>  base_angular_velocity_scale_roll_;
     std::atomic<double>  base_angular_velocity_scale_pitch_;
     std::atomic<double>  base_angular_velocity_scale_yaw_;
-    std::atomic<double>  base_linear_velocity_max_;
-    std::atomic<double>  base_angular_velocity_max_;
+    std::atomic<double>  base_linear_velocity_;
+    std::atomic<double>  base_angular_velocity_;
     std::atomic<double>  step_height_max_;
     std::atomic<double>  step_length_max_;
+    std::atomic<double>  step_height_;
 
     /** @brief Base linear velocity w.r.t horizontal frame
      * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
@@ -158,7 +162,6 @@ private:
 
     double yaw_base_;
     double step_length_;
-    double step_height_;
 };
 
 } // namespace

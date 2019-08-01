@@ -95,28 +95,33 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     {
         ROS_WARN_NAMED(CLASS_NAME,"No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
     }
-    double default_step_height_max = 0.05; // [m]
-    if (!controller_nh.getParam("default_step_height_max", default_step_height_max))
+    double default_step_height = 0.05; // [m]
+    if (!controller_nh.getParam("default_step_height_max", default_step_height))
     {
-        ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height_max);
+        ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
     }
-    double default_step_length_max = 0.05; // [m]
-    if (!controller_nh.getParam("default_step_length_max", default_step_length_max))
+    double max_step_height = 1.5; // [m]
+    if (!controller_nh.getParam("max_step_height", max_step_height))
     {
-        ROS_WARN_NAMED(CLASS_NAME,"No default step length given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_length_max);
+        ROS_WARN_NAMED(CLASS_NAME,"No max step height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
     }
-    double default_base_linear_velocity_max = 0.2; // [m/s]
-    if (!controller_nh.getParam("default_base_linear_velocity_max", default_base_linear_velocity_max))
+    double max_step_length = 0.5; // [m]
+    if (!controller_nh.getParam("max_step_length", max_step_length))
     {
-        ROS_WARN_NAMED(CLASS_NAME,"No default base linear velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity_max);
+        ROS_WARN_NAMED(CLASS_NAME,"No max step length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
     }
-    double default_base_angular_velocity_max = 0.2; // [rad/s]
-    if (!controller_nh.getParam("default_base_angular_velocity_max", default_base_angular_velocity_max))
+    double default_base_linear_velocity = 0.5; // [m/s]
+    if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
     {
-        ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity_max);
+        ROS_WARN_NAMED(CLASS_NAME,"No default base linear velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+    }
+    double default_base_angular_velocity = 0.5; // [rad/s]
+    if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
     }
 
-    // Setting up handles:
+    // Setting up joint handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
     {
         // Getting joint state handle
@@ -295,10 +300,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     gait_generator_->setSwingFrequency(default_swing_frequency);
 
     cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
-    cmds_->setMaxLinearVelocity(default_base_linear_velocity_max);
-    cmds_->setMaxAngularVelocity(default_base_angular_velocity_max);
-    cmds_->setMaxStepHeight(default_step_height_max);
-    cmds_->setMaxStepLength(default_step_length_max);
+    cmds_->setLinearVelocity(default_base_linear_velocity);
+    cmds_->setAngularVelocity(default_base_angular_velocity);
+    cmds_->setStepHeight(default_step_height);
+    cmds_->setMaxStepHeight(max_step_height);
+    cmds_->setMaxStepLength(max_step_length);
 
     state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
     state_estimator_->setContactThreshold(default_contact_threshold);
@@ -377,10 +383,9 @@ void Controller::dynamicReconfigureUpdate()
     }
     if(cmds_)
     {
-        default_config_.base_max_linear_vel = cmds_->getMaxLinearVelocity();
-        default_config_.base_max_angular_vel = cmds_->getMaxAngularVelocity();
-        default_config_.max_step_height = cmds_->getMaxStepHeight();
-        default_config_.max_step_length = cmds_->getMaxStepLength();
+        default_config_.base_linear_vel = cmds_->getLinearVelocity();
+        default_config_.base_angular_vel = cmds_->getAngularVelocity();
+        default_config_.step_height = cmds_->getStepHeight();
     }
     if(state_estimator_)
         default_config_.contact_force_th = state_estimator_->getContactThreshold();
@@ -411,40 +416,36 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         setSwingFrequency(config.swing_frequency);
         break;
     case 6:
-        cmds_->setMaxLinearVelocity(config.base_max_linear_vel);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum velocity to "<< config.base_max_linear_vel);
+        cmds_->setLinearVelocity(config.base_linear_vel);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< config.base_linear_vel);
         break;
     case 7:
-        cmds_->setMaxAngularVelocity(config.base_max_angular_vel);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum angular rate to "<< config.base_max_angular_vel);
+        cmds_->setAngularVelocity(config.base_angular_vel);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< config.base_angular_vel);
         break;
     case 8:
-        cmds_->setMaxStepHeight(config.max_step_height);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum step height to "<< config.max_step_height);
+        cmds_->setStepHeight(config.step_height);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set step height to "<< config.step_height);
         break;
     case 9:
-        cmds_->setMaxStepLength(config.max_step_length);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set maximum step length to "<< config.max_step_length);
-        break;
-    case 10:
         state_estimator_->setContactThreshold(config.contact_force_th);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
-    case 11:
+    case 10:
         pid_scale_ = config.pid_scale;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set pid scale to "<< config.pid_scale);
         break;
-    case 12:
+    case 11:
         cutoff_hz_qdot_ = config.cutoff_hz_qdot;
         qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for qdot filter at "<< config.cutoff_hz_qdot);
         break;
-    case 13:
+    case 12:
         cutoff_hz_gyro_ = config.cutoff_hz_gyro;
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
         break;
-    case 14:
+    case 13:
         x_err_gain_ = config.x_err_gain;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.x_err_gain);
     default:
