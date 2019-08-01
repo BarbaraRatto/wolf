@@ -12,6 +12,8 @@ class JoyHandler
 
 public:
 
+    enum button_t {START=0,SELECT,ONE,TWO,THREE,FOUR};
+
     typedef std::function<void ()> funct_t;
 
     /**
@@ -42,15 +44,34 @@ public:
         cmds_ = cmds;
     }
 
-    void addStartButtonHandler(funct_t f)
+    void addButtonHandler(funct_t f, button_t button)
     {
-        f_start_ = f;
+        switch(button)
+        {
+        case(button_t::START):
+            f_start_ = f;
+            break;
+        case(button_t::SELECT):
+            f_select_ = f;
+            break;
+        case(button_t::ONE):
+            f_one_ = f;
+            break;
+        case(button_t::TWO):
+            f_two_ = f;
+            break;
+        case(button_t::THREE):
+            f_three_ = f;
+            break;
+        case(button_t::FOUR):
+            f_four_ = f;
+            break;
+        default:
+            ROS_WARN("Wrong button selected!");
+            break;
+        };
     }
 
-    void addSelectButtonHandler(funct_t f)
-    {
-        f_select_ = f;
-    }
 
 private:
 
@@ -75,12 +96,6 @@ private:
 
         if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
             f_select_();
-
-        /*if(joy_select_gait_trigger_.update(static_cast<bool>(msg->buttons[8])))
-            if(cmds_->getGaitGenerator()->getGaitType() == "trot")
-                cmds_->getGaitGenerator()->setGaitType("crawl");
-            else
-                cmds_->getGaitGenerator()->setGaitType("trot");*/
 
         if(joy_start_swing_button_)
         {
@@ -130,6 +145,10 @@ private:
 
     funct_t f_select_;
     funct_t f_start_;
+    funct_t f_one_;
+    funct_t f_two_;
+    funct_t f_three_;
+    funct_t f_four_;
 
     wb_controller::Trigger joy_select_button_trigger_;
     wb_controller::Trigger joy_start_button_trigger_;

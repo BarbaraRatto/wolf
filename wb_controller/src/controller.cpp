@@ -302,8 +302,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimator_->setContactThreshold(default_contact_threshold);
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
-    joy_handler_->addStartButtonHandler(boost::bind(&Controller::toggleSolver,this));
-    joy_handler_->addSelectButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()));
+    joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
+    joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
 
     // initialize the filters
     cutoff_hz_gyro_ = 300.;
@@ -785,7 +785,6 @@ void Controller::odomPublisher()
     while(!stopping_)
     {
         // Get floating base
-        // FIXME It causes solver's failures, probably it is caused by the call to the robot model inside this thread.
         base_pose = state_estimator_->getFloatingBasePose(); //FIXME Is it thread safe?
 
         // Do the inverse of it
