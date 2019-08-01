@@ -48,11 +48,8 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
         hf_X_virtual_hips_[i].setZero();
     }
 
-    step_height_scale_ = 0.0;
-
     step_length_ = 0.0;
-    step_height_ = 0.0;
-    step_height_ext_ = 0.05;
+    step_height_ = 0.05;
 
     offset_applied_ = false;
 }
@@ -220,19 +217,6 @@ void CommandsInterface::calculateFeetStep()
                 ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step length is greater than: "<<step_length_max_);
             }
 
-            if(step_height_ext_ > step_height_max_)
-            {
-                step_height_ = step_height_max_;
-                ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is greater than: "<<step_height_max_);
-            }
-            else if(step_height_ext_ <= 0.0)
-            {
-                step_height_ = 0.0;
-                ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is less equal than: 0.0");
-            }
-            else
-                step_height_ = step_height_ext_;
-
             steps_length_[feet_names[i]]         = step_length_;
             steps_heading_[feet_names[i]]        = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
             steps_height_[feet_names[i]]         = step_height_;
@@ -336,7 +320,7 @@ void CommandsInterface::calculateBaseOrientation(const double& period, const Eig
 
     base_orientation_ = hf_base_angular_velocity_ * period + base_orientation_;
 
-     // This is the base rotation computed w.r.t world
+    // This is the base rotation computed w.r.t world
     rpyToRot(base_orientation_,base_rotation_reference_);
     base_rotation_reference_.transposeInPlace();
 }
@@ -360,19 +344,19 @@ void CommandsInterface::setHipOffset()
 
         ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[lf] are "
                          << hf_X_virtual_hips_[0] <<
-                         " they should be: +,+ and 0.0");
+                                                     " they should be: +,+ and 0.0");
 
         ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[rf] are "
                          << hf_X_virtual_hips_[1] <<
-                         " they should be: +,- and 0.0");
+                                                     " they should be: +,- and 0.0");
 
         ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[lh] are "
                          << hf_X_virtual_hips_[2] <<
-                         " they should be: -,+ and 0.0");
+                                                     " they should be: -,+ and 0.0");
 
         ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[rh] are "
                          << hf_X_virtual_hips_[3] <<
-                         " they should be: -,- and 0.0");
+                                                     " they should be: -,- and 0.0");
 
         offset_applied_ = true;
     }
@@ -434,21 +418,35 @@ void CommandsInterface::setBaseVelocityScaleYaw(const double scale)
     base_angular_velocity_scale_yaw_ = scale;
 }
 
-void CommandsInterface::setStepHeightScale(const double scale)
+void CommandsInterface::increaseStepHeight()
 {
-    if(std::abs(scale)>0.0 && step_height_scale_!=scale) // Trigger
+    double step_height = step_height_ + 0.01; // Increase step height
+
+    if(step_height > step_height_max_) // Check if it is ok
     {
-        if(scale>=1.0)
-            step_height_ext_ = step_height_ext_ + 0.01; // Increase step height
-        else if (scale<=-1.0)
-            step_height_ext_ = step_height_ext_ - 0.02; // Decrease step height
-
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Step height: "<<step_height_ext_);
+        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step height is greater than: "<<step_height_max_);
     }
-
-    step_height_scale_ = scale;
+    else
+    {
+        step_height_ = step_height;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Step height: "<<step_height);
+    }
 }
 
+void CommandsInterface::decreaseStepHeight()
+{
+    double step_height = step_height_ - 0.01; // Decrease step height
+
+    if(step_height <= 0.0) // Check if it is ok
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"Step height is less equal than: 0.0");
+    }
+    else
+    {
+        step_height_ = step_height;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Step height: "<<step_height);
+    }
+}
 
 void CommandsInterface::setMaxLinearVelocity(const double max)
 {

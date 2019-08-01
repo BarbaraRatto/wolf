@@ -49,7 +49,8 @@ public:
     void setBaseVelocityScaleX(const double scale);
     void setBaseVelocityScaleY(const double scale);
     void setBaseVelocityScaleZ(const double scale);
-    void setStepHeightScale(const double scale);
+    void increaseStepHeight();
+    void decreaseStepHeight();
     void setBaseVelocityScaleRoll(const double scale);
     void setBaseVelocityScalePitch(const double scale);
     void setBaseVelocityScaleYaw(const double scale);
@@ -103,8 +104,6 @@ private:
     std::atomic<double>  base_angular_velocity_scale_yaw_;
     std::atomic<double>  base_linear_velocity_max_;
     std::atomic<double>  base_angular_velocity_max_;
-    std::atomic<double>  step_height_scale_;
-    std::atomic<double>  step_height_ext_;
     std::atomic<double>  step_height_max_;
     std::atomic<double>  step_length_max_;
 

@@ -34,7 +34,6 @@ public:
         joy_base_yaw_scale_            = 0.0;
         joy_base_pitch_scale_          = 0.0;
         joy_base_roll_scale_           = 0.0;
-        joy_step_height_scale_         = 0.0;
         joy_start_swing_button_        = false;
         joy_reset_base_button_         = false;
 
@@ -84,12 +83,16 @@ private:
         joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
         joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
         joy_base_roll_scale_        = -static_cast<double>(msg->axes[4]);
-        joy_step_height_scale_      = static_cast<double>(msg->axes[5]);
 
         joy_start_swing_button_     = static_cast<bool>(msg->buttons[4]); // L1 button
         joy_reset_base_button_      = static_cast<bool>(msg->buttons[6]); // L2 button
 
-        cmds_->setStepHeightScale(joy_step_height_scale_);
+        joy_up_down_trigger_.update(static_cast<double>(msg->axes[5]));
+
+        if(joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::UP)
+            cmds_->increaseStepHeight();
+        else if (joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::DOWN)
+            cmds_->decreaseStepHeight();
 
         if(f_start_ && joy_start_button_trigger_.update(static_cast<bool>(msg->buttons[9])))
             f_start_();
@@ -139,7 +142,6 @@ private:
     double joy_base_yaw_scale_;
     double joy_base_pitch_scale_;
     double joy_base_roll_scale_;
-    double joy_step_height_scale_;
     bool   joy_start_swing_button_;
     bool   joy_reset_base_button_;
 
@@ -152,6 +154,7 @@ private:
 
     wb_controller::Trigger joy_select_button_trigger_;
     wb_controller::Trigger joy_start_button_trigger_;
+    wb_controller::AxisToTrigger joy_up_down_trigger_;
 
 };
 

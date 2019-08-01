@@ -103,6 +103,44 @@ private:
     bool old_value;
 };
 
+
+class AxisToTrigger
+{
+
+public:
+    enum status_t {UP=0,DOWN,STEADY};
+
+    AxisToTrigger()
+    {
+        axis_old_value_ = 0.0;
+    }
+
+    void update(const double axis)
+    {
+        status_ = STEADY;
+        if(std::abs(axis)>0.0 && axis_old_value_!=axis)
+        {
+            if(axis>=1.0)
+                status_ = UP;
+            else if (axis<=-1.0)
+                status_ = DOWN;
+        }
+
+        axis_old_value_ = axis;
+    }
+
+    status_t getStatus()
+    {
+        return status_;
+    }
+
+private:
+    double axis_old_value_;
+    status_t status_;
+
+};
+
+
 } // namespace
 
 #endif
