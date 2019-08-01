@@ -425,7 +425,6 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         break;
     case 8:
         cmds_->setStepHeight(config.step_height);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set step height to "<< config.step_height);
         break;
     case 9:
         state_estimator_->setContactThreshold(config.contact_force_th);
