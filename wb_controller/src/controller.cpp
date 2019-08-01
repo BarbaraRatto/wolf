@@ -18,6 +18,8 @@ namespace wb_controller {
 
 #define CLASS_NAME "Controller"
 
+std::vector<std::string> _dof_names = {};
+
 Controller::Controller()
     :solver_created_(false)
     ,solver_started_(false)
