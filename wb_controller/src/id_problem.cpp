@@ -26,7 +26,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     {
         _feet[feet_names[i]].reset(new OpenSoT::tasks::acceleration::Cartesian(feet_names[i], *_model, feet_names[i],
                                                                                   "world", _id->getJointsAccelerationAffine()));
-        _feet[feet_names[i]]->setLambda(0.,0.); // 60. 6.
+        // If we have a proper state estimation (i.e. with a fixed world), setting these values could be useful to avoid
+        // the robot to have slipery feet. Now if the base if moving, the feet follow the base. We should avoid that.
+        _feet[feet_names[i]]->setLambda(0.,0.);
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
      //   --------------------------
