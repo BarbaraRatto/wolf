@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# List of usefull colors
+COLOR_RESET="\033[0m"
+COLOR_INFO="\033[0;32m"
+COLOR_ITEM="\033[0;34m"
+COLOR_QUES="\033[0;35m"
+COLOR_WARN="\033[0;33m"
+COLOR_BOLD="\033[1m"
+COLOR_UNDE="\033[4m"
+
+# Specify the ros distro
 ROS_DISTRO=kinetic
 
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros-latest.list'
