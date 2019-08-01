@@ -1,5 +1,5 @@
-#ifndef HYQ_DUMMY_H
-#define HYQ_DUMMY_H
+#ifndef ROBOT_DUMMY_H
+#define ROBOT_DUMMY_H
 
 // ROS
 #include <ros/ros.h>
@@ -10,7 +10,7 @@
 #include <hardware_interface/robot_hw.h>
 #include <realtime_tools/realtime_buffer.h>
 
-// DLs HW interface
+// DLS HW interface
 #include <dls_hardware_interface/dls_robot_hw.h>
 
 // NaN
@@ -22,14 +22,14 @@
 // std::atomic
 #include <atomic>
 
-class HyqDummy : public hardware_interface::RobotHW, public hardware_interface::DlsRobotHwInterface
+class RobotDummy : public hardware_interface::RobotHW, public hardware_interface::DlsRobotHwInterface
 {
 
 public:
-  HyqDummy()
+  RobotDummy()
     : running_(true)
-    , start_srv_(nh_.advertiseService("start", &HyqDummy::startCallback, this))
-    , stop_srv_(nh_.advertiseService("stop", &HyqDummy::stopCallback, this))
+    , start_srv_(nh_.advertiseService("start", &RobotDummy::startCallback, this))
+    , stop_srv_(nh_.advertiseService("stop", &RobotDummy::stopCallback, this))
   {
 
   }

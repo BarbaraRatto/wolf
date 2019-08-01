@@ -87,10 +87,6 @@ install(DIRECTORY config/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
   PATTERN ".svn" EXCLUDE)
 
-install(DIRECTORY problems/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/problems
-  PATTERN ".svn" EXCLUDE)
-
 install(DIRECTORY plot_juggler_files/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
   PATTERN ".svn" EXCLUDE)
@@ -102,8 +98,8 @@ if (CATKIN_ENABLE_TESTING)
   find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
-  add_executable(hyq_dummy test/hyq_dummy.cpp)
-  target_link_libraries(hyq_dummy ${catkin_LIBRARIES})
+  add_executable(robot_dummy test/robot_dummy.cpp)
+  target_link_libraries(robot_dummy ${catkin_LIBRARIES})
 
   add_executable(test_state_estimation test/test_state_estimation.cpp)
   target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})

@@ -1,40 +1,40 @@
 // ROS
 #include <ros/ros.h>
-
-// ros_control
+// Ros_control
 #include <controller_manager/controller_manager.h>
+#include "robot_dummy.h"
 
-#include "hyq_dummy.h"
+#define CLASS_NAME "RobotDummy"
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "hyq_dummy");
+    ros::init(argc, argv, "robot_dummy");
     ros::NodeHandle nh;
 
-    HyqDummy robot;
+    RobotDummy robot;
     std::string ns = ros::this_node::getNamespace();
     std::string joints_param_name = ns+"/wb_controller/joints";
     std::vector<std::string> joint_names;
 
     if (!nh.getParam(joints_param_name, joint_names))
     {
-        ROS_ERROR_STREAM_NAMED("hyq_dummy","No joints given (expected namespace: /" + joints_param_name + ").");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No joints given (expected namespace: /" + joints_param_name + ").");
         return 1;
     }
     if (joint_names.size()==0)
     {
-        ROS_ERROR_STREAM_NAMED("hyq_dummy","joints list empty.");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"joints list empty.");
         return 1;
     }
 
     if(!robot.initializeInterfaces(joint_names))
     {
-        ROS_ERROR_NAMED("hyq_dummy","Can not initialize the hardware interfaces.");
+        ROS_ERROR_NAMED(CLASS_NAME,"Can not initialize the hardware interfaces.");
         return 1;
     }
     if(!robot.registerInterfaces())
     {
-        ROS_ERROR_NAMED("hyq_dummy","Can not register the hardware interfaces.");
+        ROS_ERROR_NAMED(CLASS_NAME,"Can not register the hardware interfaces.");
         return 1;
     }
 
