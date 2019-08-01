@@ -102,8 +102,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {
-        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _waistZ%idw_Z)
-                /(_arm)/(_postural)
+        _id_problem /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural + _arm)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
     else
