@@ -227,7 +227,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         return false;
     }
     opt.set_parameter("is_model_floating_base", true);
-    opt.set_parameter<std::string>("model_type", "RBDL");
+    std::string model_type = "RBDL";
+    opt.set_parameter<std::string>("model_type", model_type);
     xbot_model_ = XBot::ModelInterface::getModel(opt);
 
     // Set home position defined in the srdf
@@ -236,6 +237,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     qstance_ = qhome_;
     qswing_ = qhome_;
     xbot_model_->getJointLimits(qmin_, qmax_);
+
+    _dof_names = xbot_model_->getEnabledJointNames();
+
+    // Check if the joint names in the ROS config file are in the same order as the one in the virtual model:
+    assert(_dof_names.size() == joint_names_.size()+FLOATING_BASE_DOFS);
+    for(unsigned int i=0;i<joint_names_.size();i++)
+        if(_dof_names[i+FLOATING_BASE_DOFS]!=joint_names_[i])
+        {
+            ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Joint names in the robot model type "<<model_type<< " are not in the same order as in the ROS config file of the controller.");
+            return false;
+        }
 
     // Check if qhome is between qmin and qmax
     if(jointLimitsCheck(qhome_,qmin_,qmax_))
@@ -332,13 +344,13 @@ bool Controller::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd& qmi
         if(q(i)<qmin(i))
         {
             q(i) = qmin(i);
-            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<i<<") violates the minimum limit of "<<qmin(i));
+            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the minimum limit of "<<qmin(i));
             violated_limits = true;
         }
         if(q(i)>qmax(i))
         {
             q(i) = qmax(i);
-            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<i<<") violates the maximum limit of "<<qmax(i));
+            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum limit of "<<qmax(i));
             violated_limits = true;
         }
     }
@@ -811,18 +823,12 @@ void Controller::initPublishers(const ros::NodeHandle& root_nh, const ros::NodeH
 {
     // Create the realtime publishers
     ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4));
-    ci_joint_states_rt_pub_->msg_.name.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.position.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.velocity.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.effort.resize(joint_states_.size()+FLOATING_BASE_DOFS);
-    ci_joint_states_rt_pub_->msg_.name[0] = "x";
-    ci_joint_states_rt_pub_->msg_.name[1] = "y";
-    ci_joint_states_rt_pub_->msg_.name[2] = "z";
-    ci_joint_states_rt_pub_->msg_.name[3] = "roll";
-    ci_joint_states_rt_pub_->msg_.name[4] = "pitch";
-    ci_joint_states_rt_pub_->msg_.name[5] = "yaw";
-    for (unsigned int i = 0; i < joint_names_.size(); i++)
-        ci_joint_states_rt_pub_->msg_.name[i+FLOATING_BASE_DOFS] = joint_names_[i];
+    ci_joint_states_rt_pub_->msg_.name.resize(_dof_names.size());
+    ci_joint_states_rt_pub_->msg_.position.resize(_dof_names.size());
+    ci_joint_states_rt_pub_->msg_.velocity.resize(_dof_names.size());
+    ci_joint_states_rt_pub_->msg_.effort.resize(_dof_names.size());
+    for (unsigned int i = 0; i < _dof_names.size(); i++)
+        ci_joint_states_rt_pub_->msg_.name[i] = _dof_names[i];
 
     contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
     contact_forces_pub_->msg_.header.frame_id = "world"; //FIXME

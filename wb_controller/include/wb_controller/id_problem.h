@@ -330,8 +330,8 @@ public:
         rt_pub_->msg_.velocity_error.resize(size);
 
         // NOTE: by default we use the same leg order as RBDL (alphabetic order)
-        for(unsigned int i=0; i<wb_controller::_dofs_names.size(); i++)
-            joints_map_[wb_controller::_dofs_names[i]] = gains_t(1.0,1.0);
+        for(unsigned int i=0; i<wb_controller::_dof_names.size(); i++)
+            joints_map_[wb_controller::_dof_names[i]] = gains_t(1.0,1.0);
     }
 
     virtual void publish(const ros::Time& time)
@@ -349,7 +349,7 @@ public:
 
             for(unsigned int i = 0;i<tmp_vectorxd_.size();i++)
             {
-                rt_pub_->msg_.name[i] = wb_controller::_dofs_names[i];
+                rt_pub_->msg_.name[i] = wb_controller::_dof_names[i];
                 rt_pub_->msg_.position_actual[i] = position_actual(i);
                 rt_pub_->msg_.position_reference[i] = position_reference(i);
                 rt_pub_->msg_.velocity_actual[i] = 0.0;
