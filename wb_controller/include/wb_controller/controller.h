@@ -292,6 +292,12 @@ private:
          */
     void odomPublisher();
 
+
+    /**
+         * @brief toggles the selected gait
+         */
+    void toggleSwing();
+
     /**
          * @brief update the joints state
          */

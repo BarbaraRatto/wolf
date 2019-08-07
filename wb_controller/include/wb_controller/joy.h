@@ -58,6 +58,14 @@ public:
             break;
         };
     }
+    void setStartSwingButton(bool flag){
+        joy_start_swing_button_ = flag;
+    }
+
+    bool getStartSwingButton(){
+        return joy_start_swing_button_;
+    }
+
 
 
 private:
