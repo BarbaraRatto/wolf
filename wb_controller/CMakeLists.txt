@@ -13,6 +13,8 @@ else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+
 # ROS
 find_package(catkin REQUIRED tf controller_interface control_toolbox
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
@@ -20,6 +22,7 @@ find_package(catkin REQUIRED tf controller_interface control_toolbox
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(PkgConfig)
+find_package(RBDL REQUIRED)
 pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 
 generate_dynamic_reconfigure_options(
