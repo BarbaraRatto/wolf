@@ -107,11 +107,27 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     }
     else
     {
-        // NOTE: a stack with only one level is way faster and it makes the robot move smoothly. Two levels is safer since the contacts would be at a higher priority but the
-        // computation gets heaverier and the robot moves badly.
+        // NOTE: a stack with only one level is faster in terms of computational time and makes the robot move smoothly. The one with two levels is safer since the contacts would be at a higher priority but the
+        // computation gets heavier. The second case can be divided in two more sub-cases depending on the RPY task of the base.
+        // For the stack with the postural divided in stance and swing, checkout postural_swing_stance branch
+
+        // Stack with one level (gazebo rt factor 0.95):
+        // we could use weights to emulate the case with two levels and save in this way some computational time or we could set the contacts as constraints.
         _id_problem /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural)
-             //   / (_waistRPY%idw_RPY + _waistZ%idw_Z + _postural)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+
+        // Stack with two levels:
+        // 1 - RPY at the first level (gazebo rt factor 0.75): this is useful to have a good tracking of the base orientation but it generates a conflict with the
+        // postural e.g. the robot can not climb a slope if the base orientation is not adjusted to do so.
+        /*_id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY)
+                / (_postural)
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;*/
+
+        // 2 - RPY at the second level (gazebo rt factor 0.45): this is generating a bad tracking for the base orientation which can be counteracted by adjusting the lambda gains or by adding weights between
+        // postural and RPY.
+        /*_id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+                / (_waistRPY%idw_RPY + _postural)
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;*/
     }
 
     _id_problem->update(Eigen::VectorXd(1));
@@ -183,10 +199,10 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 
 void IDProblem::getGroundReactionForces(Eigen::VectorXd& grfs)
 {
-    //std::cout << "   FORZE GRF *********** " << std::endl;
+    //std::cout << "   FORCES GRF *********** " << std::endl;
     grfs = _x.segment(idx_grfs_start_,24);
 
-    //std::cout << "   ACC FB *********** " << std::endl;
+    //std::cout << "   ACCELLERATIONS FB *********** " << std::endl;
     //std::cout << _x.segment(0,6).transpose() << std::endl;
 }
 
