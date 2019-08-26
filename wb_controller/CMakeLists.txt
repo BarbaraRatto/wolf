@@ -24,6 +24,7 @@ pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
+  cfg/problem.cfg
   cfg/task.cfg
 )
 

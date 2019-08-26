@@ -22,11 +22,15 @@
 #include <wb_controller/CartesianTask.h>
 #include <wb_controller/JointsTask.h>
 #include <wb_controller/taskConfig.h>
+#include <wb_controller/problemConfig.h>
 
 // WB
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
 #include <wb_controller/Gains.h>
+
+// STD
+#include <atomic>
 
 namespace OpenSoT{
 
@@ -486,6 +490,24 @@ public:
     void publish(const ros::Time& time);
 
     /**
+     * @brief set the mu parameter for the friction cones
+     * @param mu value
+     */
+    void setFrictionConesMu(const double& mu);
+
+    /**
+     * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
+     * @param lower bound values
+     */
+    void setLowerForceBound(const double& x_force,const double& y_force,const double& z_force);
+
+
+    /**
+         * @brief Ros dynamic reconfigure callback
+         */
+    void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
+
+    /**
      * @brief Cartesian tasks
      */
     std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
@@ -520,6 +542,12 @@ public:
     XBot::ModelInterface::Ptr _model;
 
 private:
+
+    /**
+         * @brief Update the dynamic reconfigure interface
+         */
+    void dynamicReconfigureUpdate();
+
     /**
      * @brief _dynamics constraint relates the floating base with the contact forces
      */
@@ -553,6 +581,18 @@ private:
     Eigen::VectorXd _qddot;
     std::vector<Eigen::Vector6d> _contact_wrenches;
 
+    Eigen::Vector6d _wrench_upper_lims;
+    Eigen::Vector6d _wrench_lower_lims;
+
+    /** @brief ROS dynamic reconfigure */
+    dynamic_reconfigure::Server<wb_controller::problemConfig>* server_;
+    /** @brief ROS dynamic reconfigure config struct */
+    wb_controller::problemConfig default_config_;
+
+    std::atomic<double> _mu;
+    std::atomic<double> _x_force_lower_lim;
+    std::atomic<double> _y_force_lower_lim;
+    std::atomic<double> _z_force_lower_lim;
 
     unsigned int idx_grfs_start_;
 
