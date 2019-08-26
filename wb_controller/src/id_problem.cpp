@@ -244,12 +244,11 @@ void IDProblem::update()
     _wrench_lower_lims(0) = _x_force_lower_lim;
     _wrench_lower_lims(1) = _y_force_lower_lim;
     _wrench_lower_lims(2) = _z_force_lower_lim;
-
     for (auto& tmp_map : _feet)
     {
         _friction_cones->getFrictionCone(tmp_map.first)->setMu(_mu);
-        _wrenches_lims->getWrenchLimits(tmp_map.first)->setWrenchLimits(_wrench_lower_lims,_wrench_upper_lims);
-        //_wrenches_lims->getWrenchLimits(tmp_map.first)->update(Eigen::VectorXd(1));
+        if(!_wrenches_lims->getWrenchLimits(tmp_map.first)->isReleased())
+            _wrenches_lims->getWrenchLimits(tmp_map.first)->setWrenchLimits(_wrench_lower_lims,_wrench_upper_lims);
     }
     // Update the problem
     _id_problem->update(Eigen::VectorXd(1));
