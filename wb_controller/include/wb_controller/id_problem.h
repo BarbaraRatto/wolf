@@ -226,12 +226,16 @@ public:
         // 'commit' changes and send to all clients
         marker_->applyChanges();
 
+        Kp_ = task_->getKp();
+        Kd_ = task_->getKd();
         // NOTE: by default we use this order: x y z roll pitch yaw
         for(unsigned int i=0; i<wb_controller::_cartesian_names.size(); i++)
-            gains_map_[wb_controller::_cartesian_names[i]] = gains_t(1.0,1.0);
+        {
+            gains_map_[wb_controller::_dof_names[i]] = gains_t(Kp_(i,i),Kd_(i,i));
+        }
 
-        Kp_ = Eigen::MatrixXd::Zero(6,6);
-        Kd_ = Eigen::MatrixXd::Zero(6,6);
+        //Kp_ = Eigen::MatrixXd::Zero(6,6);
+        //Kd_ = Eigen::MatrixXd::Zero(6,6);
     }
 
     virtual void publish(const ros::Time& time)
@@ -381,12 +385,16 @@ public:
         rt_pub_->msg_.position_error.resize(size);
         rt_pub_->msg_.velocity_error.resize(size);
 
+        Kp_ = task_->getKp();
+        Kd_ = task_->getKd();
         // NOTE: by default we use the same leg order as RBDL (alphabetic order)
         for(unsigned int i=0; i<wb_controller::_dof_names.size(); i++)
-            gains_map_[wb_controller::_dof_names[i]] = gains_t(1.0,1.0);
+        {
+            gains_map_[wb_controller::_dof_names[i]] = gains_t(Kp_(i,i),Kd_(i,i));
+        }
 
-        Kp_ = Eigen::MatrixXd::Zero(size,size);
-        Kd_ = Eigen::MatrixXd::Zero(size,size);
+        //Kp_ = Eigen::MatrixXd::Zero(size,size);
+        //Kd_ = Eigen::MatrixXd::Zero(size,size);
     }
 
     virtual void publish(const ros::Time& time)
@@ -443,6 +451,7 @@ public:
         res.name.resize(gains_map_.size());
         res.Kp.resize(gains_map_.size());
         res.Kd.resize(gains_map_.size());
+
         for (unsigned int i = 0; i<wb_controller::_dof_names.size(); i++)
         {
             res.Kp[i] = Kp_(i,i) = gains_map_[wb_controller::_dof_names[i]].first;
