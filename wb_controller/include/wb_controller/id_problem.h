@@ -73,6 +73,9 @@ class TaskRosWrapperBase : public TaskRosWrapperInterface
 
 public:
 
+    typedef std::pair<double,double> gains_t;
+    typedef std::map<std::string,gains_t> gains_map_t;
+
     TaskRosWrapperBase(ros::NodeHandle& nh, task_ptr_t task)
     {
         assert(task);
@@ -117,6 +120,10 @@ protected:
 
     std::shared_ptr<realtime_tools::RealtimePublisher<msg_t>> rt_pub_;
     task_ptr_t task_;
+    gains_map_t gains_map_;
+
+    Eigen::MatrixXd Kp_;
+    Eigen::MatrixXd Kd_;
 };
 
 template <typename task_ptr_t, typename msg_t>
@@ -219,6 +226,15 @@ public:
         // 'commit' changes and send to all clients
         marker_->applyChanges();
 
+        gains_map_["x"] = gains_t(1.0,1.0);
+        gains_map_["y"] = gains_t(1.0,1.0);
+        gains_map_["z"] = gains_t(1.0,1.0);
+        gains_map_["roll"]  = gains_t(1.0,1.0);
+        gains_map_["pitch"] = gains_t(1.0,1.0);
+        gains_map_["yaw"]   = gains_t(1.0,1.0);
+
+        Kp_ = Eigen::MatrixXd::Zero(6,6);
+        Kd_ = Eigen::MatrixXd::Zero(6,6);
     }
 
     virtual void publish(const ros::Time& time)
@@ -249,6 +265,47 @@ public:
         // Set the task reference for the cartesian task
         task_->setReference(*rt_affine3d_.readFromRT());
     }
+
+    virtual bool setGains(wb_controller::Gains::Request  &req, wb_controller::Gains::Response &res)
+    {
+        for(unsigned int i=0; i<req.name.size();i++)
+        {
+            if(gains_map_.find(req.name[i]) != gains_map_.end())
+            {
+                if(req.Kp[i]>=0 && req.Kd[i]>=0)
+                {
+                    gains_map_[req.name[i]] = gains_t(req.Kp[i],req.Kd[i]);
+                }
+                else
+                {
+                    ROS_WARN_STREAM("Variable: "<<req.name[i]<<" Kp and Kd have to be positive!");
+                }
+            }
+            else
+            {
+                ROS_WARN_STREAM("Variable: "<<req.name[i] << " does not exist!");
+            }
+        }
+
+        res.name.resize(gains_map_.size());
+        res.Kp.resize(gains_map_.size());
+        res.Kd.resize(gains_map_.size());
+        unsigned int idx = 0;
+        for (auto& tmp_map : gains_map_)
+        {
+            Kp_(idx,idx) = tmp_map.second.first;
+            Kd_(idx,idx) = tmp_map.second.second;
+            res.name[idx] = tmp_map.first;
+            res.Kp[idx] = Kp_(idx,idx);
+            res.Kd[idx] = Kd_(idx,idx);
+            idx++;
+        }
+
+        task_->setGains(Kp_,Kd_);
+
+        return true;
+    }
+
 
 protected:
 
@@ -318,8 +375,6 @@ class TaskRosWrapper<tasks::acceleration::Postural::Ptr,wb_controller::JointsTas
 
 public:
 
-    typedef std::pair<double,double> gains_t;
-
     TaskRosWrapper(ros::NodeHandle& nh, tasks::acceleration::Postural::Ptr task):
         TaskRosWrapperBase<tasks::acceleration::Postural::Ptr,wb_controller::JointsTask>(nh,task)
     {
@@ -335,7 +390,10 @@ public:
 
         // NOTE: by default we use the same leg order as RBDL (alphabetic order)
         for(unsigned int i=0; i<wb_controller::_dof_names.size(); i++)
-            joints_map_[wb_controller::_dof_names[i]] = gains_t(1.0,1.0);
+            gains_map_[wb_controller::_dof_names[i]] = gains_t(1.0,1.0);
+
+        Kp_ = Eigen::MatrixXd::Zero(size,size);
+        Kd_ = Eigen::MatrixXd::Zero(size,size);
     }
 
     virtual void publish(const ros::Time& time)
@@ -367,60 +425,46 @@ public:
         }
     }
 
+    // FIXME this is copied and pasted...
     virtual bool setGains(wb_controller::Gains::Request  &req, wb_controller::Gains::Response &res)
     {
-        bool ret = true;
         for(unsigned int i=0; i<req.name.size();i++)
         {
-            if(joints_map_.find(req.name[i]) != joints_map_.end())
+            if(gains_map_.find(req.name[i]) != gains_map_.end())
             {
-
                 if(req.Kp[i]>=0 && req.Kd[i]>=0)
                 {
-                    joints_map_[req.name[i]] = gains_t(req.Kp[i],req.Kd[i]);
+                    gains_map_[req.name[i]] = gains_t(req.Kp[i],req.Kd[i]);
                 }
                 else
                 {
-                    ROS_WARN_STREAM("Joint: "<<req.name[i]<<" Kp and Kd have to be positive!");
-                    ret = false;
+                    ROS_WARN_STREAM("Variable: "<<req.name[i]<<" Kp and Kd have to be positive!");
                 }
-
-
             }
             else
             {
-                ROS_WARN_STREAM("Joint: "<<req.name[i] << " does not exist!");
-                ret = false;
+                ROS_WARN_STREAM("Variable: "<<req.name[i] << " does not exist!");
             }
         }
 
-
-        res.name.resize(joints_map_.size());
-        res.Kp.resize(joints_map_.size());
-        res.Kd.resize(joints_map_.size());
+        res.name.resize(gains_map_.size());
+        res.Kp.resize(gains_map_.size());
+        res.Kd.resize(gains_map_.size());
         unsigned int idx = 0;
-        const unsigned int& size = task_->getActualPositions().size();
-        Eigen::MatrixXd Kp = Eigen::MatrixXd::Zero(size,size);
-        Eigen::MatrixXd Kd = Eigen::MatrixXd::Zero(size,size);
-
-
-        for (auto& tmp_map : joints_map_)
+        for (auto& tmp_map : gains_map_)
         {
-            Kp(idx,idx) = tmp_map.second.first;
-            Kd(idx,idx) = tmp_map.second.second;
+            Kp_(idx,idx) = tmp_map.second.first;
+            Kd_(idx,idx) = tmp_map.second.second;
             res.name[idx] = tmp_map.first;
-            res.Kp[idx] = Kp(idx,idx);
-            res.Kd[idx] = Kd(idx,idx);
+            res.Kp[idx] = Kp_(idx,idx);
+            res.Kd[idx] = Kd_(idx,idx);
             idx++;
         }
 
-        task_->setGains(Kp,Kd);
+        task_->setGains(Kp_,Kd_);
 
-        return ret;
+        return true;
     }
-
-private:
-    std::map<std::string,gains_t> joints_map_;
 
 };
 
