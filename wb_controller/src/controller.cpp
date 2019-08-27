@@ -318,13 +318,19 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     cutoff_hz_gyro_ = 300.;
     cutoff_hz_qdot_ = 300.;
 
+    if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
+    {
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
+        return false;
+    }
+
     qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
     qdot_filter_.setDamping(1.0);
-    qdot_filter_.setTimeStep(DT);
+    qdot_filter_.setTimeStep(period_);
 
     imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
     imu_gyroscope_filter_.setDamping(1.0);
-    imu_gyroscope_filter_.setTimeStep(DT);
+    imu_gyroscope_filter_.setTimeStep(period_);
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
@@ -539,7 +545,7 @@ void Controller::toggleSolver()
     if(!solver_created_)
     {
         ROS_INFO("Reset the solver");
-        id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,DT,feet_names_,arm_tip_name_));
+        id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,feet_names_,arm_tip_name_));
         solver_created_ = true;
     }
 
@@ -653,6 +659,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             qswing_ = qhome_;
             qstance_ = qhome_;
             des_joint_velocities_.fill(0.0);
+
+            imu_gyroscope_filter_.setTimeStep(period_);
+            qdot_filter_.setTimeStep(period_);
 
             dynamicReconfigureUpdate();
 

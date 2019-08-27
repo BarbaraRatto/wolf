@@ -475,10 +475,9 @@ public:
      * @brief IDProblem constructor
      * @param ros node handle
      * @param model pointer to external model
-     * @param dT control loop
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string> feet_names, std::string arm_tip_name = std::string());
+    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name = std::string());
     ~IDProblem();
 
     /**

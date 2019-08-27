@@ -7,7 +7,7 @@ using namespace OpenSoT;
 
 #define CLASS_NAME "IDProblem"
 
-IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string> feet_names, std::string arm_tip_name):
+IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name):
     _model(model)
 {
     //

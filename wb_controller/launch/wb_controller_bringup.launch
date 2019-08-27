@@ -31,7 +31,7 @@
 	<include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
         	<arg name="sensors" value="$(arg sensors)" />
                 <arg name="arm" value="$(arg arm)"/>
-                <arg name="task_period" default="$(arg task_period)" />
+                <arg name="task_period" value="$(arg task_period)" />
 	</include>
     </group>
 
