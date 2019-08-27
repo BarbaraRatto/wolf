@@ -226,12 +226,9 @@ public:
         // 'commit' changes and send to all clients
         marker_->applyChanges();
 
-        gains_map_["x"] = gains_t(1.0,1.0);
-        gains_map_["y"] = gains_t(1.0,1.0);
-        gains_map_["z"] = gains_t(1.0,1.0);
-        gains_map_["roll"]  = gains_t(1.0,1.0);
-        gains_map_["pitch"] = gains_t(1.0,1.0);
-        gains_map_["yaw"]   = gains_t(1.0,1.0);
+        // NOTE: by default we use this order: x y z roll pitch yaw
+        for(unsigned int i=0; i<wb_controller::_cartesian_names.size(); i++)
+            gains_map_[wb_controller::_cartesian_names[i]] = gains_t(1.0,1.0);
 
         Kp_ = Eigen::MatrixXd::Zero(6,6);
         Kd_ = Eigen::MatrixXd::Zero(6,6);
@@ -290,15 +287,11 @@ public:
         res.name.resize(gains_map_.size());
         res.Kp.resize(gains_map_.size());
         res.Kd.resize(gains_map_.size());
-        unsigned int idx = 0;
-        for (auto& tmp_map : gains_map_)
+        for (unsigned int i = 0; i<wb_controller::_cartesian_names.size(); i++)
         {
-            Kp_(idx,idx) = tmp_map.second.first;
-            Kd_(idx,idx) = tmp_map.second.second;
-            res.name[idx] = tmp_map.first;
-            res.Kp[idx] = Kp_(idx,idx);
-            res.Kd[idx] = Kd_(idx,idx);
-            idx++;
+            res.Kp[i] = Kp_(i,i) = gains_map_[wb_controller::_cartesian_names[i]].first;
+            res.Kd[i] = Kd_(i,i) = gains_map_[wb_controller::_cartesian_names[i]].second;
+            res.name[i] = wb_controller::_cartesian_names[i];
         }
 
         task_->setGains(Kp_,Kd_);
@@ -450,18 +443,15 @@ public:
         res.name.resize(gains_map_.size());
         res.Kp.resize(gains_map_.size());
         res.Kd.resize(gains_map_.size());
-        unsigned int idx = 0;
-        for (auto& tmp_map : gains_map_)
+        for (unsigned int i = 0; i<wb_controller::_dof_names.size(); i++)
         {
-            Kp_(idx,idx) = tmp_map.second.first;
-            Kd_(idx,idx) = tmp_map.second.second;
-            res.name[idx] = tmp_map.first;
-            res.Kp[idx] = Kp_(idx,idx);
-            res.Kd[idx] = Kd_(idx,idx);
-            idx++;
+            res.Kp[i] = Kp_(i,i) = gains_map_[wb_controller::_dof_names[i]].first;
+            res.Kd[i] = Kd_(i,i) = gains_map_[wb_controller::_dof_names[i]].second;
+            res.name[i] = wb_controller::_dof_names[i];
         }
 
         task_->setGains(Kp_,Kd_);
+
 
         return true;
     }
