@@ -339,6 +339,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_pids",des_joint_efforts_pids_);
     Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/period",period_);
 
     return true;
 }
@@ -622,6 +623,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     readJoints();
     // 2) IMU
     readImu();
+
+    period_ = period.toSec();
 
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);

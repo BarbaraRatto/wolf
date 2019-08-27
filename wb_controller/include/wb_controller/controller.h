@@ -150,6 +150,8 @@ private:
     std::vector<std::string> joint_names_;
     /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
     std::vector<hardware_interface::JointHandle> joint_states_;
+    /** @brief Control period */
+    double period_;
     /** @brief IMU sensor name */
     std::string imu_name_;
     /** @brief IMU sensors */
