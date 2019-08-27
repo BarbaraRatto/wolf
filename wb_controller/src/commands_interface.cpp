@@ -24,13 +24,7 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
         steps_height_[feet_names[i]] = 0.0;
     }
 
-    base_linear_velocity_scale_x_ = 0.0;
-    base_linear_velocity_scale_y_ = 0.0;
-    base_linear_velocity_scale_z_ = 0.0;
-
-    base_angular_velocity_scale_roll_ = 0.0;
-    base_angular_velocity_scale_pitch_ = 0.0;
-    base_angular_velocity_scale_yaw_ = 0.0;
+    resetVelocyScales();
 
     base_linear_velocity_ = 0.0; // [m/s]
     base_angular_velocity_ = 0.0; // [rad/s]
@@ -109,6 +103,9 @@ void CommandsInterface::update(const double& period, const Eigen::Vector3d& base
 
     case cmd_t::HOLD:
         resetBaseVelocities();
+        resetVelocyScales();
+        calculateBasePosition(period,base_position);
+        calculateBaseOrientation(period,base_orientation);
         resetFeetStep();
         break;
 
@@ -288,6 +285,17 @@ void CommandsInterface::resetBaseOrientation()
 
     rpyToRot(base_orientation_,base_rotation_reference_);
     base_rotation_reference_.transposeInPlace();
+}
+
+void CommandsInterface::resetVelocyScales()
+{
+    base_linear_velocity_scale_x_ = 0.0;
+    base_linear_velocity_scale_y_ = 0.0;
+    base_linear_velocity_scale_z_ = 0.0;
+
+    base_angular_velocity_scale_roll_ = 0.0;
+    base_angular_velocity_scale_pitch_ = 0.0;
+    base_angular_velocity_scale_yaw_ = 0.0;
 }
 
 void CommandsInterface::calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)

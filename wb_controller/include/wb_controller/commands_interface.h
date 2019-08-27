@@ -93,6 +93,8 @@ private:
 
     void resetBaseOrientation();
 
+    void resetVelocyScales();
+
     void calculateBasePosition(const double& period, const Eigen::Vector3d& base_position);
 
     void calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation);
