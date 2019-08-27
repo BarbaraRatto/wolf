@@ -601,9 +601,9 @@ private:
     constraints::force::FrictionCones::Ptr _friction_cones;
 
     /**
-     * @brief _id_problem the final ID problem
+     * @brief the final ID stack
      */
-    AutoStack::Ptr _id_problem;
+    AutoStack::Ptr _stack;
 
     /**
      * @brief _solver iHQP solver
