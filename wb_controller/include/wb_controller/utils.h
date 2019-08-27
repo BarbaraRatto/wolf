@@ -12,6 +12,11 @@
 namespace wb_controller
 {
 
+//#define STACK_1
+#define STACK_2
+//#define STACK_3
+//#define STACK_4
+
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4
 #define DT 0.001 // FIXME

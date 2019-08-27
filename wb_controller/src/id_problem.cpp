@@ -39,7 +39,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
         ROS_INFO("Initialize ARM task");
         _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
                                                                "base_link", _id->getJointsAccelerationAffine()));
+<<<<<<< HEAD
         _arm->setLambda(100.);
+=======
+        _arm->setLambda(400.);
+>>>>>>> 800fc4d... Add stack4 to swing in the air
         _arm->setWeightIsDiagonalFlag(true);
 
         idx_grfs_start_ = 23;
@@ -119,23 +123,39 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
         // computation gets heavier. The second case can be divided in two more sub-cases depending on the RPY task of the base.
         // For the stack with the postural divided in stance and swing, checkout postural_swing_stance branch
 
+#ifdef STACK_1
         // Stack with one level (gazebo rt factor 0.95):
         // we could use weights to emulate the case with two levels and save in this way some computational time or we could set the contacts as constraints.
-        /*_id_problem /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural)
-                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;*/
+        _id_problem /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural)
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 1");
+#endif
 
+#ifdef STACK_2
         // Stack with two levels:
         // 1 - RPY at the first level (gazebo rt factor 0.75): this is useful to have a good tracking of the base orientation but it generates a conflict with the
         // postural e.g. the robot can not climb a slope if the base orientation is not adjusted to do so.
         _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY)
                 / (_postural)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 2");
+#endif
 
+#ifdef  STACK_3
         // 2 - RPY at the second level (gazebo rt factor 0.45): this is generating a bad tracking for the base orientation which can be counteracted by adjusting the lambda gains or by adding weights between
         // postural and RPY.
-        /*_id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
                 / (_waistRPY%idw_RPY + _postural)
-                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;*/
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 3");
+#endif
+
+#ifdef STACK_4
+        // Stack to perform the swing in the air, use freeze base to hold the robot in the air
+        _id_problem /= (_postural) <<_qddot_lims<<_dynamics;
+        ROS_INFO("------------------ PROBLEM STACK 4");
+#endif
+
     }
 
     _id_problem->update(Eigen::VectorXd(1));
