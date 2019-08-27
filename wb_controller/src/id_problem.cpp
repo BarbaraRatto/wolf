@@ -39,11 +39,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
         ROS_INFO("Initialize ARM task");
         _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
                                                                "base_link", _id->getJointsAccelerationAffine()));
-<<<<<<< HEAD
         _arm->setLambda(100.);
-=======
-        _arm->setLambda(400.);
->>>>>>> 800fc4d... Add stack4 to swing in the air
         _arm->setWeightIsDiagonalFlag(true);
 
         idx_grfs_start_ = 23;
