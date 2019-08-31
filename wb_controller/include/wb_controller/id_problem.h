@@ -98,6 +98,16 @@ public:
         case 0:
             task_->setLambda(config.lambda1,config.lambda2);
             break;
+        case 1:
+            if(config.weight>=0)
+            {
+                Eigen::MatrixXd weight = Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight;
+                task_->setWeight(weight);
+                ROS_INFO_STREAM("Set weight for task "<<task_->getTaskID()<<" to "<<config.weight);
+            }
+            else
+                ROS_WARN("Weight has to be positive definite!");
+            break;
         }
     }
 
@@ -105,6 +115,7 @@ public:
     {
         default_config_.lambda1 = task_->getLambda();
         default_config_.lambda2 = task_->getLambda2();
+        default_config_.weight = task_->getWeight()(0); // FIXME
         if(server_) server_->updateConfig(default_config_);
     }
 
