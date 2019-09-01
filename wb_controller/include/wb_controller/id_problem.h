@@ -99,14 +99,16 @@ public:
             task_->setLambda(config.lambda1,config.lambda2);
             break;
         case 1:
-            if(config.weight>=0)
+            if(config.weight_diag>=0)
             {
-                Eigen::MatrixXd weight = Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight;
-                task_->setWeight(weight);
-                ROS_INFO_STREAM("Set weight for task "<<task_->getTaskID()<<" to "<<config.weight);
+                Eigen::MatrixXd new_weight = Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight_diag;
+                Eigen::MatrixXd old_weight = Eigen::MatrixXd::Zero(task_->getTaskSize(),task_->getTaskSize());
+                old_weight = task_->getWeight();
+                task_->setWeight(new_weight);
+                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_->getTaskID()<<" from "<< old_weight(0,0) <<" to "<<new_weight(0,0));
             }
             else
-                ROS_WARN("Weight has to be positive definite!");
+                ROS_WARN("Weight diagonal value has to be positive definite!");
             break;
         }
     }
