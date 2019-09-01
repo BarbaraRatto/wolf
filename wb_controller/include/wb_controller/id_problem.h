@@ -115,7 +115,7 @@ public:
     {
         default_config_.lambda1 = task_->getLambda();
         default_config_.lambda2 = task_->getLambda2();
-        default_config_.weight = task_->getWeight()(0); // FIXME
+        default_config_.weight_diag = task_->getWeight()(0,0); // Note: we take the first value of the diagonal.
         if(server_) server_->updateConfig(default_config_);
     }
 
