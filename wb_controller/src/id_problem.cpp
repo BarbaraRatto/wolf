@@ -1,6 +1,5 @@
 #include <wb_controller/id_problem.h>
 #include <OpenSoT/utils/Affine.h>
-#include <OpenSoT/tasks/MinimizeVariable.h>
 #include <wb_controller/utils.h>
 
 using namespace OpenSoT;
@@ -96,9 +95,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     _wrenches_lims.reset(new OpenSoT::constraints::force::WrenchesLimits(
                              feet_names, _wrench_lower_lims, _wrench_upper_lims,_id->getContactsWrenchAffine()));
 
-    std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> minfs;
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
-        minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
+        _minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
 
     std::list<unsigned int> idw_Z = {2}; //z
     std::list<unsigned int> idw_RPY = {3,4,5}; //r,p,y

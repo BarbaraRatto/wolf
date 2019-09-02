@@ -5,6 +5,7 @@
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
+#include <OpenSoT/tasks/MinimizeVariable.h>
 #include <OpenSoT/constraints/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/utils/AutoStack.h>
@@ -556,7 +557,6 @@ public:
      */
     void setLowerForceBound(const double& x_force,const double& y_force,const double& z_force);
 
-
     /**
          * @brief Ros dynamic reconfigure callback
          */
@@ -570,6 +570,11 @@ public:
     tasks::acceleration::Cartesian::Ptr _waistRPY;
     tasks::acceleration::Cartesian::Ptr _waistZ;
     tasks::acceleration::CoM::Ptr _com;
+
+    /**
+     * @brief Forces minimization tasks
+     */
+    std::vector<tasks::MinimizeVariable::Ptr> _minfs;
 
     /**
      * @brief Expose the tasks to ROS
