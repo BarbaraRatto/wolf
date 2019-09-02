@@ -457,8 +457,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
     case 13:
         x_err_gain_ = config.x_err_gain;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.x_err_gain);
-    case 14:
-        toggleSwing();
+        break;
     default:
         break;
     }
@@ -561,21 +560,6 @@ void Controller::toggleSolver()
     else
         ROS_INFO("Solver integration is OFF");
 
-}
-
-void Controller::toggleSwing()
-{
-    if(!joy_handler_->getStartSwingButton())
-    {
-        ROS_INFO("start swing");
-        cmds_->setCmd(wb_controller::CommandsInterface::LINEAR_AND_ANGULAR); // Start the swing
-        cmds_->setBaseVelocityScaleX(1.0);
-        joy_handler_->setStartSwingButton(true);
-    } else {
-        ROS_INFO("stop swing");
-        cmds_->setCmd(wb_controller::CommandsInterface::HOLD); // stop the swing
-        joy_handler_->setStartSwingButton(false);
-    }
 }
 
 void Controller::readJoints()
