@@ -50,6 +50,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
+    //hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>(); //NOTE: de-comment this line to use the GT
+    //hardware_interface::GroundTruthInterface* gt_hw = NULL;
 
     if(!jt_hw)
     {
@@ -192,12 +194,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
 
     // Assume we are working with a dog
-    if(hips_names_.size()!=4)
+    if(hips_names_.size()!=N_LEGS)
     {
         ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of hips!");
         return false;
     }
-    if(feet_names_.size()!=4)
+    if(feet_names_.size()!=N_LEGS)
     {
         ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of feet!");
         return false;
@@ -275,7 +277,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_pids_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    des_contact_forces_.resize(24); // 24 = 6 dofs * 4 leg
+    des_contact_forces_.resize(FLOATING_BASE_DOFS*N_LEGS); // 24 = 6 dofs * 4 leg
     J_.resize(6,xbot_model_->getJointNum());
     J_foot_.resize(3,3);
 
