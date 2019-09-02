@@ -654,6 +654,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             // We need to set these values here because the robot is starting in the air with the simulation.
             // Be sure to start the solver and the contact estimation when the robot is grounded.
+            state_estimator_->resetImu();
             state_estimator_->startContactsEstimation();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());

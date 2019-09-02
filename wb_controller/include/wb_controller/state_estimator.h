@@ -93,6 +93,8 @@ public:
 
     void toggleHapticContactLoop();
 
+    void resetImu();
+
 private:
 
     void updateFloatingBase(const double& period);

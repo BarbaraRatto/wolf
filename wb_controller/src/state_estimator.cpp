@@ -237,6 +237,11 @@ void StateEstimator::stopContactsEstimation()
     ROS_INFO("Stop contact estimation: the contacts state are forced to TRUE");
 }
 
+void StateEstimator::resetImu()
+{
+    imu_reset_done_ = false;
+}
+
 void StateEstimator::update(const double& period)
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
