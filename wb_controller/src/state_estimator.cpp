@@ -339,7 +339,7 @@ void StateEstimator::updateFloatingBase(const double& period)
         quatToRotMat(gt_orientation_.normalized(),base_R_world_);
         rotTorpy(base_R_world_,base_rpy_);
         floating_base_pose_.linear() = base_R_world_.transpose();
-        floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * gt_angular_velocity_;
+        floating_base_velocity_.segment(3,3) = gt_angular_velocity_;
         break;
     default:
         // The base does not rotate
