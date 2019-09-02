@@ -77,24 +77,20 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     _mu = 0.5;
     for(unsigned int i = 0; i < feet_names.size(); i++)
         mus.push_back(std::pair<Eigen::Matrix3d,double> (R,_mu));
-    //_friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCone>(_id->getContactsWrenchAffine(),*_model,mus);
     _friction_cones.reset(new OpenSoT::constraints::force::FrictionCones(feet_names,_id->getContactsWrenchAffine(),*_model,mus));
 
     /// HERE WE SET SOME BOUNDS
-    Eigen::VectorXd xmax = 100.*Eigen::VectorXd::Ones(_model->getJointNum());
+    Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(_model->getJointNum());
     Eigen::VectorXd xmin = -xmax;
 
     _qddot_lims.reset(new OpenSoT::constraints::GenericConstraint(
                           "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT));
 
-    //_qddot_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
-    //            "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
-
-    _x_force_lower_lim = -1000;
-    _y_force_lower_lim = -1000;
+    _x_force_lower_lim = -2000;
+    _y_force_lower_lim = -2000;
     _z_force_lower_lim = 20.0;
 
-    _wrench_upper_lims<<1000,1000,1000,Eigen::Vector3d::Zero();
+    _wrench_upper_lims<<2000,2000,2000,Eigen::Vector3d::Zero();
     _wrench_lower_lims<<_x_force_lower_lim,_y_force_lower_lim,_z_force_lower_lim,Eigen::Vector3d::Zero();
 
     _wrenches_lims.reset(new OpenSoT::constraints::force::WrenchesLimits(
