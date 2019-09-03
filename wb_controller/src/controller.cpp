@@ -369,6 +369,41 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
     Logger::getLogger().addPublisher(CLASS_NAME"/period",period_);
 
+
+    Kp_swing_leg_  << 100, 0  , 0  ,
+            0  , 100, 0  ,
+            0  , 0  , 100;
+
+    Kd_swing_leg_  << 5  , 0  , 0  ,
+            0  , 5 ,  0  ,
+            0  , 0  , 5 ;
+
+    Kp_stance_leg_ << 200  , 0 ,0,
+            0  , 200 ,0,
+            0  , 0  ,200;
+    Kd_stance_leg_ << 20,   0 , 0,
+            0  , 20 , 0,
+            0  , 0 , 20;
+
+    xbot_model_->getInertiaMatrix(M_);
+    Mi_.setZero(M_.rows(), M_.cols());
+    Kp_postural_.setZero(M_.rows(), M_.cols());
+    Kd_postural_.setZero(M_.rows(), M_.cols());
+
+    Kp_waist_ << 200., 0 , 0, 0, 0, 0, // x (not used for the waistRPY)
+            0, 200. , 0, 0, 0, 0, // y (not used for the waistRPY)
+            0, 0 , 200., 0, 0, 0, // z (not used for the waistRPY)
+            0, 0 , 0, 240., 0, 0, // roll
+            0, 0 , 0, 0, 240., 0, // pitch
+            0, 0 , 0, 0, 0, 80.; // yaw
+
+    Kd_waist_ << 4, 0 , 0, 0, 0, 0, // x (not used for the waistRPY)
+            0, 4 , 0, 0, 0, 0, // y (not used for the waistRPY)
+            0, 0 , 4, 0, 0, 0, // z (not used for the waistRPY)
+            0, 0 , 0, 50, 0, 0, // roll
+            0, 0 , 0, 0, 50, 0, // pitch
+            0, 0 , 0, 0, 0, 16; // yaw
+
     return true;
 }
 
@@ -700,7 +735,18 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
         rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
         tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
+
+        id_prob_->_waistRPY->setGains(Kp_waist_,Kd_waist_);
+
         id_prob_->_waistRPY->setReference(tmp_affine3d_);
+
+        xbot_model_->getInertiaMatrix(M_);
+        Mi_.setZero();
+        Kp_postural_.setZero();
+        Kd_postural_.setZero();
+
+        Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS)
+                = M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS).inverse();
 
         double delta_z = cmds_->getBaseHeight() - state_estimator_->getFloatingBasePosition()(2);
 
@@ -731,6 +777,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_feet[feet_names_[i]]->setActive(false);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                 ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
+
+                Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kp_swing_leg_;
+                Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kd_swing_leg_;
             }
             else
             {
@@ -750,11 +799,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_feet[feet_names_[i]]->setActive(true);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                 ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
+
+                Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kp_stance_leg_;
+                Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_stance_leg_;
             }
         }
 
         // Set the postural desired positions and velocities
         jointLimitsCheck(des_joint_positions_,qmin_,qmax_);
+
+        id_prob_->_postural->setGains(Kp_postural_,Kd_postural_);
 
         id_prob_->_postural->setReference(des_joint_positions_,des_joint_velocities_);
 

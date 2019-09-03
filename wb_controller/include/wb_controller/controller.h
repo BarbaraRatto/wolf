@@ -293,6 +293,12 @@ private:
     Eigen::Vector3d x_err_;
     std::atomic<double> x_err_gain_;
 
+    // FIXME to be moved
+    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
+    Eigen::Matrix6d Kp_waist_, Kd_waist_;
+    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
+
+
     /**
          * @brief thread body for the odometry publisher
          */
