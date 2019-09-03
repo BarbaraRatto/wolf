@@ -330,7 +330,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
         ROS_WARN_NAMED(CLASS_NAME,"No default estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),state_estimator_->getOrientationEstimationType().c_str());
     else
-        state_estimator_->setPositionEstimationType(estimation_orientation_type);
+        state_estimator_->setOrientationEstimationType(estimation_orientation_type);
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
@@ -580,7 +580,7 @@ void Controller::toggleBaseHeightControl()
     else
     {
         base_height_control_active_ = false;
-        ROS_WARN("Can not activate the base height control, the state estimator is not configured to do so!");
+        ROS_WARN_NAMED(CLASS_NAME,"Can not activate the base height control, the state estimator (%s) is not configured to do so!",state_estimator_->getPositionEstimationType().c_str());
     }
 }
 
