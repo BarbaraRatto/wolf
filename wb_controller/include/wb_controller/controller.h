@@ -20,6 +20,7 @@
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
+#include <dls_hardware_interface/ground_truth_interface.h>
 // ADVR
 #include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
@@ -42,7 +43,8 @@ namespace wb_controller
 {
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
-                                                                         hardware_interface::ImuSensorInterface>
+                                                                         hardware_interface::ImuSensorInterface,
+                                                                         hardware_interface::GroundTruthInterface>
 {
 public:
 
@@ -150,10 +152,14 @@ private:
     std::vector<std::string> joint_names_;
     /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
     std::vector<hardware_interface::JointHandle> joint_states_;
+    /** @brief Control period */
+    double period_;
     /** @brief IMU sensor name */
     std::string imu_name_;
     /** @brief IMU sensors */
     hardware_interface::ImuSensorHandle imu_sensor_;
+    /** @brief Ground Thruth */
+    hardware_interface::GroundTruthHandle ground_truth_;
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */

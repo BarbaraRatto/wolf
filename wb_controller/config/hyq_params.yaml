@@ -27,10 +27,13 @@ wb_controller:
   imu_sensor: trunk_imu
   default_swing_frequency: 3.3
   default_contact_threshold: 30.0
-  default_base_linear_velocity_max: 0.3
-  default_base_angular_velocity_max: 0.2
-  default_step_height_max: 0.15
-  default_step_length_max: 0.4
+  default_base_linear_velocity: 0.3
+  default_base_angular_velocity: 0.2
+  default_step_height: 0.05
+  max_step_height: 0.15
+  max_step_length: 0.5
+  estimation_position_type: estimated_z
+  estimation_orientation_type: imu_magnetometer
   gains:
       lf_haa_joint: {p: 300.0, i: 0.0, d: 15.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 15.0}

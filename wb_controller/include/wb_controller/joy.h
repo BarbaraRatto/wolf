@@ -12,6 +12,8 @@ class JoyHandler
 
 public:
 
+    enum button_t {START=0,SELECT,ONE,TWO,THREE,FOUR};
+
     typedef std::function<void ()> funct_t;
 
     /**
@@ -32,7 +34,6 @@ public:
         joy_base_yaw_scale_            = 0.0;
         joy_base_pitch_scale_          = 0.0;
         joy_base_roll_scale_           = 0.0;
-        joy_step_height_scale_         = 0.0;
         joy_start_swing_button_        = false;
         joy_reset_base_button_         = false;
 
@@ -42,15 +43,30 @@ public:
         cmds_ = cmds;
     }
 
-    void addStartButtonHandler(funct_t f)
+    void addButtonHandler(funct_t f, button_t button)
     {
-        f_start_ = f;
+        switch(button)
+        {
+        case(button_t::START):
+            f_start_ = f;
+            break;
+        case(button_t::SELECT):
+            f_select_ = f;
+            break;
+        default:
+            ROS_WARN("Wrong button selected!");
+            break;
+        };
+    }
+    void setStartSwingButton(bool flag){
+        joy_start_swing_button_ = flag;
     }
 
-    void addSelectButtonHandler(funct_t f)
-    {
-        f_select_ = f;
+    bool getStartSwingButton(){
+        return joy_start_swing_button_;
     }
+
+
 
 private:
 
@@ -63,24 +79,22 @@ private:
         joy_base_yaw_scale_         = static_cast<double>(msg->axes[2]);
         joy_base_pitch_scale_       = static_cast<double>(msg->axes[3]);
         joy_base_roll_scale_        = -static_cast<double>(msg->axes[4]);
-        joy_step_height_scale_      = static_cast<double>(msg->axes[5]);
 
         joy_start_swing_button_     = static_cast<bool>(msg->buttons[4]); // L1 button
         joy_reset_base_button_      = static_cast<bool>(msg->buttons[6]); // L2 button
 
-        cmds_->setStepHeightScale(joy_step_height_scale_);
+        joy_up_down_trigger_.update(static_cast<double>(msg->axes[5]));
+
+        if(joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::UP)
+            cmds_->increaseStepHeight();
+        else if (joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::DOWN)
+            cmds_->decreaseStepHeight();
 
         if(f_start_ && joy_start_button_trigger_.update(static_cast<bool>(msg->buttons[9])))
             f_start_();
 
         if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
             f_select_();
-
-        /*if(joy_select_gait_trigger_.update(static_cast<bool>(msg->buttons[8])))
-            if(cmds_->getGaitGenerator()->getGaitType() == "trot")
-                cmds_->getGaitGenerator()->setGaitType("crawl");
-            else
-                cmds_->getGaitGenerator()->setGaitType("trot");*/
 
         if(joy_start_swing_button_)
         {
@@ -124,7 +138,6 @@ private:
     double joy_base_yaw_scale_;
     double joy_base_pitch_scale_;
     double joy_base_roll_scale_;
-    double joy_step_height_scale_;
     bool   joy_start_swing_button_;
     bool   joy_reset_base_button_;
 
@@ -133,6 +146,7 @@ private:
 
     wb_controller::Trigger joy_select_button_trigger_;
     wb_controller::Trigger joy_start_button_trigger_;
+    wb_controller::AxisToTrigger joy_up_down_trigger_;
 
 };
 

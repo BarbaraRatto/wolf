@@ -29,10 +29,12 @@
     </group>
 
     <group unless="$(arg gazebo)">
-       <include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
-            <arg name="sensors" value="$(arg sensors)" />
-       </include>
-   </group>
+	<include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
+        	<arg name="sensors" value="$(arg sensors)" />
+                <arg name="arm" value="$(arg arm)"/>
+                <arg name="task_period" value="$(arg task_period)" />
+	</include>
+    </group>
 
     <!-- Loading joint states publisher configurations from YAML file to parameter server -->
     <rosparam file="$(find wb_controller)/config/joint_state_publisher.yaml" ns="/$(arg robot_name)" command="load"/>

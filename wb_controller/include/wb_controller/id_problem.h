@@ -5,6 +5,7 @@
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
+#include <OpenSoT/tasks/MinimizeVariable.h>
 #include <OpenSoT/constraints/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/utils/AutoStack.h>
@@ -22,10 +23,15 @@
 #include <wb_controller/CartesianTask.h>
 #include <wb_controller/JointsTask.h>
 #include <wb_controller/taskConfig.h>
+#include <wb_controller/problemConfig.h>
 
 // WB
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
+#include <wb_controller/Gains.h>
+
+// STD
+#include <atomic>
 
 namespace OpenSoT{
 
@@ -50,6 +56,7 @@ protected:
     std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_;
     wb_controller::taskConfig default_config_;
     std::shared_ptr<ros::AsyncSpinner> spinner_;
+    ros::ServiceServer service_;
 
     Eigen::Affine3d       tmp_affine3d_;
     Eigen::VectorXd       tmp_vectorxd_;
@@ -67,6 +74,9 @@ class TaskRosWrapperBase : public TaskRosWrapperInterface
 
 public:
 
+    typedef std::pair<double,double> gains_t;
+    typedef std::map<std::string,gains_t> gains_map_t;
+
     TaskRosWrapperBase(ros::NodeHandle& nh, task_ptr_t task)
     {
         assert(task);
@@ -78,6 +88,8 @@ public:
         ros::NodeHandle task_nh(task->getTaskID());
         server_.reset(new dynamic_reconfigure::Server<wb_controller::taskConfig>(task_nh));
         server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
+
+        service_ = nh.advertiseService(task->getTaskID()+"/set_gains",&TaskRosWrapperBase::setGains,this);
     }
 
     void dynamicReconfigureCallback(wb_controller::taskConfig &config, uint32_t level)
@@ -87,6 +99,18 @@ public:
         case 0:
             task_->setLambda(config.lambda1,config.lambda2);
             break;
+        case 1:
+            if(config.weight_diag>=0)
+            {
+                Eigen::MatrixXd new_weight = Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight_diag;
+                Eigen::MatrixXd old_weight = Eigen::MatrixXd::Zero(task_->getTaskSize(),task_->getTaskSize());
+                old_weight = task_->getWeight();
+                task_->setWeight(new_weight);
+                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_->getTaskID()<<" from "<< old_weight(0,0) <<" to "<<new_weight(0,0));
+            }
+            else
+                ROS_WARN("Weight diagonal value has to be positive definite!");
+            break;
         }
     }
 
@@ -94,7 +118,14 @@ public:
     {
         default_config_.lambda1 = task_->getLambda();
         default_config_.lambda2 = task_->getLambda2();
+        default_config_.weight_diag = task_->getWeight()(0,0); // Note: we take the first value of the diagonal.
         if(server_) server_->updateConfig(default_config_);
+    }
+
+    virtual bool setGains(wb_controller::Gains::Request  &req, wb_controller::Gains::Response &res)
+    {
+        ROS_WARN("setGains not implemented yet.");
+        return false;
     }
 
     virtual void publish(const ros::Time& /*time*/) = 0;
@@ -103,6 +134,10 @@ protected:
 
     std::shared_ptr<realtime_tools::RealtimePublisher<msg_t>> rt_pub_;
     task_ptr_t task_;
+    gains_map_t gains_map_;
+
+    Eigen::MatrixXd Kp_;
+    Eigen::MatrixXd Kd_;
 };
 
 template <typename task_ptr_t, typename msg_t>
@@ -205,6 +240,16 @@ public:
         // 'commit' changes and send to all clients
         marker_->applyChanges();
 
+        Kp_ = task_->getKp();
+        Kd_ = task_->getKd();
+        // NOTE: by default we use this order: x y z roll pitch yaw
+        for(unsigned int i=0; i<wb_controller::_cartesian_names.size(); i++)
+        {
+            gains_map_[wb_controller::_dof_names[i]] = gains_t(Kp_(i,i),Kd_(i,i));
+        }
+
+        //Kp_ = Eigen::MatrixXd::Zero(6,6);
+        //Kd_ = Eigen::MatrixXd::Zero(6,6);
     }
 
     virtual void publish(const ros::Time& time)
@@ -235,6 +280,43 @@ public:
         // Set the task reference for the cartesian task
         task_->setReference(*rt_affine3d_.readFromRT());
     }
+
+    virtual bool setGains(wb_controller::Gains::Request  &req, wb_controller::Gains::Response &res)
+    {
+        for(unsigned int i=0; i<req.name.size();i++)
+        {
+            if(gains_map_.find(req.name[i]) != gains_map_.end())
+            {
+                if(req.Kp[i]>=0 && req.Kd[i]>=0)
+                {
+                    gains_map_[req.name[i]] = gains_t(req.Kp[i],req.Kd[i]);
+                }
+                else
+                {
+                    ROS_WARN_STREAM("Variable: "<<req.name[i]<<" Kp and Kd have to be positive!");
+                }
+            }
+            else
+            {
+                ROS_WARN_STREAM("Variable: "<<req.name[i] << " does not exist!");
+            }
+        }
+
+        res.name.resize(gains_map_.size());
+        res.Kp.resize(gains_map_.size());
+        res.Kd.resize(gains_map_.size());
+        for (unsigned int i = 0; i<wb_controller::_cartesian_names.size(); i++)
+        {
+            res.Kp[i] = Kp_(i,i) = gains_map_[wb_controller::_cartesian_names[i]].first;
+            res.Kd[i] = Kd_(i,i) = gains_map_[wb_controller::_cartesian_names[i]].second;
+            res.name[i] = wb_controller::_cartesian_names[i];
+        }
+
+        task_->setGains(Kp_,Kd_);
+
+        return true;
+    }
+
 
 protected:
 
@@ -309,12 +391,24 @@ public:
     {
         const unsigned int& size = task_->getActualPositions().size();
         tmp_vectorxd_.resize(size);
+        rt_pub_->msg_.name.resize(size);
         rt_pub_->msg_.position_actual.resize(size);
         rt_pub_->msg_.velocity_actual.resize(size);
         rt_pub_->msg_.position_reference.resize(size);
         rt_pub_->msg_.velocity_reference.resize(size);
         rt_pub_->msg_.position_error.resize(size);
         rt_pub_->msg_.velocity_error.resize(size);
+
+        Kp_ = task_->getKp();
+        Kd_ = task_->getKd();
+        // NOTE: by default we use the same leg order as RBDL (alphabetic order)
+        for(unsigned int i=0; i<wb_controller::_dof_names.size(); i++)
+        {
+            gains_map_[wb_controller::_dof_names[i]] = gains_t(Kp_(i,i),Kd_(i,i));
+        }
+
+        //Kp_ = Eigen::MatrixXd::Zero(size,size);
+        //Kd_ = Eigen::MatrixXd::Zero(size,size);
     }
 
     virtual void publish(const ros::Time& time)
@@ -332,6 +426,7 @@ public:
 
             for(unsigned int i = 0;i<tmp_vectorxd_.size();i++)
             {
+                rt_pub_->msg_.name[i] = wb_controller::_dof_names[i];
                 rt_pub_->msg_.position_actual[i] = position_actual(i);
                 rt_pub_->msg_.position_reference[i] = position_reference(i);
                 rt_pub_->msg_.velocity_actual[i] = 0.0;
@@ -340,10 +435,48 @@ public:
                 rt_pub_->msg_.velocity_error[i] = velocity_error(i);
             }
 
-
             rt_pub_->unlockAndPublish();
 
         }
+    }
+
+    // FIXME this is copied and pasted...
+    virtual bool setGains(wb_controller::Gains::Request  &req, wb_controller::Gains::Response &res)
+    {
+        for(unsigned int i=0; i<req.name.size();i++)
+        {
+            if(gains_map_.find(req.name[i]) != gains_map_.end())
+            {
+                if(req.Kp[i]>=0 && req.Kd[i]>=0)
+                {
+                    gains_map_[req.name[i]] = gains_t(req.Kp[i],req.Kd[i]);
+                }
+                else
+                {
+                    ROS_WARN_STREAM("Variable: "<<req.name[i]<<" Kp and Kd have to be positive!");
+                }
+            }
+            else
+            {
+                ROS_WARN_STREAM("Variable: "<<req.name[i] << " does not exist!");
+            }
+        }
+
+        res.name.resize(gains_map_.size());
+        res.Kp.resize(gains_map_.size());
+        res.Kd.resize(gains_map_.size());
+
+        for (unsigned int i = 0; i<wb_controller::_dof_names.size(); i++)
+        {
+            res.Kp[i] = Kp_(i,i) = gains_map_[wb_controller::_dof_names[i]].first;
+            res.Kd[i] = Kd_(i,i) = gains_map_[wb_controller::_dof_names[i]].second;
+            res.name[i] = wb_controller::_dof_names[i];
+        }
+
+        task_->setGains(Kp_,Kd_);
+
+
+        return true;
     }
 
 };
@@ -365,10 +498,9 @@ public:
      * @brief IDProblem constructor
      * @param ros node handle
      * @param model pointer to external model
-     * @param dT control loop
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string> feet_names, std::string arm_tip_name = std::string());
+    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name = std::string());
     ~IDProblem();
 
     /**
@@ -414,6 +546,23 @@ public:
     void publish(const ros::Time& time);
 
     /**
+     * @brief set the mu parameter for the friction cones
+     * @param mu value
+     */
+    void setFrictionConesMu(const double& mu);
+
+    /**
+     * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
+     * @param lower bound values
+     */
+    void setLowerForceBound(const double& x_force,const double& y_force,const double& z_force);
+
+    /**
+         * @brief Ros dynamic reconfigure callback
+         */
+    void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
+
+    /**
      * @brief Cartesian tasks
      */
     std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
@@ -421,6 +570,11 @@ public:
     tasks::acceleration::Cartesian::Ptr _waistRPY;
     tasks::acceleration::Cartesian::Ptr _waistZ;
     tasks::acceleration::CoM::Ptr _com;
+
+    /**
+     * @brief Forces minimization tasks
+     */
+    std::vector<tasks::MinimizeVariable::Ptr> _minfs;
 
     /**
      * @brief Expose the tasks to ROS
@@ -448,6 +602,12 @@ public:
     XBot::ModelInterface::Ptr _model;
 
 private:
+
+    /**
+         * @brief Update the dynamic reconfigure interface
+         */
+    void dynamicReconfigureUpdate();
+
     /**
      * @brief _dynamics constraint relates the floating base with the contact forces
      */
@@ -459,9 +619,9 @@ private:
     constraints::force::FrictionCones::Ptr _friction_cones;
 
     /**
-     * @brief _id_problem the final ID problem
+     * @brief the final ID stack
      */
-    AutoStack::Ptr _id_problem;
+    AutoStack::Ptr _stack;
 
     /**
      * @brief _solver iHQP solver
@@ -481,6 +641,18 @@ private:
     Eigen::VectorXd _qddot;
     std::vector<Eigen::Vector6d> _contact_wrenches;
 
+    Eigen::Vector6d _wrench_upper_lims;
+    Eigen::Vector6d _wrench_lower_lims;
+
+    /** @brief ROS dynamic reconfigure */
+    dynamic_reconfigure::Server<wb_controller::problemConfig>* server_;
+    /** @brief ROS dynamic reconfigure config struct */
+    wb_controller::problemConfig default_config_;
+
+    std::atomic<double> _mu;
+    std::atomic<double> _x_force_lower_lim;
+    std::atomic<double> _y_force_lower_lim;
+    std::atomic<double> _z_force_lower_lim;
 
     unsigned int idx_grfs_start_;
 
