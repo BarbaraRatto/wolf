@@ -369,6 +369,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
     Logger::getLogger().addPublisher(CLASS_NAME"/period",period_);
 
+    xbot_model_->getInertiaMatrix(M_);
+    Mi_.setZero(M_.rows(), M_.cols());
+    Kp_postural_.setZero(M_.rows(), M_.cols());
+    Kd_postural_.setZero(M_.rows(), M_.cols());
 
     Kp_swing_leg_  << 100, 0  , 0  ,
             0  , 100, 0  ,
@@ -384,11 +388,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Kd_stance_leg_ << 20,   0 , 0,
             0  , 20 , 0,
             0  , 0 , 20;
-
-    xbot_model_->getInertiaMatrix(M_);
-    Mi_.setZero(M_.rows(), M_.cols());
-    Kp_postural_.setZero(M_.rows(), M_.cols());
-    Kd_postural_.setZero(M_.rows(), M_.cols());
 
     Kp_waist_ << 200., 0 , 0, 0, 0, 0, // x (not used for the waistRPY)
             0, 200. , 0, 0, 0, 0, // y (not used for the waistRPY)
@@ -432,6 +431,7 @@ bool Controller::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd& qmi
 
 void Controller::dynamicReconfigureUpdate()
 {
+
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
     default_config_.toggle_haptic = haptic_contact_loop_active_;
@@ -440,6 +440,29 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
     default_config_.x_err_gain = x_err_gain_;
+
+    default_config_.kp_haa_swing   = Kp_swing_leg_(0,0);
+    default_config_.kp_hfe_swing   = Kp_swing_leg_(1,1);
+    default_config_.kp_kfe_swing   = Kp_swing_leg_(2,2);
+
+    default_config_.kd_haa_swing   = Kd_swing_leg_(0,0);
+    default_config_.kd_hfe_swing   = Kd_swing_leg_(1,1);
+    default_config_.kd_kfe_swing   = Kd_swing_leg_(2,2);
+
+    default_config_.kp_haa_stance = Kp_stance_leg_(0,0);
+    default_config_.kp_hfe_stance = Kp_stance_leg_(1,1);
+    default_config_.kp_kfe_stance = Kp_stance_leg_(2,2);
+
+    default_config_.kd_haa_stance = Kd_stance_leg_(0,0);
+    default_config_.kd_hfe_stance = Kd_stance_leg_(1,1);
+    default_config_.kd_kfe_stance = Kd_stance_leg_(2,2);
+
+    default_config_.kp_roll  = Kp_waist_(3,3);
+    default_config_.kp_pitch = Kp_waist_(4,4);
+    default_config_.kp_yaw   = Kp_waist_(5,5);
+    default_config_.kd_roll  = Kd_waist_(3,3);
+    default_config_.kd_pitch = Kd_waist_(4,4);
+    default_config_.kd_yaw   = Kd_waist_(5,5);
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -512,6 +535,36 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
     case 13:
         x_err_gain_ = config.x_err_gain;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.x_err_gain);
+        break;
+    case 14:
+        // FIXME: this is not thread safe!
+        // Kp swing
+        Kp_swing_leg_(0,0) = config.kp_haa_swing;
+        Kp_swing_leg_(1,1) = config.kp_hfe_swing;
+        Kp_swing_leg_(2,2) = config.kp_kfe_swing;
+        // Kd swing
+        Kd_swing_leg_(0,0) = config.kd_haa_swing;
+        Kd_swing_leg_(1,1) = config.kd_hfe_swing;
+        Kd_swing_leg_(2,2) = config.kd_kfe_swing;
+        // Kp stance
+        Kp_stance_leg_(0,0) = config.kp_haa_stance;
+        Kp_stance_leg_(1,1) = config.kp_hfe_stance;
+        Kp_stance_leg_(2,2) = config.kp_kfe_stance;
+        // Kd stance
+        Kd_stance_leg_(0,0) = config.kd_haa_stance;
+        Kd_stance_leg_(1,1) = config.kd_hfe_stance;
+        Kd_stance_leg_(2,2) = config.kd_kfe_stance;
+        ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the postural");
+        break;
+    case 15:
+        // FIXME: this is not thread safe!
+        Kp_waist_(3,3) = config.kp_roll;
+        Kp_waist_(4,4) = config.kp_pitch;
+        Kp_waist_(5,5) = config.kp_yaw;
+        Kd_waist_(3,3) = config.kd_roll;
+        Kd_waist_(4,4) = config.kd_pitch;
+        Kd_waist_(5,5) = config.kd_yaw;
+        ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the waistRPY");
         break;
     default:
         break;

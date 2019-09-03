@@ -28,16 +28,15 @@ pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
   cfg/problem.cfg
-  cfg/task.cfg
+  cfg/taskCartesian.cfg
+  cfg/taskGeneric.cfg
+  cfg/taskPostural.cfg
 )
 
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
                  ContactForces.msg)
-
-add_service_files(FILES
-                 Gains.srv)
 
 generate_messages(
     DEPENDENCIES
