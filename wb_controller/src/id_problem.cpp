@@ -125,7 +125,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         // Stack with two levels:
         // 1 - RPY at the first level (gazebo rt factor 0.75): this is useful to have a good tracking of the base orientation but it generates a conflict with the
         // postural e.g. the robot can not climb a slope if the base orientation is not adjusted to do so.
-        _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY)
+        _stack = ((1000.0*_feet[feet_names[0]]%idf + 1000.0*_feet[feet_names[1]]%idf + 1000.0*_feet[feet_names[2]]%idf + 1000.0*_feet[feet_names[3]]%idf + _waistRPY%idw_RPY)
                 / (_postural)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 2");
