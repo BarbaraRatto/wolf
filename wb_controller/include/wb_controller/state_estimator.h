@@ -93,7 +93,7 @@ public:
 
     void toggleHapticContactLoop();
 
-    void resetImu();
+    void resetImuGyroscope();
 
 private:
 
@@ -161,7 +161,7 @@ private:
     Eigen::Matrix3d base_R_world_;
 
     /** @brief Align the imu frame (trunk) to the world */
-    bool imu_reset_done_;
+    bool imu_gyroscope_reset_done_;
 
     Eigen::Matrix3d tmp_matrix3d_;
 

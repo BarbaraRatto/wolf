@@ -58,7 +58,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     estimation_orientation_ = estimation_t::IMU_MAGNETOMETER;
     estimation_position_ = estimation_t::ESTIMATED_Z;
 
-    imu_reset_done_ = false;
+    imu_gyroscope_reset_done_ = false;
 
     haptic_contact_loop_active_ = false;
 
@@ -237,9 +237,9 @@ void StateEstimator::stopContactsEstimation()
     ROS_INFO("Stop contact estimation: the contacts state are forced to TRUE");
 }
 
-void StateEstimator::resetImu()
+void StateEstimator::resetImuGyroscope()
 {
-    imu_reset_done_ = false;
+    imu_gyroscope_reset_done_ = false;
 }
 
 void StateEstimator::update(const double& period)
@@ -323,12 +323,12 @@ void StateEstimator::updateFloatingBase(const double& period)
         floating_base_velocity_.segment(3,3) = imu_gyroscope_;
         break;
     case estimation_t::IMU_GYROSCOPE: // Intergate the gyroscope, useful if the magnetometer measure has interferences
-        if(!imu_reset_done_)
+        if(!imu_gyroscope_reset_done_)
         {
             // Initialization for the integration
             quatToRotMat(imu_orientation_.normalized(),base_R_world_);
             rotTorpy(base_R_world_,base_rpy_);
-            imu_reset_done_ = true;
+            imu_gyroscope_reset_done_ = true;
         }
         rpyToEarInv(base_rpy_,Ear_);
         // Map the omegas in the base into rpy derivatives

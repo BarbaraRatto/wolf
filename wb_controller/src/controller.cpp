@@ -50,8 +50,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
-    hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>(); //NOTE: de-comment this line to use the GT
-    //hardware_interface::GroundTruthInterface* gt_hw = NULL;
+    //hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>(); //NOTE: de-comment this line to use the GT
+    hardware_interface::GroundTruthInterface* gt_hw = NULL;
 
     if(!jt_hw)
     {
@@ -278,7 +278,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_contact_forces_.resize(FLOATING_BASE_DOFS*N_LEGS); // 24 = 6 dofs * 4 leg
-    J_.resize(6,xbot_model_->getJointNum());
+    J_.resize(FLOATING_BASE_DOFS,xbot_model_->getJointNum());
     J_foot_.resize(3,3);
 
     // Initializations
@@ -654,7 +654,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             // We need to set these values here because the robot is starting in the air with the simulation.
             // Be sure to start the solver and the contact estimation when the robot is grounded.
-            state_estimator_->resetImu();
+            state_estimator_->resetImuGyroscope();
             state_estimator_->startContactsEstimation();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
