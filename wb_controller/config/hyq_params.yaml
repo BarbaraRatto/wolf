@@ -32,6 +32,8 @@ wb_controller:
   default_step_height: 0.05
   max_step_height: 0.15
   max_step_length: 0.5
+  estimation_position_type: estimated_z
+  estimation_orientation_type: imu_magnetometer
   gains:
       lf_haa_joint: {p: 300.0, i: 0.0, d: 15.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 15.0}

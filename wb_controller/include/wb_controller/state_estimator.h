@@ -35,11 +35,11 @@ public:
 
     void update(const double& period);
 
-    void setEstimationType(unsigned int position_t, unsigned int orientation_t);
+    void setEstimationType(const std::string& position_t, const std::string& orientation_t);
 
-    void setPositionEstimationType(unsigned int position_t);
+    void setPositionEstimationType(const std::string& position_t);
 
-    void setOrientationEstimationType(unsigned int orientation_t);
+    void setOrientationEstimationType(const std::string& orientation_t);
 
     void setJointPosition(const Eigen::VectorXd& joint_positions);
 
@@ -71,9 +71,9 @@ public:
 
     double getContactThreshold();
 
-    unsigned int getPositionEstimationType();
+    const std::string& getPositionEstimationType();
 
-    unsigned int getOrientationEstimationType();
+    const std::string& getOrientationEstimationType();
 
     const std::vector<Eigen::Vector3d>& getContactForces() const;
 
@@ -93,13 +93,21 @@ public:
 
     void toggleHapticContactLoop();
 
-    void resetImuGyroscope();
+    void resetGyroscopeIntegration();
 
 private:
+
+    void setEstimationType(unsigned int position_t, unsigned int orientation_t);
+
+    void setPositionEstimationType(unsigned int position_t);
+
+    void setOrientationEstimationType(unsigned int orientation_t);
 
     void updateFloatingBase(const double& period);
 
     void updateContactState();
+
+    std::map<std::string,unsigned int> estimations_;
 
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
@@ -156,12 +164,18 @@ private:
 
     Eigen::Vector3d terrain_normal_;
 
-    Eigen::Matrix3d Ear_;
+    Eigen::Matrix3d mapRPYderivativesToOmega_;
 
     Eigen::Matrix3d base_R_world_;
 
-    /** @brief Align the imu frame (trunk) to the world */
-    bool imu_gyroscope_reset_done_;
+    Eigen::Matrix3d raw_base_R_world_;
+
+    Eigen::Vector3d raw_base_rpy_;
+
+    /** @brief Reset the gyroscope integration */
+    bool reset_gyro_integration_done_;
+
+    Eigen::Vector3d com_;
 
     Eigen::Matrix3d tmp_matrix3d_;
 

@@ -52,13 +52,21 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
         base_T_foot_[i] = Eigen::Affine3d::Identity();
     }
 
-    Ear_ = Eigen::Matrix3d::Identity();
+    mapRPYderivativesToOmega_ = Eigen::Matrix3d::Identity();
     base_R_world_ = Eigen::Matrix3d::Identity();
+    raw_base_R_world_ = Eigen::Matrix3d::Identity();
+    raw_base_rpy_ = Eigen::Vector3d::Zero();
 
     estimation_orientation_ = estimation_t::IMU_MAGNETOMETER;
     estimation_position_ = estimation_t::ESTIMATED_Z;
 
-    imu_gyroscope_reset_done_ = false;
+    estimations_["none"] = estimation_t::NONE;
+    estimations_["imu_magnetometer"] = estimation_t::IMU_MAGNETOMETER;
+    estimations_["imu_gyroscope"] = estimation_t::IMU_GYROSCOPE;
+    estimations_["ground_truth"] = estimation_t::GROUND_TRUTH;
+    estimations_["estimated_z"] = estimation_t::ESTIMATED_Z;
+
+    reset_gyro_integration_done_ = false;
 
     haptic_contact_loop_active_ = false;
 
@@ -89,6 +97,30 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity",floating_base_velocity_);
     Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity_qp",floating_base_velocity_qp_);
     Logger::getLogger().addPublisher(CLASS_NAME"/base_rpy",base_rpy_);
+    Logger::getLogger().addPublisher(CLASS_NAME"/actual_height",floating_base_position_(2));
+    Logger::getLogger().addPublisher(CLASS_NAME"/com",com_);
+}
+
+void StateEstimator::setEstimationType(const std::string& position_t, const std::string& orientation_t)
+{
+    setPositionEstimationType(position_t);
+    setOrientationEstimationType(orientation_t);
+}
+
+void StateEstimator::setPositionEstimationType(const std::string& position_t)
+{
+    if(estimations_.find(position_t) == estimations_.end())
+        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Wrong position estimation type: "<<position_t);
+    else
+        setPositionEstimationType(estimations_[position_t]);
+}
+
+void StateEstimator::setOrientationEstimationType(const std::string& orientation_t)
+{
+    if(estimations_.find(orientation_t) == estimations_.end())
+        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Wrong orientation estimation type: "<<orientation_t);
+    else
+        setOrientationEstimationType(estimations_[orientation_t]);
 }
 
 void StateEstimator::setEstimationType(unsigned int position_t, unsigned int orientation_t)
@@ -162,14 +194,18 @@ double StateEstimator::getContactThreshold()
     return contact_force_th_;
 }
 
-unsigned int StateEstimator::getPositionEstimationType()
+const std::string& StateEstimator::getPositionEstimationType()
 {
-    return estimation_position_;
+    for (auto& tmp_map : estimations_)
+        if(tmp_map.second == estimation_position_)
+            return tmp_map.first;
 }
 
-unsigned int StateEstimator::getOrientationEstimationType()
+const std::string& StateEstimator::getOrientationEstimationType()
 {
-    return estimation_orientation_;
+    for (auto& tmp_map : estimations_)
+        if(tmp_map.second == estimation_orientation_)
+            return tmp_map.first;
 }
 
 const Eigen::Affine3d& StateEstimator::getFloatingBasePose() const
@@ -230,16 +266,16 @@ void StateEstimator::startContactsEstimation()
 
 }
 
+void StateEstimator::resetGyroscopeIntegration()
+{
+    reset_gyro_integration_done_ = false;
+}
+
 void StateEstimator::stopContactsEstimation()
 {
     contacts_estimation_active_ = false;
 
     ROS_INFO("Stop contact estimation: the contacts state are forced to TRUE");
-}
-
-void StateEstimator::resetImuGyroscope()
-{
-    imu_gyroscope_reset_done_ = false;
 }
 
 void StateEstimator::update(const double& period)
@@ -259,6 +295,8 @@ void StateEstimator::update(const double& period)
     updateContactState();
 
     updateFloatingBase(period);
+
+    xbot_model_->getCOM(com_);
 }
 
 void StateEstimator::updateContactState()
@@ -316,29 +354,55 @@ void StateEstimator::updateFloatingBase(const double& period)
         floating_base_velocity_.segment(3,3) << 0.0, 0.0, 0.0;
         break;
     case estimation_t::IMU_MAGNETOMETER: // Use directly the orientation information from the IMU
+        //use this with the real robot only if the magnetometer is not drifting
         quatToRotMat(imu_orientation_.normalized(),base_R_world_);
         rotTorpy(base_R_world_,base_rpy_);
         floating_base_pose_.linear() = base_R_world_.transpose();
-        //floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_; // This line is making the robot crash
+        //IMU is in base frame in the real robot while in gazebo is in the world frame
+#ifdef ROBOT_REAL
+        floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
+#else
         floating_base_velocity_.segment(3,3) = imu_gyroscope_;
+#endif
         break;
     case estimation_t::IMU_GYROSCOPE: // Intergate the gyroscope, useful if the magnetometer measure has interferences
-        if(!imu_gyroscope_reset_done_)
+        if(!reset_gyro_integration_done_) // Initialize the integration with the measured orientation
         {
             // Initialization for the integration
             quatToRotMat(imu_orientation_.normalized(),base_R_world_);
             rotTorpy(base_R_world_,base_rpy_);
-            imu_gyroscope_reset_done_ = true;
+            reset_gyro_integration_done_ = true;
         }
-        rpyToEarInv(base_rpy_,Ear_);
-        // Map the omegas in the base into rpy derivatives
-        base_rpy_ += (Ear_.inverse() * imu_gyroscope_) * period;
-        // Overwrite measures if one of them is more noisy
-        // base_rpy_.head(2) = raw_base_rpy_.head(2);
+#ifdef ROBOT_REAL
+        //IMU is in base frame in the real robot
+        rpyToEar(base_rpy_,mapRPYderivativesToOmega_);
+#else
+        //IMU in gazebo is in the world frame
+        rpyToEarInv(base_rpy_,mapRPYderivativesToOmega_);
+#endif
+        // Map the omegas in the base into rpy derivatives and integrate
+        base_rpy_ += (mapRPYderivativesToOmega_.inverse() * imu_gyroscope_) * period;
+
+#ifdef ROBOT_REAL
+        // Overwrite measures if one of them is more noisy (e.g. only yaw is noisy)
+        quatToRotMat(imu_orientation_.normalized(),raw_base_R_world_);
+        rotTorpy(raw_base_R_world_,raw_base_rpy_);
+        base_rpy_.head(2) = raw_base_rpy_.head(2);
+#endif
+
+        //set the affine transformation for angular position
         rpyToRot(base_rpy_, base_R_world_);
         floating_base_pose_.linear() = base_R_world_.transpose();
-        //floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_; // This line is making the robot crash
+
+        //set the affine transformation for angular velocity
+#ifdef ROBOT_REAL
+        //IMU is in base frame in the real robot
+        floating_base_velocity_.segment(3,3) = base_R_world_.transpose() * imu_gyroscope_;
+#else
+        //IMU in gazebo is in the world frame
         floating_base_velocity_.segment(3,3) = imu_gyroscope_;
+#endif
+
         break;
     case estimation_t::GROUND_TRUTH:
         quatToRotMat(gt_orientation_.normalized(),base_R_world_);
@@ -388,7 +452,8 @@ void StateEstimator::updateFloatingBase(const double& period)
         }
         estimated_z /= feet_in_stance;
         // Update the qp estimation based on the new virtual model state
-        qp_estimation_->update();
+        //termporarily commented to save time
+        //qp_estimation_->update();
         qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
         floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
         //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);

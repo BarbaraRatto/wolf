@@ -3,6 +3,7 @@ Add Kp and Kd
 Set weights for one level stack
 Add force minimization
 Add time to the rt publishers
+Add params file for sim and real robot
 change names dls -> wb
 push recovery
 terrain estimator

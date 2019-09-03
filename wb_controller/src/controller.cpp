@@ -50,9 +50,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
-    //hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>(); //NOTE: de-comment this line to use the GT
-    hardware_interface::GroundTruthInterface* gt_hw = NULL;
+    hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
 
+    // Hardware interfaces checks
     if(!jt_hw)
     {
         ROS_ERROR("hardware_interface::EffortJointInterface not found");
@@ -63,6 +63,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ImuSensorInterface not found");
         return false;
     }
+    if(!gt_hw)
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::GroundTruthInterface not found");
+        return false;
+    }
+    else
+        ground_truth_ = gt_hw->getHandle("ground_truth");
+
     if (!controller_nh.getParam("joints", joint_names_))
     {
         ROS_ERROR_NAMED(CLASS_NAME,"No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
@@ -311,15 +319,18 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
     state_estimator_->setContactThreshold(default_contact_threshold);
-    if(gt_hw)
-    {
-        ground_truth_ = gt_hw->getHandle("ground_truth");
-        state_estimator_->setEstimationType(StateEstimator::GROUND_TRUTH,StateEstimator::GROUND_TRUTH);
-    }
+
+    std::string estimation_position_type;
+    if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
+        ROS_WARN_NAMED(CLASS_NAME,"No default estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),state_estimator_->getPositionEstimationType().c_str());
     else
-    {
-        state_estimator_->setEstimationType(StateEstimator::ESTIMATED_Z,StateEstimator::IMU_GYROSCOPE);
-    }
+        state_estimator_->setPositionEstimationType(estimation_position_type);
+
+    std::string estimation_orientation_type;
+    if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
+        ROS_WARN_NAMED(CLASS_NAME,"No default estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),state_estimator_->getOrientationEstimationType().c_str());
+    else
+        state_estimator_->setPositionEstimationType(estimation_orientation_type);
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
@@ -522,7 +533,7 @@ bool Controller::setDutyCycle(const double& duty_cycle)
 
 void Controller::toggleBaseHeightControl()
 {
-    if(state_estimator_->getPositionEstimationType() == StateEstimator::ESTIMATED_Z || state_estimator_->getPositionEstimationType() == StateEstimator::GROUND_TRUTH)
+    if(state_estimator_->getPositionEstimationType() == "estimated_z" || state_estimator_->getPositionEstimationType() == "ground_truth")
     {
         base_height_control_active_=!base_height_control_active_;
 
@@ -630,12 +641,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
-    if(state_estimator_->getPositionEstimationType() == StateEstimator::GROUND_TRUTH)
+    if(state_estimator_->getPositionEstimationType() == "ground_truth")
     {
         state_estimator_->setGroundTruthBasePosition(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearPosition()));
         state_estimator_->setGroundTruthBaseLinearVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearVelocity()));
     }
-    if(state_estimator_->getOrientationEstimationType() == StateEstimator::GROUND_TRUTH)
+    if(state_estimator_->getOrientationEstimationType() == "ground_truth")
     {
         state_estimator_->setGroundTruthBaseOrientation(imu_orientation_);
         state_estimator_->setGroundTruthBaseAngularVelocity(imu_gyroscope_filt_);
@@ -654,7 +665,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         {
             // We need to set these values here because the robot is starting in the air with the simulation.
             // Be sure to start the solver and the contact estimation when the robot is grounded.
-            state_estimator_->resetImuGyroscope();
+            state_estimator_->resetGyroscopeIntegration();
             state_estimator_->startContactsEstimation();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
