@@ -146,6 +146,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         ROS_INFO("------------------ PROBLEM STACK 4");
 #endif
 
+#ifdef STACK_5
+        // Make the contacts hard constraints
+        _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+                / (_waistRPY%idw_RPY)
+                / (_postural)
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 5");
+#endif
+
     }
 
     _stack->update(Eigen::VectorXd(1));
