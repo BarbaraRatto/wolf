@@ -205,6 +205,9 @@ void IDProblem::dynamicReconfigureCallback(wb_controller::problemConfig &config,
     case 1:
         setLowerForceBound(config.x_force_lower_lim,config.y_force_lower_lim,config.z_force_lower_lim);
         break;
+    case 2:
+        setMinFsWeight(config.minFs_weight);
+        break;
     default:
         break;
     }
@@ -217,7 +220,7 @@ void IDProblem::dynamicReconfigureUpdate()
     default_config_.x_force_lower_lim = _x_force_lower_lim;
     default_config_.y_force_lower_lim = _y_force_lower_lim;
     default_config_.z_force_lower_lim = _z_force_lower_lim;
-
+    default_config_.minFs_weight = _minfs[0]->getWeight()(0,0);
     if(server_)
         server_->updateConfig(default_config_);
 }
@@ -241,6 +244,18 @@ void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,c
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x force lower lim to: "<<x_force);
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set y force lower lim to: "<<y_force);
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<z_force);
+}
+
+void IDProblem::setMinFsWeight(const double& weight)
+{
+    if(weight>=0.0)
+    {
+        for(unsigned int i=0;i<_minfs.size();i++)
+            _minfs[i]->setWeight(Eigen::Matrix6d::Identity()*weight);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set MinFs weight to: "<<weight);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"MinFs weight has to be positive!");
 }
 
 void IDProblem::reset()

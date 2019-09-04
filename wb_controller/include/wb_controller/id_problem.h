@@ -103,6 +103,12 @@ public:
     void setLowerForceBound(const double& x_force,const double& y_force,const double& z_force);
 
     /**
+     * @brief set the weight for the forces minimization task
+     * @param weight
+     */
+    void setMinFsWeight(const double& weight);
+
+    /**
          * @brief Ros dynamic reconfigure callback
          */
     void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
