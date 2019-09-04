@@ -16,7 +16,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface control_toolbox
+find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardware_interface
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
