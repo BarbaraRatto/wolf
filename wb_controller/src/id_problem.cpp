@@ -114,7 +114,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 #ifdef STACK_1
         // Stack with one level (gazebo rt factor 0.95):
         // we could use weights to emulate the case with two levels and save in this way some computational time or we could set the contacts as constraints.
-        _stack /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural)
+        _stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
+                + 1000.0*_waistRPY%idw_RPY + _postural
+                + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3])
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 1");
 #endif
@@ -168,11 +170,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     // Add some ROS magic
     _tasks_ros["waistRPY"] = std::make_shared<CartesianWrapper>(nh,_waistRPY); // WAIST RPY
-    _tasks_ros["waistZ"] = std::make_shared<CartesianWrapper>(nh,_waistZ); // WAIST Z
     for(unsigned int i=0; i<feet_names.size(); i++)
         _tasks_ros[feet_names[i]] = std::make_shared<CartesianWrapper>(nh,_feet[feet_names[i]]); // FEET
-
-    _tasks_ros["com"] = std::make_shared<ComWrapper>(nh,_com); // COM
     _tasks_ros["postural"] = std::make_shared<PosturalWrapper>(nh,_postural); // POSTURAL
 
     if(!arm_tip_name.empty())
