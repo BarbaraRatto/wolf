@@ -253,11 +253,49 @@ void IDProblem::setMinFsWeight(const double& weight)
     if(weight>=0.0)
     {
         for(unsigned int i=0;i<_minfs.size();i++)
-            _minfs[i]->setWeight(Eigen::Matrix6d::Identity()*weight);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set MinFs weight to: "<<weight);
+        {
+            _minfs[i]->setWeight(Eigen::Matrix6d::Identity()*weight); // FIXME No-RT safe
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_minfs[i]->getTaskID()<<" weight to: "<<weight);
+        }
     }
     else
-        ROS_WARN_NAMED(CLASS_NAME,"MinFs weight has to be positive!");
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setWaistRPYWeight(const double& weight)
+{
+    if(weight>=0.0 && _waistRPY)
+    {
+        _waistRPY->setWeight(Eigen::Matrix6d::Identity()*weight); // FIXME No-RT safe
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_waistRPY->getTaskID()<<" weight to: "<<weight);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setPosturalWeight(const double& weight)
+{
+    if(weight>=0.0 && _postural)
+    {
+        _postural->setWeight(weight);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_postural->getTaskID()<<" weight to: "<<weight);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setFeetWeight(const double& weight)
+{
+    if(weight>=0.0)
+    {
+        for (auto& tmp_map : _feet)
+        {
+            tmp_map.second->setWeight(weight);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<tmp_map.second->getTaskID()<<" weight to: "<<weight);
+        }
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
 }
 
 void IDProblem::reset()
