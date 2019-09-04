@@ -92,7 +92,8 @@ public:
         case 1:
             if(config.weight_diag>=0)
             {
-                task_->setWeight(Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight_diag);
+                //task_->setWeight(Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight_diag);
+                task_->setWeight(config.weight_diag);
                 ROS_INFO_STREAM("Set weight diagonal values for task "<<task_->getTaskID()<<" to "<<task_->getWeight()(0,0));
             }
             else
