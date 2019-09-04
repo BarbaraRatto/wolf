@@ -46,6 +46,8 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
     step_height_ = 0.0;
 
     offset_applied_ = false;
+
+    Logger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
 }
 
 void CommandsInterface::update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
