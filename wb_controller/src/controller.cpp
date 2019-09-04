@@ -20,6 +20,7 @@ namespace wb_controller {
 
 std::vector<std::string> _dof_names = {}; // To be loaded from the robot model
 std::vector<std::string> _cartesian_names = {"x","y","z","roll","pitch","yaw"}; // This is our standard cartesian dofs order
+std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 
 Controller::Controller()
     :solver_created_(false)
@@ -199,7 +200,63 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
         pids_[i].setGains(joint_p_gain_[i],joint_i_gain_[i],joint_d_gain_[i],0,0);
         //pids_[i].initDynamicReconfig(controller_nh); // FIXME change namespace for the pids
+    }
 
+    Kp_waist_.setZero();
+    Kd_waist_.setZero();
+    Kd_swing_leg_.setZero();
+    Kp_swing_leg_.setZero();
+    Kd_stance_leg_.setZero();
+    Kp_stance_leg_.setZero();
+
+    // Getting Kp and Kd gains
+    for(unsigned int i=0; i<_joints_prefix.size(); i++)
+    {
+        if (!controller_nh.getParam("gains/kp_swing/" + _joints_prefix[i] , Kp_swing_leg_(i,i)))
+        {
+            ROS_ERROR_NAMED(CLASS_NAME,"No kp_swing_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            return false;
+        }
+        if (!controller_nh.getParam("gains/kd_swing/" + _joints_prefix[i] , Kd_swing_leg_(i,i)))
+        {
+            ROS_ERROR_NAMED(CLASS_NAME,"No kd_swing_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            return false;
+        }
+        if (!controller_nh.getParam("gains/kp_stance/" + _joints_prefix[i] , Kp_stance_leg_(i,i)))
+        {
+            ROS_ERROR_NAMED(CLASS_NAME,"No kp_stance_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            return false;
+        }
+        if (!controller_nh.getParam("gains/kd_stance/" + _joints_prefix[i] , Kd_stance_leg_(i,i)))
+        {
+            ROS_ERROR_NAMED(CLASS_NAME,"No kd_stance_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            return false;
+        }
+        // Check if the values are positive
+        if(Kp_swing_leg_(i,i)<0.0 || Kd_swing_leg_(i,i)<0.0 || Kp_stance_leg_(i,i)<0.0 || Kd_stance_leg_(i,i)<0.0)
+        {
+            ROS_ERROR("Kp and Kd gains must be positive!");
+            return false;
+        }
+    }
+    for(unsigned int i=0; i<_cartesian_names.size(); i++)
+    {
+        if (!controller_nh.getParam("gains/kp_waist/" + _cartesian_names[i] , Kp_waist_(i,i)))
+        {
+            ROS_ERROR_NAMED(CLASS_NAME,"No kp_waist_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
+            return false;
+        }
+        if (!controller_nh.getParam("gains/kd_waist/" + _cartesian_names[i] , Kd_waist_(i,i)))
+        {
+            ROS_ERROR_NAMED(CLASS_NAME,"No kd_waist_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
+            return false;
+        }
+        // Check if the values are positive
+        if(Kp_waist_(i,i)<0.0 || Kd_waist_(i,i)<0.0)
+        {
+            ROS_ERROR("Kp and Kd gains must be positive!");
+            return false;
+        }
     }
 
     // Assume we are working with a dog
@@ -259,6 +316,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     _dof_names = xbot_model_->getEnabledJointNames();
 
+    // Initialize the inertia related matrices
+    xbot_model_->getInertiaMatrix(M_);
+    Mi_.setZero(M_.rows(), M_.cols());
+    Kp_postural_.setZero(M_.rows(), M_.cols());
+    Kd_postural_.setZero(M_.rows(), M_.cols());
+
     // Check if the joint names in the ROS config file are in the same order as the one in the virtual model:
     assert(_dof_names.size() == joint_names_.size()+FLOATING_BASE_DOFS);
     for(unsigned int i=0;i<joint_names_.size();i++)
@@ -270,7 +333,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Check if qhome is between qmin and qmax
     if(jointLimitsCheck(qhome_,qmin_,qmax_))
-         return false;
+        return false;
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -370,40 +433,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
     Logger::getLogger().addPublisher(CLASS_NAME"/period",period_);
 
-    xbot_model_->getInertiaMatrix(M_);
-    Mi_.setZero(M_.rows(), M_.cols());
-    Kp_postural_.setZero(M_.rows(), M_.cols());
-    Kd_postural_.setZero(M_.rows(), M_.cols());
-
-    Kp_swing_leg_  << 100, 0  , 0  ,
-            0  , 100, 0  ,
-            0  , 0  , 100;
-
-    Kd_swing_leg_  << 5  , 0  , 0  ,
-            0  , 5 ,  0  ,
-            0  , 0  , 5 ;
-
-    Kp_stance_leg_ << 200  , 0 ,0,
-            0  , 200 ,0,
-            0  , 0  ,200;
-    Kd_stance_leg_ << 20,   0 , 0,
-            0  , 20 , 0,
-            0  , 0 , 20;
-
-    Kp_waist_ << 200., 0 , 0, 0, 0, 0, // x (not used for the waistRPY)
-            0, 200. , 0, 0, 0, 0, // y (not used for the waistRPY)
-            0, 0 , 200., 0, 0, 0, // z (not used for the waistRPY)
-            0, 0 , 0, 240., 0, 0, // roll
-            0, 0 , 0, 0, 240., 0, // pitch
-            0, 0 , 0, 0, 0, 80.; // yaw
-
-    Kd_waist_ << 4, 0 , 0, 0, 0, 0, // x (not used for the waistRPY)
-            0, 4 , 0, 0, 0, 0, // y (not used for the waistRPY)
-            0, 0 , 4, 0, 0, 0, // z (not used for the waistRPY)
-            0, 0 , 0, 50, 0, 0, // roll
-            0, 0 , 0, 0, 50, 0, // pitch
-            0, 0 , 0, 0, 0, 16; // yaw
-
     return true;
 }
 
@@ -496,48 +525,51 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         toggleBaseHeightControl();
         break;
     case 3:
-        setDutyCycle(config.duty_cycle);
+        toggleInertiaCompensation();
         break;
     case 4:
-        setGaitType(config.gaits);
+        setDutyCycle(config.duty_cycle);
         break;
     case 5:
-        setSwingFrequency(config.swing_frequency);
+        setGaitType(config.gaits);
         break;
     case 6:
+        setSwingFrequency(config.swing_frequency);
+        break;
+    case 7:
         cmds_->setLinearVelocity(config.base_linear_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< config.base_linear_vel);
         break;
-    case 7:
+    case 8:
         cmds_->setAngularVelocity(config.base_angular_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< config.base_angular_vel);
         break;
-    case 8:
+    case 9:
         cmds_->setStepHeight(config.step_height);
         break;
-    case 9:
+    case 10:
         state_estimator_->setContactThreshold(config.contact_force_th);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
-    case 10:
+    case 11:
         pid_scale_ = config.pid_scale;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set pid scale to "<< config.pid_scale);
         break;
-    case 11:
+    case 12:
         cutoff_hz_qdot_ = config.cutoff_hz_qdot;
         qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for qdot filter at "<< config.cutoff_hz_qdot);
         break;
-    case 12:
+    case 13:
         cutoff_hz_gyro_ = config.cutoff_hz_gyro;
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
         break;
-    case 13:
+    case 14:
         x_err_gain_ = config.x_err_gain;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.x_err_gain);
         break;
-    case 14:
+    case 15:
         // FIXME: this is not thread safe!
         // Kp swing
         Kp_swing_leg_(0,0) = config.kp_haa_swing;
@@ -557,7 +589,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         Kd_stance_leg_(2,2) = config.kd_kfe_stance;
         ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the postural");
         break;
-    case 15:
+    case 16:
         // FIXME: this is not thread safe!
         Kp_waist_(3,3) = config.kp_roll;
         Kp_waist_(4,4) = config.kp_pitch;
@@ -809,8 +841,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         Kp_postural_.setZero();
         Kd_postural_.setZero();
 
-        Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS)
-                = M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS).inverse();
+        if(inertia_compensation_active_)
+        {
+            Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS)
+                    = M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS).inverse();
+        }
 
         double delta_z = cmds_->getBaseHeight() - state_estimator_->getFloatingBasePosition()(2);
 
@@ -842,14 +877,22 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                 ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
 
-                Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kp_swing_leg_;
-                Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kd_swing_leg_;
+                if(inertia_compensation_active_)
+                {
+                    Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kp_swing_leg_;
+                    Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kd_swing_leg_;
+                }
+                else
+                {
+                    Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kp_swing_leg_;
+                    Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_swing_leg_;
+                }
             }
             else
             {
-                 // At the first cycle of stance, set the des joints position at the current homing position
-                 //if(gait_generator_->isTouchDown(feet_names_[i]))
-                 //   des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
+                // At the first cycle of stance, set the des joints position at the current homing position
+                //if(gait_generator_->isTouchDown(feet_names_[i]))
+                //   des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qhome_.segment(FLOATING_BASE_DOFS+3*i,3);
 
                 if(base_height_control_active_)
                 {

@@ -17,6 +17,7 @@ namespace wb_controller
 //#define STACK_3
 //#define STACK_4
 #define STACK_5
+//#define ROBOT_REAL
 
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4
@@ -77,6 +78,7 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
 extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
+extern std::vector<std::string> _joints_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
 inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
