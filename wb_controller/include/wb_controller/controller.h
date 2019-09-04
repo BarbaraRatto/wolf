@@ -114,6 +114,11 @@ public:
     void toggleBaseHeightControl();
 
     /**
+         * @brief Start/Stop the inertia compensation at the leg level, useful if the robot has very low inertia at the knee joints
+         */
+    void toggleInertiaCompensation();
+
+    /**
          * @brief Set the duty cycle for the feet
          * @param const double duty_cycle
          */
@@ -276,6 +281,8 @@ private:
     std::atomic<bool> haptic_contact_loop_active_;
     /** @brief True if the control of the base height is active */
     std::atomic<bool> base_height_control_active_;
+    /** @brief True if the inertia compensation is active */
+    std::atomic<bool> inertia_compensation_active_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
 

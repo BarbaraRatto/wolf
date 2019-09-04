@@ -28,6 +28,7 @@ Controller::Controller()
     ,pid_active_(true)
     ,haptic_contact_loop_active_(false)
     ,base_height_control_active_(false)
+    ,inertia_compensation_active_(false)
     ,stopping_(false)
 {
 }
@@ -668,6 +669,16 @@ void Controller::toggleSolver()
     else
         ROS_INFO("Solver integration is OFF");
 
+}
+
+void Controller::toggleInertiaCompensation()
+{
+    inertia_compensation_active_=!inertia_compensation_active_;
+
+    if(inertia_compensation_active_)
+        ROS_INFO("Inertia compensation is ON");
+    else
+        ROS_INFO("Inertia compensation is OFF");
 }
 
 void Controller::readJoints()
