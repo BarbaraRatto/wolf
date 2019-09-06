@@ -9,6 +9,7 @@
     <arg name="gazebo_gui" default="true" />
     <arg name="gazebo" default="true" />
     <arg name="arm" default="false" />
+    <arg name="keyboard" default="false" />
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
@@ -57,9 +58,15 @@
     </node>
 
     <!-- joy -->
-    <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/wb_controller">
-       <param name="autorepeat_rate " value="500" />
-    </node>
+    <group unless="$(arg keyboard)">
+       <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/wb_controller">
+         <param name="autorepeat_rate " value="500" />
+       </node>
+    </group>
+   <!-- keyboard -->
+   <group if="$(arg keyboard)">
+       <node pkg="wb_controller" type="keyboard_node" name="keyboard_node" ns="/$(arg robot_name)/wb_controller" output="screen"/>
+   </group>
 
     <!-- plotJuggler -->
     <node pkg="plotjuggler" type="PlotJuggler" name="PlotJuggler" ns="/$(arg robot_name)/wb_controller"

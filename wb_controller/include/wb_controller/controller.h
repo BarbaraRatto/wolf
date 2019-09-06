@@ -32,7 +32,7 @@
 #include <wb_controller/locomotion.h>
 #include <wb_controller/commands_interface.h>
 #include <wb_controller/state_estimator.h>
-#include <wb_controller/joy.h>
+#include <wb_controller/device_interface.h>
 #include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/controllerConfig.h>
@@ -255,6 +255,8 @@ private:
     ros::NodeHandle nh_;
     /** @brief Joy handler */
     JoyHandler::Ptr joy_handler_;
+    /** @brief Keyboard handler */
+    KeyboardHandler::Ptr keyboard_handler_;
     /** @brief Command interface */
     CommandsInterface::Ptr cmds_;
     /** @brief State estimator */
