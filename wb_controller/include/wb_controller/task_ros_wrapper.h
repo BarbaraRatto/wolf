@@ -29,7 +29,6 @@
 // WB
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
-#include <wb_controller/Gains.h>
 
 // STD
 #include <atomic>
