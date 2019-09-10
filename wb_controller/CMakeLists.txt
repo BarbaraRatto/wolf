@@ -36,7 +36,8 @@ generate_dynamic_reconfigure_options(
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
-                 ContactForces.msg)
+                 ContactForces.msg
+                 LoggerNumeric.msg)
 
 generate_messages(
     DEPENDENCIES
