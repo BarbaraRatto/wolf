@@ -15,6 +15,7 @@
 	<arg name="dls_empty_world" default="true"/>
 	<arg name="world_name" default="empty.world"/>
         <arg name="task_period" default="0.004"/>
+        <arg name="arm" default="false"/>
 
         <arg if="$(arg dls_empty_world)" name="full_world_name" default="$(find dls_gazebo_resources)/worlds/$(arg world_name)"/>
 	<arg unless="$(arg dls_empty_world)" name="full_world_name" default="worlds/$(arg world_name)"/>
