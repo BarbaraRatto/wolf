@@ -1,6 +1,9 @@
-Add weights in the yaml file
-Add cost plots
-Add time to the rt publishers
+Experiments on the real robot
+Keyboard interface
+IK with joint limits
+Update the cartesio when ready
+Add external api for the weights, to be used for a ML thesis
+Arm task
 change names dls -> wb
 push recovery
 terrain estimator
