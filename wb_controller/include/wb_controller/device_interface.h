@@ -8,6 +8,7 @@
 #include <wb_controller/commands_interface.h>
 #include <wb_controller/utils.h>
 
+
 template <typename msg_t>
 class DeviceHandlerInterface
 {
@@ -175,25 +176,22 @@ public:
 
 };
 
-class KeyboardHandler : public DeviceHandlerInterface<geometry_msgs::Twist>
+class TwistHandler : public DeviceHandlerInterface<geometry_msgs::Twist>
 {
 
 public:
 
-
-    typedef std::function<void ()> funct_t;
+    /**
+     * @brief Shared pointer to TwistHandler
+     */
+    typedef std::shared_ptr<TwistHandler> Ptr;
 
     /**
-     * @brief Shared pointer to JoyHandler
+     * @brief Shared pointer to const TwistHandler
      */
-    typedef std::shared_ptr<KeyboardHandler> Ptr;
+    typedef std::shared_ptr<const TwistHandler> ConstPtr;
 
-    /**
-     * @brief Shared pointer to const JoyHandler
-     */
-    typedef std::shared_ptr<const KeyboardHandler> ConstPtr;
-
-    KeyboardHandler(ros::NodeHandle& node, wb_controller::CommandsInterface::Ptr cmds, const std::string& topic = "key")
+    TwistHandler(ros::NodeHandle& node, wb_controller::CommandsInterface::Ptr cmds, const std::string& topic = "twist")
         :DeviceHandlerInterface(node,cmds,topic)
     {
 
@@ -201,15 +199,19 @@ public:
 
     void callback(const geometry_msgs::Twist& msg)
     {
-        base_velocity_y_scale_     = static_cast<double>(msg.linear.x);
-        base_velocity_x_scale_     = static_cast<double>(msg.linear.y);
+        base_velocity_x_scale_     = static_cast<double>(msg.linear.x);
+        base_velocity_y_scale_     = static_cast<double>(msg.linear.y);
         base_velocity_z_scale_     = static_cast<double>(msg.linear.z);
 
-        base_yaw_scale_         = static_cast<double>(msg.angular.x);
+        base_roll_scale_        = static_cast<double>(msg.angular.x);
         base_pitch_scale_       = static_cast<double>(msg.angular.y);
-        base_roll_scale_        = static_cast<double>(msg.angular.z);
+        base_yaw_scale_         = static_cast<double>(msg.angular.z);
 
-        start_swing_     = true; //Swing if we receive any message
+        if(std::abs(base_velocity_x_scale_) > 0.0 || std::abs(base_velocity_y_scale_) > 0.0)
+            start_swing_ = true;
+        else
+            start_swing_ = false;
+
         reset_base_      = false; // FIXME
 
         update();

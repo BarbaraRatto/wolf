@@ -400,7 +400,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
     joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
 
-    keyboard_handler_.reset(new KeyboardHandler(controller_nh,cmds_));
+    keyboard_handler_.reset(new TwistHandler(controller_nh,cmds_));
 
     // initialize the filters
     cutoff_hz_gyro_ = 300.;

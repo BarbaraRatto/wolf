@@ -256,7 +256,7 @@ private:
     /** @brief Joy handler */
     JoyHandler::Ptr joy_handler_;
     /** @brief Keyboard handler */
-    KeyboardHandler::Ptr keyboard_handler_;
+    TwistHandler::Ptr keyboard_handler_;
     /** @brief Command interface */
     CommandsInterface::Ptr cmds_;
     /** @brief State estimator */
