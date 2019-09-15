@@ -95,6 +95,8 @@ install(DIRECTORY plot_juggler_files/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
   PATTERN ".svn" EXCLUDE)
 
+catkin_install_python(PROGRAMS scripts/keyboard_node
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #if (CATKIN_ENABLE_TESTING)
 #  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
