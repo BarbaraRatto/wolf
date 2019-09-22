@@ -1,5 +1,7 @@
 Experiments on the real robot
-Keyboard interface
+Fix device interface
+Simplify math in the commands interface
+Change class names according to the paper
 IK with joint limits
 Update the cartesio when ready
 Add external api for the weights, to be used for a ML thesis
