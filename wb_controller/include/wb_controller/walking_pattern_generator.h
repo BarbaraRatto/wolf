@@ -1,5 +1,5 @@
-#ifndef COMMANDS_INTERFACE_H
-#define COMMANDS_INTERFACE_H
+#ifndef WALKING_PATTERN_GENERATOR_H
+#define WALKING_PATTERN_GENERATOR_H
 
 #include <ros/ros.h>
 #include <Eigen/Core>
@@ -11,24 +11,27 @@
 namespace wb_controller
 {
 
-class CommandsInterface
+/**
+ * @brief This class gets inputs from
+ */
+class WalkingPatternGenerator
 {
 
 public:
 
     /**
-     * @brief Shared pointer to CommandsInterface
+     * @brief Shared pointer to WalkingPatternGenerator
      */
-    typedef std::shared_ptr<CommandsInterface> Ptr;
+    typedef std::shared_ptr<WalkingPatternGenerator> Ptr;
 
     /**
-     * @brief Shared pointer to const CommandsInterface
+     * @brief Shared pointer to const WalkingPatternGenerator
      */
-    typedef std::shared_ptr<const CommandsInterface> ConstPtr;
+    typedef std::shared_ptr<const WalkingPatternGenerator> ConstPtr;
 
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
-    CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3);
+    WalkingPatternGenerator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3);
 
     void update(const double& period,const Eigen::Vector3d& base_position); // OpenLoop Orientation
 

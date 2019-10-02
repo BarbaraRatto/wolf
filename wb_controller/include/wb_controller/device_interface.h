@@ -5,7 +5,7 @@
 #include <atomic>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Twist.h>
-#include <wb_controller/commands_interface.h>
+#include <wb_controller/walking_pattern_generator.h>
 #include <wb_controller/utils.h>
 
 
@@ -25,7 +25,7 @@ public:
      */
     typedef std::shared_ptr<const DeviceHandlerInterface> ConstPtr;
 
-    DeviceHandlerInterface(ros::NodeHandle& node, wb_controller::CommandsInterface::Ptr cmds, const std::string& topic)
+    DeviceHandlerInterface(ros::NodeHandle& node, wb_controller::WalkingPatternGenerator::Ptr cmds, const std::string& topic)
     {
         base_velocity_x_scale_     = 0.0;
         base_velocity_y_scale_     = 0.0;
@@ -52,7 +52,7 @@ protected:
 
         if(start_swing_)
         {
-            cmds_->setCmd(wb_controller::CommandsInterface::LINEAR_AND_ANGULAR); // Start the swing
+            cmds_->setCmd(wb_controller::WalkingPatternGenerator::LINEAR_AND_ANGULAR); // Start the swing
             cmds_->setBaseVelocityScaleX(base_velocity_x_scale_);
             cmds_->setBaseVelocityScaleY(base_velocity_y_scale_);
             cmds_->setBaseVelocityScaleZ(base_velocity_z_scale_);
@@ -62,14 +62,14 @@ protected:
         }
         else if(reset_base_)
         {
-            cmds_->setCmd(wb_controller::CommandsInterface::RESET_BASE); // Reset the base orientation and position (height)
+            cmds_->setCmd(wb_controller::WalkingPatternGenerator::RESET_BASE); // Reset the base orientation and position (height)
         }
         else if(std::abs(base_velocity_z_scale_)>0 ||
                 std::abs(base_yaw_scale_)       >0 ||
                 std::abs(base_pitch_scale_)     >0 ||
                 std::abs(base_roll_scale_)      >0  )
         {
-            cmds_->setCmd(wb_controller::CommandsInterface::BASE_ONLY); // Move the base orientation and Z
+            cmds_->setCmd(wb_controller::WalkingPatternGenerator::BASE_ONLY); // Move the base orientation and Z
             cmds_->setBaseVelocityScaleX(0.0);
             cmds_->setBaseVelocityScaleY(0.0);
             cmds_->setBaseVelocityScaleZ(base_velocity_z_scale_);
@@ -79,13 +79,13 @@ protected:
         }
         else
         {
-            cmds_->setCmd(wb_controller::CommandsInterface::HOLD); // HODOR!
+            cmds_->setCmd(wb_controller::WalkingPatternGenerator::HOLD); // HODOR!
         }
     }
 
     /** @brief Ros subscriber for the device */
     ros::Subscriber sub_;
-    wb_controller::CommandsInterface::Ptr cmds_;
+    wb_controller::WalkingPatternGenerator::Ptr cmds_;
     double base_velocity_x_scale_;
     double base_velocity_y_scale_;
     double base_velocity_z_scale_;
@@ -116,7 +116,7 @@ public:
      */
     typedef std::shared_ptr<const JoyHandler> ConstPtr;
 
-    JoyHandler(ros::NodeHandle& node, wb_controller::CommandsInterface::Ptr cmds, const std::string& topic = "joy")
+    JoyHandler(ros::NodeHandle& node, wb_controller::WalkingPatternGenerator::Ptr cmds, const std::string& topic = "joy")
         :DeviceHandlerInterface(node,cmds,topic)
     {
 
@@ -191,7 +191,7 @@ public:
      */
     typedef std::shared_ptr<const TwistHandler> ConstPtr;
 
-    TwistHandler(ros::NodeHandle& node, wb_controller::CommandsInterface::Ptr cmds, const std::string& topic = "twist")
+    TwistHandler(ros::NodeHandle& node, wb_controller::WalkingPatternGenerator::Ptr cmds, const std::string& topic = "twist")
         :DeviceHandlerInterface(node,cmds,topic)
     {
 

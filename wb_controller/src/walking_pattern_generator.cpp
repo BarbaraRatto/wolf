@@ -1,10 +1,10 @@
-#include <wb_controller/commands_interface.h>
+#include <wb_controller/walking_pattern_generator.h>
 
 namespace wb_controller {
 
-#define CLASS_NAME "CommandsInterface"
+#define CLASS_NAME "WalkingPatternGenerator"
 
-CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max, double step_height_max)
+WalkingPatternGenerator::WalkingPatternGenerator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max, double step_height_max)
 {
 
     assert(gait_generator);
@@ -35,7 +35,7 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
     cmd_ = cmd_t::HOLD;
 
     hf_X_hip_foot_offsets_.resize(4);
-    hf_X_virtual_hips_.resize(4);
+    hf_X_virtual_hips_.resize(4); // \f$X_hip(i)\f$ with i corresponding to the leg number
     for(unsigned int i=0; i<4; i++)
     {
         hf_X_hip_foot_offsets_[i].setZero();
@@ -50,23 +50,23 @@ CommandsInterface::CommandsInterface(GaitGenerator::Ptr gait_generator, XBot::Mo
     Logger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
 }
 
-void CommandsInterface::update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
+void WalkingPatternGenerator::update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
 {
     update(period,base_position,base_orientation_);
 }
 
-void CommandsInterface::update(const double& period) // OpenLoop
+void WalkingPatternGenerator::update(const double& period) // OpenLoop
 {
     update(period,base_position_,base_orientation_);
 }
 
-void CommandsInterface::initializeFootPosition(const std::string& foot_name)
+void WalkingPatternGenerator::initializeFootPosition(const std::string& foot_name)
 {
     xbot_model_->getPose(foot_name,world_T_foot_);
     gait_generator_->setInitialPose(foot_name,world_T_foot_);
 }
 
-void CommandsInterface::initializeFeetPosition()
+void WalkingPatternGenerator::initializeFeetPosition()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
@@ -74,7 +74,7 @@ void CommandsInterface::initializeFeetPosition()
         initializeFootPosition(feet_names[i]);
 }
 
-void CommandsInterface::update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop
+void WalkingPatternGenerator::update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop
 {
     unsigned int cmd = cmd_;
 
@@ -160,7 +160,7 @@ void CommandsInterface::update(const double& period, const Eigen::Vector3d& base
     gait_generator_->update(period);
 }
 
-void CommandsInterface::calculateFeetStep()
+void WalkingPatternGenerator::calculateFeetStep()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
     const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
@@ -178,12 +178,12 @@ void CommandsInterface::calculateFeetStep()
             xbot_model_->getPose(hips_names[i],world_T_hip_);
             //xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
 
-            hf_delta_hip_.setZero();
+            hf_delta_hip_.setZero(); // \f$\deltaL_{x,y,0}\f$
             hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
             hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
 
             //hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
-            hf_delta_heding_.setZero();
+            hf_delta_heding_.setZero(); // \f$\deltaL_{h,0}\f$
             hf_delta_heding_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
             hf_delta_heding_ = hf_delta_heding_.cross(hf_X_virtual_hips_[i]);
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_heding_: "<<hf_delta_heding_.transpose());
@@ -238,7 +238,7 @@ void CommandsInterface::calculateFeetStep()
     gait_generator_->activateSwing();
 }
 
-void CommandsInterface::resetFeetStep()
+void WalkingPatternGenerator::resetFeetStep()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
@@ -252,33 +252,33 @@ void CommandsInterface::resetFeetStep()
     gait_generator_->deactivateSwing();
 }
 
-void CommandsInterface::resetBaseAngularVelocity()
+void WalkingPatternGenerator::resetBaseAngularVelocity()
 {
     hf_base_angular_velocity_.setZero();
     hf_base_angular_velocity_ref_.setZero();
     hf_base_angular_velocity_filt_.setZero();
 }
 
-void CommandsInterface::resetBaseLinearVelocity()
+void WalkingPatternGenerator::resetBaseLinearVelocity()
 {
     hf_base_linear_velocity_.setZero();
     hf_base_linear_velocity_ref_.setZero();
     hf_base_linear_velocity_filt_.setZero();
 }
 
-void CommandsInterface::resetBaseVelocities()
+void WalkingPatternGenerator::resetBaseVelocities()
 {
     resetBaseAngularVelocity();
     resetBaseLinearVelocity();
 }
 
-void CommandsInterface::resetBasePosition()
+void WalkingPatternGenerator::resetBasePosition()
 {
     for(unsigned int i=0;i<3;i++)
         base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
 }
 
-void CommandsInterface::resetBaseOrientation()
+void WalkingPatternGenerator::resetBaseOrientation()
 {
     default_base_orientation_(2) = base_orientation_(2); // Keep the same yaw
 
@@ -289,7 +289,7 @@ void CommandsInterface::resetBaseOrientation()
     base_rotation_reference_.transposeInPlace();
 }
 
-void CommandsInterface::resetVelocyScales()
+void WalkingPatternGenerator::resetVelocyScales()
 {
     base_linear_velocity_scale_x_ = 0.0;
     base_linear_velocity_scale_y_ = 0.0;
@@ -300,7 +300,7 @@ void CommandsInterface::resetVelocyScales()
     base_angular_velocity_scale_yaw_ = 0.0;
 }
 
-void CommandsInterface::calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
+void WalkingPatternGenerator::calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
 {
     base_position_ = base_position;
 
@@ -317,7 +317,7 @@ void CommandsInterface::calculateBasePosition(const double& period, const Eigen:
     //base_position_(2);
 }
 
-void CommandsInterface::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
+void WalkingPatternGenerator::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
 {
     base_orientation_ = base_orientation;
 
@@ -335,7 +335,7 @@ void CommandsInterface::calculateBaseOrientation(const double& period, const Eig
     base_rotation_reference_.transposeInPlace();
 }
 
-void CommandsInterface::setHipOffset()
+void WalkingPatternGenerator::setHipOffset()
 {
     if(!offset_applied_)
     {
@@ -373,82 +373,82 @@ void CommandsInterface::setHipOffset()
 }
 
 // Sets
-void CommandsInterface::setCmd(const unsigned int cmd)
+void WalkingPatternGenerator::setCmd(const unsigned int cmd)
 {
     cmd_ = cmd;
 }
 
-void CommandsInterface::setBasePosition(const Eigen::Vector3d& position)
+void WalkingPatternGenerator::setBasePosition(const Eigen::Vector3d& position)
 {
     base_position_ = position;
 }
 
-void CommandsInterface::setBaseOrientation(const Eigen::Vector3d& orientation)
+void WalkingPatternGenerator::setBaseOrientation(const Eigen::Vector3d& orientation)
 {
     base_orientation_ = orientation;
 }
 
-void CommandsInterface::setDefaultBaseOrientation(const Eigen::Vector3d& orientation)
+void WalkingPatternGenerator::setDefaultBaseOrientation(const Eigen::Vector3d& orientation)
 {
     default_base_orientation_ = orientation;
 }
 
-void CommandsInterface::setDefaultBasePosition(const Eigen::Vector3d& position)
+void WalkingPatternGenerator::setDefaultBasePosition(const Eigen::Vector3d& position)
 {
     default_base_position_ = position;
 }
 
-void CommandsInterface::setBaseVelocityScaleX(const double scale)
+void WalkingPatternGenerator::setBaseVelocityScaleX(const double scale)
 {
     base_linear_velocity_scale_x_ = scale;
 }
 
-void CommandsInterface::setBaseVelocityScaleY(const double scale)
+void WalkingPatternGenerator::setBaseVelocityScaleY(const double scale)
 {
     base_linear_velocity_scale_y_ = scale;
 }
 
-void CommandsInterface::setBaseVelocityScaleZ(const double scale)
+void WalkingPatternGenerator::setBaseVelocityScaleZ(const double scale)
 {
     base_linear_velocity_scale_z_ = scale;
 }
 
-void CommandsInterface::setBaseVelocityScaleRoll(const double scale)
+void WalkingPatternGenerator::setBaseVelocityScaleRoll(const double scale)
 {
     base_angular_velocity_scale_roll_ = scale;
 }
 
-void CommandsInterface::setBaseVelocityScalePitch(const double scale)
+void WalkingPatternGenerator::setBaseVelocityScalePitch(const double scale)
 {
     base_angular_velocity_scale_pitch_ = scale;
 }
 
-void CommandsInterface::setBaseVelocityScaleYaw(const double scale)
+void WalkingPatternGenerator::setBaseVelocityScaleYaw(const double scale)
 {
     base_angular_velocity_scale_yaw_ = scale;
 }
 
-void CommandsInterface::increaseStepHeight()
+void WalkingPatternGenerator::increaseStepHeight()
 {
     setStepHeight(step_height_ + 0.01); // Increase step height
 }
 
-void CommandsInterface::decreaseStepHeight()
+void WalkingPatternGenerator::decreaseStepHeight()
 {
   setStepHeight(step_height_ - 0.01); // Decrease step height
 }
 
-void CommandsInterface::setLinearVelocity(const double linear)
+void WalkingPatternGenerator::setLinearVelocity(const double linear)
 {
     base_linear_velocity_ = linear;
 }
 
-void CommandsInterface::setAngularVelocity(const double angular)
+void WalkingPatternGenerator::setAngularVelocity(const double angular)
 {
     base_angular_velocity_ = angular;
 }
 
-void CommandsInterface::setStepHeight(const double height)
+void WalkingPatternGenerator::setStepHeight(const double height)
 {
     if(height > step_height_max_) // Check if it is ok
     {
@@ -468,7 +468,7 @@ void CommandsInterface::setStepHeight(const double height)
     }
 }
 
-void CommandsInterface::setMaxStepHeight(const double max)
+void WalkingPatternGenerator::setMaxStepHeight(const double max)
 {
     if(max >= 0.0) // Check if it is ok
     {
@@ -478,7 +478,7 @@ void CommandsInterface::setMaxStepHeight(const double max)
         ROS_WARN_NAMED(CLASS_NAME,"Max step height is less equal than: 0.0");
 }
 
-void CommandsInterface::setMaxStepLength(const double max)
+void WalkingPatternGenerator::setMaxStepLength(const double max)
 {
     if(max >= 0.0) // Check if it is ok
     {
@@ -489,57 +489,57 @@ void CommandsInterface::setMaxStepLength(const double max)
 }
 
 // Gets
-unsigned int CommandsInterface::getCmd()
+unsigned int WalkingPatternGenerator::getCmd()
 {
     return cmd_;
 }
 
-const Eigen::Matrix3d& CommandsInterface::getBaseRotationReference() const
+const Eigen::Matrix3d& WalkingPatternGenerator::getBaseRotationReference() const
 {
     return base_rotation_reference_;
 }
 
-const double& CommandsInterface::getStepLength(const std::string& foot_name)
+const double& WalkingPatternGenerator::getStepLength(const std::string& foot_name)
 {
     return steps_length_[foot_name];
 }
 
-const double& CommandsInterface::getStepHeading(const std::string& foot_name)
+const double& WalkingPatternGenerator::getStepHeading(const std::string& foot_name)
 {
     return steps_heading_[foot_name];
 }
 
-const double& CommandsInterface::getStepHeight(const std::string& foot_name)
+const double& WalkingPatternGenerator::getStepHeight(const std::string& foot_name)
 {
     return steps_height_[foot_name];
 }
 
-const double& CommandsInterface::getStepHeadingRate(const std::string& foot_name)
+const double& WalkingPatternGenerator::getStepHeadingRate(const std::string& foot_name)
 {
     return steps_heading_rate_[foot_name];
 }
 
-const double& CommandsInterface::getBaseHeight() const
+const double& WalkingPatternGenerator::getBaseHeight() const
 {
     return base_position_(2);
 }
 
-double CommandsInterface::getLinearVelocity() const
+double WalkingPatternGenerator::getLinearVelocity() const
 {
     return base_linear_velocity_;
 }
 
-double CommandsInterface::getAngularVelocity() const
+double WalkingPatternGenerator::getAngularVelocity() const
 {
     return base_angular_velocity_;
 }
 
-double CommandsInterface::getStepHeight() const
+double WalkingPatternGenerator::getStepHeight() const
 {
     return step_height_;
 }
 
-double CommandsInterface::getStepLength() const
+double WalkingPatternGenerator::getStepLength() const
 {
     return step_length_;
 }

@@ -374,7 +374,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     gait_generator_.reset(new GaitGenerator(feet_names_,hips_names_,"crawl","ellipse"));
     gait_generator_->setSwingFrequency(default_swing_frequency);
 
-    cmds_.reset(new CommandsInterface(gait_generator_,xbot_model_));
+    cmds_.reset(new WalkingPatternGenerator(gait_generator_,xbot_model_));
     cmds_->setLinearVelocity(default_base_linear_velocity);
     cmds_->setAngularVelocity(default_base_angular_velocity);
     cmds_->setStepHeight(default_step_height);
@@ -824,7 +824,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         cmds_->update(period.toSec());
 
-        // FIXME I should add something to the CommandsInterface!!!
+        // FIXME I should add something to the WalkingPatternGenerator!!!
         // Get the external reference (interactive marker) for the arm if available
         id_prob_->updateReference(arm_tip_name_);
 
@@ -1121,7 +1121,7 @@ StateEstimator* Controller::getStateEstimator() const
     return state_estimator_.get();
 }
 
-CommandsInterface* Controller::getCommandsInterface() const
+WalkingPatternGenerator* Controller::getWalkingPatternGenerator() const
 {
     return cmds_.get();
 }

@@ -30,7 +30,7 @@
 #include <chrono>
 // Controller
 #include <wb_controller/locomotion.h>
-#include <wb_controller/commands_interface.h>
+#include <wb_controller/walking_pattern_generator.h>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/device_interface.h>
 #include <wb_controller/id_problem.h>
@@ -144,7 +144,7 @@ public:
     /**
          * @brief Get the gait commands interface pointer
          */
-    CommandsInterface* getCommandsInterface() const;
+    WalkingPatternGenerator* getWalkingPatternGenerator() const;
 
     /**
          * @brief Get the state estimator pointer
@@ -258,7 +258,7 @@ private:
     /** @brief Keyboard handler */
     TwistHandler::Ptr keyboard_handler_;
     /** @brief Command interface */
-    CommandsInterface::Ptr cmds_;
+    WalkingPatternGenerator::Ptr cmds_;
     /** @brief State estimator */
     StateEstimator::Ptr state_estimator_;
     /** @brief pid scale, range between 0 and 1. 0 the pid is deactivated, 1 the pid is providing full torque */
