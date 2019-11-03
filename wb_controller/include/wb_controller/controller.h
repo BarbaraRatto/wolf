@@ -300,7 +300,7 @@ private:
     Eigen::MatrixXd J_;
     Eigen::MatrixXd J_foot_;
     Eigen::Vector3d x_err_;
-    std::atomic<double> x_err_gain_;
+    std::atomic<double> clik_gain_;
 
     // FIXME to be moved
     Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
