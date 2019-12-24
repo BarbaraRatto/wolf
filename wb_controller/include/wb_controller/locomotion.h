@@ -209,46 +209,46 @@ public:
 
         if(std::strcmp(gait_type.c_str(),"trot")==0)
         {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RH],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RF],1));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LH],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],1));
             next_feet_to_move_.resize(2);
             max_priority_ = 1;
         }
         else if(std::strcmp(gait_type.c_str(),"crawl")==0)
         {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RH],1));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RF],2));
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LH],3));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],1));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],2));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],3));
             next_feet_to_move_.resize(1);
             max_priority_ = 3;
         }
-        /*else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
+        else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
         {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LF],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
             next_feet_to_move_.resize(1);
             max_priority_ = 0;
         }
         else if(std::strcmp(gait_type.c_str(),"one_foot_rh")==0)
         {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RH],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],0));
             next_feet_to_move_.resize(1);
             max_priority_ = 0;
         }
         else if(std::strcmp(gait_type.c_str(),"one_foot_rf")==0)
         {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::RF],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],0));
             next_feet_to_move_.resize(1);
             max_priority_ = 0;
         }
         else if(std::strcmp(gait_type.c_str(),"one_foot_lh")==0)
         {
-            schedule_.push_back(foot_priority_t(ordered_feet_names[leg_id::LH],0));
+            schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],0));
             next_feet_to_move_.resize(1);
             max_priority_ = 0;
-        }*/
+        }
         else
         {
             throw std::runtime_error("Wrong gait type!");

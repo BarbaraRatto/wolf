@@ -25,7 +25,7 @@ ros::Subscriber subscriber_;
 void callbackContactForces(const wb_controller::ContactForces &msg);
 unsigned int decimate = 10;
 unsigned long long cnt = 0;
-Eigen::Affine3d pose;
+Eigen::Isometry3d pose;
 Eigen::Vector3d vector;
 double norm;
 Eigen::Matrix3d R;
@@ -55,7 +55,6 @@ void createArrow(const geometry_msgs::Vector3& force, const geometry_msgs::Vecto
     pose.translation().x() = position.x;
     pose.translation().y() = position.y;
     pose.translation().z() = position.z;
-
     visual_tools_->publishArrow(pose, color, rviz_visual_tools::LARGE, norm/500.0);
     visual_tools_->trigger();
 }

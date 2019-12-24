@@ -12,9 +12,15 @@
 namespace wb_controller
 {
 
+//#define STACK_1
+//#define STACK_2
+//#define STACK_3
+//#define STACK_4
+#define STACK_5
+//#define ROBOT_REAL
+
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4
-#define DT 0.001 // FIXME
 #define THREADS_SLEEP_TIME_ms 4
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
 // stays in the same position because the feet don't move relatively to the base anymore. There is no reset!
@@ -70,7 +76,10 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
 }
 
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
-enum leg_id {LF=0,LH,RF,RH};
+extern std::vector<std::string> _dof_names;
+extern std::vector<std::string> _cartesian_names;
+extern std::vector<std::string> _joints_prefix;
+enum _leg_id {LF=0,LH,RF,RH};
 inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
     // Sort the names following order
@@ -101,6 +110,44 @@ public:
 private:
     bool old_value;
 };
+
+
+class AxisToTrigger
+{
+
+public:
+    enum status_t {UP=0,DOWN,STEADY};
+
+    AxisToTrigger()
+    {
+        axis_old_value_ = 0.0;
+    }
+
+    void update(const double axis)
+    {
+        status_ = STEADY;
+        if(std::abs(axis)>0.0 && axis_old_value_!=axis)
+        {
+            if(axis>=1.0)
+                status_ = UP;
+            else if (axis<=-1.0)
+                status_ = DOWN;
+        }
+
+        axis_old_value_ = axis;
+    }
+
+    status_t getStatus()
+    {
+        return status_;
+    }
+
+private:
+    double axis_old_value_;
+    status_t status_;
+
+};
+
 
 } // namespace
 

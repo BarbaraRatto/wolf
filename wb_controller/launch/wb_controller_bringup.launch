@@ -30,6 +30,8 @@
     <group unless="$(arg gazebo)">
 	<include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
         	<arg name="sensors" value="$(arg sensors)" />
+                <arg name="arm" value="$(arg arm)"/>
+                <arg name="task_period" value="$(arg task_period)" />
 	</include>
     </group>
 
@@ -56,7 +58,7 @@
 
     <!-- joy -->
     <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/wb_controller">
-       <param name="autorepeat_rate " value="500" />
+            <param name="autorepeat_rate " value="500" />
     </node>
 
     <!-- plotJuggler -->

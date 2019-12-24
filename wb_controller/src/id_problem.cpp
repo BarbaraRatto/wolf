@@ -1,11 +1,12 @@
 #include <wb_controller/id_problem.h>
 #include <OpenSoT/utils/Affine.h>
-#include <OpenSoT/tasks/MinimizeVariable.h>
 #include <wb_controller/utils.h>
 
 using namespace OpenSoT;
 
-IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const double dT, std::vector<std::string> feet_names, std::string arm_tip_name):
+#define CLASS_NAME "IDProblem"
+
+IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name):
     _model(model)
 {
     //
@@ -25,16 +26,16 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
         _feet[feet_names[i]].reset(new OpenSoT::tasks::acceleration::Cartesian(feet_names[i], *_model, feet_names[i],
-                                                                                  "world", _id->getJointsAccelerationAffine()));
-        _feet[feet_names[i]]->setLambda(0.,0.); // 60. 6.
+                                                                               "world", _id->getJointsAccelerationAffine()));
+        _feet[feet_names[i]]->setLambda(0.,0.);
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
-     //   --------------------------
+    //   --------------------------
     if(!arm_tip_name.empty())
     {
         ROS_INFO("Initialize ARM task");
         _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
-                                                                         "base_link", _id->getJointsAccelerationAffine()));
+                                                               "base_link", _id->getJointsAccelerationAffine()));
         _arm->setLambda(100.);
         _arm->setWeightIsDiagonalFlag(true);
 
@@ -47,21 +48,21 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     //   --------------------------
     _waistRPY = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
                                                                             "world", _id->getJointsAccelerationAffine());
-    _waistRPY->setLambda(100.);
+    _waistRPY->setLambda(1.,1.);
     _waistRPY->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _waistZ = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
                                                                           "world", _id->getJointsAccelerationAffine());
-    _waistZ->setLambda(100.);
+    _waistZ->setLambda(1.,1.);
     _waistZ->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural.reset(new OpenSoT::tasks::acceleration::Postural(*_model, _id->getJointsAccelerationAffine()));
-    _postural->setLambda(200.,40.);
+    _postural->setLambda(1.,1.);
     _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
-    _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
-    _com->setLambda(0.);
-    _com->setWeightIsDiagonalFlag(true);
+    //_com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
+    //_com->setLambda(0.);
+    //_com->setWeightIsDiagonalFlag(true);
 
     //
     // Here we create the constraints & bounds
@@ -70,29 +71,30 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
                                                                                _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), feet_names));
     OpenSoT::constraints::force::FrictionCones::friction_cones mus;
     Eigen::Matrix3d R; R.setIdentity();
+    _mu = 0.5;
     for(unsigned int i = 0; i < feet_names.size(); i++)
-        mus.push_back(std::pair<Eigen::Matrix3d,double> (R,0.5));
-    //_friction_cones = boost::make_shared<OpenSoT::constraints::force::FrictionCone>(_id->getContactsWrenchAffine(),*_model,mus);
+        mus.push_back(std::pair<Eigen::Matrix3d,double> (R,_mu));
     _friction_cones.reset(new OpenSoT::constraints::force::FrictionCones(feet_names,_id->getContactsWrenchAffine(),*_model,mus));
 
     /// HERE WE SET SOME BOUNDS
-    Eigen::VectorXd xmax = 100.*Eigen::VectorXd::Ones(_model->getJointNum());
+    Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(_model->getJointNum());
     Eigen::VectorXd xmin = -xmax;
 
     _qddot_lims.reset(new OpenSoT::constraints::GenericConstraint(
                           "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT));
 
-    //_qddot_lims = boost::make_shared<OpenSoT::constraints::GenericConstraint>(
-    //            "acc_lims", _id->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
+    _x_force_lower_lim = -2000;
+    _y_force_lower_lim = -2000;
+    _z_force_lower_lim = 20.0;
 
-    Eigen::Vector6d wrench_upper_lims; wrench_upper_lims<<1000,1000,1000,Eigen::Vector3d::Zero();
-    Eigen::Vector6d wrench_lower_lims; wrench_lower_lims<<-1000,-1000,20.0,Eigen::Vector3d::Zero();
+    _wrench_upper_lims<<2000,2000,2000,Eigen::Vector3d::Zero();
+    _wrench_lower_lims<<_x_force_lower_lim,_y_force_lower_lim,_z_force_lower_lim,Eigen::Vector3d::Zero();
+
     _wrenches_lims.reset(new OpenSoT::constraints::force::WrenchesLimits(
-                             feet_names, wrench_lower_lims, wrench_upper_lims,_id->getContactsWrenchAffine()));
+                             feet_names, _wrench_lower_lims, _wrench_upper_lims,_id->getContactsWrenchAffine()));
 
-    std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> minfs;
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
-        minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
+        _minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
 
     std::list<unsigned int> idw_Z = {2}; //z
     std::list<unsigned int> idw_RPY = {3,4,5}; //r,p,y
@@ -100,22 +102,67 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {
-        _id_problem = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _waistZ%idw_Z)
-                /(_arm)/(_postural)
+        _stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
+                + 1000.0*_waistRPY%idw_RPY + _postural
+                + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3]
+                + _arm)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
     else
     {
-        // NOTE: a stack with only one level is way faster and it makes the robot move smoothly. Two levels is safer since the contacts would be at a higher priority but the
-        // computation gets heaverier and the robot moves badly.
-        _id_problem /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural)
-             //   / (_waistRPY%idw_RPY + _waistZ%idw_Z + _postural)
+        // NOTE: a stack with only one level is faster in terms of computational time and makes the robot move smoothly. The one with two levels is safer since the contacts would be at a higher priority but the
+        // computation gets heavier. The second case can be divided in two more sub-cases depending on the RPY task of the base.
+        // For the stack with the postural divided in stance and swing, checkout postural_swing_stance branch
+
+#ifdef STACK_1
+        // Stack with one level (gazebo rt factor 0.95):
+        // we could use weights to emulate the case with two levels and save in this way some computational time or we could set the contacts as constraints.
+        _stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
+                + 1000.0*_waistRPY%idw_RPY + _postural
+                + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3])
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 1");
+#endif
+
+#ifdef STACK_2
+        // Stack with two levels:
+        // 1 - RPY at the first level (gazebo rt factor 0.75): this is useful to have a good tracking of the base orientation but it generates a conflict with the
+        // postural e.g. the robot can not climb a slope if the base orientation is not adjusted to do so.
+        _stack = ((1000.0*_feet[feet_names[0]]%idf + 1000.0*_feet[feet_names[1]]%idf + 1000.0*_feet[feet_names[2]]%idf + 1000.0*_feet[feet_names[3]]%idf + _waistRPY%idw_RPY)
+                / (_postural)
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 2");
+#endif
+
+#ifdef  STACK_3
+        // 2 - RPY at the second level (gazebo rt factor 0.45): this is generating a bad tracking for the base orientation which can be counteracted by adjusting the lambda gains or by adding weights between
+        // postural and RPY.
+        _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+                / (_waistRPY%idw_RPY + _postural)
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 3");
+#endif
+
+#ifdef STACK_4
+        // Stack to perform the swing in the air, use freeze base to hold the robot in the air
+        _stack /= (_postural) <<_qddot_lims<<_dynamics;
+        ROS_INFO("------------------ PROBLEM STACK 4");
+#endif
+
+#ifdef STACK_5
+        // Make the contacts hard constraints
+        _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+                / (_waistRPY%idw_RPY)
+                / (_postural)
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+        ROS_INFO("------------------ PROBLEM STACK 5");
+#endif
+
     }
 
-    _id_problem->update(Eigen::VectorXd(1));
+    _stack->update(Eigen::VectorXd(1));
 
-    _solver.reset(new OpenSoT::solvers::iHQP(_id_problem->getStack(), _id_problem->getBounds(),1e6)); //, 1e6);
+    _solver.reset(new OpenSoT::solvers::iHQP(_stack->getStack(), _stack->getBounds(),1e6)); //, 1e6);
     //, OpenSoT::solvers::solver_back_ends::OSQP);
     //, OpenSoT::solvers::solver_back_ends::eiQuadProg);
 
@@ -124,21 +171,132 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, const
     _qddot.setZero(_model->getJointNum());
     _contact_wrenches.reserve(feet_names.size());
 
-
     // Add some ROS magic
     _tasks_ros["waistRPY"] = std::make_shared<CartesianWrapper>(nh,_waistRPY); // WAIST RPY
-    _tasks_ros["waistZ"] = std::make_shared<CartesianWrapper>(nh,_waistZ); // WAIST Z
     for(unsigned int i=0; i<feet_names.size(); i++)
         _tasks_ros[feet_names[i]] = std::make_shared<CartesianWrapper>(nh,_feet[feet_names[i]]); // FEET
+    _tasks_ros["postural"] = std::make_shared<PosturalWrapper>(nh,_postural); // POSTURAL
 
-     _tasks_ros["com"] = std::make_shared<ComWrapper>(nh,_com); // COM
-     _tasks_ros["postural"] = std::make_shared<PosturalWrapper>(nh,_postural); // POSTURAL
+    if(!arm_tip_name.empty())
+        _tasks_ros["TCP"] = std::make_shared<CartesianWrapper>(nh,_arm); // ARM
 
-     if(!arm_tip_name.empty())
-         _tasks_ros["TCP"] = std::make_shared<CartesianWrapper>(nh,_arm); // ARM
+    for (auto& tmp_map : _tasks_ros)
+        tmp_map.second->dynamicReconfigureUpdate();
 
-     for (auto& tmp_map : _tasks_ros)
-         tmp_map.second->dynamicReconfigureUpdate();
+    // Set the callback for the dynamic reconfigure server
+    ros::NodeHandle problem_nh("problem");
+    server_ = new dynamic_reconfigure::Server<wb_controller::problemConfig>(problem_nh);
+    server_->setCallback(boost::bind(&IDProblem::dynamicReconfigureCallback, this, _1, _2));
+
+    dynamicReconfigureUpdate();
+}
+
+IDProblem::~IDProblem()
+{
+    if(server_)
+        delete server_;
+}
+
+void IDProblem::dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level)
+{
+    switch(level)
+    {
+    case 0:
+        setFrictionConesMu(config.mu);
+        break;
+    case 1:
+        setLowerForceBound(config.x_force_lower_lim,config.y_force_lower_lim,config.z_force_lower_lim);
+        break;
+    case 2:
+        setMinFsWeight(config.minFs_weight);
+        break;
+    default:
+        break;
+    }
+}
+
+void IDProblem::dynamicReconfigureUpdate()
+{
+    // Update the config for dynamic reconfigure
+    default_config_.mu = _mu;
+    default_config_.x_force_lower_lim = _x_force_lower_lim;
+    default_config_.y_force_lower_lim = _y_force_lower_lim;
+    default_config_.z_force_lower_lim = _z_force_lower_lim;
+    default_config_.minFs_weight = _minfs[0]->getWeight()(0,0);
+
+    if(server_)
+        server_->updateConfig(default_config_);
+}
+
+void IDProblem::setFrictionConesMu(const double& mu)
+{
+    if(mu>=0.0 && mu<=1.0)
+    {
+        _mu = mu;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set mu to: "<<mu);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Mu has to be between 0 and 1!");
+}
+
+void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,const double& z_force)
+{
+    _x_force_lower_lim = x_force;
+    _y_force_lower_lim = y_force;
+    _z_force_lower_lim = z_force;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x force lower lim to: "<<x_force);
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set y force lower lim to: "<<y_force);
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<z_force);
+}
+
+void IDProblem::setMinFsWeight(const double& weight)
+{
+    if(weight>=0.0)
+    {
+        for(unsigned int i=0;i<_minfs.size();i++)
+        {
+            _minfs[i]->setWeight(Eigen::Matrix6d::Identity()*weight); // FIXME No-RT safe
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_minfs[i]->getTaskID()<<" weight to: "<<weight);
+        }
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setWaistRPYWeight(const double& weight)
+{
+    if(weight>=0.0 && _waistRPY)
+    {
+        _waistRPY->setWeight(Eigen::Matrix6d::Identity()*weight); // FIXME No-RT safe
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_waistRPY->getTaskID()<<" weight to: "<<weight);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setPosturalWeight(const double& weight)
+{
+    if(weight>=0.0 && _postural)
+    {
+        _postural->setWeight(weight);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_postural->getTaskID()<<" weight to: "<<weight);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setFeetWeight(const double& weight)
+{
+    if(weight>=0.0)
+    {
+        for (auto& tmp_map : _feet)
+        {
+            tmp_map.second->setWeight(weight);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<tmp_map.second->getTaskID()<<" weight to: "<<weight);
+        }
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
 }
 
 void IDProblem::reset()
@@ -155,7 +313,18 @@ void IDProblem::reset()
 
 void IDProblem::update()
 {
-    _id_problem->update(Eigen::VectorXd(1));
+    // Update the mu and the wrench limits
+    _wrench_lower_lims(0) = _x_force_lower_lim;
+    _wrench_lower_lims(1) = _y_force_lower_lim;
+    _wrench_lower_lims(2) = _z_force_lower_lim;
+    for (auto& tmp_map : _feet)
+    {
+        _friction_cones->getFrictionCone(tmp_map.first)->setMu(_mu);
+        if(!_wrenches_lims->getWrenchLimits(tmp_map.first)->isReleased())
+            _wrenches_lims->getWrenchLimits(tmp_map.first)->setWrenchLimits(_wrench_lower_lims,_wrench_upper_lims);
+    }
+    // Update the problem
+    _stack->update(Eigen::VectorXd(1));
 }
 
 void IDProblem::updateReference(const std::string& task_name)
@@ -182,23 +351,16 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 
 void IDProblem::getGroundReactionForces(Eigen::VectorXd& grfs)
 {
-    //std::cout << "   FORZE GRF *********** " << std::endl;
+    //std::cout << "   FORCES GRF *********** " << std::endl;
     grfs = _x.segment(idx_grfs_start_,24);
 
-    //std::cout << "   ACC FB *********** " << std::endl;
+    //std::cout << "   ACCELLERATIONS FB *********** " << std::endl;
     //std::cout << _x.segment(0,6).transpose() << std::endl;
 }
 
 void IDProblem::log(XBot::MatLogger::Ptr& logger)
 {
     _id->log(logger);
-    _id_problem->log(logger);
+    _stack->log(logger);
     _solver->log(logger);
 }
-
-IDProblem::~IDProblem()
-{
-
-}
-
-
