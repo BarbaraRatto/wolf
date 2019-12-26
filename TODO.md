@@ -1,3 +1,4 @@
+Use external rt_logger and create a library for the wpg
 Experiments on the real robot
 Fix device interface
 Simplify math in the commands interface
