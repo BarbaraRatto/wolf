@@ -259,6 +259,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
     }
 
+    double click_gain = 0.0; // Default value
+    if (!controller_nh.getParam("gains/clik_gain", click_gain))
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
+    }
+    clik_gain_ = click_gain;
+
     // Assume we are working with a dog
     if(hips_names_.size()!=N_LEGS)
     {
@@ -364,7 +371,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_.fill(0.0);
     x_.fill(0.0);
     imu_orientation_.normalize();
-    x_err_gain_ = 1.0;
     pid_scale_ = 1.0;
 
     // Set the callback for the dynamic reconfigure server
@@ -474,7 +480,7 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
-    default_config_.x_err_gain = x_err_gain_;
+    default_config_.clik_gain = clik_gain_;
 
     default_config_.kp_haa_swing   = Kp_swing_leg_(0,0);
     default_config_.kp_hfe_swing   = Kp_swing_leg_(1,1);
@@ -572,8 +578,8 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
         break;
     case 14:
-        x_err_gain_ = config.x_err_gain;
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.x_err_gain);
+        clik_gain_ = config.clik_gain;
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.clik_gain);
         break;
     case 15:
         // FIXME: this is not thread safe!
@@ -873,7 +879,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
                 x_err_ = gait_generator_->getReference(feet_names_[i]).translation() - state_estimator_->getFeetPoseInWorld()[i].translation();
 
-                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3) + x_err_gain_ * x_err_);
+                des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (gait_generator_->getReferenceDot(feet_names_[i]).segment(0,3) + clik_gain_ * x_err_);
 
                 qswing_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period.toSec() + qswing_.segment(FLOATING_BASE_DOFS+3*i,3);
 
@@ -903,7 +909,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 if(base_height_control_active_)
                 {
                     x_err_ << 0, 0, -delta_z;
-                    qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (x_err_gain_ * x_err_) * period.toSec() + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
+                    qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (clik_gain_ * x_err_) * period.toSec() + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
                 }
 
                 des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);  // Don't generate velocities for the feet in stance
