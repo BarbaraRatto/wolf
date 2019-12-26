@@ -1,5 +1,5 @@
-#ifndef WALKING_PATTERN_GENERATOR_H
-#define WALKING_PATTERN_GENERATOR_H
+#ifndef FOOTHOLDS_PLANNER_H
+#define FOOTHOLDS_PLANNER_H
 
 #include <ros/ros.h>
 #include <Eigen/Core>
@@ -14,24 +14,24 @@ namespace wb_controller
 /**
  * @brief This class gets inputs from
  */
-class WalkingPatternGenerator
+class FootholdsPlanner
 {
 
 public:
 
     /**
-     * @brief Shared pointer to WalkingPatternGenerator
+     * @brief Shared pointer to FootholdsPlanner
      */
-    typedef std::shared_ptr<WalkingPatternGenerator> Ptr;
+    typedef std::shared_ptr<FootholdsPlanner> Ptr;
 
     /**
-     * @brief Shared pointer to const WalkingPatternGenerator
+     * @brief Shared pointer to const FootholdsPlanner
      */
-    typedef std::shared_ptr<const WalkingPatternGenerator> ConstPtr;
+    typedef std::shared_ptr<const FootholdsPlanner> ConstPtr;
 
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
-    WalkingPatternGenerator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3);
+    FootholdsPlanner(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3);
 
     void update(const double& period,const Eigen::Vector3d& base_position); // OpenLoop Orientation
 

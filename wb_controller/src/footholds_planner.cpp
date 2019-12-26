@@ -1,10 +1,10 @@
-#include <wb_controller/walking_pattern_generator.h>
+#include <wb_controller/footholds_planner.h>
 
 namespace wb_controller {
 
-#define CLASS_NAME "WalkingPatternGenerator"
+#define CLASS_NAME "FootholdsPlanner"
 
-WalkingPatternGenerator::WalkingPatternGenerator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max, double step_height_max)
+FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max, double step_height_max)
 {
 
     assert(gait_generator);
@@ -50,23 +50,23 @@ WalkingPatternGenerator::WalkingPatternGenerator(GaitGenerator::Ptr gait_generat
     Logger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
 }
 
-void WalkingPatternGenerator::update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
+void FootholdsPlanner::update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
 {
     update(period,base_position,base_orientation_);
 }
 
-void WalkingPatternGenerator::update(const double& period) // OpenLoop
+void FootholdsPlanner::update(const double& period) // OpenLoop
 {
     update(period,base_position_,base_orientation_);
 }
 
-void WalkingPatternGenerator::initializeFootPosition(const std::string& foot_name)
+void FootholdsPlanner::initializeFootPosition(const std::string& foot_name)
 {
     xbot_model_->getPose(foot_name,world_T_foot_);
     gait_generator_->setInitialPose(foot_name,world_T_foot_);
 }
 
-void WalkingPatternGenerator::initializeFeetPosition()
+void FootholdsPlanner::initializeFeetPosition()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
@@ -74,7 +74,7 @@ void WalkingPatternGenerator::initializeFeetPosition()
         initializeFootPosition(feet_names[i]);
 }
 
-void WalkingPatternGenerator::update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop
+void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop
 {
     unsigned int cmd = cmd_;
 
@@ -160,7 +160,7 @@ void WalkingPatternGenerator::update(const double& period, const Eigen::Vector3d
     gait_generator_->update(period);
 }
 
-void WalkingPatternGenerator::calculateFeetStep()
+void FootholdsPlanner::calculateFeetStep()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
     const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
@@ -238,7 +238,7 @@ void WalkingPatternGenerator::calculateFeetStep()
     gait_generator_->activateSwing();
 }
 
-void WalkingPatternGenerator::resetFeetStep()
+void FootholdsPlanner::resetFeetStep()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
 
@@ -252,33 +252,33 @@ void WalkingPatternGenerator::resetFeetStep()
     gait_generator_->deactivateSwing();
 }
 
-void WalkingPatternGenerator::resetBaseAngularVelocity()
+void FootholdsPlanner::resetBaseAngularVelocity()
 {
     hf_base_angular_velocity_.setZero();
     hf_base_angular_velocity_ref_.setZero();
     hf_base_angular_velocity_filt_.setZero();
 }
 
-void WalkingPatternGenerator::resetBaseLinearVelocity()
+void FootholdsPlanner::resetBaseLinearVelocity()
 {
     hf_base_linear_velocity_.setZero();
     hf_base_linear_velocity_ref_.setZero();
     hf_base_linear_velocity_filt_.setZero();
 }
 
-void WalkingPatternGenerator::resetBaseVelocities()
+void FootholdsPlanner::resetBaseVelocities()
 {
     resetBaseAngularVelocity();
     resetBaseLinearVelocity();
 }
 
-void WalkingPatternGenerator::resetBasePosition()
+void FootholdsPlanner::resetBasePosition()
 {
     for(unsigned int i=0;i<3;i++)
         base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
 }
 
-void WalkingPatternGenerator::resetBaseOrientation()
+void FootholdsPlanner::resetBaseOrientation()
 {
     default_base_orientation_(2) = base_orientation_(2); // Keep the same yaw
 
@@ -289,7 +289,7 @@ void WalkingPatternGenerator::resetBaseOrientation()
     base_rotation_reference_.transposeInPlace();
 }
 
-void WalkingPatternGenerator::resetVelocyScales()
+void FootholdsPlanner::resetVelocyScales()
 {
     base_linear_velocity_scale_x_ = 0.0;
     base_linear_velocity_scale_y_ = 0.0;
@@ -300,7 +300,7 @@ void WalkingPatternGenerator::resetVelocyScales()
     base_angular_velocity_scale_yaw_ = 0.0;
 }
 
-void WalkingPatternGenerator::calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
+void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::Vector3d& base_position)
 {
     base_position_ = base_position;
 
@@ -317,7 +317,7 @@ void WalkingPatternGenerator::calculateBasePosition(const double& period, const 
     //base_position_(2);
 }
 
-void WalkingPatternGenerator::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
+void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
 {
     base_orientation_ = base_orientation;
 
@@ -335,7 +335,7 @@ void WalkingPatternGenerator::calculateBaseOrientation(const double& period, con
     base_rotation_reference_.transposeInPlace();
 }
 
-void WalkingPatternGenerator::setHipOffset()
+void FootholdsPlanner::setHipOffset()
 {
     if(!offset_applied_)
     {
@@ -373,82 +373,82 @@ void WalkingPatternGenerator::setHipOffset()
 }
 
 // Sets
-void WalkingPatternGenerator::setCmd(const unsigned int cmd)
+void FootholdsPlanner::setCmd(const unsigned int cmd)
 {
     cmd_ = cmd;
 }
 
-void WalkingPatternGenerator::setBasePosition(const Eigen::Vector3d& position)
+void FootholdsPlanner::setBasePosition(const Eigen::Vector3d& position)
 {
     base_position_ = position;
 }
 
-void WalkingPatternGenerator::setBaseOrientation(const Eigen::Vector3d& orientation)
+void FootholdsPlanner::setBaseOrientation(const Eigen::Vector3d& orientation)
 {
     base_orientation_ = orientation;
 }
 
-void WalkingPatternGenerator::setDefaultBaseOrientation(const Eigen::Vector3d& orientation)
+void FootholdsPlanner::setDefaultBaseOrientation(const Eigen::Vector3d& orientation)
 {
     default_base_orientation_ = orientation;
 }
 
-void WalkingPatternGenerator::setDefaultBasePosition(const Eigen::Vector3d& position)
+void FootholdsPlanner::setDefaultBasePosition(const Eigen::Vector3d& position)
 {
     default_base_position_ = position;
 }
 
-void WalkingPatternGenerator::setBaseVelocityScaleX(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleX(const double scale)
 {
     base_linear_velocity_scale_x_ = scale;
 }
 
-void WalkingPatternGenerator::setBaseVelocityScaleY(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleY(const double scale)
 {
     base_linear_velocity_scale_y_ = scale;
 }
 
-void WalkingPatternGenerator::setBaseVelocityScaleZ(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleZ(const double scale)
 {
     base_linear_velocity_scale_z_ = scale;
 }
 
-void WalkingPatternGenerator::setBaseVelocityScaleRoll(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleRoll(const double scale)
 {
     base_angular_velocity_scale_roll_ = scale;
 }
 
-void WalkingPatternGenerator::setBaseVelocityScalePitch(const double scale)
+void FootholdsPlanner::setBaseVelocityScalePitch(const double scale)
 {
     base_angular_velocity_scale_pitch_ = scale;
 }
 
-void WalkingPatternGenerator::setBaseVelocityScaleYaw(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleYaw(const double scale)
 {
     base_angular_velocity_scale_yaw_ = scale;
 }
 
-void WalkingPatternGenerator::increaseStepHeight()
+void FootholdsPlanner::increaseStepHeight()
 {
     setStepHeight(step_height_ + 0.01); // Increase step height
 }
 
-void WalkingPatternGenerator::decreaseStepHeight()
+void FootholdsPlanner::decreaseStepHeight()
 {
   setStepHeight(step_height_ - 0.01); // Decrease step height
 }
 
-void WalkingPatternGenerator::setLinearVelocity(const double linear)
+void FootholdsPlanner::setLinearVelocity(const double linear)
 {
     base_linear_velocity_ = linear;
 }
 
-void WalkingPatternGenerator::setAngularVelocity(const double angular)
+void FootholdsPlanner::setAngularVelocity(const double angular)
 {
     base_angular_velocity_ = angular;
 }
 
-void WalkingPatternGenerator::setStepHeight(const double height)
+void FootholdsPlanner::setStepHeight(const double height)
 {
     if(height > step_height_max_) // Check if it is ok
     {
@@ -468,7 +468,7 @@ void WalkingPatternGenerator::setStepHeight(const double height)
     }
 }
 
-void WalkingPatternGenerator::setMaxStepHeight(const double max)
+void FootholdsPlanner::setMaxStepHeight(const double max)
 {
     if(max >= 0.0) // Check if it is ok
     {
@@ -478,7 +478,7 @@ void WalkingPatternGenerator::setMaxStepHeight(const double max)
         ROS_WARN_NAMED(CLASS_NAME,"Max step height is less equal than: 0.0");
 }
 
-void WalkingPatternGenerator::setMaxStepLength(const double max)
+void FootholdsPlanner::setMaxStepLength(const double max)
 {
     if(max >= 0.0) // Check if it is ok
     {
@@ -489,57 +489,57 @@ void WalkingPatternGenerator::setMaxStepLength(const double max)
 }
 
 // Gets
-unsigned int WalkingPatternGenerator::getCmd()
+unsigned int FootholdsPlanner::getCmd()
 {
     return cmd_;
 }
 
-const Eigen::Matrix3d& WalkingPatternGenerator::getBaseRotationReference() const
+const Eigen::Matrix3d& FootholdsPlanner::getBaseRotationReference() const
 {
     return base_rotation_reference_;
 }
 
-const double& WalkingPatternGenerator::getStepLength(const std::string& foot_name)
+const double& FootholdsPlanner::getStepLength(const std::string& foot_name)
 {
     return steps_length_[foot_name];
 }
 
-const double& WalkingPatternGenerator::getStepHeading(const std::string& foot_name)
+const double& FootholdsPlanner::getStepHeading(const std::string& foot_name)
 {
     return steps_heading_[foot_name];
 }
 
-const double& WalkingPatternGenerator::getStepHeight(const std::string& foot_name)
+const double& FootholdsPlanner::getStepHeight(const std::string& foot_name)
 {
     return steps_height_[foot_name];
 }
 
-const double& WalkingPatternGenerator::getStepHeadingRate(const std::string& foot_name)
+const double& FootholdsPlanner::getStepHeadingRate(const std::string& foot_name)
 {
     return steps_heading_rate_[foot_name];
 }
 
-const double& WalkingPatternGenerator::getBaseHeight() const
+const double& FootholdsPlanner::getBaseHeight() const
 {
     return base_position_(2);
 }
 
-double WalkingPatternGenerator::getLinearVelocity() const
+double FootholdsPlanner::getLinearVelocity() const
 {
     return base_linear_velocity_;
 }
 
-double WalkingPatternGenerator::getAngularVelocity() const
+double FootholdsPlanner::getAngularVelocity() const
 {
     return base_angular_velocity_;
 }
 
-double WalkingPatternGenerator::getStepHeight() const
+double FootholdsPlanner::getStepHeight() const
 {
     return step_height_;
 }
 
-double WalkingPatternGenerator::getStepLength() const
+double FootholdsPlanner::getStepLength() const
 {
     return step_length_;
 }
