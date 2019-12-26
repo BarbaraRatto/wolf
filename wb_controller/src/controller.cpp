@@ -470,9 +470,6 @@ bool Controller::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd& qmi
 void Controller::dynamicReconfigureUpdate()
 {
 
-  std::cout << "ASDAS" << std::endl;
-  getchar();
-
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
     default_config_.toggle_haptic = haptic_contact_loop_active_;
