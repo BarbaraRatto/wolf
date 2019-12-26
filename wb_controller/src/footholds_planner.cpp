@@ -34,18 +34,18 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, XBot::Mode
 
     cmd_ = cmd_t::HOLD;
 
-    hf_X_hip_foot_offsets_.resize(4);
-    hf_X_virtual_hips_.resize(4); // \f$X_hip(i)\f$ with i corresponding to the leg number
+    hf_X_initial_footholds_.resize(4);
+    hf_X_initial_hips_.resize(4); // \f$X_hip(i)\f$ with i corresponding to the leg number
     for(unsigned int i=0; i<4; i++)
     {
-        hf_X_hip_foot_offsets_[i].setZero();
-        hf_X_virtual_hips_[i].setZero();
+        hf_X_initial_hips_[i].setZero();
+        hf_X_initial_footholds_[i].setZero();
     }
 
     step_length_ = 0.0;
     step_height_ = 0.0;
 
-    offset_applied_ = false;
+    offsets_applied_ = false;
 
     Logger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
 }
@@ -98,7 +98,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
     ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base_" << world_R_base_);
     ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base_" << hf_R_base_);
 
-    setHipOffset();
+    setInitialOffsets();
 
     switch(cmd)
     {
@@ -163,7 +163,6 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 void FootholdsPlanner::calculateFeetStep()
 {
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
-    const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
 
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
@@ -173,41 +172,37 @@ void FootholdsPlanner::calculateFeetStep()
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"*********");
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"CalculateFeetStep for foot "<<feet_names[i]);
 
-            xbot_model_->getPose(feet_names[i],world_T_foot_);
-            xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_);
-            xbot_model_->getPose(hips_names[i],world_T_hip_);
-            //xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
-
+            // 1) Compute the displacement of the foot produced by the linear velocity command
             hf_delta_hip_.setZero(); // \f$\deltaL_{x,y,0}\f$
             hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
             hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Linear part): "<<hf_delta_hip_.transpose());
 
-            //hf_X_hip_ = hf_R_base_ * base_T_hip_.translation();
+            // 2) Compute the displacement of the foot produced by the angular velocity command
             hf_delta_heding_.setZero(); // \f$\deltaL_{h,0}\f$
             hf_delta_heding_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
-            hf_delta_heding_ = hf_delta_heding_.cross(hf_X_virtual_hips_[i]);
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_heding_: "<<hf_delta_heding_.transpose());
+            hf_delta_heding_ = hf_delta_heding_.cross(hf_X_initial_hips_[i]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_heding_ (Angular part): "<<hf_delta_heding_.transpose());
 
+            // 3) Combine the two displacements
             hf_delta_hip_(0)+= hf_delta_heding_(0);
             hf_delta_hip_(1)+= hf_delta_heding_(1);
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_(velocity based): "<<hf_delta_hip_.transpose());
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
-            world_delta_hip_ = world_R_hf_ * hf_delta_hip_;
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_delta_hip_(velocity based): "<<world_delta_hip_.transpose());
+            // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
+            xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_);
+            // current foot position in the horizontal frame
+            hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
+            //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
+            //world_X_virtual_foothold_offset_(2) = 0;
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_X_current_foothold_: "<<hf_X_current_foothold_.transpose());
 
-            world_X_virtual_hip_ = world_R_hf_ *(hf_X_virtual_hips_[i] - hf_R_base_*base_T_foot_.translation() );
-            world_X_virtual_hip_(2)=0;
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_X_virtual_hip_(distance of actual foot position wrt to virtual hip pos in wf): "<<world_X_virtual_hip_.transpose());
-
-            world_X_hip_foot_offset_ = world_R_hf_ * hf_X_hip_foot_offsets_[i];
-            world_X_hip_foot_offset_(2) = 0;
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_X_hip_foot_offset_: "<<world_X_hip_foot_offset_.transpose());
-
+            // 6) Sum everything to obtain the new foothold displacement w.r.t world
             world_delta_foot_.setZero();
-            world_delta_foot_.head(2) =   world_delta_hip_.head(2)  + world_X_hip_foot_offset_.head(2) + world_X_virtual_hip_.head(2);
-
+            world_delta_foot_.head(2) =  world_R_hf_ * (hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2));
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_delta_foot_: "<<world_delta_foot_.transpose());
 
+            // 7) Get the step length and heading
             step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
 
             if(step_length_ > step_length_max_)
@@ -335,40 +330,21 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
     base_rotation_reference_.transposeInPlace();
 }
 
-void FootholdsPlanner::setHipOffset()
+void FootholdsPlanner::setInitialOffsets()
 {
-    if(!offset_applied_)
+    if(!offsets_applied_)
     {
         const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
         for(unsigned int i=0; i<hips_names.size(); i++)
         {
             xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
-            xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
-            //initial feet offsets
-            hf_X_hip_foot_offsets_[i] = hf_R_base_ * (base_T_foot_.translation() - base_T_hip_.translation());
-
-            //virtual hips we assume base starts horizzontal (TODO)
-            hf_X_virtual_hips_[i] = base_T_hip_.translation();
-
+            // initial feet offsets in the horizontal frame
+            hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
+            // initial hip positions, we assume the base starts horizontal (TODO)
+            hf_X_initial_hips_[i] = base_T_hip_.translation();
         }
 
-        ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[lf] are "
-                         << hf_X_virtual_hips_[0] <<
-                                                     " they should be: +,+ and 0.0");
-
-        ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[rf] are "
-                         << hf_X_virtual_hips_[1] <<
-                                                     " they should be: +,- and 0.0");
-
-        ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[lh] are "
-                         << hf_X_virtual_hips_[2] <<
-                                                     " they should be: -,+ and 0.0");
-
-        ROS_DEBUG_STREAM("The signs for hf_X_base_hip_offsets_[rh] are "
-                         << hf_X_virtual_hips_[3] <<
-                                                     " they should be: -,- and 0.0");
-
-        offset_applied_ = true;
+        offsets_applied_ = true;
     }
 }
 

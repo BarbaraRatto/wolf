@@ -78,7 +78,7 @@ public:
     double getStepHeight() const ;
     double getStepLength() const ;
 
-    void setHipOffset();
+    void setInitialOffsets();
 
 private:
 
@@ -138,17 +138,15 @@ private:
 
     Eigen::Vector3d hf_delta_hip_;
     Eigen::Vector3d hf_delta_heding_;
-    Eigen::Vector3d hf_X_hip_;
+    Eigen::Vector3d hf_X_current_foothold_;
     Eigen::Vector3d world_delta_hip_;
-    Eigen::Vector3d world_X_hip_;
-    Eigen::Vector3d world_X_virtual_hip_;
     Eigen::Vector3d world_delta_foot_;
-    Eigen::Vector3d world_X_hip_foot_offset_;
+    Eigen::Vector3d world_X_virtual_foothold_offset_;
 
     Eigen::Matrix3d world_R_base_;
     Eigen::Matrix3d hf_R_base_;
 
-    bool offset_applied_;
+    bool offsets_applied_;
 
     typedef std::map<std::string,double> map_t;
     map_t steps_length_;
@@ -161,9 +159,9 @@ private:
     GaitGenerator::Ptr gait_generator_;
     XBot::ModelInterface::Ptr xbot_model_;
 
-    Eigen::Affine3d world_T_foot_, world_T_hip_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
-    std::vector<Eigen::Vector3d> hf_X_hip_foot_offsets_;
-    std::vector<Eigen::Vector3d> hf_X_virtual_hips_;
+    Eigen::Affine3d world_T_foot_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
+    std::vector<Eigen::Vector3d> hf_X_initial_footholds_;
+    std::vector<Eigen::Vector3d> hf_X_initial_hips_;
 
     double yaw_base_;
     double step_length_;
