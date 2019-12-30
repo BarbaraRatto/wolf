@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <assert.h>
-#include <wb_controller/logger.h>
+#include <rt_logger/rt_logger.h>
 #include <XBotInterface/TypedefAndEnums.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>

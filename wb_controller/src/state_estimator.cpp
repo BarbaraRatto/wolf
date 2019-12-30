@@ -1,6 +1,8 @@
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/utils.h>
 
+using namespace rt_logger;
+
 namespace wb_controller {
 
 #define CLASS_NAME "StateEstimator"
@@ -93,12 +95,12 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
         force_torque_sensors_.push_back(force_estimation_->add_link(feet_names[i],dofs,chain));
     }
 
-    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_position",floating_base_position_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity",floating_base_velocity_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity_qp",floating_base_velocity_qp_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/base_rpy",base_rpy_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/actual_height",floating_base_position_(2));
-    Logger::getLogger().addPublisher(CLASS_NAME"/com",com_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/floating_base_position",floating_base_position_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity",floating_base_velocity_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity_qp",floating_base_velocity_qp_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/base_rpy",base_rpy_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/actual_height",floating_base_position_(2));
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/com",com_);
 }
 
 void StateEstimator::setEstimationType(const std::string& position_t, const std::string& orientation_t)

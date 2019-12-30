@@ -17,7 +17,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 # ROS
 find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardware_interface
-    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
+    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
@@ -36,8 +36,7 @@ generate_dynamic_reconfigure_options(
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
-                 ContactForces.msg
-                 LoggerNumeric.msg)
+                 ContactForces.msg)
 
 generate_messages(
     DEPENDENCIES

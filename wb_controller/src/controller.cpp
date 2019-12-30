@@ -13,6 +13,7 @@
 
 using namespace XBot;
 using namespace Cartesian;
+using namespace rt_logger;
 
 namespace wb_controller {
 
@@ -431,15 +432,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     initPublishers(root_nh,controller_nh);
 
-    Logger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_",joint_velocities_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt",joint_velocities_filt_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_solver",des_joint_efforts_solver_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_pids",des_joint_efforts_pids_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
-    Logger::getLogger().addPublisher(CLASS_NAME"/period",period_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_",joint_velocities_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt",joint_velocities_filt_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_solver",des_joint_efforts_solver_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_pids",des_joint_efforts_pids_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/period",period_);
 
     return true;
 }
@@ -1105,7 +1106,7 @@ void Controller::publish(const ros::Time& time, const ros::Duration& period)
     }
 
     // Logger publishing
-    Logger::getLogger().publish(time);
+    RtLogger::getLogger().publish(time);
 }
 
 void Controller::stopping(const ros::Time& /*time*/)
