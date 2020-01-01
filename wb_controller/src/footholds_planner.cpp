@@ -1,5 +1,7 @@
 #include <wb_controller/footholds_planner.h>
 
+using namespace rt_logger;
+
 namespace wb_controller {
 
 #define CLASS_NAME "FootholdsPlanner"
@@ -47,7 +49,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, XBot::Mode
 
     offsets_applied_ = false;
 
-    Logger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
 }
 
 void FootholdsPlanner::update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
