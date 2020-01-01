@@ -119,10 +119,10 @@ public:
     void toggleInertiaCompensation();
 
     /**
-         * @brief Set the duty cycle for the feet
-         * @param const double duty_cycle
+         * @brief Set the duty factor for the feet
+         * @param const double duty_factor
          */
-    bool setDutyCycle(const double& duty_cycle);
+    bool setDutyFactor(const double& duty_factor);
 
     /**
          * @brief Set the gait type

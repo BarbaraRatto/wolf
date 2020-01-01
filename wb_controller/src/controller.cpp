@@ -507,7 +507,7 @@ void Controller::dynamicReconfigureUpdate()
     {
         default_config_.gaits = gait_generator_->getGaitType();
         default_config_.swing_frequency = gait_generator_->getSwingFrequency(feet_names_[0]); // FIXME - HACK
-        default_config_.duty_cycle = gait_generator_->getDutyCycle(feet_names_[0]); // FIXME - HACK
+        default_config_.duty_factor = gait_generator_->getDutyFactor(feet_names_[0]); // FIXME - HACK
     }
     if(cmds_)
     {
@@ -538,7 +538,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         toggleInertiaCompensation();
         break;
     case 4:
-        setDutyCycle(config.duty_cycle);
+        setDutyFactor(config.duty_factor);
         break;
     case 5:
         setGaitType(config.gaits);
@@ -647,17 +647,17 @@ bool Controller::setGaitType(const std::string& gait_type)
     return true;
 }
 
-bool Controller::setDutyCycle(const double& duty_cycle)
+bool Controller::setDutyFactor(const double& duty_factor)
 {
-    if(duty_cycle>=0.0 && duty_cycle<=1.0 && gait_generator_)
+    if(duty_factor>=0.0 && duty_factor<=1.0 && gait_generator_)
     {
-        gait_generator_->setDutyCycle(duty_cycle);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"setDutyCycle: set the duty cycle to "<<duty_cycle);
+        gait_generator_->setDutyFactor(duty_factor);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"setDutyFactor: set the duty factor to "<<duty_factor);
         return true;
     }
     else
     {
-        ROS_WARN_NAMED(CLASS_NAME,"setDutyCycle: duty cycle has to be between 0 and 1!");
+        ROS_WARN_NAMED(CLASS_NAME,"setDutyFactor: duty factor has to be between 0 and 1!");
         return false;
     }
 }

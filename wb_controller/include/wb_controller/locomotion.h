@@ -9,185 +9,10 @@
 #include <XBotInterface/ModelInterface.h>
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
+#include <wb_controller/foot_state_machine.h>
 
 namespace wb_controller
 {
-
-class FootStateMachine
-{
-public:
-
-  FootStateMachine()
-  {
-
-    // Inputs
-    duty_factor_ = 0.8; // It is defined as T_stance / T_cycle
-    T_cycle_ = 2.0;
-
-    reset();
-    state_ = states::STANCE;
-    // We assume that the state machine starts as it completed a full swing cycle, in this way isCycleEnded returns true.
-    // This is useful to set the initial pose in the commands interface
-    cycle_completed_ = true;
-    prev_state_ = states::SWING;
-  }
-
-  bool isSwing()
-  {
-    if(state_ == states::SWING)
-      return true;
-    else
-      return false;
-  }
-
-  bool isStance()
-  {
-    if(state_ == states::STANCE)
-      return true;
-    else
-      return false;
-  }
-
-  bool isStateChanged()
-  {
-    if(prev_state_ != state_)
-      return true;
-    else
-      return false;
-  }
-
-  bool isTouchDown()
-  {
-    if(prev_state_ == states::SWING && state_ == states::STANCE)
-      return true;
-    else
-      return false;
-  }
-
-  bool isLiftOff()
-  {
-    if(prev_state_ == states::STANCE && state_ == states::SWING)
-      return true;
-    else
-      return false;
-  }
-
-  bool isCycleEnded()
-  {
-    if(cycle_ended_)
-      return true;
-    else
-      return false;
-  }
-
-  void triggerSwing()
-  {
-    trigger_swing_ = true;
-  }
-
-  void setDutyFactor(double duty_factor)
-  {
-    assert(duty_factor > 0 && duty_factor <=1);
-    duty_factor_ = duty_factor;
-  }
-
-  void setCycleTime(double cycle_time)
-  {
-    assert(cycle_time >= 0);
-    T_cycle_ = cycle_time;
-  }
-
-  double getDutyFactor()
-  {
-    return duty_factor_;
-  }
-
-  void update(const double& period, const bool& contact)
-  {
-
-    prev_state_ = state_;
-
-    double half_swing_time = 0.0;
-
-    switch (state_)
-    {
-
-    case states::STANCE:
-
-      if(trigger_swing_ && cycle_completed_)
-      {
-        trigger_swing_ = false;
-        state_ = states::SWING;
-      }
-      else
-      {
-
-        wait_time_-=period;
-
-        if(wait_time_ <= 0.0)
-        {
-          cycle_completed_ = true;
-
-        }
-        else
-          state_ = states::STANCE;
-
-      }
-      break;
-
-    case states::SWING:
-
-      //ROS_DEBUG("SWING");
-
-      active_time_ += period;
-
-      if(swing_frequency_>0)
-        half_swing_time = 1/(2*swing_frequency_); // NOTE: since we use f'=2f, we should divide by 4 and not by 2.
-      // If swing frequency is geq than 0
-      // deactivate the contact sensing for half of the swing time
-      if(contact && active_time_>=half_swing_time)
-      {
-        calculateTimes();
-        state_ = states::STANCE;
-      }
-      else
-        state_ = states::SWING;
-
-      break;
-
-    default:
-      break;
-
-    };
-  }
-
-private:
-
-  double active_time_;
-  double total_time_;
-  double wait_time_;
-  bool trigger_swing_;
-  std::atomic<double> swing_frequency_;
-  std::atomic<double> dc_;
-
-  enum states {INIT=0,SWING,STANCE};
-  unsigned int state_;
-  unsigned int prev_state_;
-
-  void reset()
-  {
-    wait_time_ = T_stance_;
-    cycle_completed_ = true;
-  }
-
-  void calculateTimes()
-  {
-    T_stance_ = duty_factor_ * T_cycle_;
-    T_swing_ = T_cycle_ * (1.0 - duty_factor_);
-    f_swing_ = 1 / T_swing_;
-  }
-
-};
 
 class Gait
 {
@@ -597,16 +422,6 @@ public:
     return feet_[foot_name].state_machine->isStance();
   }
 
-  bool isInStanceOrInit(const std::string& foot_name)
-  {
-    return (feet_[foot_name].state_machine->isStance() || feet_[foot_name].state_machine->isInit());
-  }
-
-  bool isInInit(const std::string& foot_name)
-  {
-    return feet_[foot_name].state_machine->isInit();
-  }
-
   bool isStateChanged(const std::string& foot_name)
   {
     return feet_[foot_name].state_machine->isStateChanged();
@@ -663,20 +478,20 @@ public:
     feet_[foot_name].trajectory->setInitialPose(initial_pose);
   }
 
-  double getDutyCycle(const std::string& foot_name)
+  double getDutyFactor(const std::string& foot_name)
   {
-    return feet_[foot_name].state_machine->getDutyCycle();
+    return feet_[foot_name].state_machine->getDutyFactor();
   }
 
-  void setDutyCycle(const double& duty_cycle)
+  void setDutyFactor(const double& duty_factor)
   {
     for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-      it->second.state_machine->setDutyCycle(duty_cycle);
+      it->second.state_machine->setDutyFactor(duty_factor);
   }
 
-  void setDutyCycle(const std::string& foot_name, const double& duty_cycle)
+  void setDutyFactor(const std::string& foot_name, const double& duty_factor)
   {
-    feet_[foot_name].state_machine->setDutyCycle(duty_cycle);
+    feet_[foot_name].state_machine->setDutyFactor(duty_factor);
   }
 
   void setSwingFrequency(const double& swing_frequency)
@@ -775,15 +590,15 @@ public:
 
   void update(const double& period)
   {
-    // 1) Check if the scheduled feet are all in Init and start the swing if this is the case.
-    bool scheduled_feet_are_init = true;
+    // 1) Check if the scheduled feet are all in Stance and start the swing if this is the case.
+    bool scheduled_feet_are_in_stance = true;
     for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-      if(!feet_[scheduled_feet_[i]].state_machine->isInit())
+      if(!feet_[scheduled_feet_[i]].state_machine->isStance())
       {
-        scheduled_feet_are_init = false;
+        scheduled_feet_are_in_stance = false;
         break;
       }
-    if(scheduled_feet_are_init && activate_swing_)
+    if(scheduled_feet_are_in_stance && activate_swing_)
       for(unsigned int i=0; i<scheduled_feet_.size(); i++)
         feet_[scheduled_feet_[i]].state_machine->triggerSwing();
 
@@ -817,10 +632,10 @@ public:
       }
     }
 
-    // 3) If the scheduled feet are all in Init, change the schedule to the next one (i.e. move to the next feet)
+    // 3) If the scheduled feet are all in Stance, change the schedule to the next one (i.e. move to the next feet)
     unsigned int cnt = 0;
     for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-      if(feet_[scheduled_feet_[i]].state_machine->isInit())
+      if(feet_[scheduled_feet_[i]].state_machine->isStance())
         cnt++;
     if(cnt == scheduled_feet_.size())
     {
