@@ -381,7 +381,6 @@ public:
     scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
 
     change_gait_ = false;
-    schedule_changed_ = true; // At the beginning is already changed no?
     activate_swing_ = false;
 
     gait_type_ = gait_type;
@@ -440,11 +439,6 @@ public:
   bool isCycleEnded(const std::string& foot_name)
   {
     return feet_[foot_name].state_machine->isCycleEnded();
-  }
-
-  bool isScheduleChanged()
-  {
-    return schedule_changed_;
   }
 
   bool isAnyFootInLiftOff()
@@ -642,11 +636,6 @@ public:
       if(change_gait_)
         changeGait();
       scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
-      schedule_changed_ = true;
-    }
-    else
-    {
-      schedule_changed_ = false;
     }
   }
 
@@ -695,7 +684,6 @@ private:
   std::atomic<unsigned int> current_gait_idx_;
   std::atomic<unsigned int> next_gait_idx_;
   std::atomic<bool> change_gait_;
-  std::atomic<bool> schedule_changed_;
   std::atomic<bool> activate_swing_;
 
   std::vector<std::string> feet_names_;
