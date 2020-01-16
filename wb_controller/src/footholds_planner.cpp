@@ -199,13 +199,18 @@ void FootholdsPlanner::calculateFeetStep()
             //world_X_virtual_foothold_offset_(2) = 0;
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_X_current_foothold_: "<<hf_X_current_foothold_.transpose());
 
+            // 5) Sum everything to obtain the new foothold displacement w.r.t hf
+            hf_delta_foot_.setZero();
+            hf_delta_foot_.head(2) =  hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
+
             // 6) Sum everything to obtain the new foothold displacement w.r.t world
-            world_delta_foot_.setZero();
-            world_delta_foot_.head(2) =  world_R_hf_ * (hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2));
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_delta_foot_: "<<world_delta_foot_.transpose());
+            //world_delta_foot_.setZero();
+            //world_delta_foot_.head(2) =  world_R_hf_ * hf_delta_foot_;
+            //ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_delta_foot_: "<<world_delta_foot_.transpose());
 
             // 7) Get the step length and heading
-            step_length_ = std::sqrt(world_delta_foot_(0)*world_delta_foot_(0) + world_delta_foot_(1)*world_delta_foot_(1));
+            step_length_ = std::sqrt(hf_delta_foot_(0)*hf_delta_foot_(0) + hf_delta_foot_(1)*hf_delta_foot_(1));
 
             if(step_length_ > step_length_max_)
             {
@@ -214,7 +219,7 @@ void FootholdsPlanner::calculateFeetStep()
             }
 
             steps_length_[feet_names[i]]         = step_length_;
-            steps_heading_[feet_names[i]]        = std::atan2(world_delta_foot_(1),world_delta_foot_(0));
+            steps_heading_[feet_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0));
             steps_height_[feet_names[i]]         = step_height_;
             steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
 
