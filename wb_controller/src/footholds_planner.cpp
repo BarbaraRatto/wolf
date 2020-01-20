@@ -110,40 +110,36 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
         resetVelocyScales();
         calculateBasePosition(period,base_position);
         calculateBaseOrientation(period,base_orientation);
-        resetFeetStep();
         break;
 
     case cmd_t::LINEAR:
         calculateBasePosition(period,base_position);
         resetBaseAngularVelocity();
-        calculateFeetStep();
         break;
 
     case cmd_t::ANGULAR:
         calculateBaseOrientation(period,base_orientation);
         resetBaseLinearVelocity();
-        calculateFeetStep();
         break;
 
     case cmd_t::LINEAR_AND_ANGULAR:
         calculateBasePosition(period,base_position);
         calculateBaseOrientation(period,base_orientation);
-        calculateFeetStep();
         break;
 
     case cmd_t::BASE_ONLY:
         calculateBasePosition(period,base_position);
         calculateBaseOrientation(period,base_orientation);
-        resetFeetStep();
         break;
 
     case cmd_t::RESET_BASE:
         resetBaseVelocities();
         resetBasePosition();
         resetBaseOrientation();
-        resetFeetStep();
         break;
     };
+
+    calculateFeetStep();
 
     const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
     for(unsigned int i=0; i<feet_names.size(); i++)
@@ -157,6 +153,11 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
         gait_generator_->setStepHeight(feet_names[i], steps_height_[feet_names[i]]);
         gait_generator_->setStepHeadingRate(feet_names[i], steps_heading_rate_[feet_names[i]]);
     }
+
+    if(cmd == cmd_t::LINEAR_AND_ANGULAR)
+      gait_generator_->activateSwing();
+    else
+      gait_generator_->deactivateSwing();
 
     // Update the gait_generator
     gait_generator_->update(period);
@@ -236,8 +237,6 @@ void FootholdsPlanner::calculateFeetStep()
             steps_heading_rate_[feet_names[i]]   = 0.0;
         }
     }
-
-    gait_generator_->activateSwing();
 }
 
 void FootholdsPlanner::resetFeetStep()
@@ -251,7 +250,6 @@ void FootholdsPlanner::resetFeetStep()
         steps_height_[feet_names[i]]   = 0.0;
         steps_heading_rate_[feet_names[i]]   = 0.0;
     }
-    gait_generator_->deactivateSwing();
 }
 
 void FootholdsPlanner::resetBaseAngularVelocity()
