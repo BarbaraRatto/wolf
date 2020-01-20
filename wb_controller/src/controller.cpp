@@ -114,7 +114,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     {
         ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
     }
-    double max_step_height = 1.5; // [m]
+    double max_step_height = 0.15; // [m]
     if (!controller_nh.getParam("max_step_height", max_step_height))
     {
         ROS_WARN_NAMED(CLASS_NAME,"No max step height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
