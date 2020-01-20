@@ -115,7 +115,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_WARN_NAMED(CLASS_NAME,"No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
     }
     double default_step_height = 0.05; // [m]
-    if (!controller_nh.getParam("default_step_height_max", default_step_height))
+    if (!controller_nh.getParam("default_step_height", default_step_height))
     {
         ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
     }
