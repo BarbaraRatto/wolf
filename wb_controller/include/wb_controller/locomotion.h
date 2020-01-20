@@ -363,9 +363,11 @@ public:
     // 2) Update the trajectories for each foot depending on the state machine status
     for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
     {
-
+#ifdef REACHING_MOTION
+      it->second.trigger_stance = it->second.contact_state;
+#else
       it->second.trigger_stance = it->second.contact_state || it->second.trajectory->isFinished(); //CloseLoop with trajectory end
-
+#endif
       it->second.state_machine->update(period,it->second.trigger_stance);
 
       if (it->second.state_machine->isSwing())

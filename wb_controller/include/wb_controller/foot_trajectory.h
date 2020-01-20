@@ -131,12 +131,12 @@ public:
 
   void update(const double& period)
   {
+    time_ += period;
+
     pose_reference_  = trajectoryFunction(time_);
     twist_reference_ = trajectoryFunctionDot(time_);
 
-    if(swing_frequency_*time_<1.0)
-      time_ += period;
-    else
+    if(swing_frequency_*time_>=1.0)
       trajectory_finished_ = true;
   }
 
