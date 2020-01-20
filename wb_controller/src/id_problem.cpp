@@ -46,12 +46,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     }
 
     //   --------------------------
-    _waistRPY = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
+    _waistRPY = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
                                                                             "world", _id->getJointsAccelerationAffine());
     _waistRPY->setLambda(1.,1.);
     _waistRPY->setWeightIsDiagonalFlag(true);
     //   --------------------------
-    _waistZ = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
+    _waistZ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
                                                                           "world", _id->getJointsAccelerationAffine());
     _waistZ->setLambda(1.,1.);
     _waistZ->setWeightIsDiagonalFlag(true);
