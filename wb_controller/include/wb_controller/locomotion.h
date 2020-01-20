@@ -348,15 +348,15 @@ public:
 
   void update(const double& period)
   {
-    // 1) Check if the scheduled feet are all in Stance and start the swing if this is the case.
-    bool scheduled_feet_are_in_stance = true;
+    // 1) Check if the scheduled feet are all ready to get triggered and start the swing if this is the case.
+    bool scheduled_feet_are_ready = true;
     for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-      if(!feet_[scheduled_feet_[i]].state_machine->isStance())
+      if(!feet_[scheduled_feet_[i]].state_machine->isCycleEnded())
       {
-        scheduled_feet_are_in_stance = false;
+        scheduled_feet_are_ready = false;
         break;
       }
-    if(scheduled_feet_are_in_stance && activate_swing_)
+    if(scheduled_feet_are_ready && activate_swing_)
       for(unsigned int i=0; i<scheduled_feet_.size(); i++)
         feet_[scheduled_feet_[i]].state_machine->triggerSwing();
 
@@ -390,10 +390,10 @@ public:
       }
     }
 
-    // 3) If the scheduled feet are all in Stance, change the schedule to the next one (i.e. move to the next feet)
+    // 3) If the cycle for the scheduled feet is over, change the schedule to the next one (i.e. move to the next feet)
     unsigned int cnt = 0;
     for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-      if(feet_[scheduled_feet_[i]].state_machine->isStance())
+      if(feet_[scheduled_feet_[i]].state_machine->isCycleEnded())
         cnt++;
     if(cnt == scheduled_feet_.size())
     {

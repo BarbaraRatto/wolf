@@ -16,6 +16,7 @@ public:
     duty_factor_ = 0.8; // It is defined as T_stance / T_cycle
     swing_frequency_ = 0.3;
     reset();
+    cycle_ended_ = true; // We set true so that the swing can be triggered
     updatePeriods();
     state_ = prev_state_ = states::STANCE;
   }
@@ -103,27 +104,30 @@ public:
     case states::STANCE:
 
       stance_time_+=period;
+
       if(stance_time_ >= T_stance_)
         cycle_ended_ = true;
-      else
-        cycle_ended_ = false;
 
       if(trigger_swing_ && cycle_ended_)
+      {
         state_ = states::SWING;
+        cycle_ended_ = false;
+      }
 
       break;
 
     case states::SWING:
 
       swing_time_+=period;
+
       //if(swing_frequency_>0)
       //  half_swing_time = 1/(2*swing_frequency_); // NOTE: since we use f'=2f, we should divide by 4 and not by 2.
       // If swing frequency is geq than 0
       // deactivate the contact sensing for half of the swing period
       if(contact && swing_time_>=T_swing_/2.0)
       {
-        reset();
         state_ = states::STANCE;
+        reset();
       }
 
       break;
@@ -140,9 +144,6 @@ private:
   {
     stance_time_ = 0.0;
     swing_time_ = 0.0;
-    // We assume that the state machine starts as it completed a full swing cycle, in this way isCycleEnded returns true.
-    // This is useful to set the initial pose in the commands interface
-    cycle_ended_ = true;
     trigger_swing_ = false;
   }
 
