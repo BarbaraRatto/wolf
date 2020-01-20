@@ -26,8 +26,8 @@ wb_controller:
   - rf_hip
   imu_sensor: trunk_imu
   default_swing_frequency: 3.0
-  default_contact_threshold: 50.0
-  default_base_linear_velocity: 0.3
+  default_contact_threshold: 30.0
+  default_base_linear_velocity: 0.2
   default_base_angular_velocity: 0.2
   default_step_height: 0.05
   max_step_height: 0.15
@@ -60,3 +60,5 @@ wb_controller:
 
       kp_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
       kd_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
+
+      clik_gain: 1.0

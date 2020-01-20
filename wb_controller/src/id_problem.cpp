@@ -46,12 +46,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     }
 
     //   --------------------------
-    _waistRPY = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
+    _waistRPY = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
                                                                             "world", _id->getJointsAccelerationAffine());
     _waistRPY->setLambda(1.,1.);
     _waistRPY->setWeightIsDiagonalFlag(true);
     //   --------------------------
-    _waistZ = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
+    _waistZ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
                                                                           "world", _id->getJointsAccelerationAffine());
     _waistZ->setLambda(1.,1.);
     _waistZ->setWeightIsDiagonalFlag(true);
@@ -185,7 +185,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     // Set the callback for the dynamic reconfigure server
     ros::NodeHandle problem_nh("problem");
-    server_ = new dynamic_reconfigure::Server<wb_controller::problemConfig>(problem_nh);
+    server_.reset(new dynamic_reconfigure::Server<wb_controller::problemConfig>(problem_nh));
     server_->setCallback(boost::bind(&IDProblem::dynamicReconfigureCallback, this, _1, _2));
 
     dynamicReconfigureUpdate();
@@ -193,8 +193,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
 IDProblem::~IDProblem()
 {
-    if(server_)
-        delete server_;
 }
 
 void IDProblem::dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level)
