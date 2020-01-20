@@ -291,12 +291,12 @@ namespace dls_gazebo_interface
     {
       sim_model_->SetWorldPose(inital_pose);
       gazebo::physics::LinkPtr base_link = sim_model_->GetLink("base_link");
-      if(base_link != NULL){
+      if(base_link != nullptr){
         //Set velocities and accelerations only for the base link:
         base_link->SetLinearVel(ignition::math::Vector3d::Zero);
-        base_link->SetLinearAccel(ignition::math::Vector3d::Zero);
+        //base_link->SetLinearAccel(ignition::math::Vector3d::Zero); // Deprecated in gazebo9
         base_link->SetAngularVel(ignition::math::Vector3d::Zero);
-        base_link->SetAngularAccel(ignition::math::Vector3d::Zero);
+        //base_link->SetAngularAccel(ignition::math::Vector3d::Zero); // Deprecated in gazebo9
       }
     }
 
