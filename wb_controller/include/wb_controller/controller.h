@@ -214,7 +214,7 @@ private:
     /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
     /** @brief ROS dynamic reconfigure */
-    dynamic_reconfigure::Server<wb_controller::controllerConfig>* server_;
+    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::controllerConfig>> server_;
     /** @brief ROS dynamic reconfigure config struct */
     controllerConfig default_config_;
     /** @brief IMU Accelerometer */

@@ -37,8 +37,6 @@ Controller::Controller()
 
 Controller::~Controller()
 {
-    if(server_)
-        delete server_;
 }
 
 bool Controller::init(hardware_interface::RobotHW* robot_hw,
@@ -99,6 +97,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_NAMED(CLASS_NAME,"No imu_sensor given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
+    double default_duty_factor = 0.3;
+    if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"No default duty factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+    }
     double default_swing_frequency = 3.0; // [Hz]
     if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
     {
@@ -110,7 +113,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_WARN_NAMED(CLASS_NAME,"No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
     }
     double default_step_height = 0.05; // [m]
-    if (!controller_nh.getParam("default_step_height_max", default_step_height))
+    if (!controller_nh.getParam("default_step_height", default_step_height))
     {
         ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
     }
@@ -374,12 +377,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_orientation_.normalize();
     pid_scale_ = 1.0;
 
-    // Set the callback for the dynamic reconfigure server
-    server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
-    server_->setCallback(boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
-
     gait_generator_.reset(new GaitGenerator(feet_names_,hips_names_,"crawl","ellipse"));
     gait_generator_->setSwingFrequency(default_swing_frequency);
+    gait_generator_->setDutyFactor(default_duty_factor);
 
     cmds_.reset(new FootholdsPlanner(gait_generator_,xbot_model_));
     cmds_->setLinearVelocity(default_base_linear_velocity);
@@ -431,6 +431,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     initPublishers(root_nh,controller_nh);
+
+    // Set the callback for the dynamic reconfigure server
+    server_.reset(new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh));
+    server_->setCallback(boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
     RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
