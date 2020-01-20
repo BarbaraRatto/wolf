@@ -25,6 +25,7 @@ wb_controller:
   - lh_hipassembly
   - rf_hipassembly
   imu_sensor: trunk_imu
+  default_duty_factor: 0.3
   default_swing_frequency: 3.0
   default_contact_threshold: 50.0
   default_base_linear_velocity: 0.2

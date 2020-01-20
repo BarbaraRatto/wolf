@@ -99,6 +99,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_ERROR_NAMED(CLASS_NAME,"No imu_sensor given in the namespace: %s.", controller_nh.getNamespace().c_str());
         return false;
     }
+    double default_duty_factor = 0.3;
+    if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"No default duty factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+    }
     double default_swing_frequency = 3.0; // [Hz]
     if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
     {
@@ -380,6 +385,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     gait_generator_.reset(new GaitGenerator(feet_names_,hips_names_,"crawl","ellipse"));
     gait_generator_->setSwingFrequency(default_swing_frequency);
+    gait_generator_->setDutyFactor(default_duty_factor);
 
     cmds_.reset(new FootholdsPlanner(gait_generator_,xbot_model_));
     cmds_->setLinearVelocity(default_base_linear_velocity);
