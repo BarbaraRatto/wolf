@@ -37,8 +37,6 @@ Controller::Controller()
 
 Controller::~Controller()
 {
-    if(server_)
-        delete server_;
 }
 
 bool Controller::init(hardware_interface::RobotHW* robot_hw,
@@ -379,10 +377,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_orientation_.normalize();
     pid_scale_ = 1.0;
 
-    // Set the callback for the dynamic reconfigure server
-    server_ = new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh);
-    server_->setCallback(boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
-
     gait_generator_.reset(new GaitGenerator(feet_names_,hips_names_,"crawl","ellipse"));
     gait_generator_->setSwingFrequency(default_swing_frequency);
     gait_generator_->setDutyFactor(default_duty_factor);
@@ -437,6 +431,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     initPublishers(root_nh,controller_nh);
+
+    // Set the callback for the dynamic reconfigure server
+    server_.reset(new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh));
+    server_->setCallback(boost::bind(&Controller::dynamicReconfigureCallback, this, _1, _2));
 
     RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
