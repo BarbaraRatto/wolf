@@ -193,8 +193,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
 IDProblem::~IDProblem()
 {
-    if(server_)
-        delete server_;
 }
 
 void IDProblem::dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level)

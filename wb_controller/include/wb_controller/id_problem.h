@@ -214,7 +214,7 @@ private:
     Eigen::Vector6d _wrench_lower_lims;
 
     /** @brief ROS dynamic reconfigure */
-    dynamic_reconfigure::Server<wb_controller::problemConfig>* server_;
+    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::problemConfig>> server_;
     /** @brief ROS dynamic reconfigure config struct */
     wb_controller::problemConfig default_config_;
 
