@@ -343,6 +343,7 @@ void FootholdsPlanner::setInitialOffsets()
         for(unsigned int i=0; i<hips_names.size(); i++)
         {
             xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
+            xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
             // initial feet offsets in the horizontal frame
             hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
             // initial hip positions, we assume the base starts horizontal (TODO)
