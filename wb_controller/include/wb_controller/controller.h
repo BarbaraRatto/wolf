@@ -29,7 +29,7 @@
 #include <thread>
 #include <chrono>
 // Controller
-#include <wb_controller/locomotion.h>
+#include <wb_controller/gait_generator.h>
 #include <wb_controller/footholds_planner.h>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/device_interface.h>

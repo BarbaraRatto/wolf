@@ -8,7 +8,7 @@
 #include <XBotInterface/ModelInterface.h>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
-#include <wb_controller/locomotion.h>
+#include <wb_controller/gait_generator.h>
 
 namespace wb_controller
 {

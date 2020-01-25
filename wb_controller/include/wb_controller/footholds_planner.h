@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 #include <atomic>
 #include <XBotInterface/ModelInterface.h>
-#include <wb_controller/locomotion.h>
+#include <wb_controller/gait_generator.h>
 
 namespace wb_controller
 {
