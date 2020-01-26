@@ -37,7 +37,7 @@ class IDProblem
 
 public:
 
-    typedef boost::shared_ptr<IDProblem> Ptr;
+    typedef std::shared_ptr<IDProblem> Ptr;
 
     /**
      * @brief IDProblem constructor
