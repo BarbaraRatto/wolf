@@ -107,6 +107,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
                 + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3]
                 + _arm)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+      _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+              / (_waistRPY%idw_RPY)
+              / (_arm)
+              / (_postural)
+              )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
     else
     {
