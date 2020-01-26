@@ -52,7 +52,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, XBot::Mode
     RtLogger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
 }
 
-void FootholdsPlanner::update(const double& period,const Eigen::Vector3d& base_position) // OpenLoop Orientation
+void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_position) // OpenLoop Orientation
 {
     update(period,base_position,base_orientation_);
 }

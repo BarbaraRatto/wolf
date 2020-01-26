@@ -6,7 +6,6 @@
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 #include <atomic>
-#include <XBotInterface/ModelInterface.h>
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
 #include <wb_controller/foot_state_machine.h>
