@@ -155,7 +155,7 @@ protected:
   double time_;
   std::atomic<double> swing_frequency_;
   std::atomic<double> length_;
-  std::atomic<double> heading_;
+  std::atomic<double> heading_; // This includes the heading w.r.t the horizontal frame and world
   std::atomic<double> heading_rate_;
   std::atomic<double> height_;
   bool trajectory_finished_;

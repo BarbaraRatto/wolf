@@ -220,7 +220,7 @@ void FootholdsPlanner::calculateFeetStep()
             }
 
             steps_length_[feet_names[i]]         = step_length_;
-            steps_heading_[feet_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0));
+            steps_heading_[feet_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + yaw_base_;
             steps_height_[feet_names[i]]         = step_height_;
             steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
 
