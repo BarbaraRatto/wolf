@@ -791,6 +791,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Reset the tasks
             //id_prob_->reset(); // FIXME
 
+            kin_->reset();
+
             des_joint_positions_ = kin_->getJointHomePositions();
             des_joint_velocities_.fill(0.0);
 

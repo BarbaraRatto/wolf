@@ -68,6 +68,8 @@ public:
 
   bool isBaseHeightControlActive();
 
+  void reset();
+
 private:
 
   XBot::ModelInterface::Ptr xbot_model_;

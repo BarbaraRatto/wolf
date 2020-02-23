@@ -17,16 +17,18 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInt
   // Initial values
   xbot_model_->getRobotState("home", qhome_);
   xbot_model_->setJointPosition(qhome_);
-  qstance_ = qhome_;
-  qswing_ = qhome_;
+
   xbot_model_->getJointLimits(qmin_, qmax_);
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
 
   // Initializations
-  des_joint_positions_.fill(0.0);
-  des_joint_velocities_.fill(0.0);
+  reset();
+  //des_joint_positions_.fill(0.0);
+  //des_joint_velocities_.fill(0.0);
+  //qstance_ = qhome_;
+  //qswing_ = qhome_;
 
 }
 
@@ -123,6 +125,16 @@ bool LegsKinematics::setJointHomePositions(Eigen::VectorXd& qhome)
 const Eigen::VectorXd& LegsKinematics::getJointHomePositions()
 {
   return qhome_;
+}
+
+void LegsKinematics::reset()
+{
+  des_joint_velocities_.setZero();
+  des_joint_positions_ = qhome_;
+  qstance_ = qhome_;
+  qswing_ = qhome_;
+  xbot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
 }
 
 void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
