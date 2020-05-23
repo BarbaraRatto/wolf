@@ -7,6 +7,7 @@
     <arg name="task_period" default="0.001" />
     <arg name="gazebo_debug" default="false" />
     <arg name="gazebo_gui" default="true" />
+    <arg name="full_gui" default="false" />
     <arg name="gazebo" default="true" />
     <arg name="arm" default="false" />
 
@@ -61,11 +62,6 @@
             <param name="autorepeat_rate " value="500" />
     </node>
 
-    <!-- plotJuggler -->
-    <node pkg="plotjuggler" type="PlotJuggler" name="PlotJuggler" ns="/$(arg robot_name)/wb_controller"
-        args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
-    </node>
-
     <!-- Convert joint states to TF transforms for rviz, etc -->
     <node name="$(arg robot_name)_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
         <remap from="/joint_states" to="/$(arg robot_name)/joint_states"/>
@@ -77,13 +73,21 @@
         <remap from="/joint_states" to="/$(arg robot_name)/ci/joint_states" />
     </node>
 
-    <!-- plot node launch -->
-    <include  file="$(find wb_controller)/launch/plot_node.launch">
-        <arg name="robot_name" value="$(arg robot_name)" />
-    </include>
 
-    <!-- Rviz -->
-    <node pkg="rviz" type="rviz" name="rviz">
-    </node>
+    <group if="$(arg full_gui)">
+	    <!-- plot node launch -->
+	    <include  file="$(find wb_controller)/launch/plot_node.launch">
+		<arg name="robot_name" value="$(arg robot_name)" />
+	    </include>
+
+	    <!-- plotJuggler -->
+	    <node pkg="plotjuggler" type="PlotJuggler" name="PlotJuggler" ns="/$(arg robot_name)/wb_controller"
+		args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
+	    </node>
+
+	    <!-- Rviz -->
+	    <node pkg="rviz" type="rviz" name="rviz">
+	    </node>
+   </group>
 
 </launch>
