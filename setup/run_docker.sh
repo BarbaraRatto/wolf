@@ -25,13 +25,10 @@ if [ `sudo systemctl is-active docker` = "inactive" ]; then
   sudo systemctl start docker
 fi
 
-if [ "$(docker container inspect $CONTAINER_NAME > /dev/null 2>&1)" ]; then
-	docker rm $CONTAINER_NAME
-fi
-
+# Cleanup the docker container before launching it
+docker rm -f $CONTAINER_NAME || true
 
 # Run the container with shared X11
-#--entrypoint "eval $(/usr/bin/ssh-agent -s) /usr/bin/ssh-add /home/`whoami`/.ssh/id_rsa"
 docker run --user `id -u`:sudo --hostname $HOSTNAME --device=/dev/dri:/dev/dri --privileged -e "QT_X11_NO_MITSHM=1" -e SHELL -e DISPLAY -e DOCKER=1 --name $CONTAINER_NAME \
 --gpus all \
 --device=/dev/ttyUSB0 \
