@@ -1,0 +1,5 @@
+# In order to create the debian packages with bloom, we need to setup rosdep frist.
+# Append the following line to /etc/ros/rosdep/sources.list.d/20-default.list 
+yaml http://localhost/wbc.yaml
+# Setup an apache server and place wbc.yaml on the server.
+# You can now debianize the packages!

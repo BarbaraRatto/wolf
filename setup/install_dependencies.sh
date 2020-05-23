@@ -9,19 +9,30 @@ COLOR_WARN="\033[0;33m"
 COLOR_BOLD="\033[1m"
 COLOR_UNDE="\033[4m"
 
-# Specify the ros distro
-ROS_DISTRO=kinetic
+# Check args
+if [ "$#" -lt 1 ]; then
+	ROS_DISTRO=melodic
+else
+	ROS_DISTRO=$1
+fi
 
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros-latest.list'
 wget https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -O - | sudo apt-key add -
 sudo apt-get update
 
-cat ./ros_deps_list.txt | grep -v \# | xargs printf -- "ros-${ROS_DISTRO}-%s\n" | xargs sudo apt-get install -y
+echo -e "${COLOR_INFO}Install system libraries${COLOR_RESET}"
+cat ./config/sys_deps_list.txt | grep -v \# | xargs sudo apt-get install -y
+
+echo -e "${COLOR_INFO}Install ROS packages${COLOR_RESET}"
+cat ./config/ros_deps_list.txt | grep -v \# | xargs printf -- "ros-${ROS_DISTRO}-%s\n" | xargs sudo apt-get install -y
+
+sudo ldconfig
 
 sudo rosdep init
 rosdep update
 
-sudo dpkg -i ./advr-superbuild*
+echo -e "${COLOR_INFO}Install the handmade debians${COLOR_RESET}"
+sudo dpkg -i ./debs/*.deb
 
 # Setup Bashrc
 if grep -Fwq "/opt/ros/${ROS_DISTRO}/setup.bash" ~/.bashrc
