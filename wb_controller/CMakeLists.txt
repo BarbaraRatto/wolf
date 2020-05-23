@@ -21,9 +21,9 @@ find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardwar
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
-find_package(PkgConfig)
+#find_package(PkgConfig)
 find_package(RBDL REQUIRED)
-pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
+#pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
