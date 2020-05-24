@@ -260,6 +260,16 @@ void StateEstimator::toggleHapticContactLoop()
     haptic_contact_loop_active_=!haptic_contact_loop_active_;
 }
 
+void StateEstimator::startHapticContactLoop()
+{
+    haptic_contact_loop_active_ = true;
+}
+
+void StateEstimator::stopHapticContactLoop()
+{
+    haptic_contact_loop_active_ = false;
+}
+
 void StateEstimator::startContactsEstimation()
 {
     contacts_estimation_active_ = true;

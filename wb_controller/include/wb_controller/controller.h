@@ -105,11 +105,6 @@ public:
     void toggleSolver();
 
     /**
-         * @brief Start/Stop the haptic contact loop
-         */
-    void toggleHapticContactLoop();
-
-    /**
          * @brief Start/Stop the base height control
          */
     void toggleBaseHeightControl();
@@ -272,8 +267,6 @@ private:
     std::atomic<bool> init_done_;
     /** @brief True if the pid control is active */
     std::atomic<bool> pid_active_;
-    /** @brief True if the haptic contact loop is active */
-    std::atomic<bool> haptic_contact_loop_active_;
     /** @brief True if the inertia compensation is active */
     std::atomic<bool> inertia_compensation_active_;
     /** @brief True if the controller is stopping */

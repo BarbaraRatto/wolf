@@ -28,8 +28,7 @@ Controller::Controller()
     ,solver_started_(false)
     ,init_done_(false)
     ,pid_active_(true)
-    ,haptic_contact_loop_active_(false)
-    ,inertia_compensation_active_(false)
+    ,inertia_compensation_active_(true)
     ,stopping_(false)
 {
 }
@@ -378,6 +377,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     kin_.reset(new LegsKinematics(gait_generator_,xbot_model_));
     kin_->setClikGain(default_clik_gain);
+    kin_->activateBaseHeightControl();
 
     std::string estimation_position_type;
     if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
@@ -442,7 +442,6 @@ void Controller::dynamicReconfigureUpdate()
 
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
-    default_config_.toggle_haptic = haptic_contact_loop_active_;
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
@@ -503,57 +502,54 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         toggleSolver();
         break;
     case 1:
-        toggleHapticContactLoop();
-        break;
-    case 2:
         toggleBaseHeightControl();
         break;
-    case 3:
+    case 2:
         toggleInertiaCompensation();
         break;
-    case 4:
+    case 3:
         setDutyFactor(config.duty_factor);
         break;
-    case 5:
+    case 4:
         setGaitType(config.gaits);
         break;
-    case 6:
+    case 5:
         setSwingFrequency(config.swing_frequency);
         break;
-    case 7:
+    case 6:
         cmds_->setLinearVelocity(config.base_linear_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< config.base_linear_vel);
         break;
-    case 8:
+    case 7:
         cmds_->setAngularVelocity(config.base_angular_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< config.base_angular_vel);
         break;
-    case 9:
+    case 8:
         cmds_->setStepHeight(config.step_height);
         break;
-    case 10:
+    case 9:
         state_estimator_->setContactThreshold(config.contact_force_th);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
         break;
-    case 11:
+    case 10:
         pid_scale_ = config.pid_scale;
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set pid scale to "<< config.pid_scale);
         break;
-    case 12:
+    case 11:
         cutoff_hz_qdot_ = config.cutoff_hz_qdot;
         qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for qdot filter at "<< config.cutoff_hz_qdot);
         break;
-    case 13:
+    case 12:
         cutoff_hz_gyro_ = config.cutoff_hz_gyro;
         imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
         break;
-    case 14:
+    case 13:
         kin_->setClikGain(config.clik_gain);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.clik_gain);
         break;
-    case 15:
+    case 14:
         // FIXME: this is not thread safe!
         // Kp swing
         Kp_swing_leg_(0,0) = config.kp_haa_swing;
@@ -573,7 +569,7 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         Kd_stance_leg_(2,2) = config.kd_kfe_stance;
         ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the postural");
         break;
-    case 16:
+    case 15:
         // FIXME: this is not thread safe!
         Kp_waist_(3,3) = config.kp_roll;
         Kp_waist_(4,4) = config.kp_pitch;
@@ -652,18 +648,6 @@ void Controller::toggleBaseHeightControl()
         kin_->deactivateBaseHeightControl();
         ROS_WARN_NAMED(CLASS_NAME,"Can not activate the base height control, the state estimator (%s) is not configured to do so!",state_estimator_->getPositionEstimationType().c_str());
     }
-}
-
-void Controller::toggleHapticContactLoop()
-{
-    haptic_contact_loop_active_=!haptic_contact_loop_active_;
-
-    state_estimator_->toggleHapticContactLoop();
-
-    if(haptic_contact_loop_active_)
-        ROS_INFO("Haptic contact loop is ON");
-    else
-        ROS_INFO("Haptic contact loop is OFF");
 }
 
 void Controller::toggleSolver()
@@ -782,6 +766,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             // Be sure to start the solver and the contact estimation when the robot is grounded.
             state_estimator_->resetGyroscopeIntegration();
             state_estimator_->startContactsEstimation();
+            state_estimator_->startHapticContactLoop();
             cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
             cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
@@ -799,12 +784,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
 
-            dynamicReconfigureUpdate();
+            dynamicReconfigureUpdate(); // FIXME Why is it here?
 
             init_done_ = true;
+
         }
 
-        cmds_->update(period.toSec());
+        cmds_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
 
         // FIXME I should add something to the FootholdsPlanner!!!
         // Get the external reference (interactive marker) for the arm if available
@@ -890,6 +876,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->getGroundReactionForces(des_contact_forces_);
 
         pid_active_ = false;
+
     }
     else // Use a position PID controller
     {
@@ -898,27 +885,18 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     if(pid_active_)
     {
-        for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
-        {
-            des_joint_p_gain_[i] = joint_p_gain_[i];
-            des_joint_i_gain_[i] = joint_i_gain_[i];
-            des_joint_d_gain_[i] = joint_d_gain_[i];
-        }
-    }
-    else
-    {
-        for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
-        {
-            des_joint_p_gain_[i] = pid_scale_ * joint_p_gain_[i];
-            des_joint_i_gain_[i] = pid_scale_ * joint_i_gain_[i];
-            des_joint_d_gain_[i] = pid_scale_ * joint_d_gain_[i];
-        }
-    }
-
-    if(pid_active_)
-    {
         des_joint_positions_ = kin_->getJointHomePositions();
         des_joint_efforts_solver_.fill(0.0);
+        pid_scale_ = 1.0;
+    }
+    else
+        pid_scale_ = 0.0;
+
+    for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
+    {
+        des_joint_p_gain_[i] = pid_scale_ * joint_p_gain_[i];
+        des_joint_i_gain_[i] = pid_scale_ * joint_i_gain_[i];
+        des_joint_d_gain_[i] = pid_scale_ * joint_d_gain_[i];
     }
 
     // Write to the hardware interface
@@ -931,7 +909,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                                                              -joint_velocities_(i+FLOATING_BASE_DOFS),
                                                              period);
 
-        des_joint_efforts_(i) = (1.0 - pid_scale_) * des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + des_joint_efforts_pids_(i);
+        des_joint_efforts_(i) = (1.0 - pid_scale_) * des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + pid_scale_ * des_joint_efforts_pids_(i);
 
         joint_states_[i].setCommand(des_joint_efforts_(i));
     }

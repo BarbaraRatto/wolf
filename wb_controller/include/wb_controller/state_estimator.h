@@ -93,6 +93,10 @@ public:
 
     void toggleHapticContactLoop();
 
+    void startHapticContactLoop();
+
+    void stopHapticContactLoop();
+
     void resetGyroscopeIntegration();
 
 private:
