@@ -1,24 +1,33 @@
-cmake_minimum_required(VERSION 2.8)
-PROJECT(iit-teleop-ros-pkg)
+cmake_minimum_required(VERSION 2.8.3)
+project(teleop_description)
 
-add_custom_target(  acm
-                    COMMAND ${CMAKE_SOURCE_DIR}/teleop_urdf/script/create_acm.sh teleop)
+find_package(catkin REQUIRED)
 
-add_custom_target(	remove_old_teleop_urdf_gazebo ALL
-    				COMMAND ${CMAKE_COMMAND} -E remove_directory 
-        			"~/.gazebo/models/teleop_urdf/")
 
-add_custom_target(  remove_old_teleop_gazebo ALL
-                    COMMAND ${CMAKE_COMMAND} -E remove_directory 
-                    "~/.gazebo/models/teleop/")
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES rrbot_description
+#  CATKIN_DEPENDS other_catkin_pkg
+#  DEPENDS system_lib
+)
 
-add_custom_target(  compile_urdf_sdf ALL
-                    COMMAND ${CMAKE_SOURCE_DIR}/teleop_urdf/script/create_urdf_srdf_sdf.sh teleop)
 
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    add_custom_target(	copy_teleop_gazebo ALL
-        				COMMAND ${CMAKE_COMMAND} -E copy_directory 
-            			"${PROJECT_SOURCE_DIR}/teleop_gazebo/sdf/" 
-            			"~/.gazebo/models/teleop/"
-            			DEPENDS remove_old_teleop_gazebo)
-endif()
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY meshes/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY urdf/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdf
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY script/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/script
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY docs/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/docs
+  PATTERN ".svn" EXCLUDE)

@@ -17,6 +17,7 @@
 
   <run_depend>xacro</run_depend>
   <run_depend>sensors_description</run_depend>
+  <run_depend>teleop_description</run_depend>
 
 </package>
 
