@@ -27,8 +27,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     {
         _feet[feet_names[i]].reset(new OpenSoT::tasks::acceleration::Cartesian(feet_names[i], *_model, feet_names[i],
                                                                                "world", _id->getJointsAccelerationAffine()));
-        // If we have a proper state estimation (i.e. with a fixed world), setting these values could be useful to avoid
-        // the robot to have slipery feet. Now if the base if moving, the feet follow the base. We should avoid that.
         _feet[feet_names[i]]->setLambda(0.,0.);
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
@@ -50,16 +48,16 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     //   --------------------------
     _waistRPY = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
                                                                             "world", _id->getJointsAccelerationAffine());
-    _waistRPY->setLambda(100.);
+    _waistRPY->setLambda(1.,1.);
     _waistRPY->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _waistZ = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
                                                                           "world", _id->getJointsAccelerationAffine());
-    _waistZ->setLambda(100.);
+    _waistZ->setLambda(1.,1.);
     _waistZ->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural.reset(new OpenSoT::tasks::acceleration::Postural(*_model, _id->getJointsAccelerationAffine()));
-    _postural->setLambda(200.,40.);
+    _postural->setLambda(1.,1.);
     _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
@@ -104,7 +102,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {
-        _stack /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural + _arm)
+        _stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
+                + 1000.0*_waistRPY%idw_RPY + _postural
+                + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3]
+                + _arm)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
     else
@@ -116,7 +117,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 #ifdef STACK_1
         // Stack with one level (gazebo rt factor 0.95):
         // we could use weights to emulate the case with two levels and save in this way some computational time or we could set the contacts as constraints.
-        _stack /= ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _waistRPY%idw_RPY + _postural)
+        _stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
+                + 1000.0*_waistRPY%idw_RPY + _postural
+                + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3])
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 1");
 #endif
@@ -170,11 +173,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     // Add some ROS magic
     _tasks_ros["waistRPY"] = std::make_shared<CartesianWrapper>(nh,_waistRPY); // WAIST RPY
-    _tasks_ros["waistZ"] = std::make_shared<CartesianWrapper>(nh,_waistZ); // WAIST Z
     for(unsigned int i=0; i<feet_names.size(); i++)
         _tasks_ros[feet_names[i]] = std::make_shared<CartesianWrapper>(nh,_feet[feet_names[i]]); // FEET
-
-    _tasks_ros["com"] = std::make_shared<ComWrapper>(nh,_com); // COM
     _tasks_ros["postural"] = std::make_shared<PosturalWrapper>(nh,_postural); // POSTURAL
 
     if(!arm_tip_name.empty())
@@ -207,6 +207,9 @@ void IDProblem::dynamicReconfigureCallback(wb_controller::problemConfig &config,
     case 1:
         setLowerForceBound(config.x_force_lower_lim,config.y_force_lower_lim,config.z_force_lower_lim);
         break;
+    case 2:
+        setMinFsWeight(config.minFs_weight);
+        break;
     default:
         break;
     }
@@ -219,7 +222,7 @@ void IDProblem::dynamicReconfigureUpdate()
     default_config_.x_force_lower_lim = _x_force_lower_lim;
     default_config_.y_force_lower_lim = _y_force_lower_lim;
     default_config_.z_force_lower_lim = _z_force_lower_lim;
-
+    default_config_.minFs_weight = _minfs[0]->getWeight()(0,0);
     if(server_)
         server_->updateConfig(default_config_);
 }
@@ -243,6 +246,56 @@ void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,c
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x force lower lim to: "<<x_force);
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set y force lower lim to: "<<y_force);
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<z_force);
+}
+
+void IDProblem::setMinFsWeight(const double& weight)
+{
+    if(weight>=0.0)
+    {
+        for(unsigned int i=0;i<_minfs.size();i++)
+        {
+            _minfs[i]->setWeight(Eigen::Matrix6d::Identity()*weight); // FIXME No-RT safe
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_minfs[i]->getTaskID()<<" weight to: "<<weight);
+        }
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setWaistRPYWeight(const double& weight)
+{
+    if(weight>=0.0 && _waistRPY)
+    {
+        _waistRPY->setWeight(Eigen::Matrix6d::Identity()*weight); // FIXME No-RT safe
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_waistRPY->getTaskID()<<" weight to: "<<weight);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setPosturalWeight(const double& weight)
+{
+    if(weight>=0.0 && _postural)
+    {
+        _postural->setWeight(weight);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<_postural->getTaskID()<<" weight to: "<<weight);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
+}
+
+void IDProblem::setFeetWeight(const double& weight)
+{
+    if(weight>=0.0)
+    {
+        for (auto& tmp_map : _feet)
+        {
+            tmp_map.second->setWeight(weight);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set "<<tmp_map.second->getTaskID()<<" weight to: "<<weight);
+        }
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Weight has to be positive!");
 }
 
 void IDProblem::reset()

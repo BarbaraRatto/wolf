@@ -16,7 +16,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface control_toolbox
+find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardware_interface
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
@@ -28,16 +28,16 @@ pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
   cfg/problem.cfg
-  cfg/task.cfg
+  cfg/taskCartesian.cfg
+  cfg/taskGeneric.cfg
+  cfg/taskPostural.cfg
 )
 
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
-                 ContactForces.msg)
-
-add_service_files(FILES
-                 Gains.srv)
+                 ContactForces.msg
+                 LoggerNumeric.msg)
 
 generate_messages(
     DEPENDENCIES
@@ -63,7 +63,7 @@ include_directories(
     ${RBDL_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/commands_interface.cpp src/state_estimator.cpp)
+add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/walking_pattern_generator.cpp src/state_estimator.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(${PROJECT_NAME} ${RBDL_LIBRARIES} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
@@ -95,21 +95,23 @@ install(DIRECTORY plot_juggler_files/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
   PATTERN ".svn" EXCLUDE)
 
+catkin_install_python(PROGRAMS scripts/keyboard_node
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-if (CATKIN_ENABLE_TESTING)
-  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
-  find_package(OpenSoT REQUIRED)
-  find_package(cartesian_interface REQUIRED)
-  include_directories(include ${catkin_INCLUDE_DIRS})
+#if (CATKIN_ENABLE_TESTING)
+#  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
+#  find_package(OpenSoT REQUIRED)
+#  find_package(cartesian_interface REQUIRED)
+#  include_directories(include ${catkin_INCLUDE_DIRS})
 
-  add_executable(robot_dummy test/robot_dummy.cpp)
-  target_link_libraries(robot_dummy ${catkin_LIBRARIES})
+#  add_executable(robot_dummy test/robot_dummy.cpp)
+#  target_link_libraries(robot_dummy ${catkin_LIBRARIES})
 
-  add_executable(test_state_estimation test/test_state_estimation.cpp)
-  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+#  add_executable(test_state_estimation test/test_state_estimation.cpp)
+#  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
-  add_rostest_gtest(wb_controller_test
-    test/wb_controller_test.test
-    test/wb_controller_test.cpp)
-  target_link_libraries(wb_controller_test ${catkin_LIBRARIES})
-endif()
+#  add_rostest_gtest(wb_controller_test
+#    test/wb_controller_test.test
+#    test/wb_controller_test.cpp)
+#  target_link_libraries(wb_controller_test ${catkin_LIBRARIES})
+#endif()

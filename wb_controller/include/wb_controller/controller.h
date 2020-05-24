@@ -30,9 +30,9 @@
 #include <chrono>
 // Controller
 #include <wb_controller/locomotion.h>
-#include <wb_controller/commands_interface.h>
+#include <wb_controller/walking_pattern_generator.h>
 #include <wb_controller/state_estimator.h>
-#include <wb_controller/joy.h>
+#include <wb_controller/device_interface.h>
 #include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/controllerConfig.h>
@@ -114,6 +114,11 @@ public:
     void toggleBaseHeightControl();
 
     /**
+         * @brief Start/Stop the inertia compensation at the leg level, useful if the robot has very low inertia at the knee joints
+         */
+    void toggleInertiaCompensation();
+
+    /**
          * @brief Set the duty cycle for the feet
          * @param const double duty_cycle
          */
@@ -139,7 +144,7 @@ public:
     /**
          * @brief Get the gait commands interface pointer
          */
-    CommandsInterface* getCommandsInterface() const;
+    WalkingPatternGenerator* getWalkingPatternGenerator() const;
 
     /**
          * @brief Get the state estimator pointer
@@ -250,8 +255,10 @@ private:
     ros::NodeHandle nh_;
     /** @brief Joy handler */
     JoyHandler::Ptr joy_handler_;
+    /** @brief Keyboard handler */
+    TwistHandler::Ptr keyboard_handler_;
     /** @brief Command interface */
-    CommandsInterface::Ptr cmds_;
+    WalkingPatternGenerator::Ptr cmds_;
     /** @brief State estimator */
     StateEstimator::Ptr state_estimator_;
     /** @brief pid scale, range between 0 and 1. 0 the pid is deactivated, 1 the pid is providing full torque */
@@ -276,6 +283,8 @@ private:
     std::atomic<bool> haptic_contact_loop_active_;
     /** @brief True if the control of the base height is active */
     std::atomic<bool> base_height_control_active_;
+    /** @brief True if the inertia compensation is active */
+    std::atomic<bool> inertia_compensation_active_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
 
@@ -291,7 +300,13 @@ private:
     Eigen::MatrixXd J_;
     Eigen::MatrixXd J_foot_;
     Eigen::Vector3d x_err_;
-    std::atomic<double> x_err_gain_;
+    std::atomic<double> clik_gain_;
+
+    // FIXME to be moved
+    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
+    Eigen::Matrix6d Kp_waist_, Kd_waist_;
+    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
+
 
     /**
          * @brief thread body for the odometry publisher
