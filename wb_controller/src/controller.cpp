@@ -442,6 +442,7 @@ void Controller::dynamicReconfigureUpdate()
 
     // Update the config for dynamic reconfigure
     default_config_.toggle_solver = solver_started_;
+    default_config_.toggle_inertia_compensation = inertia_compensation_active_;
     default_config_.pid_scale = pid_scale_;
     default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
     default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
