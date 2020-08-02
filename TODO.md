@@ -1,10 +1,8 @@
 Create a library for the wpg
 Experiments on the real robot
 Fix device interface
-Fix the swing frequency definition based on https://cseweb.ucsd.edu/classes/sp16/cse169-a/slides/CSE169_13.pdf
 IK with joint limits
 Update to cartesio when ready
-Add external api for the weights, to be used for a ML thesis
 Arm task
 change names dls -> wb ( can not because of the compatibility with the real hardware )
 push recovery
