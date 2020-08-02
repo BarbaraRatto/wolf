@@ -103,6 +103,24 @@ public:
     void setLowerForceBound(const double& x_force,const double& y_force,const double& z_force);
 
     /**
+     * @brief setLowerForceBoundX
+     * @param force
+     */
+    void setLowerForceBoundX(const double& force);
+
+    /**
+     * @brief setLowerForceBoundY
+     * @param force
+     */
+    void setLowerForceBoundY(const double& force);
+
+    /**
+     * @brief setLowerForceBoundZ
+     * @param force
+     */
+    void setLowerForceBoundZ(const double& force);
+
+    /**
      * @brief set the weight for the forces minimization task
      * @param weight
      */

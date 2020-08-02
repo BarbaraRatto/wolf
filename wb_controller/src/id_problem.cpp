@@ -255,6 +255,24 @@ void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,c
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<z_force);
 }
 
+void IDProblem::setLowerForceBoundX(const double& force)
+{
+    _x_force_lower_lim = force;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x force lower lim to: "<<force);
+}
+
+void IDProblem::setLowerForceBoundY(const double& force)
+{
+    _y_force_lower_lim = force;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set y force lower lim to: "<<force);
+}
+
+void IDProblem::setLowerForceBoundZ(const double& force)
+{
+    _z_force_lower_lim = force;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<force);
+}
+
 void IDProblem::setMinFsWeight(const double& weight)
 {
     if(weight>=0.0)
