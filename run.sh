@@ -3,13 +3,18 @@
 # These are fixed
 CONTAINER_NAME="wbc"
 IMAGE_NAME="wbc:latest"
-USAGE="Usage: ./run.sh [ROBOT_NAME=hyq|anymal] [WORLD_NAME=empty|ruins]\nExample: ./run.sh hyq ruins"
+USAGE="Usage: ./run.sh [ROBOT_NAME=hyq|anymal] [WORLD_NAME=empty|ruins] [GUI=false|true]\nExample: ./run.sh hyq ruins"
 
 # Check args
 if [[ ( $1 == "--help") ||  $1 == "-h" ]] 
 then 
 	echo -e $USAGE
 	exit 0
+fi
+if [ "$#" -lt 3 ]; then
+	GUI=false
+else
+	GUI=$3
 fi
 if [ "$#" -lt 2 ]; then
 	WORLD_NAME=empty
@@ -55,4 +60,4 @@ docker run --user `id -u`:sudo --hostname $HOSTNAME --device=/dev/dri:/dev/dri -
 --volume="$HOME/.ros:$HOME/.ros" \
 --volume="$HOME/.gazebo:$HOME/.gazebo" \
 --volume="$HOME/.ignition:$HOME/.ignition" \
--it $IMAGE_NAME $SHELL -c "eval export HOME=$HOME; cd $HOME; source /opt/ros/melodic/setup.bash; source /opt/ros/advr-superbuild/setup.bash; source $HOME/ros_ws/devel/setup.bash; roslaunch wb_controller wb_controller_bringup.launch robot_name:=$ROBOT_NAME world_name:=$WORLD_NAME.world"
+-it $IMAGE_NAME $SHELL -c "eval export HOME=$HOME; cd $HOME; source /opt/ros/melodic/setup.bash; source /opt/ros/advr-superbuild/setup.bash; source $HOME/ros_ws/devel/setup.bash; roslaunch wb_controller wb_controller_bringup.launch robot_name:=$ROBOT_NAME world_name:=$WORLD_NAME.world full_gui:=$GUI"
