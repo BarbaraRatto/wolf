@@ -9,6 +9,14 @@ using namespace OpenSoT;
 IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name):
     _model(model)
 {
+
+    // Load some params from the ROS server
+    double default_z_lower_force = 20; // [N]
+    if (!nh.getParam("default_z_lower_force", default_z_lower_force))
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"No default z lower force given in namespace %s, using a default value of %f.", nh.getNamespace().c_str(),default_z_lower_force);
+    }
+
     //
     // With links_in_contact we define which links are in contact with the environment
     //
@@ -85,7 +93,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     _x_force_lower_lim = -2000;
     _y_force_lower_lim = -2000;
-    _z_force_lower_lim = 20.0;
+    _z_force_lower_lim = default_z_lower_force;
 
     _wrench_upper_lims<<2000,2000,2000,Eigen::Vector3d::Zero();
     _wrench_lower_lims<<_x_force_lower_lim,_y_force_lower_lim,_z_force_lower_lim,Eigen::Vector3d::Zero();
