@@ -140,31 +140,37 @@ public:
 
     void callback(const sensor_msgs::Joy::ConstPtr& msg)
     {
-        base_velocity_y_scale_     = static_cast<double>(msg->axes[0]);
-        base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
-        base_velocity_z_scale_     = (static_cast<double>(msg->buttons[5])-static_cast<double>(msg->buttons[7])); //R1 and R2
 
-        base_yaw_scale_         = static_cast<double>(msg->axes[2]);
-        base_pitch_scale_       = static_cast<double>(msg->axes[3]);
-        base_roll_scale_        = -static_cast<double>(msg->axes[4]);
+        if(msg.get() && !msg->axes.empty() && !msg->buttons.empty())
+        {
 
-        start_swing_     = static_cast<bool>(msg->buttons[4]); // L1 button
-        reset_base_      = static_cast<bool>(msg->buttons[6]); // L2 button
+          base_velocity_y_scale_     = static_cast<double>(msg->axes[0]);
+          base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
+          base_velocity_z_scale_     = (static_cast<double>(msg->buttons[5])-static_cast<double>(msg->buttons[7])); //R1 and R2
 
-        joy_up_down_trigger_.update(static_cast<double>(msg->axes[5]));
+          base_yaw_scale_         = static_cast<double>(msg->axes[2]);
+          base_pitch_scale_       = static_cast<double>(msg->axes[3]);
+          base_roll_scale_        = -static_cast<double>(msg->axes[4]);
 
-        if(joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::UP)
-            cmds_->increaseStepHeight();
-        else if (joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::DOWN)
-            cmds_->decreaseStepHeight();
+          start_swing_     = static_cast<bool>(msg->buttons[4]); // L1 button
+          reset_base_      = static_cast<bool>(msg->buttons[6]); // L2 button
 
-        if(f_start_ && joy_start_button_trigger_.update(static_cast<bool>(msg->buttons[9])))
-            f_start_();
+          joy_up_down_trigger_.update(static_cast<double>(msg->axes[5]));
 
-        if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
-            f_select_();
+          if(joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::UP)
+              cmds_->increaseStepHeight();
+          else if (joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::DOWN)
+              cmds_->decreaseStepHeight();
 
-        update();
+          if(f_start_ && joy_start_button_trigger_.update(static_cast<bool>(msg->buttons[9])))
+              f_start_();
+
+          if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
+              f_select_();
+
+          update();
+
+        }
     }
 
     funct_t f_select_;
