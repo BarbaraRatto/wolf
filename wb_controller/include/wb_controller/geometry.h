@@ -2,6 +2,7 @@
 #define GEOMETRY_H
 
 #include <Eigen/Core>
+#include <XBotInterface/TypedefAndEnums.h>
 
 namespace wb_controller
 {
@@ -194,6 +195,17 @@ inline void rpyToEar(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
     Ear<< 1,   0,    -s_p,
           0,   c_r,  c_p*s_r,
           0,  -s_r,  c_p*c_r;
+}
+
+/**
+ * @brief computeCartesianInertiaInverse
+ * @param J Jacobian
+ * @param Mi joint inertia inverse
+ * @param Lambdai Cartesian inertia matrix inverse
+ */
+inline void computeCartesianInertiaInverse(const Eigen::MatrixXd& J, const Eigen::MatrixXd& Mi, Eigen::Matrix6d& Lambdai)
+{
+    Lambdai = J*Mi*J.transpose();
 }
 
 }; // namespace

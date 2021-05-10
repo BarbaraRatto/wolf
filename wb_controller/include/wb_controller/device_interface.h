@@ -5,7 +5,7 @@
 #include <atomic>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Twist.h>
-#include <wb_controller/walking_pattern_generator.h>
+#include <wb_controller/footholds_planner.h>
 #include <wb_controller/utils.h>
 
 
@@ -25,7 +25,7 @@ public:
      */
     typedef std::shared_ptr<const DeviceHandlerInterface> ConstPtr;
 
-    DeviceHandlerInterface(ros::NodeHandle& node, wb_controller::WalkingPatternGenerator::Ptr cmds, const std::string& topic)
+    DeviceHandlerInterface(ros::NodeHandle& node, wb_controller::FootholdsPlanner::Ptr cmds, const std::string& topic)
     {
         base_velocity_x_scale_     = 0.0;
         base_velocity_y_scale_     = 0.0;
@@ -52,7 +52,7 @@ protected:
 
         if(start_swing_)
         {
-            cmds_->setCmd(wb_controller::WalkingPatternGenerator::LINEAR_AND_ANGULAR); // Start the swing
+            cmds_->setCmd(wb_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
             cmds_->setBaseVelocityScaleX(base_velocity_x_scale_);
             cmds_->setBaseVelocityScaleY(base_velocity_y_scale_);
             cmds_->setBaseVelocityScaleZ(base_velocity_z_scale_);
@@ -62,14 +62,14 @@ protected:
         }
         else if(reset_base_)
         {
-            cmds_->setCmd(wb_controller::WalkingPatternGenerator::RESET_BASE); // Reset the base orientation and position (height)
+            cmds_->setCmd(wb_controller::FootholdsPlanner::RESET_BASE); // Reset the base orientation and position (height)
         }
         else if(std::abs(base_velocity_z_scale_)>0 ||
                 std::abs(base_yaw_scale_)       >0 ||
                 std::abs(base_pitch_scale_)     >0 ||
                 std::abs(base_roll_scale_)      >0  )
         {
-            cmds_->setCmd(wb_controller::WalkingPatternGenerator::BASE_ONLY); // Move the base orientation and Z
+            cmds_->setCmd(wb_controller::FootholdsPlanner::BASE_ONLY); // Move the base orientation and Z
             cmds_->setBaseVelocityScaleX(0.0);
             cmds_->setBaseVelocityScaleY(0.0);
             cmds_->setBaseVelocityScaleZ(base_velocity_z_scale_);
@@ -79,13 +79,13 @@ protected:
         }
         else
         {
-            cmds_->setCmd(wb_controller::WalkingPatternGenerator::HOLD); // HODOR!
+            cmds_->setCmd(wb_controller::FootholdsPlanner::HOLD); // HODOR!
         }
     }
 
     /** @brief Ros subscriber for the device */
     ros::Subscriber sub_;
-    wb_controller::WalkingPatternGenerator::Ptr cmds_;
+    wb_controller::FootholdsPlanner::Ptr cmds_;
     double base_velocity_x_scale_;
     double base_velocity_y_scale_;
     double base_velocity_z_scale_;
@@ -116,7 +116,7 @@ public:
      */
     typedef std::shared_ptr<const JoyHandler> ConstPtr;
 
-    JoyHandler(ros::NodeHandle& node, wb_controller::WalkingPatternGenerator::Ptr cmds, const std::string& topic = "joy")
+    JoyHandler(ros::NodeHandle& node, wb_controller::FootholdsPlanner::Ptr cmds, const std::string& topic = "joy")
         :DeviceHandlerInterface(node,cmds,topic)
     {
 
@@ -140,31 +140,37 @@ public:
 
     void callback(const sensor_msgs::Joy::ConstPtr& msg)
     {
-        base_velocity_y_scale_     = static_cast<double>(msg->axes[0]);
-        base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
-        base_velocity_z_scale_     = (static_cast<double>(msg->buttons[5])-static_cast<double>(msg->buttons[7])); //R1 and R2
 
-        base_yaw_scale_         = static_cast<double>(msg->axes[2]);
-        base_pitch_scale_       = static_cast<double>(msg->axes[3]);
-        base_roll_scale_        = -static_cast<double>(msg->axes[4]);
+        if(msg.get() && !msg->axes.empty() && !msg->buttons.empty())
+        {
 
-        start_swing_     = static_cast<bool>(msg->buttons[4]); // L1 button
-        reset_base_      = static_cast<bool>(msg->buttons[6]); // L2 button
+          base_velocity_y_scale_     = static_cast<double>(msg->axes[0]);
+          base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
+          base_velocity_z_scale_     = (static_cast<double>(msg->buttons[5])-static_cast<double>(msg->buttons[7])); //R1 and R2
 
-        joy_up_down_trigger_.update(static_cast<double>(msg->axes[5]));
+          base_yaw_scale_         = static_cast<double>(msg->axes[2]);
+          base_pitch_scale_       = static_cast<double>(msg->axes[3]);
+          base_roll_scale_        = -static_cast<double>(msg->axes[4]);
 
-        if(joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::UP)
-            cmds_->increaseStepHeight();
-        else if (joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::DOWN)
-            cmds_->decreaseStepHeight();
+          start_swing_     = static_cast<bool>(msg->buttons[4]); // L1 button
+          reset_base_      = static_cast<bool>(msg->buttons[6]); // L2 button
 
-        if(f_start_ && joy_start_button_trigger_.update(static_cast<bool>(msg->buttons[9])))
-            f_start_();
+          joy_up_down_trigger_.update(static_cast<double>(msg->axes[5]));
 
-        if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
-            f_select_();
+          if(joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::UP)
+              cmds_->increaseStepHeight();
+          else if (joy_up_down_trigger_.getStatus() == wb_controller::AxisToTrigger::DOWN)
+              cmds_->decreaseStepHeight();
 
-        update();
+          if(f_start_ && joy_start_button_trigger_.update(static_cast<bool>(msg->buttons[9])))
+              f_start_();
+
+          if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
+              f_select_();
+
+          update();
+
+        }
     }
 
     funct_t f_select_;
@@ -191,7 +197,7 @@ public:
      */
     typedef std::shared_ptr<const TwistHandler> ConstPtr;
 
-    TwistHandler(ros::NodeHandle& node, wb_controller::WalkingPatternGenerator::Ptr cmds, const std::string& topic = "twist")
+    TwistHandler(ros::NodeHandle& node, wb_controller::FootholdsPlanner::Ptr cmds, const std::string& topic = "twist")
         :DeviceHandlerInterface(node,cmds,topic)
     {
 

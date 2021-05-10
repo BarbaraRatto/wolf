@@ -1,0 +1,6 @@
+[submodule "rt_logger"]
+	path = rt_logger
+	url = https://github.com/graiola/rt_logger.git
+[submodule "setup"]
+	path = setup
+	url = git@github.com:graiola/wbc-setup.git

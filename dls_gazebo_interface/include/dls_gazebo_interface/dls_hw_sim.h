@@ -76,7 +76,7 @@ private:
 
   std::vector<gazebo::physics::JointPtr> sim_joints_;
   gazebo::physics::ModelPtr sim_model_;
-  gazebo::math::Pose inital_pose;
+  ignition::math::Pose3d inital_pose;
 
   ros::ServiceServer ss_;
   bool freeze_base_sim_;

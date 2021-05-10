@@ -37,7 +37,7 @@ class IDProblem
 
 public:
 
-    typedef boost::shared_ptr<IDProblem> Ptr;
+    typedef std::shared_ptr<IDProblem> Ptr;
 
     /**
      * @brief IDProblem constructor
@@ -101,6 +101,24 @@ public:
      * @param lower bound values
      */
     void setLowerForceBound(const double& x_force,const double& y_force,const double& z_force);
+
+    /**
+     * @brief setLowerForceBoundX
+     * @param force
+     */
+    void setLowerForceBoundX(const double& force);
+
+    /**
+     * @brief setLowerForceBoundY
+     * @param force
+     */
+    void setLowerForceBoundY(const double& force);
+
+    /**
+     * @brief setLowerForceBoundZ
+     * @param force
+     */
+    void setLowerForceBoundZ(const double& force);
 
     /**
      * @brief set the weight for the forces minimization task
@@ -214,7 +232,7 @@ private:
     Eigen::Vector6d _wrench_lower_lims;
 
     /** @brief ROS dynamic reconfigure */
-    dynamic_reconfigure::Server<wb_controller::problemConfig>* server_;
+    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::problemConfig>> server_;
     /** @brief ROS dynamic reconfigure config struct */
     wb_controller::problemConfig default_config_;
 

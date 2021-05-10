@@ -9,6 +9,14 @@ using namespace OpenSoT;
 IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name):
     _model(model)
 {
+
+    // Load some params from the ROS server
+    double default_z_lower_force = 20; // [N]
+    if (!nh.getParam("default_z_lower_force", default_z_lower_force))
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"No default z lower force given in namespace %s, using a default value of %f.", nh.getNamespace().c_str(),default_z_lower_force);
+    }
+
     //
     // With links_in_contact we define which links are in contact with the environment
     //
@@ -46,12 +54,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     }
 
     //   --------------------------
-    _waistRPY = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
+    _waistRPY = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
                                                                             "world", _id->getJointsAccelerationAffine());
     _waistRPY->setLambda(1.,1.);
     _waistRPY->setWeightIsDiagonalFlag(true);
     //   --------------------------
-    _waistZ = boost::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
+    _waistZ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
                                                                           "world", _id->getJointsAccelerationAffine());
     _waistZ->setLambda(1.,1.);
     _waistZ->setWeightIsDiagonalFlag(true);
@@ -60,9 +68,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     _postural->setLambda(1.,1.);
     _postural->setWeightIsDiagonalFlag(true);
     //   --------------------------
-    _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
-    _com->setLambda(0.);
-    _com->setWeightIsDiagonalFlag(true);
+    //_com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
+    //_com->setLambda(0.);
+    //_com->setWeightIsDiagonalFlag(true);
 
     //
     // Here we create the constraints & bounds
@@ -85,7 +93,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     _x_force_lower_lim = -2000;
     _y_force_lower_lim = -2000;
-    _z_force_lower_lim = 20.0;
+    _z_force_lower_lim = default_z_lower_force;
 
     _wrench_upper_lims<<2000,2000,2000,Eigen::Vector3d::Zero();
     _wrench_lower_lims<<_x_force_lower_lim,_y_force_lower_lim,_z_force_lower_lim,Eigen::Vector3d::Zero();
@@ -102,11 +110,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {
-        _stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
-                + 1000.0*_waistRPY%idw_RPY + _postural
-                + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3]
-                + _arm)
-                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+      _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+              / (_waistRPY%idw_RPY)
+              / (_arm)
+              / (_postural)
+              )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
     }
     else
     {
@@ -185,7 +193,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     // Set the callback for the dynamic reconfigure server
     ros::NodeHandle problem_nh("problem");
-    server_ = new dynamic_reconfigure::Server<wb_controller::problemConfig>(problem_nh);
+    server_.reset(new dynamic_reconfigure::Server<wb_controller::problemConfig>(problem_nh));
     server_->setCallback(boost::bind(&IDProblem::dynamicReconfigureCallback, this, _1, _2));
 
     dynamicReconfigureUpdate();
@@ -193,8 +201,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
 IDProblem::~IDProblem()
 {
-    if(server_)
-        delete server_;
 }
 
 void IDProblem::dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level)
@@ -223,6 +229,7 @@ void IDProblem::dynamicReconfigureUpdate()
     default_config_.y_force_lower_lim = _y_force_lower_lim;
     default_config_.z_force_lower_lim = _z_force_lower_lim;
     default_config_.minFs_weight = _minfs[0]->getWeight()(0,0);
+
     if(server_)
         server_->updateConfig(default_config_);
 }
@@ -246,6 +253,24 @@ void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,c
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x force lower lim to: "<<x_force);
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set y force lower lim to: "<<y_force);
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<z_force);
+}
+
+void IDProblem::setLowerForceBoundX(const double& force)
+{
+    _x_force_lower_lim = force;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x force lower lim to: "<<force);
+}
+
+void IDProblem::setLowerForceBoundY(const double& force)
+{
+    _y_force_lower_lim = force;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set y force lower lim to: "<<force);
+}
+
+void IDProblem::setLowerForceBoundZ(const double& force)
+{
+    _z_force_lower_lim = force;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<force);
 }
 
 void IDProblem::setMinFsWeight(const double& weight)

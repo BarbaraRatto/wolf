@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>wb_controller</name>
-  <version>0.0.0</version>
+  <version>0.0.2</version>
   <description>The controller package</description>
 
   <maintainer email="graiola@todo.todo">graiola</maintainer>
@@ -21,6 +21,7 @@
   <depend>dynamic_reconfigure</depend>
   <depend>message_generation</depend>
   <depend>message_runtime</depend>
+  <depend>rt_logger</depend>
   <depend>rospy</depend>
 
   <test_depend>controller_manager</test_depend>
