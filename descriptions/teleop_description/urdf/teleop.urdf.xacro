@@ -12,10 +12,10 @@
 -->
 
 <!-- ************ MODEL CONFIGURATION ************ -->
-<xacro:include filename="$(find teleop_urdf)/urdf/teleop_config.urdf.xacro" />
+<xacro:include filename="$(find teleop_description)/urdf/teleop_config.urdf.xacro" />
 
 <!-- ************ TELEOP BASE ************** -->
-<xacro:include filename="$(find teleop_urdf)/urdf/teleop_base.urdf.xacro"/>
+<xacro:include filename="$(find teleop_description)/urdf/teleop_base.urdf.xacro"/>
 
 <xacro:if value="${TELEOP_FLOATING_BASE}" >
 	<link name="world"/>

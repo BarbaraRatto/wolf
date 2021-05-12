@@ -8,16 +8,16 @@
   This file groups files to use COGIMON in GAZEBO
   
   -->
-  <xacro:include filename="$(find teleop_urdf)/urdf/teleop.urdf.xacro" />
+  <xacro:include filename="$(find teleop_description)/urdf/teleop.urdf.xacro" />
 
-  <xacro:include filename="$(find teleop_urdf)/urdf/gazebo/teleop.gazebo.xacro" />
+  <xacro:include filename="$(find teleop_description)/urdf/gazebo/teleop.gazebo.xacro" />
  
-  <xacro:include filename="$(find teleop_urdf)/urdf/gazebo/teleop_materials.gazebo.xacro" />
+  <xacro:include filename="$(find teleop_description)/urdf/gazebo/teleop_materials.gazebo.xacro" />
   
   <!--xacro:include filename="$(find cogimon_urdf)/urdf/gazebo/force_torque.gazebo.xacro" /-->
   
   
 
-  <xacro:include filename="$(find teleop_urdf)/urdf/gazebo/xbot_control.gazebo.xacro" />
+  <xacro:include filename="$(find teleop_description)/urdf/gazebo/xbot_control.gazebo.xacro" />
 
 </robot>

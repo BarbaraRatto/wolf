@@ -30,14 +30,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link0_visual">
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link0.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/_teleop_link0.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="red"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link0_collision">
-        <mesh filename="package://teleop_urdf/meshes/simple/_teleop_link0.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/simple/_teleop_link0.stl" scale="0.001 0.001 0.001" />
       </geometry>             
     </collision>
 </link>
@@ -51,14 +51,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="${PI_2} 0 ${-PI_2}"/>
       <geometry name="teleop_link1_visual">
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/_teleop_link1.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="red"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="${PI_2} 0 ${-PI_2}"/>
       <geometry name="teleop_link1_collision">
-        <mesh filename="package://teleop_urdf/meshes/simple/_teleop_link1.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/simple/_teleop_link1.stl" scale="0.001 0.001 0.001" />
       </geometry>             
     </collision>
 </link>
@@ -72,14 +72,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link2_visual">
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/_teleop_link2.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="red"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link2_collision">
-        <mesh filename="package://teleop_urdf/meshes/simple/_teleop_link2.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/simple/_teleop_link2.stl" scale="0.001 0.001 0.001" />
       </geometry>             
     </collision>
 </link>
@@ -93,14 +93,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link3_visual">
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/_teleop_link3.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="red"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link3_collision">
-        <mesh filename="package://teleop_urdf/meshes/simple/_teleop_link3.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/simple/_teleop_link3.stl" scale="0.001 0.001 0.001" />
       </geometry>             
     </collision>
 </link>
@@ -114,14 +114,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link4_visual">
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/_teleop_link4.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="red"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="${PI_2} 0 0"/>
       <geometry name="teleop_link4_collision">
-        <mesh filename="package://teleop_urdf/meshes/simple/_teleop_link4.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/simple/_teleop_link4.stl" scale="0.001 0.001 0.001" />
       </geometry>             
     </collision>
 </link>
@@ -136,14 +136,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="${PI_2} 0 ${PI}"/>
       <geometry name="teleop_link5_visual">
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link5.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/_teleop_link5.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="red"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="${PI_2} 0 ${PI}"/>
       <geometry name="teleop_link5_collision">
-        <mesh filename="package://teleop_urdf/meshes/simple/_teleop_link5.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/simple/_teleop_link5.stl" scale="0.001 0.001 0.001" />
       </geometry>             
     </collision>
 </link-->
@@ -158,14 +158,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="${PI_2} 0 ${PI}"/>
       <geometry name="teleop_link5_visual">
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link5.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/_teleop_link5.stl" scale="0.001 0.001 0.001" />
       </geometry>
       <material name="red"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="${PI_2} 0 ${PI}"/>
       <geometry name="teleop_link5_collision">
-        <mesh filename="package://teleop_urdf/meshes/simple/_teleop_link5.stl" scale="0.001 0.001 0.001" />
+        <mesh filename="package://teleop_description/meshes/simple/_teleop_link5.stl" scale="0.001 0.001 0.001" />
       </geometry>             
     </collision>
 </link>

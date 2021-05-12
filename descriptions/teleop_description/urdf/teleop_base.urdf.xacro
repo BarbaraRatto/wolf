@@ -32,7 +32,7 @@
 
 
 <!-- SELECTION OF KINEMATICS CHAINS IS HANDLED INSIDE THE FILES -->
-<xacro:include filename="$(find teleop_urdf)/urdf/parts/arm.urdf.xacro" />
+<xacro:include filename="$(find teleop_description)/urdf/parts/arm.urdf.xacro" />
 
 </robot>
 

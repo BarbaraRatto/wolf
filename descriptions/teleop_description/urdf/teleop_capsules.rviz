@@ -15,7 +15,7 @@
     <visual>
       <origin rpy="1.57079632679 0.0 0.0" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link0.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://teleop_description/meshes/_teleop_link0.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -47,7 +47,7 @@
     <visual>
       <origin rpy="1.57079632679 0.0 -1.57079632679" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://teleop_description/meshes/_teleop_link1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -79,7 +79,7 @@
     <visual>
       <origin rpy="1.57079632679 0.0 0.0" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link2.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://teleop_description/meshes/_teleop_link2.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -111,7 +111,7 @@
     <visual>
       <origin rpy="1.57079632679 0.0 0.0" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link3.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://teleop_description/meshes/_teleop_link3.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -143,7 +143,7 @@
     <visual>
       <origin rpy="1.57079632679 0.0 0.0" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link4.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://teleop_description/meshes/_teleop_link4.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -175,7 +175,7 @@
     <visual>
       <origin rpy="1.57079632679 0.0 3.14159265359" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="package://teleop_urdf/meshes/_teleop_link5.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://teleop_description/meshes/_teleop_link5.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
