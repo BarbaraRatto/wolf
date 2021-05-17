@@ -95,6 +95,10 @@ install(DIRECTORY plot_juggler_files/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
   PATTERN ".svn" EXCLUDE)
 
+install(DIRECTORY rviz_files/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/rviz_files
+  PATTERN ".svn" EXCLUDE)
+
 catkin_install_python(PROGRAMS scripts/keyboard_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
