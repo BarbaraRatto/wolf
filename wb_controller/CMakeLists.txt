@@ -21,6 +21,7 @@ find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardwar
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
+find_package(XBotInterface REQUIRED)
 #find_package(PkgConfig)
 find_package(RBDL REQUIRED)
 #pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
@@ -58,6 +59,7 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
+    ${XBotInterface_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
     ${RBDL_INCLUDE_DIRS}
 )
@@ -65,7 +67,7 @@ include_directories(
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/legs_kinematics.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(${PROJECT_NAME} #${RBDL_LIBRARIES}
-${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 add_dependencies(plot_node ${wb_controller_EXPORTED_TARGETS})

@@ -6,7 +6,7 @@
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
 #include <OpenSoT/tasks/MinimizeVariable.h>
-#include <OpenSoT/constraints/acceleration/DynamicFeasibility.h>
+#include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/iHQP.h>

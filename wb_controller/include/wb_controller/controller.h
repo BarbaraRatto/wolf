@@ -22,7 +22,6 @@
 #include <hardware_interface/joint_state_interface.h>
 #include <dls_hardware_interface/ground_truth_interface.h>
 // ADVR
-#include <cartesian_interface/open_sot/OpenSotImpl.h>
 #include <XBotCoreModel/XBotCoreModel.h>
 // STD
 #include <atomic>

@@ -75,7 +75,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     //
     // Here we create the constraints & bounds
     //
-    _dynamics.reset(new OpenSoT::constraints::acceleration::DynamicFeasibility("dynamics", *_model,
+    _dynamics.reset(new OpenSoT::tasks::acceleration::DynamicFeasibility("dynamics", *_model,
                                                                                _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), feet_names));
     OpenSoT::constraints::force::FrictionCones::friction_cones mus;
     Eigen::Matrix3d R; R.setIdentity();

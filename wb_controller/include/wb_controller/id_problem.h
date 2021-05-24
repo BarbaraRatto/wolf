@@ -6,7 +6,7 @@
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
 #include <OpenSoT/tasks/MinimizeVariable.h>
-#include <OpenSoT/constraints/acceleration/DynamicFeasibility.h>
+#include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/iHQP.h>
@@ -196,9 +196,9 @@ private:
     void dynamicReconfigureUpdate();
 
     /**
-     * @brief _dynamics constraint relates the floating base with the contact forces
+     * @brief _dynamics task relates the floating base with the contact forces
      */
-    constraints::acceleration::DynamicFeasibility::Ptr _dynamics;
+    tasks::acceleration::DynamicFeasibility::Ptr _dynamics;
 
     /**
      * @brief _friction_cones constraints
