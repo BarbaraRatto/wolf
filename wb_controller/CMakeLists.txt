@@ -23,7 +23,7 @@ find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(XBotInterface REQUIRED)
 #find_package(PkgConfig)
-find_package(RBDL REQUIRED)
+#find_package(RBDL REQUIRED)
 #pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 
 generate_dynamic_reconfigure_options(
@@ -61,7 +61,7 @@ include_directories(
     ${OpenSoT_INCLUDE_DIRS}
     ${XBotInterface_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
-    ${RBDL_INCLUDE_DIRS}
+#    ${RBDL_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/legs_kinematics.cpp)
