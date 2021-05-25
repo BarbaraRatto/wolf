@@ -75,8 +75,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     //
     // Here we create the constraints & bounds
     //
-    _dynamics.reset(new OpenSoT::tasks::acceleration::DynamicFeasibility("dynamics", *_model,
-                                                                               _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), feet_names));
+    _dynamics_task.reset(new OpenSoT::tasks::acceleration::DynamicFeasibility("dynamics", *_model,
+                                                                          _id->getJointsAccelerationAffine(), _id->getContactsWrenchAffine(), feet_names));
+
+    _dynamics_con.reset(new OpenSoT::constraints::TaskToConstraint(_dynamics_task));
+
+
     OpenSoT::constraints::force::FrictionCones::friction_cones mus;
     Eigen::Matrix3d R; R.setIdentity();
     _mu = 0.5;
@@ -114,7 +118,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
               / (_waistRPY%idw_RPY)
               / (_arm)
               / (_postural)
-              )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+              )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
     }
     else
     {
@@ -128,7 +132,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         _stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
                 + 1000.0*_waistRPY%idw_RPY + _postural
                 + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3])
-                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 1");
 #endif
 
@@ -138,7 +142,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         // postural e.g. the robot can not climb a slope if the base orientation is not adjusted to do so.
         _stack = ((1000.0*_feet[feet_names[0]]%idf + 1000.0*_feet[feet_names[1]]%idf + 1000.0*_feet[feet_names[2]]%idf + 1000.0*_feet[feet_names[3]]%idf + _waistRPY%idw_RPY)
                 / (_postural)
-                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 2");
 #endif
 
@@ -147,13 +151,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         // postural and RPY.
         _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
                 / (_waistRPY%idw_RPY + _postural)
-                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 3");
 #endif
 
 #ifdef STACK_4
         // Stack to perform the swing in the air, use freeze base to hold the robot in the air
-        _stack /= (_postural) <<_qddot_lims<<_dynamics;
+        _stack /= (_postural) <<_qddot_lims<<_dynamics_con;
         ROS_INFO("------------------ PROBLEM STACK 4");
 #endif
 
@@ -162,7 +166,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
                 / (_waistRPY%idw_RPY)
                 / (_postural)
-                )<<_wrenches_lims<<_qddot_lims<<_dynamics<<_friction_cones;
+                )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 5");
 #endif
 
@@ -328,7 +332,7 @@ void IDProblem::reset()
     _postural->reset();
     _waistRPY->reset();
     _waistZ->reset();
-    _com->resetReference();
+    //_com->resetReference();
     if(_arm)
         _arm->reset();
     for (auto& tmp_map : _feet)
@@ -384,7 +388,7 @@ void IDProblem::getGroundReactionForces(Eigen::VectorXd& grfs)
 
 void IDProblem::log(XBot::MatLogger::Ptr& logger)
 {
-    _id->log(logger);
-    _stack->log(logger);
-    _solver->log(logger);
+    //_id->log(logger);
+    //_stack->log(logger);
+    //_solver->log(logger);
 }

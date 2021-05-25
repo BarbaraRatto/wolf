@@ -13,6 +13,7 @@
 #include <OpenSoT/utils/InverseDynamics.h>
 #include <OpenSoT/constraints/force/FrictionCone.h>
 #include <OpenSoT/constraints/force/WrenchLimits.h>
+#include <OpenSoT/constraints/TaskToConstraint.h>
 
 // ROS
 #include <ros/ros.h>
@@ -196,9 +197,14 @@ private:
     void dynamicReconfigureUpdate();
 
     /**
-     * @brief _dynamics task relates the floating base with the contact forces
+     * @brief _dynamics_con constraint relates the floating base with the contact forces
      */
-    tasks::acceleration::DynamicFeasibility::Ptr _dynamics;
+    constraints::TaskToConstraint::Ptr _dynamics_con;
+
+    /**
+     * @brief _dynamics_task constraint relates the floating base with the contact forces
+     */
+    tasks::acceleration::DynamicFeasibility::Ptr _dynamics_task;
 
     /**
      * @brief _friction_cones constraints
