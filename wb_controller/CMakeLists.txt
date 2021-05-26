@@ -13,8 +13,6 @@ else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
-
 # ROS
 find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardware_interface
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger)
@@ -22,9 +20,6 @@ find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardwar
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(XBotInterface REQUIRED)
-#find_package(PkgConfig)
-#find_package(RBDL REQUIRED)
-#pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
@@ -61,13 +56,11 @@ include_directories(
     ${OpenSoT_INCLUDE_DIRS}
     ${XBotInterface_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
-#    ${RBDL_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/legs_kinematics.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
-target_link_libraries(${PROJECT_NAME} #${RBDL_LIBRARIES}
-${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 add_dependencies(plot_node ${wb_controller_EXPORTED_TARGETS})
