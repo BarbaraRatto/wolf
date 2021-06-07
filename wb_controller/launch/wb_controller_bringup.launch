@@ -82,7 +82,7 @@
 	    </include>
 
 	    <!-- plotJuggler -->
-	    <node pkg="plotjuggler" type="PlotJuggler" name="PlotJuggler" ns="/$(arg robot_name)/wb_controller"
+            <node pkg="plotjuggler" type="plotjuggler" name="plotjuggler" ns="/$(arg robot_name)/wb_controller"
 		args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
 	    </node>
 
