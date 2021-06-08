@@ -62,4 +62,4 @@ wb_controller:
       kp_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
       kd_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
 
-      clik_gain: 0.0
+      clik_gain: 1.0
