@@ -743,26 +743,4 @@
     <xacro:leg_transmission name="lh"/>
     <xacro:leg_gazebo name="lh" load_force_sensors="$(arg load_force_sensors)"/>
 
-
-    <xacro:if value="$(arg sensors)">
-        <!-- IMU trunk -->
-        <xacro:microstrain_3dmgx425_imu
-                parent="base"
-                imu_name="trunk_imu"
-                imu_topic="trunk_imu_1/data"
-                update_rate="250">
-                <origin xyz="0.27025 0.000 0.0967678" rpy="0 0 0"/>
-        </xacro:microstrain_3dmgx425_imu>
-
-        <xacro:kvh_1775_imu
-                parent="base"
-                imu_name="kvh_imu"
-                imu_topic="kvh_imu/data"
-                update_rate="250">
-                <origin xyz="0.316115 0.00 0.0887678" rpy="0 ${PI} ${PI/4}"/>
-        </xacro:kvh_1775_imu>
-
-
-    </xacro:if>
-
 </robot>
