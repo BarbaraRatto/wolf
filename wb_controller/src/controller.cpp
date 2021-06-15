@@ -206,6 +206,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     Kp_waist_.setZero();
     Kd_waist_.setZero();
+    Kp_arm_.setZero();
+    Kd_arm_.setZero();
     Kd_swing_leg_.setZero();
     Kp_swing_leg_.setZero();
     Kd_stance_leg_.setZero();
@@ -258,6 +260,26 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         {
             ROS_ERROR("Kp and Kd gains must be positive!");
             return false;
+        }
+
+        if(!arm_tip_name_.empty())
+        {
+          if (!controller_nh.getParam("gains/Kp_arm/" + _cartesian_names[i] , Kp_arm_(i,i)))
+          {
+              ROS_ERROR_NAMED(CLASS_NAME,"No Kp_arm_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
+              return false;
+          }
+          if (!controller_nh.getParam("gains/Kd_arm/" + _cartesian_names[i] , Kd_arm_(i,i)))
+          {
+              ROS_ERROR_NAMED(CLASS_NAME,"No Kd_arm_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
+              return false;
+          }
+          // Check if the values are positive
+          if(Kp_arm_(i,i)<0.0 || Kd_arm_(i,i)<0.0)
+          {
+              ROS_ERROR("Kp and Kd gains must be positive!");
+              return false;
+          }
         }
     }
 
@@ -795,6 +817,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // FIXME I should add something to the FootholdsPlanner!!!
         // Get the external reference (interactive marker) for the arm if available
+        if(!arm_tip_name_.empty())
+          id_prob_->_arm->setGains(Kp_arm_,Kd_arm_);
         id_prob_->updateReference(arm_tip_name_);
 
         // Set the task reference for the waist
@@ -802,9 +826,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
         rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
         tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
-
         id_prob_->_waistRPY->setGains(Kp_waist_,Kd_waist_);
-
         id_prob_->_waistRPY->setReference(tmp_affine3d_);
 
         if(inertia_compensation_active_)

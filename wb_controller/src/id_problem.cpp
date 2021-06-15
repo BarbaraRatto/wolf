@@ -44,7 +44,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         ROS_INFO("Initialize ARM task");
         _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
                                                                "world", _id->getJointsAccelerationAffine()));
-        _arm->setLambda(10.);
+        _arm->setLambda(1.,1.);
         _arm->setWeightIsDiagonalFlag(true);
 
         idx_grfs_start_ = 23;
@@ -129,7 +129,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
       //_stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
       //        / (_waistRPY%idw_RPY + _arm + _postural + _com)
       //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
-
 
       _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _com)
               / (_arm)

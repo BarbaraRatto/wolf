@@ -73,3 +73,6 @@ wb_controller:
       kp_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
       kd_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
 
+      kp_arm: {x: 500.0, y: 500.0, z: 500.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
+      kd_arm: {x: 50.0, y: 50.0, z: 50.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
+
