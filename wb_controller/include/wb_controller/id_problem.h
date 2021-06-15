@@ -80,12 +80,6 @@ public:
     void updateReference(const std::string& task_name);
 
     /**
-     * @brief log to log solver and autostaack status
-     * @param logger a pointer to a MatLogger
-     */
-    void log(XBot::MatLogger::Ptr& logger);
-
-    /**
      * @brief publish the ros topics related to the tasks
      * @param ros current time
      */
