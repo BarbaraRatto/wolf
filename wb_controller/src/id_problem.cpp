@@ -43,8 +43,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     {
         ROS_INFO("Initialize ARM task");
         _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
-                                                               "base_link", _id->getJointsAccelerationAffine()));
-        _arm->setLambda(100.);
+                                                               "world", _id->getJointsAccelerationAffine()));
+        _arm->setLambda(10.);
         _arm->setWeightIsDiagonalFlag(true);
 
         idx_grfs_start_ = 23;
@@ -114,9 +114,26 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {
-      _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
-              / (_waistRPY%idw_RPY)
+      //_stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+      //        / (_waistRPY%idw_RPY)
+      //        / (_arm)
+      //        / (_postural)
+      //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
+
+      //_stack /= ((6000*_feet[feet_names[0]]%idf + 6000*_feet[feet_names[1]]%idf + 6000*_feet[feet_names[2]]%idf + 6000*_feet[feet_names[3]]%idf
+      //        + _waistRPY%idw_RPY + _postural + _com + _arm
+      //        + 0.000001*_minfs[0] + 0.000001*_minfs[1] + 0.000001*_minfs[2] + 0.000001*_minfs[3])
+      //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
+
+      // questo fa sballare l'arm
+      //_stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+      //        / (_waistRPY%idw_RPY + _arm + _postural + _com)
+      //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
+
+
+      _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _com)
               / (_arm)
+              / (_waistRPY%idw_RPY)
               / (_postural)
               )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
     }
