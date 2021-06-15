@@ -281,7 +281,6 @@ private:
 
     // FIXME To be moved in a class handling the computation for impedances
     Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
-    Eigen::Matrix6d Kp_waist_, Kd_waist_, Kp_arm_, Kd_arm_;
     Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
 
 

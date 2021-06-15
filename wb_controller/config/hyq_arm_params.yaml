@@ -42,6 +42,8 @@ wb_controller:
   estimation_position_type: ground_truth
   estimation_orientation_type: ground_truth
   gains:
+      clik_gain: 1.0
+
       lf_haa_joint: {p: 300.0, i: 0.0, d: 10.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 10.0}
       lf_kfe_joint: {p: 200.0, i: 0.0, d: 6.0}
@@ -70,9 +72,11 @@ wb_controller:
       kp_stance: {haa: 400.0, hfe: 400.0, kfe: 400.0}
       kd_stance: {haa: 60.0, hfe: 60.0, kfe: 60.0}
 
-      kp_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
-      kd_waist: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
+      waistRPY:
+          Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
+          Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
 
-      kp_arm: {x: 500.0, y: 500.0, z: 500.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
-      kd_arm: {x: 50.0, y: 50.0, z: 50.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
+      TCP:
+          Kp: {x: 50.0, y: 50.0, z: 50.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
+          Kd: {x: 10.0, y: 10.0, z: 10.0, roll: 2.0, pitch: 2.0, yaw: 2.0}
 

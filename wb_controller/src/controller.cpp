@@ -204,10 +204,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         //pids_[i].initDynamicReconfig(controller_nh); // FIXME change namespace for the pids
     }
 
-    Kp_waist_.setZero();
-    Kd_waist_.setZero();
-    Kp_arm_.setZero();
-    Kd_arm_.setZero();
     Kd_swing_leg_.setZero();
     Kp_swing_leg_.setZero();
     Kd_stance_leg_.setZero();
@@ -243,46 +239,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
             return false;
         }
     }
-    for(unsigned int i=0; i<_cartesian_names.size(); i++)
-    {
-        if (!controller_nh.getParam("gains/kp_waist/" + _cartesian_names[i] , Kp_waist_(i,i)))
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"No kp_waist_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
-            return false;
-        }
-        if (!controller_nh.getParam("gains/kd_waist/" + _cartesian_names[i] , Kd_waist_(i,i)))
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"No kd_waist_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
-            return false;
-        }
-        // Check if the values are positive
-        if(Kp_waist_(i,i)<0.0 || Kd_waist_(i,i)<0.0)
-        {
-            ROS_ERROR("Kp and Kd gains must be positive!");
-            return false;
-        }
-
-        if(!arm_tip_name_.empty())
-        {
-          if (!controller_nh.getParam("gains/Kp_arm/" + _cartesian_names[i] , Kp_arm_(i,i)))
-          {
-              ROS_ERROR_NAMED(CLASS_NAME,"No Kp_arm_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
-              return false;
-          }
-          if (!controller_nh.getParam("gains/Kd_arm/" + _cartesian_names[i] , Kd_arm_(i,i)))
-          {
-              ROS_ERROR_NAMED(CLASS_NAME,"No Kd_arm_%s gain given in the namespace: %s. ",_cartesian_names[i].c_str(),controller_nh.getNamespace().c_str());
-              return false;
-          }
-          // Check if the values are positive
-          if(Kp_arm_(i,i)<0.0 || Kd_arm_(i,i)<0.0)
-          {
-              ROS_ERROR("Kp and Kd gains must be positive!");
-              return false;
-          }
-        }
-    }
-
     double default_clik_gain = 0.0; // Default value
     if (!controller_nh.getParam("gains/clik_gain", default_clik_gain))
     {
@@ -485,13 +441,6 @@ void Controller::dynamicReconfigureUpdate()
     default_config_.kd_hfe_stance = Kd_stance_leg_(1,1);
     default_config_.kd_kfe_stance = Kd_stance_leg_(2,2);
 
-    default_config_.kp_roll  = Kp_waist_(3,3);
-    default_config_.kp_pitch = Kp_waist_(4,4);
-    default_config_.kp_yaw   = Kp_waist_(5,5);
-    default_config_.kd_roll  = Kd_waist_(3,3);
-    default_config_.kd_pitch = Kd_waist_(4,4);
-    default_config_.kd_yaw   = Kd_waist_(5,5);
-
     if(gait_generator_)
     {
         default_config_.gaits = gait_generator_->getGaitType();
@@ -591,16 +540,6 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         Kd_stance_leg_(1,1) = config.kd_hfe_stance;
         Kd_stance_leg_(2,2) = config.kd_kfe_stance;
         ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the postural");
-        break;
-    case 15:
-        // FIXME: this is not thread safe!
-        Kp_waist_(3,3) = config.kp_roll;
-        Kp_waist_(4,4) = config.kp_pitch;
-        Kp_waist_(5,5) = config.kp_yaw;
-        Kd_waist_(3,3) = config.kd_roll;
-        Kd_waist_(4,4) = config.kd_pitch;
-        Kd_waist_(5,5) = config.kd_yaw;
-        ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the waistRPY");
         break;
     default:
         break;
@@ -817,8 +756,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // FIXME I should add something to the FootholdsPlanner!!!
         // Get the external reference (interactive marker) for the arm if available
-        if(!arm_tip_name_.empty())
-          id_prob_->_arm->setGains(Kp_arm_,Kd_arm_);
         id_prob_->updateReference(arm_tip_name_);
 
         // Set the task reference for the waist
@@ -826,7 +763,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
         rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
         tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
-        id_prob_->_waistRPY->setGains(Kp_waist_,Kd_waist_);
         id_prob_->_waistRPY->setReference(tmp_affine3d_);
 
         if(inertia_compensation_active_)
