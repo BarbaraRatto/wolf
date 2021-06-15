@@ -18,10 +18,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     }
 
     //
-    // With links_in_contact we define which links are in contact with the environment
-    //
-
-    //
     //  This utility internally creates the right variables which later we will use to
     //  create all the tasks and constraints
     //
@@ -83,7 +79,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     OpenSoT::constraints::force::FrictionCones::friction_cones mus;
     Eigen::Matrix3d R; R.setIdentity();
-    _mu = 0.5;
+    _mu = 0.7;
     for(unsigned int i = 0; i < feet_names.size(); i++)
         mus.push_back(std::pair<Eigen::Matrix3d,double> (R,_mu));
     _friction_cones.reset(new OpenSoT::constraints::force::FrictionCones(feet_names,_id->getContactsWrenchAffine(),*_model,mus));
@@ -108,6 +104,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
         _minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
 
+    std::list<unsigned int> idw_XY = {0,1}; //xy
     std::list<unsigned int> idw_Z = {2}; //z
     std::list<unsigned int> idw_RPY = {3,4,5}; //r,p,y
     std::list<unsigned int> idf = {0,1,2};
@@ -130,9 +127,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
       //        / (_waistRPY%idw_RPY + _arm + _postural + _com)
       //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
-      _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf + _com)
-              / (_arm)
-              / (_waistRPY%idw_RPY)
+      _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
+              / (_com%idw_XY)
+              / (0.5*_waistRPY%idw_RPY + _arm + 10.0*_com%idw_Z)
               / (_postural)
               )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
     }
@@ -348,7 +345,7 @@ void IDProblem::reset()
     _postural->reset();
     _waistRPY->reset();
     _waistZ->reset();
-    //_com->resetReference();
+    _com->reset();
     if(_arm)
         _arm->reset();
     for (auto& tmp_map : _feet)
@@ -400,11 +397,4 @@ void IDProblem::getGroundReactionForces(Eigen::VectorXd& grfs)
 
     //std::cout << "   ACCELLERATIONS FB *********** " << std::endl;
     //std::cout << _x.segment(0,6).transpose() << std::endl;
-}
-
-void IDProblem::log(XBot::MatLogger::Ptr& logger)
-{
-    //_id->log(logger);
-    //_stack->log(logger);
-    //_solver->log(logger);
 }
