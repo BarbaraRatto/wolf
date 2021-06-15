@@ -129,16 +129,18 @@ public:
     }
 };
 
-// Specializations
+// Specializations:
+
+// CARTESIAN - CARTESIAN
 template <>
-class TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>
-        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>
+class TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>
+        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>
 {
 
 public:
 
     TaskRosWrapper(ros::NodeHandle& nh, OpenSoT::tasks::acceleration::Cartesian::Ptr task):
-        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>(nh,task)
+        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>(nh,task)
     {
 
         task_->getActualPose(tmp_affine3d_);
@@ -147,81 +149,42 @@ public:
 
         tmp_quaterniond_ = tmp_affine3d_.linear();
 
-        marker_.reset(new interactive_markers::InteractiveMarkerServer(task_->getTaskID()));
+        createInteractiveMarker(tmp_affine3d_);
 
-        // create an interactive marker for our server
-        visualization_msgs::InteractiveMarker int_marker;
-        int_marker.header.frame_id = task_->getBaseLink();
-        int_marker.name = task_->getTaskID();
-        int_marker.description = task_->getTaskID();
+        // Load params
+        Eigen::Matrix6d Kp = Eigen::Matrix6d::Zero();
+        Eigen::Matrix6d Kd = Eigen::Matrix6d::Zero();
+        bool use_identity = false;
+        for(unsigned int i=0; i<wb_controller::_cartesian_names.size(); i++)
+        {
+            if (!nh.getParam("gains/"+task_->getTaskID()+"/Kp/" + wb_controller::_cartesian_names[i] , Kp(i,i)))
+            {
+                ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_->getTaskID().c_str(),nh.getNamespace().c_str());
+                use_identity = true;
+            }
+            if (!nh.getParam("gains/"+task_->getTaskID()+"/Kd/"  + wb_controller::_cartesian_names[i] , Kd(i,i)))
+            {
+                ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_->getTaskID().c_str(),nh.getNamespace().c_str());
+                use_identity = true;
+            }
+            // Check if the values are positive
+            if(Kp(i,i)<0.0 || Kd(i,i)<0.0)
+            {
+                ROS_WARN("Kp and Kd gains must be positive!");
+                use_identity = true;
+            }
+        }
 
-        wb_controller::affine3dToPose(tmp_affine3d_,int_marker.pose);
+        if(use_identity)
+        {
+          Kp = Eigen::Matrix6d::Identity();
+          Kd = Eigen::Matrix6d::Identity();
+        }
 
-        // create a grey box marker
-        visualization_msgs::Marker box_marker;
-        box_marker.type = visualization_msgs::Marker::SPHERE;
-        box_marker.scale.x = 0.2;
-        box_marker.scale.y = 0.2;
-        box_marker.scale.z = 0.2;
-        box_marker.color.r = 0.5;
-        box_marker.color.g = 0.5;
-        box_marker.color.b = 0.5;
-        box_marker.color.a = 0.5;
-
-        // create a non-interactive control which contains the box
-        visualization_msgs::InteractiveMarkerControl box_control;
-        box_control.always_visible = true;
-        box_control.markers.push_back( box_marker );
-
-        // add the control to the interactive marker
-        int_marker.controls.push_back( box_control );
-
-        visualization_msgs::InteractiveMarkerControl control;
-
-        control.orientation_mode = visualization_msgs::InteractiveMarkerControl::FIXED;
-
-        control.orientation.w = 1;
-        control.orientation.x = 1;
-        control.orientation.y = 0;
-        control.orientation.z = 0;
-        control.name = "rotate_x";
-        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
-        int_marker.controls.push_back(control);
-        control.name = "move_x";
-        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
-        int_marker.controls.push_back(control);
-
-        control.orientation.w = 1;
-        control.orientation.x = 0;
-        control.orientation.y = 1;
-        control.orientation.z = 0;
-        control.name = "rotate_z";
-        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
-        int_marker.controls.push_back(control);
-        control.name = "move_z";
-        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
-        int_marker.controls.push_back(control);
-
-        control.orientation.w = 1;
-        control.orientation.x = 0;
-        control.orientation.y = 0;
-        control.orientation.z = 1;
-        control.name = "rotate_y";
-        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
-        int_marker.controls.push_back(control);
-        control.name = "move_y";
-        control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
-        int_marker.controls.push_back(control);
-
-        // add the interactive marker to our collection &
-        // tell the server to call processFeedback() when feedback arrives for it
-        marker_->insert(int_marker, boost::bind(&TaskRosWrapper::processFeedback, this, _1));
-
-        // 'commit' changes and send to all clients
-        marker_->applyChanges();
+        task_->setGains(Kp,Kd);
     }
 
-    virtual void publish(const ros::Time& time)
+    virtual void publish(const ros::Time& time) override
     {
         if(rt_pub_->trylock())
         {
@@ -231,14 +194,18 @@ public:
             // ACTUAL VALUES
             task_->getActualPose(tmp_affine3d_);
             task_->getActualTwist(tmp_vector6d_);
+            wb_controller::rotTorpy(tmp_affine3d_.linear(),tmp_vector3d_);
             wb_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_actual);
             wb_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_actual);
+            wb_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_actual);
 
             // REFERENCE VALUES
             task_->getReference(tmp_affine3d_);
             tmp_vector6d_ = task_->getCachedVelocityReference();
+            wb_controller::rotTorpy(tmp_affine3d_.linear(),tmp_vector3d_);
             wb_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_reference);
             wb_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_reference);
+            wb_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_reference);
 
             rt_pub_->unlockAndPublish();
         }
@@ -250,7 +217,7 @@ public:
         task_->setReference(*rt_affine3d_.readFromRT());
     }
 
-    /*virtual void dynamicReconfigureCallback(wb_controller::taskCartesianConfig &config, uint32_t level)
+    virtual void dynamicReconfigureCallback(wb_controller::taskCartesianConfig &config, uint32_t level)
     {
         TaskRosWrapperBase::dynamicReconfigureCallback(config,level);
         switch(level)
@@ -299,7 +266,7 @@ public:
         default_config_.kd_yaw   = task_->getKd()(5,5);
 
         TaskRosWrapperBase::dynamicReconfigureUpdate();
-    }*/
+    }
 
 protected:
 
@@ -317,7 +284,7 @@ protected:
         wb_controller::quatToRotMat(orientation_reference,R);
 
         pose_reference.translation() = translation_reference;
-        pose_reference.linear() = R;
+        pose_reference.linear() = R.transpose();
 
         /*quaternion.x() = feedback->pose.orientation.x;
         quaternion.y() = feedback->pose.orientation.y;
@@ -328,9 +295,89 @@ protected:
         // FIXME no orientation yet
         rt_affine3d_.writeFromNonRT(pose_reference);
     }
+
+private:
+
+    void createInteractiveMarker(const Eigen::Affine3d& initial_pose)
+    {
+
+      marker_.reset(new interactive_markers::InteractiveMarkerServer(task_->getTaskID()));
+
+      // create an interactive marker for our server
+      visualization_msgs::InteractiveMarker int_marker;
+      int_marker.header.frame_id = task_->getBaseLink();
+      int_marker.name = task_->getTaskID();
+      int_marker.description = task_->getTaskID();
+
+      wb_controller::affine3dToPose(initial_pose,int_marker.pose);
+
+      // create a grey box marker
+      visualization_msgs::Marker box_marker;
+      box_marker.type = visualization_msgs::Marker::SPHERE;
+      box_marker.scale.x = 0.2;
+      box_marker.scale.y = 0.2;
+      box_marker.scale.z = 0.2;
+      box_marker.color.r = 0.5;
+      box_marker.color.g = 0.5;
+      box_marker.color.b = 0.5;
+      box_marker.color.a = 0.5;
+
+      // create a non-interactive control which contains the box
+      visualization_msgs::InteractiveMarkerControl box_control;
+      box_control.always_visible = true;
+      box_control.markers.push_back( box_marker );
+
+      // add the control to the interactive marker
+      int_marker.controls.push_back( box_control );
+
+      visualization_msgs::InteractiveMarkerControl control;
+
+      //control.orientation_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_3D;
+
+      control.orientation.w = 1;
+      control.orientation.x = 1;
+      control.orientation.y = 0;
+      control.orientation.z = 0;
+      control.name = "rotate_x";
+      control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+      int_marker.controls.push_back(control);
+      control.name = "move_x";
+      control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+      int_marker.controls.push_back(control);
+
+      control.orientation.w = 1;
+      control.orientation.x = 0;
+      control.orientation.y = 1;
+      control.orientation.z = 0;
+      control.name = "rotate_z";
+      control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+      int_marker.controls.push_back(control);
+      control.name = "move_z";
+      control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+      int_marker.controls.push_back(control);
+
+      control.orientation.w = 1;
+      control.orientation.x = 0;
+      control.orientation.y = 0;
+      control.orientation.z = 1;
+      control.name = "rotate_y";
+      control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+      int_marker.controls.push_back(control);
+      control.name = "move_y";
+      control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+      int_marker.controls.push_back(control);
+
+      // add the interactive marker to our collection &
+      // tell the server to call processFeedback() when feedback arrives for it
+      marker_->insert(int_marker, boost::bind(&TaskRosWrapper::processFeedback, this, _1));
+
+      // 'commit' changes and send to all clients
+      marker_->applyChanges();
+
+    }
 };
 
-
+// COM - GENERIC
 template <>
 class TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>
         : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>
@@ -364,6 +411,7 @@ public:
 
 };
 
+// POSTURAL - GENERIC
 template <>
 class TaskRosWrapper<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig>
         : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig>
@@ -462,7 +510,7 @@ public:
     }*/
 };
 
-typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig> CartesianWrapper;
+typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig> CartesianWrapper;
 typedef TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig> ComWrapper;
 typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig> PosturalWrapper;
 

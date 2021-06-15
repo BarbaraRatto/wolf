@@ -68,6 +68,13 @@ inline void vector6dToTwist(const Eigen::Vector6d& vector6d, geometry_msgs::Twis
     twist.angular.z = vector6d(5);
 }
 
+inline void vector3dToVector3(const Eigen::Vector3d& vector3d, geometry_msgs::Vector3& vector3)
+{
+    vector3.x = vector3d.x();
+    vector3.y = vector3d.y();
+    vector3.z = vector3d.z();
+}
+
 template <typename T>
 inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)
 { 

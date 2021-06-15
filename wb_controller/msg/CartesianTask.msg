@@ -3,3 +3,5 @@ geometry_msgs/Pose pose_actual
 geometry_msgs/Pose pose_reference
 geometry_msgs/Twist twist_actual
 geometry_msgs/Twist twist_reference
+geometry_msgs/Vector3 rpy_actual
+geometry_msgs/Vector3 rpy_reference
