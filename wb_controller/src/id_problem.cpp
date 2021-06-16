@@ -201,6 +201,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     for(unsigned int i=0; i<feet_names.size(); i++)
         _tasks_ros[feet_names[i]] = std::make_shared<CartesianWrapper>(nh,_feet[feet_names[i]]); // FEET
     _tasks_ros["postural"] = std::make_shared<PosturalWrapper>(nh,_postural); // POSTURAL
+    _tasks_ros["com"] = std::make_shared<ComWrapper>(nh,_com); // CoM
 
     if(!arm_tip_name.empty())
         _tasks_ros["TCP"] = std::make_shared<CartesianWrapper>(nh,_arm); // ARM
