@@ -46,8 +46,7 @@ namespace wb_controller
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
                                                                          hardware_interface::ImuSensorInterface,
-                                                                         hardware_interface::GroundTruthInterface>,
-                   public std::enable_shared_from_this<Controller>
+                                                                         hardware_interface::GroundTruthInterface>
 {
 public:
 
@@ -55,6 +54,11 @@ public:
      * @brief Shared pointer to Controller
      */
     typedef std::shared_ptr<Controller> Ptr;
+
+    /**
+     * @brief Weak pointer to Controller
+     */
+    typedef std::weak_ptr<Controller> WeakPtr;
 
     /**
      * @brief Shared pointer to const Controller
@@ -135,6 +139,11 @@ public:
     bool setSwingFrequency(const double& swing_frequency);
 
     /**
+         * @brief Get the id problem
+         */
+    OpenSoT::IDProblem* getIDProblem() const;
+
+    /**
          * @brief Get the gait generator pointer
          */
     GaitGenerator* getGaitGenerator() const;
@@ -153,6 +162,31 @@ public:
          * @brief Get the legs kinematics pointer
          */
     LegsKinematics* getLegsKinematics() const;
+
+    /**
+         * @brief Get Xbot Robot Model
+         */
+    XBot::ModelInterface* getXbotModel() const;
+
+    /**
+         * @brief Get feet names
+         */
+    const std::vector<std::string>& getFeetNames() const;
+
+    /**
+         * @brief Get desired contact forces
+         */
+    const Eigen::Vector3d& getDesiredContactForces(const std::string& contact_name) const;
+
+    /**
+         * @brief Get desired joint efforts
+         */
+    const Eigen::VectorXd& getDesiredJointEfforts() const;
+
+
+    // FIXME To be moved in a class handling the computation for impedances
+    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
+    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
 
 private:
 
@@ -178,10 +212,6 @@ private:
     Eigen::VectorXd joint_accellerations_;
     /** @brief Joint efforts */
     Eigen::VectorXd joint_efforts_;
-    /** @brief XBOT joint positions */
-    Eigen::VectorXd joint_positions_xbot_;
-    /** @brief XBOT joint velocities */
-    Eigen::VectorXd joint_velocities_xbot_;
     /** @brief Desired joint positions */
     Eigen::VectorXd des_joint_positions_;
     /** @brief Desired joint velocities */
@@ -240,8 +270,6 @@ private:
     std::vector<std::string> hips_names_;
     /** @brief Thread for the odometry publisher */
     std::shared_ptr<std::thread> odom_publisher_thread_;
-    /** @brief Thread for the rviz publisher */
-    std::shared_ptr<std::thread> rviz_publisher_thread_;
     /** @brief Gait generator */
     GaitGenerator::Ptr gait_generator_;
     /** @brief Legs Kinematics */
@@ -278,7 +306,7 @@ private:
     std::atomic<bool> inertia_compensation_active_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
-
+    /** @brief Manage the ros interfacing */
     RosWrapperInterface::Ptr ros_wrapper_;
 
     /** @brief Support temporary Affine3d */
@@ -287,11 +315,6 @@ private:
     Eigen::Vector3d tmp_vector3d_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
-
-    // FIXME To be moved in a class handling the computation for impedances
-    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
-    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
-
 
     /**
          * @brief thread body for the odometry publisher
