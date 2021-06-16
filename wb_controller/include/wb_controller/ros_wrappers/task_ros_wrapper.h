@@ -15,11 +15,6 @@
 #include <OpenSoT/constraints/force/WrenchLimits.h>
 
 // ROS
-#include <ros/ros.h>
-#include <dynamic_reconfigure/server.h>
-#include <interactive_markers/interactive_marker_server.h>
-#include <realtime_tools/realtime_publisher.h>
-#include <realtime_tools/realtime_buffer.h>
 #include <wb_controller/CartesianTask.h>
 #include <wb_controller/JointsTask.h>
 #include <wb_controller/taskGenericConfig.h>
@@ -27,43 +22,11 @@
 #include <wb_controller/taskCartesianConfig.h>
 
 // WB
+#include <wb_controller/ros_wrappers/ros_wrapper.h>
 #include <wb_controller/geometry.h>
-#include <wb_controller/utils.h>
-
-// STD
-#include <atomic>
-
-class TaskRosWrapperInterface
-{
-
-public:
-
-    typedef std::shared_ptr<TaskRosWrapperInterface> Ptr;
-
-    TaskRosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
-    virtual ~TaskRosWrapperInterface(){spinner_->stop();}
-
-    virtual void publish(const ros::Time& /*time*/) = 0;
-    virtual void updateReference() {}
-    virtual void dynamicReconfigureUpdate() {}
-
-protected:
-
-    std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_;
-    std::shared_ptr<ros::AsyncSpinner> spinner_;
-
-    Eigen::Affine3d       tmp_affine3d_;
-    Eigen::VectorXd       tmp_vectorxd_;
-    Eigen::Vector3d       tmp_vector3d_;
-    Eigen::Vector6d       tmp_vector6d_;
-    Eigen::Quaterniond    tmp_quaterniond_;
-
-    realtime_tools::RealtimeBuffer<Eigen::Affine3d> rt_affine3d_;
-
-};
 
 template <typename task_ptr_t, typename msg_t, typename config_t>
-class TaskRosWrapperBase : public TaskRosWrapperInterface
+class TaskRosWrapperBase : public RosWrapperInterface
 {
 
 public:

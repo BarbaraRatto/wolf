@@ -27,6 +27,7 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
+#include <memory>
 // Controller
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/legs_kinematics.h>
@@ -36,6 +37,7 @@
 #include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/controllerConfig.h>
+#include <wb_controller/ros_wrappers/ros_wrapper.h>
 // Eigen
 #include <Eigen/Geometry>
 
@@ -44,7 +46,8 @@ namespace wb_controller
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
                                                                          hardware_interface::ImuSensorInterface,
-                                                                         hardware_interface::GroundTruthInterface>
+                                                                         hardware_interface::GroundTruthInterface>,
+                   public std::enable_shared_from_this<Controller>
 {
 public:
 
@@ -276,6 +279,7 @@ private:
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
 
+    RosWrapperInterface::Ptr ros_wrapper_;
 
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;

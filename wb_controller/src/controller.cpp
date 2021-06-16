@@ -10,6 +10,7 @@
  */
 
 #include <wb_controller/controller.h>
+#include <wb_controller/ros_wrappers/controller_ros_wrapper.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -392,6 +393,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
     imu_gyroscope_filter_.setDamping(1.0);
     imu_gyroscope_filter_.setTimeStep(period_);
+
+    ros_wrapper_.reset(new ControllerRosWrapper(controller_nh,shared_from_this()));
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));

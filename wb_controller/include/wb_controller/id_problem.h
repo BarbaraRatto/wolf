@@ -23,7 +23,7 @@
 // WB
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
-#include <wb_controller/task_ros_wrapper.h>
+#include <wb_controller/ros_wrappers/task_ros_wrapper.h>
 
 // STD
 #include <atomic>
@@ -161,7 +161,7 @@ public:
     /**
      * @brief Expose the tasks to ROS
      */
-    std::map<std::string,TaskRosWrapperInterface::Ptr> _tasks_ros;
+    std::map<std::string,RosWrapperInterface::Ptr> _tasks_ros;
 
     /**
      * @brief _posture a postural task
