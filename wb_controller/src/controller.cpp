@@ -1017,5 +1017,9 @@ FootholdsPlanner* Controller::getFootholdsPlanner() const
     return cmds_.get();
 }
 
+LegsKinematics* Controller::getLegsKinematics() const
+{
+    return kin_.get();
+}
 
 } //namespace

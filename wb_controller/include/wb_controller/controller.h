@@ -146,6 +146,11 @@ public:
          */
     StateEstimator* getStateEstimator() const;
 
+    /**
+         * @brief Get the legs kinematics pointer
+         */
+    LegsKinematics* getLegsKinematics() const;
+
 private:
 
     /** @brief Joint names */
