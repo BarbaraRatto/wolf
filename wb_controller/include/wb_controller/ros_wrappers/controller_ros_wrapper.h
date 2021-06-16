@@ -34,6 +34,70 @@ public:
     {
         controller_ = controller_ptr;
 
+        // Defaults
+        double default_duty_factor = 0.3;
+        if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
+        {
+            ROS_WARN("No default duty factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+        }
+        double default_swing_frequency = 3.0; // [Hz]
+        if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
+        {
+            ROS_WARN("No default swing frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
+        }
+        double default_contact_threshold = 50.0; // [N]
+        if (!controller_nh.getParam("default_contact_threshold", default_contact_threshold))
+        {
+            ROS_WARN("No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
+        }
+        double default_step_height = 0.05; // [m]
+        if (!controller_nh.getParam("default_step_height", default_step_height))
+        {
+            ROS_WARN("No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
+        }
+        double max_step_height = 0.15; // [m]
+        if (!controller_nh.getParam("max_step_height", max_step_height))
+        {
+            ROS_WARN("No max step height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
+        }
+        double max_step_length = 0.5; // [m]
+        if (!controller_nh.getParam("max_step_length", max_step_length))
+        {
+            ROS_WARN("No max step length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
+        }
+        double default_base_linear_velocity = 0.5; // [m/s]
+        if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
+        {
+            ROS_WARN("No default base linear velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+        }
+        double default_base_angular_velocity = 0.5; // [rad/s]
+        if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
+        {
+            ROS_WARN("No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+        }
+        std::string estimation_position_type;
+        if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
+            ROS_WARN("No default estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
+        else
+            controller_->getStateEstimator()->setPositionEstimationType(estimation_position_type);
+
+        std::string estimation_orientation_type;
+        if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
+            ROS_WARN("No default estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
+        else
+            controller_->getStateEstimator()->setOrientationEstimationType(estimation_orientation_type);
+
+        controller_->getStateEstimator()->setContactThreshold(default_contact_threshold);
+
+        controller_->getGaitGenerator()->setSwingFrequency(default_swing_frequency);
+        controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
+
+        controller_->getFootholdsPlanner()->setLinearVelocity(default_base_linear_velocity);
+        controller_->getFootholdsPlanner()->setAngularVelocity(default_base_angular_velocity);
+        controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
+        controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
+        controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
+
         // Create the realtime publishers
         //ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4));
         //ci_joint_states_rt_pub_->msg_.name.resize(wb_controller::_dof_names.size());
@@ -67,72 +131,37 @@ public:
             controller_->toggleSolver();
             break;
         case 1:
-            controller_->toggleBaseHeightControl();
-            break;
-        case 2:
             controller_->toggleInertiaCompensation();
             break;
-        case 3:
+        case 2:
             controller_->setDutyFactor(config.duty_factor);
             break;
-        case 4:
+        case 3:
             controller_->setGaitType(config.gaits);
             break;
-        case 5:
+        case 4:
             controller_->setSwingFrequency(config.swing_frequency);
+            ROS_INFO_STREAM("Set swing frequency to "<< config.swing_frequency);
             break;
-        case 6:
+        case 5:
             controller_->getFootholdsPlanner()->setLinearVelocity(config.base_linear_vel);
             ROS_INFO_STREAM("Set base linear velocity to "<< config.base_linear_vel);
             break;
-        case 7:
+        case 6:
             controller_->getFootholdsPlanner()->setAngularVelocity(config.base_angular_vel);
             ROS_INFO_STREAM("Set base angular velocity to "<< config.base_angular_vel);
             break;
-        case 8:
+        case 7:
             controller_->getFootholdsPlanner()->setStepHeight(config.step_height);
+             ROS_INFO_STREAM("Set step height to "<< config.step_height);
             break;
-        case 9:
+        case 8:
             controller_->getStateEstimator()->setContactThreshold(config.contact_force_th);
             ROS_INFO_STREAM("Set contact force threshold to "<< config.contact_force_th);
             break;
-        case 10:
-            //pid_scale_ = config.pid_scale;
-            //ROS_INFO_STREAM("Set pid scale to "<< config.pid_scale);
-            break;
-        case 11:
-            //cutoff_hz_qdot_ = config.cutoff_hz_qdot;
-            //qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
-            //ROS_INFO_STREAM("Set cutoff frequency for qdot filter at "<< config.cutoff_hz_qdot);
-            break;
-        case 12:
-            //cutoff_hz_gyro_ = config.cutoff_hz_gyro;
-            //imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
-            //ROS_INFO_STREAM("Set cutoff frequency  for gyroscope filter at "<< config.cutoff_hz_gyro);
-            break;
-        case 13:
+        case 9:
             controller_->getLegsKinematics()->setClikGain(config.clik_gain);
             ROS_INFO_STREAM("Set x err gain at "<< config.clik_gain);
-            break;
-        case 14:
-            // FIXME: this is not thread safe!
-            // Kp swing
-            //Kp_swing_leg_(0,0) = config.kp_haa_swing;
-            //Kp_swing_leg_(1,1) = config.kp_hfe_swing;
-            //Kp_swing_leg_(2,2) = config.kp_kfe_swing;
-            //// Kd swing
-            //Kd_swing_leg_(0,0) = config.kd_haa_swing;
-            //Kd_swing_leg_(1,1) = config.kd_hfe_swing;
-            //Kd_swing_leg_(2,2) = config.kd_kfe_swing;
-            //// Kp stance
-            //Kp_stance_leg_(0,0) = config.kp_haa_stance;
-            //Kp_stance_leg_(1,1) = config.kp_hfe_stance;
-            //Kp_stance_leg_(2,2) = config.kp_kfe_stance;
-            //// Kd stance
-            //Kd_stance_leg_(0,0) = config.kd_haa_stance;
-            //Kd_stance_leg_(1,1) = config.kd_hfe_stance;
-            //Kd_stance_leg_(2,2) = config.kd_kfe_stance;
-            //ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the postural");
             break;
         default:
             break;
@@ -141,29 +170,6 @@ public:
 
     void dynamicReconfigureUpdate()
     {
-
-        // Update the config for dynamic reconfigure
-        //default_config_.toggle_solver = solver_started_;
-        //default_config_.toggle_inertia_compensation = inertia_compensation_active_;
-        //default_config_.pid_scale = pid_scale_;
-        //default_config_.cutoff_hz_qdot = cutoff_hz_qdot_;
-        //default_config_.cutoff_hz_gyro = cutoff_hz_gyro_;
-
-        default_config_.kp_haa_swing   = controller_->Kp_swing_leg_(0,0);
-        default_config_.kp_hfe_swing   = controller_->Kp_swing_leg_(1,1);
-        default_config_.kp_kfe_swing   = controller_->Kp_swing_leg_(2,2);
-
-        default_config_.kd_haa_swing   = controller_->Kd_swing_leg_(0,0);
-        default_config_.kd_hfe_swing   = controller_->Kd_swing_leg_(1,1);
-        default_config_.kd_kfe_swing   = controller_->Kd_swing_leg_(2,2);
-
-        default_config_.kp_haa_stance = controller_->Kp_stance_leg_(0,0);
-        default_config_.kp_hfe_stance = controller_->Kp_stance_leg_(1,1);
-        default_config_.kp_kfe_stance = controller_->Kp_stance_leg_(2,2);
-
-        default_config_.kd_haa_stance = controller_->Kd_stance_leg_(0,0);
-        default_config_.kd_hfe_stance = controller_->Kd_stance_leg_(1,1);
-        default_config_.kd_kfe_stance = controller_->Kd_stance_leg_(2,2);
 
         if(controller_->getGaitGenerator())
         {
@@ -182,7 +188,6 @@ public:
 
         if(controller_->getLegsKinematics())
         {
-            default_config_.toggle_base_height_control = controller_->getLegsKinematics()->isBaseHeightControlActive();
             default_config_.clik_gain = controller_->getLegsKinematics()->getClikGain();
         }
 

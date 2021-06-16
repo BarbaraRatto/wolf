@@ -101,11 +101,6 @@ public:
     void stopping(const ros::Time& time);
 
     /**
-         * @brief Ros dynamic reconfigure callback
-         */
-    void dynamicReconfigureCallback(wb_controller::controllerConfig &config, uint32_t level);
-
-    /**
          * @brief Start/Stop solver integration
          */
     void toggleSolver();
