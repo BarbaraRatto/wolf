@@ -13,55 +13,28 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <wb_controller/utils.h>
 #include <wb_controller/ContactForces.h>
+#include <wb_controller/CartesianTask.h>
 #include <rviz_visual_tools/rviz_visual_tools.h>
 
 namespace wb_controller
 {
 
-/** @brief Visual tools */
-rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+class ContactForcesVisualizer {
 
-ros::Subscriber subscriber_;
-void callbackContactForces(const wb_controller::ContactForces &msg);
-unsigned int decimate = 10;
-unsigned long long cnt = 0;
-Eigen::Isometry3d pose;
-Eigen::Vector3d vector;
-double norm;
-Eigen::Matrix3d R;
+  public:
 
-bool init(ros::NodeHandle& nh)
-{
+  ContactForcesVisualizer(ros::NodeHandle& nh)
+  {
+        cnt_ = 0;
+        decimate_ = 10;
 
-    ROS_INFO("Init");
+        subscriber_ = nh.subscribe("contact_forces", 1, &ContactForcesVisualizer::callbackContactForces, this);
+        visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","contact_forces_visual_marker"));
+  }
 
-    // Create subscribers
-    subscriber_ = nh.subscribe("contact_forces", 1, callbackContactForces);
-    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","contact_forces_visual_marker"));
-
-    return true;
-}
-
-void createArrow(const geometry_msgs::Vector3& force, const geometry_msgs::Vector3& position,  rviz_visual_tools::colors color)
-{
-    vector(0) = force.x;
-    vector(1) = force.y;
-    vector(2) = force.z;
-    norm = vector.norm();
-
-    //find rotation matrix to align 1 0  0 to force direction
-    R = Eigen::Quaterniond().setFromTwoVectors(Eigen::Vector3d::UnitX(),vector/norm).toRotationMatrix();
-    pose.linear() = R;
-    pose.translation().x() = position.x;
-    pose.translation().y() = position.y;
-    pose.translation().z() = position.z;
-    visual_tools_->publishArrow(pose, color, rviz_visual_tools::LARGE, norm/500.0);
-    visual_tools_->trigger();
-}
-
-void callbackContactForces(const wb_controller::ContactForces& msg)
-{
-    if(cnt++%decimate==0)
+  inline void callbackContactForces(const wb_controller::ContactForces &msg)
+  {
+    if(cnt_++%decimate_==0)
     {
         visual_tools_->deleteAllMarkers();
 
@@ -72,8 +45,87 @@ void callbackContactForces(const wb_controller::ContactForces& msg)
                 createArrow(msg.contact_forces[i].force,msg.contact_positions[i],rviz_visual_tools::GREEN);
         }
     }
+  }
 
-}
+private:
+
+  void createArrow(const geometry_msgs::Vector3& force, const geometry_msgs::Vector3& position,  rviz_visual_tools::colors color)
+  {
+      vector_(0) = force.x;
+      vector_(1) = force.y;
+      vector_(2) = force.z;
+      norm_ = vector_.norm()+0.00001;
+
+      //find rotation matrix to align 1 0  0 to force direction
+      R_ = Eigen::Quaterniond().setFromTwoVectors(Eigen::Vector3d::UnitX(),vector_/norm_).toRotationMatrix();
+      pose_.linear() = R_;
+      pose_.translation().x() = position.x;
+      pose_.translation().y() = position.y;
+      pose_.translation().z() = position.z;
+      visual_tools_->publishArrow(pose_, color, rviz_visual_tools::LARGE, norm_/500.0);
+      visual_tools_->trigger();
+  }
+
+  unsigned int cnt_;
+  unsigned int decimate_;
+  Eigen::Isometry3d pose_;
+  Eigen::Vector3d vector_;
+  double norm_;
+  Eigen::Matrix3d R_;
+  ros::Subscriber subscriber_;
+  rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+
+};
+
+class CoMVisualizer {
+
+  public:
+
+  CoMVisualizer(ros::NodeHandle& nh)
+  {
+        cnt_ = 0;
+        decimate_ = 10;
+
+        subscriber_ = nh.subscribe("CoM", 1, &CoMVisualizer::callbackCoM, this);
+        visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","com_visual_marker"));
+  }
+
+  void callbackCoM(const wb_controller::CartesianTask& msg)
+  {
+    if(cnt_++%decimate_==0)
+    {
+          visual_tools_->deleteAllMarkers();
+
+          pose_.linear() = Eigen::Matrix3d::Identity();
+
+          pose_.translation().x() = msg.pose_actual.position.x;
+          pose_.translation().y() = msg.pose_actual.position.y;
+          pose_.translation().z() = msg.pose_actual.position.z;
+
+          visual_tools_->publishSphere(pose_,rviz_visual_tools::GREEN,rviz_visual_tools::XXLARGE);
+
+          pose_.translation().x() = msg.pose_reference.position.x;
+          pose_.translation().y() = msg.pose_reference.position.y;
+          pose_.translation().z() = msg.pose_reference.position.z;
+
+          visual_tools_->publishSphere(pose_,rviz_visual_tools::BLUE,rviz_visual_tools::XXLARGE);
+
+          visual_tools_->trigger();
+      }
+
+  }
+
+private:
+
+  unsigned int cnt_;
+  unsigned int decimate_;
+  Eigen::Isometry3d pose_;
+  ros::Subscriber subscriber_;
+  rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+
+};
+
+
 
 } // namespace
 
@@ -85,9 +137,10 @@ int main(int argc, char **argv)
   //name space specified in the launch file
 
   ros::NodeHandle node("wb_controller");
-  wb_controller::init(node);
 
-  ROS_INFO("Ready to plot");
+  wb_controller::ContactForcesVisualizer cfv(node);
+  wb_controller::CoMVisualizer comv(node);
+
   ros::spin();
 
   return 0;
