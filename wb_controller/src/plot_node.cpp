@@ -94,28 +94,24 @@ class CoMVisualizer {
   {
     if(cnt_++%decimate_==0)
     {
-          visual_tools_->deleteAllMarkers();
+        visual_tools_->deleteAllMarkers();
 
-          pose_.linear() = Eigen::Matrix3d::Identity();
-
-          pose_.translation().x() = msg.pose_actual.position.x;
-          pose_.translation().y() = msg.pose_actual.position.y;
-          pose_.translation().z() = msg.pose_actual.position.z;
-
-          visual_tools_->publishSphere(pose_,rviz_visual_tools::GREEN,rviz_visual_tools::XXLARGE);
-
-          pose_.translation().x() = msg.pose_reference.position.x;
-          pose_.translation().y() = msg.pose_reference.position.y;
-          pose_.translation().z() = msg.pose_reference.position.z;
-
-          visual_tools_->publishSphere(pose_,rviz_visual_tools::BLUE,rviz_visual_tools::XXLARGE);
-
-          visual_tools_->trigger();
-      }
-
+        createSphere(msg.pose_actual,rviz_visual_tools::GREEN);
+        createSphere(msg.pose_reference,rviz_visual_tools::BLUE);
+    }
   }
 
 private:
+
+  void createSphere(const geometry_msgs::Pose& pose, rviz_visual_tools::colors color)
+  {
+    pose_.linear() = Eigen::Matrix3d::Identity();
+    pose_.translation().x() = pose.position.x;
+    pose_.translation().y() = pose.position.y;
+    pose_.translation().z() = pose.position.z;
+    visual_tools_->publishSphere(pose_,color,rviz_visual_tools::XXLARGE);
+    visual_tools_->trigger();
+  }
 
   unsigned int cnt_;
   unsigned int decimate_;
