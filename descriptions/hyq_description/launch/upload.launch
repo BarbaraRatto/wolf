@@ -10,6 +10,10 @@
         <!-- send hyq urdf to param server -->
         <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find hyq_description)/robots/hyq.urdf.xacro'
         arm:=$(arg arm) sensors:=$(arg sensors) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period)"/>
+        
+        <!-- send hyq.gazebo urdf to param server -->
+        <param name="gazebo_robot_description" command="$(find xacro)/xacro --inorder '$(find hyq_description)/robots/hyq.gazebo.xacro'
+        arm:=$(arg arm) sensors:=$(arg sensors) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period)"/>
 
         <!-- send hyq semantic description srdf to param server -->
         <!-- <group if="$(arg arm)">
