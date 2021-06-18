@@ -1,6 +1,7 @@
 # TODO list
 
-- Clean solo
+- Web app
+- Clean solo, test it without inertia comp.
 - Add kinova arm on aliengo
 - Clean contact forces stuff
 - Angular momentum task
