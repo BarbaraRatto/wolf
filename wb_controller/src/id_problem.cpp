@@ -56,13 +56,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     _waistRPY->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _waistZ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *_model, "base_link",
-                                                                          "world", _id->getJointsAccelerationAffine());
+                                                                        "world", _id->getJointsAccelerationAffine());
     _waistZ->setLambda(1.,1.);
     _waistZ->setWeightIsDiagonalFlag(true);
     //   --------------------------
     _postural.reset(new OpenSoT::tasks::acceleration::Postural(*_model, _id->getJointsAccelerationAffine()));
     _postural->setLambda(1.,1.);
     _postural->setWeightIsDiagonalFlag(true);
+
     //   --------------------------
     _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
     _com->setLambda(0.,1.);
@@ -104,10 +105,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
         _minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
 
-    std::list<unsigned int> idw_XY = {0,1}; //xy
-    std::list<unsigned int> idw_Z = {2}; //z
-    std::list<unsigned int> idw_RPY = {3,4,5}; //r,p,y
-    std::list<unsigned int> idf = {0,1,2};
+    std::list<unsigned int> id_XY = {0,1}; //xy
+    std::list<unsigned int> id_Z = {2}; //z
+    std::list<unsigned int> id_RPY = {3,4,5}; //r,p,y
+    std::list<unsigned int> id_XYZ = {0,1,2};
 
     if(!arm_tip_name.empty()) // FIXME Use the operators....
     {
@@ -127,11 +128,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
       //        / (_waistRPY%idw_RPY + _arm + _postural + _com)
       //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
-      _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
-              / (_com%idw_XY)
-              / (0.5*_waistRPY%idw_RPY + _arm + 10.0*_com%idw_Z)
+      _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
+              / (_com%id_XY)
+              / (0.5*_waistRPY%id_RPY + 0.25*_waistZ%id_Z + _arm + 50.0*_com%id_Z)
               / (_postural)
               )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
+
     }
     else
     {
@@ -176,8 +178,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
 #ifdef STACK_5
         // Make the contacts hard constraints
-        _stack = ((_feet[feet_names[0]]%idf + _feet[feet_names[1]]%idf + _feet[feet_names[2]]%idf + _feet[feet_names[3]]%idf)
-                / (_waistRPY%idw_RPY)
+        _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
+                / (_waistRPY%id_RPY)
                 / (_postural + _com)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 5");
@@ -198,6 +200,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     // Add some ROS magic
     _tasks_ros["waistRPY"] = std::make_shared<CartesianWrapper>(nh,_waistRPY); // WAIST RPY
+    _tasks_ros["waistZ"] = std::make_shared<CartesianWrapper>(nh,_waistZ); // WAIST Z
     for(unsigned int i=0; i<feet_names.size(); i++)
         _tasks_ros[feet_names[i]] = std::make_shared<CartesianWrapper>(nh,_feet[feet_names[i]]); // FEET
     _tasks_ros["postural"] = std::make_shared<PosturalWrapper>(nh,_postural); // POSTURAL
