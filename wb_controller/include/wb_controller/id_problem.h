@@ -148,12 +148,7 @@ public:
     /**
      * @brief _posture a postural task
      */
-    tasks::acceleration::Postural::Ptr _postural_stance;
-
-    /**
-     * @brief _posture a postural task
-     */
-    tasks::acceleration::Postural::Ptr _postural_swing;
+    tasks::acceleration::Postural::Ptr _postural;
 
     /**
      * @brief _x_lims some bounds
