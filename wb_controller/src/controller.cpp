@@ -765,6 +765,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
         id_prob_->_waistRPY->setReference(tmp_affine3d_);
 
+        id_prob_->_waistZ->setReference(tmp_affine3d_);
+
         if(inertia_compensation_active_)
         {
             Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS)
