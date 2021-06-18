@@ -314,6 +314,7 @@ private:
       // create a grey box marker
       visualization_msgs::Marker box_marker;
       box_marker.type = visualization_msgs::Marker::SPHERE;
+
       box_marker.scale.x = 0.1;
       box_marker.scale.y = 0.1;
       box_marker.scale.z = 0.1;

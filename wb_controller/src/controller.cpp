@@ -239,6 +239,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
             return false;
         }
     }
+
     double default_clik_gain = 0.0; // Default value
     if (!controller_nh.getParam("gains/clik_gain", default_clik_gain))
     {
