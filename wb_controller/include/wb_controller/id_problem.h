@@ -122,24 +122,6 @@ public:
     void setMinFsWeight(const double& weight);
 
     /**
-     * @brief set the weight for the waist task
-     * @param weight
-     */
-    void setWaistRPYWeight(const double& weight);
-
-    /**
-     * @brief set the weight for the postural task
-     * @param weight
-     */
-    void setPosturalWeight(const double& weight);
-
-    /**
-     * @brief set the weight for the contacts tasks
-     * @param weight
-     */
-    void setFeetWeight(const double& weight);
-
-    /**
          * @brief Ros dynamic reconfigure callback
          */
     void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
@@ -166,7 +148,12 @@ public:
     /**
      * @brief _posture a postural task
      */
-    tasks::acceleration::Postural::Ptr _postural;
+    tasks::acceleration::Postural::Ptr _postural_stance;
+
+    /**
+     * @brief _posture a postural task
+     */
+    tasks::acceleration::Postural::Ptr _postural_swing;
 
     /**
      * @brief _x_lims some bounds
