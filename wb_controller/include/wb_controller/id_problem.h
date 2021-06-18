@@ -148,12 +148,12 @@ public:
     /**
      * @brief _posture a postural task
      */
-    tasks::acceleration::Postural::Ptr _postural_stance;
+    tasks::acceleration::Postural::Ptr _postural;
+    SubTask::Ptr _postural_arm;
+    SubTask::Ptr _postural_floating_base;
+    std::map<std::string,SubTask::Ptr> _postural_feet_swing;
+    std::map<std::string,SubTask::Ptr> _postural_feet_stance;
 
-    /**
-     * @brief _posture a postural task
-     */
-    tasks::acceleration::Postural::Ptr _postural_swing;
 
     /**
      * @brief _x_lims some bounds

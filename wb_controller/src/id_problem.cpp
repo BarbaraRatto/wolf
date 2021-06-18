@@ -35,19 +35,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         _feet[feet_names[i]]->setWeightIsDiagonalFlag(true);
     }
     //   --------------------------
-    if(!arm_tip_name.empty())
-    {
-        ROS_INFO("Initialize ARM task");
-        _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
-                                                               "world", _id->getJointsAccelerationAffine()));
-        _arm->setLambda(1.,1.);
-        _arm->setWeightIsDiagonalFlag(true);
-
-        idx_grfs_start_ = 23;
-    }
-    else {
-        idx_grfs_start_ = 18;
-    }
 
     //   --------------------------
     _waistRPY = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
@@ -64,10 +51,50 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     _postural->setLambda(1.,1.);
     _postural->setWeightIsDiagonalFlag(true);
 
+
+
+    std::list<unsigned int> id_postural_floating_base = {0,1,2,3,4,5};
+    std::list<unsigned int> id_postural_lf  = {6,7,8};
+    std::list<unsigned int> id_postural_lh  = {9,10,11};
+    std::list<unsigned int> id_postural_rf  = {12,13,14};
+    std::list<unsigned int> id_postural_rh  = {15,16,17};
+    std::list<unsigned int> id_postural_arm = {18,19,20,21,22};
+
     //   --------------------------
     _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
     _com->setLambda(0.,1.);
     _com->setWeightIsDiagonalFlag(true);
+
+    if(!arm_tip_name.empty())
+    {
+        ROS_INFO("Initialize ARM task");
+        _arm.reset(new OpenSoT::tasks::acceleration::Cartesian(arm_tip_name, *_model, arm_tip_name,
+                                                               "world", _id->getJointsAccelerationAffine()));
+        _arm->setLambda(1.,1.);
+        _arm->setWeightIsDiagonalFlag(true);
+
+        _postural_arm = _postural%id_postural_arm;
+        _postural_arm->setActive(false);
+
+        idx_grfs_start_ = 23;
+    }
+    else {
+        idx_grfs_start_ = 18;
+    }
+
+
+    _postural_floating_base   = _postural%id_postural_floating_base;
+    _postural_feet_swing["lf_foot"] = _postural%id_postural_lf;
+    _postural_feet_swing["lh_foot"] = _postural%id_postural_lh;
+    _postural_feet_swing["rf_foot"] = _postural%id_postural_rf;
+    _postural_feet_swing["rh_foot"] = _postural%id_postural_rh;
+
+    _postural_feet_stance["lf_foot"] = _postural%id_postural_lf;
+    _postural_feet_stance["lh_foot"] = _postural%id_postural_lh;
+    _postural_feet_stance["rf_foot"] = _postural%id_postural_rf;
+    _postural_feet_stance["rh_foot"] = _postural%id_postural_rh;
+
+    _postural_floating_base->setActive(true);
 
     //
     // Here we create the constraints & bounds
@@ -105,8 +132,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
         _minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
 
-    std::list<unsigned int> id_XY = {0,1}; //xy
-    std::list<unsigned int> id_Z = {2}; //z
+    std::list<unsigned int> id_XY  = {0,1}; //xy
+    std::list<unsigned int> id_Z   = {2}; //z
     std::list<unsigned int> id_RPY = {3,4,5}; //r,p,y
     std::list<unsigned int> id_XYZ = {0,1,2};
 
@@ -128,10 +155,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
       //        / (_waistRPY%idw_RPY + _arm + _postural + _com)
       //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
-      _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
+      _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ
+                 +  _postural_feet_swing["lf_foot"] + _postural_feet_swing["lh_foot"] + _postural_feet_swing["rf_foot"] + _postural_feet_swing["rh_foot"] )
               / (_com%id_XY)
               / (0.5*_waistRPY%id_RPY + 0.25*_waistZ%id_Z + _arm + 50.0*_com%id_Z)
-              / (_postural)
+              / (_postural_feet_stance["lf_foot"] + _postural_feet_stance["lh_foot"] + _postural_feet_stance["rf_foot"] + _postural_feet_stance["rh_foot"]
+                 + _postural_floating_base)
               )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
     }
@@ -178,9 +207,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
 #ifdef STACK_5
         // Make the contacts hard constraints
-        _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
+        _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ +
+                   _postural_feet_swing["lf_foot"] + _postural_feet_swing["lh_foot"] + _postural_feet_swing["rf_foot"] + _postural_feet_swing["rh_foot"] )
+                / (_com)
                 / (_waistRPY%id_RPY)
-                / (_postural + _com)
+                / (_postural_feet_stance["lf_foot"] + _postural_feet_stance["lh_foot"] + _postural_feet_stance["rf_foot"] + _postural_feet_stance["rh_foot"]
+            + _postural_floating_base)
                 )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
         ROS_INFO("------------------ PROBLEM STACK 5");
 #endif

@@ -785,6 +785,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_feet[feet_names_[i]]->setActive(false);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                 ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
+                id_prob_->_postural_feet_swing[feet_names_[i]]->setActive(true);
+                id_prob_->_postural_feet_stance[feet_names_[i]]->setActive(false);
 
                 if(inertia_compensation_active_)
                 {
@@ -805,6 +807,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_feet[feet_names_[i]]->setActive(true);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                 ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
+                id_prob_->_postural_feet_swing[feet_names_[i]]->setActive(false);
+                id_prob_->_postural_feet_stance[feet_names_[i]]->setActive(true);
             }
         }
 
