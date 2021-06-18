@@ -1,10 +1,16 @@
 # TODO list
 
+- Clean solo
+- Add kinova arm on aliengo
+- Clean contact forces stuff
+- Angular momentum task
+- Convex hull in acceleration
+- Arm controlled in velocity (no state estimation)
+- State estimation
 - Clean Ros interfaces
 - add com/icp to stabilize the robot at low freq swings ML thesis
-- Com visualizer
 - Experiments on the real robot
-- Fix device interface
+- Fix device interface Add XBOX
 - IK with joint limits
 - change names dls -> wb ( can not because of the compatibility with the real hardware )
 - push recovery
