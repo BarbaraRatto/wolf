@@ -190,7 +190,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     _tasks_ros["postural"] = std::make_shared<PosturalWrapper>(nh,_postural); // POSTURAL
 
     if(!arm_tip_name.empty())
-        _tasks_ros["TCP"] = std::make_shared<CartesianWrapper>(nh,_arm); // ARM
+        _tasks_ros[arm_tip_name] = std::make_shared<CartesianWrapper>(nh,_arm); // ARM
 
     for (auto& tmp_map : _tasks_ros)
         tmp_map.second->dynamicReconfigureUpdate();

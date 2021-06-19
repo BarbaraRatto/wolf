@@ -15,7 +15,8 @@
 	<arg name="dls_empty_world" default="true"/>
 	<arg name="world_name" default="empty.world"/>
         <arg name="task_period" default="0.004"/>
-        <arg name="arm" default="false"/>
+        <arg name="arm_enabled" default="false"/>
+        <arg name="arm_name" default="teleop"/>
 
         <arg if="$(arg dls_empty_world)" name="full_world_name" default="$(find dls_gazebo_resources)/worlds/$(arg world_name)"/>
 	<arg unless="$(arg dls_empty_world)" name="full_world_name" default="worlds/$(arg world_name)"/>
@@ -46,21 +47,15 @@
         <include file="$(find anymal_description)/launch/upload.launch">
 		<arg name="sensors" value="$(arg sensors)" />
 		<arg name="internal_wrench" value="$(arg internal_wrench)" />
-                <arg name="task_period" value="$(arg task_period)" />
+                <arg name="arm_name" value="$(arg arm_name)" />
+                <arg name="arm_enabled" value="$(arg arm_enabled)" />
 	</include>
 
 	<!-- Spawn a robot into Gazebo -->
-        <node name="spawn_anymal_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model anymal -z 1.0"/>
+        <node name="spawn_anymal_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model anymal -z 0.5"/>
 
         <!-- Get robot to 0 position -->
         <node name="goto0" pkg="anymal_description" type="go0" args="1.0"  />
 
-	<!-- Start the stereo processing for the simulated multisense -->
-	<group if="$(arg sensors)">
-		<node ns="multisense/camera" name="stereo_proc" pkg="stereo_image_proc" type="stereo_image_proc" respawn="false" output="log">
-			<param name="disparity_range" type="int" value="128"/>
-			<param name="approximate_sync" type="bool" value="false"/>
-		</node>
-	</group>
 </launch>
 
