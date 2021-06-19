@@ -14,12 +14,10 @@ wb_controller:
   - rh_haa_joint
   - rh_hfe_joint
   - rh_kfe_joint
-  - z_joint_1
-  - z_joint_2
-  - z_joint_3
-  - z_joint_4
-  - z_joint_5
-  - z_joint_6
+  - kinova_joint_1
+  - kinova_joint_2
+  - kinova_joint_3
+  - kinova_joint_4
   feet:
   - rh_foot
   - lf_foot
@@ -30,7 +28,7 @@ wb_controller:
   - lf_hip
   - lh_hip
   - rf_hip
-  arm_tip: TCP
+  arm_tip: kinova_end_effector
   imu_sensor: trunk_imu
   default_swing_frequency: 2.5
   default_contact_threshold: 15.0
@@ -46,13 +44,10 @@ wb_controller:
 
       clik_gain: 1.0
 
-      z_joint_1: {p: 50.0, i: 0.0, d: 5.0}
-      z_joint_2: {p: 50.0, i: 0.0, d: 5.0}
-      z_joint_3: {p: 50.0, i: 0.0, d: 5.0}
-      z_joint_4: {p: 50.0, i: 0.0, d: 5.0}
-      z_joint_5: {p: 50.0, i: 0.0, d: 5.0}
-      z_joint_6: {p: 50.0, i: 0.0, d: 5.0}
-
+      kinova_joint_1: {p: 1.0, i: 0.0, d: 0.01}
+      kinova_joint_2: {p: 1.0, i: 0.0, d: 0.01}
+      kinova_joint_3: {p: 1.0, i: 0.0, d: 0.01}
+      kinova_joint_4: {p: 1.0, i: 0.0, d: 0.01}
 
       lf_haa_joint: {p: 100.0, i: 0.0, d: 5.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 8.0}
