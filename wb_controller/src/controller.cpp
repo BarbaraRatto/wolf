@@ -54,7 +54,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Hardware interfaces checks
     if(!jt_hw)
     {
-        ROS_ERROR("hardware_interface::EffortJointInterface not found");
+        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::EffortJointInterface not found");
         return false;
     }
     if(!imu_hw)
@@ -70,21 +70,71 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     else
         ground_truth_ = gt_hw->getHandle("ground_truth");
 
-    if (!controller_nh.getParam("joints", joint_names_))
+
+    // Create the ModelInterface from XBot
+    XBot::ConfigOptions opt;
+    std::string urdf, srdf, problem;
+
+    if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
     {
-        ROS_ERROR_NAMED(CLASS_NAME,"No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CLASS_NAME,"No robot_description given in namespace /");
         return false;
     }
-    if (!controller_nh.getParam("feet", feet_names_))
+    if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
     {
-        ROS_ERROR_NAMED(CLASS_NAME,"No feet given in the namespace: %s.", controller_nh.getNamespace().c_str());
+        ROS_ERROR_NAMED(CLASS_NAME,"No robot_semantic_description given in namespace /");
         return false;
     }
-    if (!controller_nh.getParam("arm_tip", arm_tip_name_))
+    if(!opt.set_urdf(urdf))
     {
-        ROS_WARN_NAMED(CLASS_NAME,"No arm tip name given in the namespace: %s, proceeding without using the arm.", controller_nh.getNamespace().c_str());
-        arm_tip_name_ = std::string();
+        ROS_ERROR_NAMED(CLASS_NAME,"Unable to load urdf");
+        return false;
     }
+    if(!opt.set_srdf(srdf))
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"Unable to load srdf");
+        return false;
+    }
+    if(!opt.generate_jidmap())
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"Unable to load jidmap");
+        return false;
+    }
+
+    opt.set_parameter("is_model_floating_base", true);
+    std::string model_type = "RBDL";
+    opt.set_parameter<std::string>("model_type", model_type);
+    xbot_model_ = XBot::ModelInterface::getModel(opt);
+
+    _dof_names = xbot_model_->getEnabledJointNames();
+
+    int n_arms = xbot_model_->arms();
+    int n_legs = xbot_model_->legs();
+    std::vector<int> actuated_joints = xbot_model_->getEnabledJointId();
+
+    // Load the joint names
+    for(unsigned int i=0;i<actuated_joints.size();i++)
+    {
+        if(actuated_joints[i]>0) // Filter out the floating base joints
+          joint_names_.push_back(xbot_model_->getJointByID(actuated_joints[i])->getJointName());
+    }
+
+    if(n_legs != N_LEGS)
+    {
+      ROS_ERROR_NAMED(CLASS_NAME,"Wrong number of legs, check the srdf file!");
+      return false;
+    }
+    for(int i=0;i<n_legs;i++)
+    {
+        feet_names_.push_back(xbot_model_->leg(i).getTipLinkName());
+    }
+    if(n_arms != 1)
+    {
+      ROS_ERROR_NAMED(CLASS_NAME,"Wrong number of arms, check the srdf file!");
+      return false;
+    }
+    arm_tip_name_ = xbot_model_->arm(0).getTipLinkName();
+
     if (!controller_nh.getParam("hips", hips_names_))
     {
         ROS_ERROR_NAMED(CLASS_NAME,"No hips given in the namespace: %s.", controller_nh.getNamespace().c_str());
@@ -259,42 +309,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     hips_names_ = sortByLegName(hips_names_);
     feet_names_ = sortByLegName(feet_names_);
-
-    // Create the ModelInterface from XBot
-    XBot::ConfigOptions opt;
-    std::string urdf, srdf, problem;
-
-    if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot_description given in namespace /");
-        return false;
-    }
-    if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot_semantic_description given in namespace /");
-        return false;
-    }
-    if(!opt.set_urdf(urdf))
-    {
-        ROS_ERROR("Unable to load urdf");
-        return false;
-    }
-    if(!opt.set_srdf(srdf))
-    {
-        ROS_ERROR("Unable to load srdf");
-        return false;
-    }
-    if(!opt.generate_jidmap())
-    {
-        ROS_ERROR("Unable to load jidmap");
-        return false;
-    }
-    opt.set_parameter("is_model_floating_base", true);
-    std::string model_type = "RBDL";
-    opt.set_parameter<std::string>("model_type", model_type);
-    xbot_model_ = XBot::ModelInterface::getModel(opt);
-
-    _dof_names = xbot_model_->getEnabledJointNames();
 
     // Initialize the inertia related matrices
     xbot_model_->getInertiaMatrix(M_);
@@ -809,7 +823,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                 ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
                 id_prob_->_postural_feet_swing[feet_names_[i]]->setActive(false);
-                id_prob_->_postural_feet_stance[feet_names_[i]]->setActive(true);
+                id_prob_->_postural_feet_stance[[i]]->setActive(true);
             }
         }
 
