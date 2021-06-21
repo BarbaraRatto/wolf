@@ -57,7 +57,7 @@ include_directories(
     ${cartesian_interface_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/legs_kinematics.cpp)
+add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/legs_kinematics.cpp src/quadruped_robot.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
 
@@ -103,7 +103,7 @@ if (CATKIN_ENABLE_TESTING)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
   add_executable(test_state_estimation test/test_state_estimation.cpp)
-  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
   add_executable(test_id_problem test/test_id_problem.cpp)
   target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
