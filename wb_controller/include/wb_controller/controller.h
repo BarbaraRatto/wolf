@@ -21,8 +21,6 @@
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <dls_hardware_interface/ground_truth_interface.h>
-// ADVR
-#include <XBotCoreModel/XBotCoreModel.h>
 // STD
 #include <atomic>
 #include <thread>
@@ -36,6 +34,7 @@
 #include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/controllerConfig.h>
+#include <wb_controller/quadruped_robot.h>
 // Eigen
 #include <Eigen/Geometry>
 

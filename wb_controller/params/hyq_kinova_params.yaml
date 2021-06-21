@@ -1,17 +1,6 @@
 wb_controller:
   type: wb_controller/Controller
   publish_rate: 250
-  feet:
-  - rh_foot
-  - lf_foot
-  - lh_foot
-  - rf_foot
-  arm_tip: kinova_end_effector
-  hips:
-  - rh_hipassembly
-  - lf_hipassembly
-  - lh_hipassembly
-  - rf_hipassembly
   imu_sensor: trunk_imu
   default_swing_frequency: 3.0
   default_contact_threshold: 50.0
