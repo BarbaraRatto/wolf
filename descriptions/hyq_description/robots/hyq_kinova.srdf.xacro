@@ -21,6 +21,18 @@
   <group name="rh_leg">
     <chain base_link="trunk" tip_link="rh_foot"/>
   </group>
+  <group name="feet">
+    <link name="lf_foot"/>
+    <link name="rf_foot"/>
+    <link name="lh_foot"/>
+    <link name="rh_foot"/>
+  </group>
+  <group name="hips">
+    <link name="lf_hipassembly"/>
+    <link name="rf_hipassembly"/>
+    <link name="lh_hipassembly"/>
+    <link name="rh_hipassembly"/>
+  </group>
   <group name="legs">
     <group name="lf_leg"/>
     <group name="rf_leg"/>
