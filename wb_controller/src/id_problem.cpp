@@ -49,6 +49,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
         idx_grfs_start_ = 18;
     }
 
+    _angular_momentum.reset(new OpenSoT::tasks::acceleration::AngularMomentum(*_model,_id->getJointsAccelerationAffine()));
+    _angular_momentum->setLambda(1.);
+    _angular_momentum->setWeightIsDiagonalFlag(true);
+    _angular_momentum->setReference(Eigen::Vector3d::Zero());
+    _angular_momentum->setMomentumGain(Eigen::Matrix3d::Identity()*10.0);
+
     //   --------------------------
     _waistRPY = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
                                                                             "world", _id->getJointsAccelerationAffine());

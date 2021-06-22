@@ -4,6 +4,7 @@
 // OpenSoT
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
+#include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
 #include <OpenSoT/tasks/MinimizeVariable.h>
 #include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
@@ -134,6 +135,7 @@ public:
     tasks::acceleration::Cartesian::Ptr _waistRPY;
     tasks::acceleration::Cartesian::Ptr _waistZ;
     tasks::acceleration::CoM::Ptr _com;
+    tasks::acceleration::AngularMomentum::Ptr _angular_momentum;
 
     /**
      * @brief Forces minimization tasks
