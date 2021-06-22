@@ -50,10 +50,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     }
 
     _angular_momentum.reset(new OpenSoT::tasks::acceleration::AngularMomentum(*_model,_id->getJointsAccelerationAffine()));
-    _angular_momentum->setLambda(1.);
+    _angular_momentum->setLambda(0.);
     _angular_momentum->setWeightIsDiagonalFlag(true);
-    _angular_momentum->setReference(Eigen::Vector3d::Zero());
-    _angular_momentum->setMomentumGain(Eigen::Matrix3d::Identity()*10.0);
+    _angular_momentum->setReference(Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
+    _angular_momentum->setMomentumGain(Eigen::Matrix3d::Identity());
 
     //   --------------------------
     _waistRPY = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *_model, "base_link",
@@ -136,7 +136,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
       _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
               / (_com%id_XY)
-              / (0.5*_waistRPY%id_RPY + 0.25*_waistZ%id_Z + _arm + 50.0*_com%id_Z)
+              / (0.5*_waistRPY%id_RPY + 0.25*_waistZ%id_Z + _arm + 50.0*_com%id_Z + _angular_momentum)
               / (_postural)
               )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
