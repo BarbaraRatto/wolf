@@ -134,12 +134,21 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
       //        / (_waistRPY%idw_RPY + _arm + _postural + _com)
       //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
-      // Stack world
+      // Stack world statico
       _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
               / (_com%id_XY)
               / (0.5*_waistRPY%id_RPY + 0.25*_waistZ%id_Z + _arm + 50.0*_com%id_Z + _angular_momentum)
               / (_postural)
               )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
+
+      // Stack base_link camminata
+      // _arm->setLambda(100.);
+      // _arm->setBaseLink("base_link")
+      //_stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
+      //        / (_waistRPY%id_RPY)
+      //        / (_arm)
+      //        / (_postural + _com + _angular_momentum)
+      //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
     }
     else
