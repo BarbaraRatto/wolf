@@ -112,6 +112,25 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
     }
 
+    // Create the quadruped robot object, it wraps the xbot model with some meta information
+    std::string urdf, srdf;
+    if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
+    {
+        throw std::runtime_error("No robot_description given in namespace /");
+    }
+    if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
+    {
+        throw std::runtime_error("No robot_semantic_description given in namespace /");
+    }
+    robot_model_.reset(new QuadrupedRobot(urdf,srdf));
+    //FIXME
+    xbot_model_ = robot_model_->getXBotModel();
+    joint_names_ = robot_model_->getJointNames();
+    feet_names_ = robot_model_->getFootNames();
+    hips_names_ = robot_model_->getHipNames();
+    if(robot_model_->getNumberArms()==1)
+      arm_tip_name_ = robot_model_->getArmNames()[0];
+
     // Setting up joint handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
     {
@@ -223,19 +242,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
     }
 
-    // Assume we are working with a dog
-    if(hips_names_.size()!=N_LEGS)
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of hips!");
-        return false;
-    }
-    if(feet_names_.size()!=N_LEGS)
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of feet!");
-        return false;
-    }
-    hips_names_ = sortByLegName(hips_names_);
-    feet_names_ = sortByLegName(feet_names_);
+
+
 
     // Initialize the inertia related matrices
     xbot_model_->getInertiaMatrix(M_);

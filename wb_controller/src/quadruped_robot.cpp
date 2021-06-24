@@ -15,23 +15,12 @@ using namespace XBot;
 
 namespace wb_controller {
 
-QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& root_nh)
+QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 {
 
   // Create the ModelInterface from XBot
   XBot::ConfigOptions opt;
-  std::string urdf, srdf;
 
-  nh_ = root_nh;
-
-  if(!nh_.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
-  {
-      throw std::runtime_error("No robot_description given in namespace /");
-  }
-  if(!nh_.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
-  {
-      throw std::runtime_error("No robot_semantic_description given in namespace /");
-  }
   if(!opt.set_urdf(urdf))
   {
       throw std::runtime_error("Unable to load URDF file");
@@ -52,8 +41,8 @@ QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& root_nh)
 
   _dof_names = xbot_model_->getEnabledJointNames();
 
-  int n_arms = xbot_model_->arms();
-  int n_legs = xbot_model_->legs();
+  n_arms_ = xbot_model_->arms();
+  n_legs_ = xbot_model_->legs();
   std::vector<int> actuated_joints = xbot_model_->getEnabledJointId();
 
   // Load the joint names
@@ -63,15 +52,17 @@ QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& root_nh)
         joint_names_.push_back(xbot_model_->getJointByID(actuated_joints[i])->getJointName());
   }
 
-  if(n_legs != N_LEGS)
+  if(n_legs_ != N_LEGS)
   {
     throw std::runtime_error("Wrong number of legs, check the SRDF file!");
   }
-  if(n_arms != N_ARMS)
+  if(n_arms_ > N_ARMS)
   {
     throw std::runtime_error("Wrong number of arms, check the SRDF file!");
   }
-  arm_name_ = xbot_model_->arm(0).getTipLinkName();
+  if(n_arms_ == N_ARMS) // Note: in the future we could have more than 1 ARM
+    for(unsigned int i = 0; i<n_arms_; i++)
+      arm_names_.push_back(xbot_model_->arm(i).getTipLinkName());
 
   const srdf_advr::Model& srdf_model = xbot_model_->getSrdf();
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
@@ -90,6 +81,19 @@ QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& root_nh)
         hip_names_.push_back(chains[j].second);
     }
   }
+
+  // Check the number of feet and hips
+  if(foot_names_.size() != N_LEGS)
+  {
+    throw std::runtime_error("Wrong number of feet, check the SRDF file!");
+  }
+  if(hip_names_.size() != N_LEGS)
+  {
+    throw std::runtime_error("Wrong number of hips, check the SRDF file!");
+  }
+
+  hip_names_ = sortByLegName(hip_names_);
+  foot_names_ = sortByLegName(foot_names_);
 
   // Check if the joint names in the ROS config file are in the same order as the one in the virtual model:
   //assert(_dof_names.size() == joint_names_.size()+FLOATING_BASE_DOFS);
@@ -118,9 +122,9 @@ const std::vector<std::string>& QuadrupedRobot::getJointNames() const
   return joint_names_;
 }
 
-const std::string& QuadrupedRobot::getArmName() const
+const std::vector<std::string>& QuadrupedRobot::getArmNames() const
 {
-  return arm_name_;
+  return arm_names_;
 }
 
 XBot::ModelInterface::Ptr QuadrupedRobot::getXBotModel()
@@ -128,20 +132,13 @@ XBot::ModelInterface::Ptr QuadrupedRobot::getXBotModel()
   return xbot_model_;
 }
 
-const ros::NodeHandle& QuadrupedRobot::getRosNode() const
+const unsigned int& QuadrupedRobot::getNumberArms() const
 {
-  return nh_;
+  return n_arms_;
 }
-
-ros::NodeHandle& QuadrupedRobot::getRosNode()
+const unsigned int& QuadrupedRobot::getNumberLegs() const
 {
-  return nh_;
+  return n_legs_;
 }
-
-
-
-
-
-
 
 };

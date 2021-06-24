@@ -1,8 +1,6 @@
 #ifndef QUADRUPED_ROBOT_H
 #define QUADRUPED_ROBOT_H
 
-// ROS
-#include <ros/ros.h>
 // ADVR
 #include <XBotCoreModel/XBotCoreModel.h>
 #include <XBotInterface/ModelInterface.h>
@@ -21,25 +19,27 @@ public:
 
   typedef std::shared_ptr<const QuadrupedRobot> ConstPtr;
 
-  QuadrupedRobot(ros::NodeHandle& root_nh);
+  QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
   const std::vector<std::string>& getFootNames() const;
   const std::vector<std::string>& getHipNames() const;
   const std::vector<std::string>& getJointNames() const;
-  const std::string& getArmName() const;
+  const std::vector<std::string>& getArmNames() const;
   XBot::ModelInterface::Ptr getXBotModel();
-  const ros::NodeHandle& getRosNode() const;
-  ros::NodeHandle& getRosNode();
+
+  const unsigned int& getNumberArms() const;
+  const unsigned int& getNumberLegs() const;
 
 private:
+
   XBot::ModelInterface::Ptr xbot_model_;
   std::vector<std::string> foot_names_;
   std::vector<std::string> hip_names_;
   std::vector<std::string> joint_names_;
-  std::string arm_name_;
-  ros::NodeHandle nh_;
+  std::vector<std::string> arm_names_;
 
-
+  unsigned int n_legs_;
+  unsigned int n_arms_;
 
 };
 
