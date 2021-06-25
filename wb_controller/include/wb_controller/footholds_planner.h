@@ -67,6 +67,8 @@ public:
 
     // Gets
     unsigned int getCmd();
+    const Eigen::Vector3d& getBasePositionReference() const ;
+    const Eigen::Vector3d& getBaseLinearVelocityReference() const ;
     const Eigen::Matrix3d& getBaseRotationReference() const ;
     const double& getStepLength(const std::string& foot_name);
     const double& getStepHeading(const std::string& foot_name);
@@ -155,6 +157,8 @@ private:
     map_t steps_height_;
     map_t steps_heading_rate_;
     Eigen::Matrix3d base_rotation_reference_;
+    Eigen::Vector3d base_position_reference_;
+    Eigen::Vector3d base_linear_velocity_reference_;
     Eigen::Matrix3d world_R_hf_;
 
     GaitGenerator::Ptr gait_generator_;

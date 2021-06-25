@@ -311,7 +311,11 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
     for(unsigned int i=0;i<3;i++)
         hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
 
-    base_position_ = world_R_hf_ * hf_base_linear_velocity_ * period + base_position_;
+    base_linear_velocity_reference_ = world_R_hf_ * hf_base_linear_velocity_;
+
+    base_position_ = base_linear_velocity_reference_ * period + base_position_;
+
+    base_position_reference_ = base_position_;
 
     // This is the base height computed w.r.t world
     //base_position_(2);
@@ -474,6 +478,16 @@ void FootholdsPlanner::setMaxStepLength(const double max)
 unsigned int FootholdsPlanner::getCmd()
 {
     return cmd_;
+}
+
+const Eigen::Vector3d& FootholdsPlanner::getBasePositionReference() const
+{
+    return base_position_reference_;
+}
+
+const Eigen::Vector3d& FootholdsPlanner::getBaseLinearVelocityReference() const
+{
+    return base_linear_velocity_reference_;
 }
 
 const Eigen::Matrix3d& FootholdsPlanner::getBaseRotationReference() const
