@@ -766,6 +766,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->_waistRPY->setReference(tmp_affine3d_);
 
         id_prob_->_waistZ->setReference(tmp_affine3d_);
+        id_prob_->_com->setReference(Eigen::Vector3d::Zero(),cmds_->getBaseLinearVelocityReference());
 
         if(inertia_compensation_active_)
         {

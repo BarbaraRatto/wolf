@@ -72,7 +72,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
 
     //   --------------------------
     _com.reset(new OpenSoT::tasks::acceleration::CoM(*_model, _id->getJointsAccelerationAffine()));
-    _com->setLambda(0.,1.);
+    _com->setLambda(0.,100.);
     _com->setWeightIsDiagonalFlag(true);
 
     //
@@ -111,8 +111,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
     for(unsigned int i = 0; i < _id->getContactsWrenchAffine().size(); ++i)
         _minfs.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(new OpenSoT::tasks::MinimizeVariable("minf"+std::to_string(i), _id->getContactsWrenchAffine()[i])));
 
-    std::list<unsigned int> id_XY = {0,1}; //xy
-    std::list<unsigned int> id_Z = {2}; //z
+    std::list<unsigned int> id_XY  = {0,1}; //xy
+    std::list<unsigned int> id_Z   = {2}; //z
     std::list<unsigned int> id_RPY = {3,4,5}; //r,p,y
     std::list<unsigned int> id_XYZ = {0,1,2};
 
@@ -135,20 +135,20 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
       //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
       // Stack world statico
-      _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
-              / (_com%id_XY)
-              / (0.5*_waistRPY%id_RPY + 0.25*_waistZ%id_Z + _arm + 50.0*_com%id_Z + _angular_momentum)
-              / (_postural)
-              )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
-
-      // Stack base_link camminata
-      // _arm->setLambda(100.);
-      // _arm->setBaseLink("base_link")
       //_stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
-      //        / (_waistRPY%id_RPY)
-      //        / (_arm)
-      //        / (_postural + _com + _angular_momentum)
+      //        / (_com%id_XY)
+      //        / (0.5*_waistRPY%id_RPY + 0.25*_waistZ%id_Z + _arm + 50.0*_com%id_Z + _angular_momentum)
+      //        / (_postural)
       //        )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
+
+      // Stack base_link camminata, ok ad alte frequenze
+      _arm->setLambda(100.);
+      _arm->setBaseLink("base_link");
+      _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
+              / (_waistRPY%id_RPY)
+              / (_arm)
+              / (_postural + 10.0*_com + _angular_momentum)
+              )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
     }
     else
