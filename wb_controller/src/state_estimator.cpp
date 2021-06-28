@@ -35,23 +35,16 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     terrain_normal_ << 0,0,1; // TODO terrain estimation
     imu_orientation_.normalize();
     floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
-    contacts_.resize(N_LEGS);
-    contact_forces_.resize(N_LEGS);
-    world_X_foot_.resize(N_LEGS);
-    base_X_foot_.resize(N_LEGS);
-    world_T_foot_.resize(N_LEGS);
-    base_T_foot_.resize(N_LEGS);
-
     contacts_estimation_active_ = false;
 
     for(unsigned int i=0;i<feet_names.size();i++)
     {
-        contacts_[i] = true;
-        contact_forces_[i] = Eigen::Vector3d::Zero();
-        world_X_foot_[i] = Eigen::Vector3d::Zero();
-        base_X_foot_[i] = Eigen::Vector3d::Zero();
-        world_T_foot_[i] = Eigen::Affine3d::Identity();
-        base_T_foot_[i] = Eigen::Affine3d::Identity();
+        contacts_[feet_names[i]] = true;
+        contact_forces_[feet_names[i]] = Eigen::Vector3d::Zero();
+        world_X_foot_[feet_names[i]] = Eigen::Vector3d::Zero();
+        base_X_foot_[feet_names[i]] = Eigen::Vector3d::Zero();
+        world_T_foot_[feet_names[i]] = Eigen::Affine3d::Identity();
+        base_T_foot_[feet_names[i]] = Eigen::Affine3d::Identity();
     }
 
     mapRPYderivativesToOmega_ = Eigen::Matrix3d::Identity();
@@ -92,7 +85,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     for(unsigned int i=0;i<feet_names.size();i++)
     {
         chain[0] = feet_chains[i];
-        force_torque_sensors_.push_back(force_estimation_->add_link(feet_names[i],dofs,chain));
+        force_torque_sensors_[feet_names[i]] = force_estimation_->add_link(feet_names[i],dofs,chain);
     }
 
     RtLogger::getLogger().addPublisher(CLASS_NAME"/floating_base_position",floating_base_position_);
@@ -188,7 +181,12 @@ void StateEstimator::setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt
 
 void StateEstimator::setContactThreshold(const double& th)
 {
-    contact_force_th_ = th;
+  contact_force_th_ = th;
+}
+
+const Eigen::Vector3d &StateEstimator::getComPosition() const
+{
+  return com_;
 }
 
 double StateEstimator::getContactThreshold()
@@ -225,32 +223,32 @@ const Eigen::Vector3d& StateEstimator::getFloatingBaseOrientationRPY() const
     return base_rpy_;
 }
 
-const std::vector<Eigen::Vector3d>& StateEstimator::getContactForces() const
+const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactForces() const
 {
     return contact_forces_;
 }
 
-const std::vector<bool>& StateEstimator::getContacts() const
+const std::map<std::string,bool>& StateEstimator::getContacts() const
 {
     return contacts_;
 }
 
-const std::vector<Eigen::Vector3d>& StateEstimator::getFeetPositionInWorld() const
+const std::map<std::string,Eigen::Vector3d>& StateEstimator::getFeetPositionInWorld() const
 {
     return world_X_foot_;
 }
 
-const std::vector<Eigen::Vector3d>& StateEstimator::getFeetPositionInBase() const
+const std::map<std::string,Eigen::Vector3d>& StateEstimator::getFeetPositionInBase() const
 {
     return base_X_foot_;
 }
 
-const std::vector<Eigen::Affine3d>& StateEstimator::getFeetPoseInWorld() const
+const std::map<std::string,Eigen::Affine3d>& StateEstimator::getFeetPoseInWorld() const
 {
     return world_T_foot_;
 }
 
-const std::vector<Eigen::Affine3d>& StateEstimator::getFeetPoseInBase() const
+const std::map<std::string,Eigen::Affine3d>& StateEstimator::getFeetPoseInBase() const
 {
     return base_T_foot_;
 }
@@ -297,11 +295,11 @@ void StateEstimator::update(const double& period)
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
         // Feet position in world
-        xbot_model_->getPose(feet_names[i],world_T_foot_[i]);
-        world_X_foot_[i] = world_T_foot_[i].translation();
+        xbot_model_->getPose(feet_names[i],world_T_foot_[feet_names[i]]);
+        world_X_foot_[feet_names[i]] = world_T_foot_[feet_names[i]].translation();
         // Feet position in base/trunk
-        xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_[i]);
-        base_X_foot_[i] = base_T_foot_[i].translation();
+        xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_[feet_names[i]]);
+        base_X_foot_[feet_names[i]] = base_T_foot_[feet_names[i]].translation();
     }
 
     updateContactState();
@@ -318,23 +316,23 @@ void StateEstimator::updateContactState()
 
     force_estimation_->update();
 
-    for(unsigned int i=0; i<contacts_.size(); i++)
+    for(unsigned int i=0; i<feet_names.size(); i++)
     {
-        force_torque_sensors_[i]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
+        force_torque_sensors_[feet_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
 
-        tmp_vector3d_ = world_T_foot_[i] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
+        tmp_vector3d_ = world_T_foot_[feet_names[i]] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
 
         if(contacts_estimation_active_)
-            contacts_[i] = (tmp_vector3d_.dot(terrain_normal_) >= contact_force_th_ ? true : false);
+            contacts_[feet_names[i]] = (tmp_vector3d_.dot(terrain_normal_) >= contact_force_th_ ? true : false);
         else
-            contacts_[i] = true;
+            contacts_[feet_names[i]] = true;
 
-        contact_forces_[i] = tmp_vector3d_;
+        contact_forces_[feet_names[i]] = tmp_vector3d_;
 
         if(haptic_contact_loop_active_)
         {
-            qp_estimation_->setContactState(feet_names[i],contacts_[i]);
-            gait_generator_->setContactState(feet_names[i],contacts_[i]);
+            qp_estimation_->setContactState(feet_names[i],contacts_[feet_names[i]]);
+            gait_generator_->setContactState(feet_names[i],contacts_[feet_names[i]]);
         }
         else
         {
@@ -458,7 +456,7 @@ void StateEstimator::updateFloatingBase(const double& period)
             if(!gait_generator_->isSwinging(feet_names[i]))
             {
                 feet_in_stance++;
-                tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[i];
+                tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[feet_names[i]];
                 estimated_z +=  tmp_affine3d_.translation().z();
             }
         }

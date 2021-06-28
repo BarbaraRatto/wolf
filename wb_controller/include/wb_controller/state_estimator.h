@@ -63,6 +63,8 @@ public:
 
     void setContactThreshold(const double& th);
 
+    const Eigen::Vector3d& getComPosition() const;
+
     const Eigen::Affine3d& getFloatingBasePose() const;
 
     const Eigen::Vector3d& getFloatingBasePosition() const;
@@ -75,17 +77,17 @@ public:
 
     const std::string& getOrientationEstimationType();
 
-    const std::vector<Eigen::Vector3d>& getContactForces() const;
+    const std::map<std::string,Eigen::Vector3d>& getContactForces() const;
 
-    const std::vector<bool>& getContacts() const;
+    const std::map<std::string,bool>& getContacts() const;
 
-    const std::vector<Eigen::Vector3d>& getFeetPositionInWorld() const;
+    const std::map<std::string,Eigen::Vector3d>& getFeetPositionInWorld() const;
 
-    const std::vector<Eigen::Vector3d>& getFeetPositionInBase() const;
+    const std::map<std::string,Eigen::Vector3d>& getFeetPositionInBase() const;
 
-    const std::vector<Eigen::Affine3d>& getFeetPoseInWorld() const;
+    const std::map<std::string,Eigen::Affine3d>& getFeetPoseInWorld() const;
 
-    const std::vector<Eigen::Affine3d>& getFeetPoseInBase() const;
+    const std::map<std::string,Eigen::Affine3d>& getFeetPoseInBase() const;
 
     void startContactsEstimation();
 
@@ -145,19 +147,19 @@ private:
     /** @brief Contact estimation */
     XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
     /** @brief Contact estimation */
-    std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
+    std::map<std::string,XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Feet positions w.r.t base */
-    std::vector<Eigen::Vector3d> base_X_foot_;
+    std::map<std::string,Eigen::Vector3d> base_X_foot_;
     /** @brief Feet positions w.r.t world */
-    std::vector<Eigen::Vector3d> world_X_foot_;
+    std::map<std::string,Eigen::Vector3d> world_X_foot_;
     /** @brief Feet pose w.r.t base */
-    std::vector<Eigen::Affine3d> base_T_foot_;
+    std::map<std::string,Eigen::Affine3d> base_T_foot_;
     /** @brief Feet pose w.r.t world */
-    std::vector<Eigen::Affine3d> world_T_foot_;
+    std::map<std::string,Eigen::Affine3d> world_T_foot_;
     /** @brief GRF contacts */
-    std::vector<bool> contacts_;
+    std::map<std::string,bool> contacts_;
     /** @brief GRF contact forces */
-    std::vector<Eigen::Vector3d> contact_forces_;
+    std::map<std::string,Eigen::Vector3d> contact_forces_;
     /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
     is consired true */
     std::atomic<double> contact_force_th_;

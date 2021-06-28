@@ -959,14 +959,14 @@ void Controller::publish(const ros::Time& time, const ros::Duration& /*period*/)
         for(unsigned int i=0; i <feet_names_.size(); i++)
         {
             contact_forces_pub_->msg_.name[i] = feet_names_[i];
-            contact_forces_pub_->msg_.contact[i] = state_estimator_->getContacts()[i];
-            contact_forces_pub_->msg_.contact_positions[i].x = state_estimator_->getFeetPositionInWorld()[i](0);
-            contact_forces_pub_->msg_.contact_positions[i].y = state_estimator_->getFeetPositionInWorld()[i](1);
-            contact_forces_pub_->msg_.contact_positions[i].z = state_estimator_->getFeetPositionInWorld()[i](2);
+            contact_forces_pub_->msg_.contact[i] = state_estimator_->getContacts().at(feet_names_[i]);
+            contact_forces_pub_->msg_.contact_positions[i].x = state_estimator_->getFeetPositionInWorld().at(feet_names_[i])(0);
+            contact_forces_pub_->msg_.contact_positions[i].y = state_estimator_->getFeetPositionInWorld().at(feet_names_[i])(1);
+            contact_forces_pub_->msg_.contact_positions[i].z = state_estimator_->getFeetPositionInWorld().at(feet_names_[i])(2);
 
-            contact_forces_pub_->msg_.contact_forces[i].force.x = state_estimator_->getContactForces()[i](0);
-            contact_forces_pub_->msg_.contact_forces[i].force.y = state_estimator_->getContactForces()[i](1);
-            contact_forces_pub_->msg_.contact_forces[i].force.z = state_estimator_->getContactForces()[i](2);
+            contact_forces_pub_->msg_.contact_forces[i].force.x = state_estimator_->getContactForces().at(feet_names_[i])(0);
+            contact_forces_pub_->msg_.contact_forces[i].force.y = state_estimator_->getContactForces().at(feet_names_[i])(1);
+            contact_forces_pub_->msg_.contact_forces[i].force.z = state_estimator_->getContactForces().at(feet_names_[i])(2);
 
             contact_forces_pub_->msg_.des_contact_forces[i].force.x = des_contact_forces_.segment(6*i,3)(0);
             contact_forces_pub_->msg_.des_contact_forces[i].force.y = des_contact_forces_.segment(6*i,3)(1);
