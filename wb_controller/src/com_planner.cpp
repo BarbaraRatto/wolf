@@ -35,7 +35,10 @@ void ComPlanner::update(double dt)
   //  lh --- rh
   auto feet_pos = state_estimator_->getFeetPositionInBase();
 
-  p0_ = state_estimator_->getComPosition().head(2); // This should be defined w.r.t base
+  auto world_T_base = state_estimator_->getFloatingBasePose();
+
+  base_X_com_ = world_T_base.inverse() * state_estimator_->getComPosition();
+  p0_ = base_X_com_.head(2); // This should be defined w.r.t base
 
   base_velocity_xy_ = foothold_planner_->getBaseLinearVelocityReference().head(2);
   base_velocity_xy_versor_ = base_velocity_xy_ / base_velocity_xy_.norm();

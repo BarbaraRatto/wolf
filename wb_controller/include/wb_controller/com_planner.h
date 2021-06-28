@@ -37,6 +37,7 @@ private:
   StateEstimator::Ptr state_estimator_;
   FootholdsPlanner::Ptr foothold_planner_;
   Eigen::Vector3d com_velocity_ref_;
+  Eigen::Vector3d base_X_com_;
 
   Eigen::Vector2d p0_;
   Eigen::Vector2d p1_;
