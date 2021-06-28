@@ -212,11 +212,27 @@ public:
     return result;
   }
 
+  bool isAnyFootInSwing()
+  {
+    bool result = false;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      result = result || it->second.state_machine->isSwing();
+    return result;
+  }
+
   bool isAnyFootInTouchDown()
   {
     bool result = false;
     for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
       result = result || it->second.state_machine->isTouchDown();
+    return result;
+  }
+
+  bool isAnyFootInStance()
+  {
+    bool result = false;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      result = result || it->second.state_machine->isStance();
     return result;
   }
 
