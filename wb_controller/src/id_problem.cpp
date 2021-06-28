@@ -147,7 +147,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::
       _stack = ((_feet[feet_names[0]]%id_XYZ + _feet[feet_names[1]]%id_XYZ + _feet[feet_names[2]]%id_XYZ + _feet[feet_names[3]]%id_XYZ)
               / (_waistRPY%id_RPY)
               / (_arm)
-              / (_postural + 10.0*_com + _angular_momentum)
+              / (_postural + _com + _angular_momentum)
               )<<_wrenches_lims<<_qddot_lims<<_dynamics_con<<_friction_cones;
 
     }
