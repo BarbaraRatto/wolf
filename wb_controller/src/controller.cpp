@@ -343,15 +343,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     gait_generator_->setSwingFrequency(default_swing_frequency);
     gait_generator_->setDutyFactor(default_duty_factor);
 
-    cmds_.reset(new FootholdsPlanner(gait_generator_,xbot_model_));
-    cmds_->setLinearVelocity(default_base_linear_velocity);
-    cmds_->setAngularVelocity(default_base_angular_velocity);
-    cmds_->setStepHeight(default_step_height);
-    cmds_->setMaxStepHeight(max_step_height);
-    cmds_->setMaxStepLength(max_step_length);
+    foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,xbot_model_));
+    foot_holds_planner_->setLinearVelocity(default_base_linear_velocity);
+    foot_holds_planner_->setAngularVelocity(default_base_angular_velocity);
+    foot_holds_planner_->setStepHeight(default_step_height);
+    foot_holds_planner_->setMaxStepHeight(max_step_height);
+    foot_holds_planner_->setMaxStepLength(max_step_length);
 
     state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
     state_estimator_->setContactThreshold(default_contact_threshold);
+
+    com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_));
 
     kin_.reset(new LegsKinematics(gait_generator_,xbot_model_));
     kin_->setClikGain(default_clik_gain);
@@ -369,11 +371,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     else
         state_estimator_->setOrientationEstimationType(estimation_orientation_type);
 
-    joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
+    joy_handler_.reset(new JoyHandler(controller_nh,foot_holds_planner_));
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
     joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
 
-    keyboard_handler_.reset(new TwistHandler(controller_nh,cmds_));
+    keyboard_handler_.reset(new TwistHandler(controller_nh,foot_holds_planner_));
 
     // initialize the filters
     cutoff_hz_gyro_ = 300.;
@@ -447,11 +449,11 @@ void Controller::dynamicReconfigureUpdate()
         default_config_.swing_frequency = gait_generator_->getSwingFrequency(feet_names_[0]); // FIXME - HACK
         default_config_.duty_factor = gait_generator_->getDutyFactor(feet_names_[0]); // FIXME - HACK
     }
-    if(cmds_)
+    if(foot_holds_planner_)
     {
-        default_config_.base_linear_vel = cmds_->getLinearVelocity();
-        default_config_.base_angular_vel = cmds_->getAngularVelocity();
-        default_config_.step_height = cmds_->getStepHeight();
+        default_config_.base_linear_vel = foot_holds_planner_->getLinearVelocity();
+        default_config_.base_angular_vel = foot_holds_planner_->getAngularVelocity();
+        default_config_.step_height = foot_holds_planner_->getStepHeight();
     }
     if(state_estimator_)
         default_config_.contact_force_th = state_estimator_->getContactThreshold();
@@ -489,15 +491,15 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         setSwingFrequency(config.swing_frequency);
         break;
     case 6:
-        cmds_->setLinearVelocity(config.base_linear_vel);
+        foot_holds_planner_->setLinearVelocity(config.base_linear_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< config.base_linear_vel);
         break;
     case 7:
-        cmds_->setAngularVelocity(config.base_angular_vel);
+        foot_holds_planner_->setAngularVelocity(config.base_angular_vel);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< config.base_angular_vel);
         break;
     case 8:
-        cmds_->setStepHeight(config.step_height);
+        foot_holds_planner_->setStepHeight(config.step_height);
         break;
     case 9:
         state_estimator_->setContactThreshold(config.contact_force_th);
@@ -729,11 +731,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             state_estimator_->resetGyroscopeIntegration();
             state_estimator_->startContactsEstimation();
             state_estimator_->startHapticContactLoop();
-            cmds_->setBasePosition(state_estimator_->getFloatingBasePosition());
-            cmds_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
-            cmds_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
-            cmds_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
-            cmds_->initializeFeetPosition();
+            foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
+            foot_holds_planner_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
+            foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
+            foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
+            foot_holds_planner_->initializeFeetPosition();
 
             // Reset the tasks
             //id_prob_->reset(); // FIXME
@@ -752,7 +754,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         }
 
-        cmds_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
+        foot_holds_planner_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
 
         // FIXME I should add something to the FootholdsPlanner!!!
         // Get the external reference (interactive marker) for the arm if available
@@ -760,13 +762,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Set the task reference for the waist
         id_prob_->_waistRPY->getReference(tmp_affine3d_);
-        tmp_affine3d_.linear() = cmds_->getBaseRotationReference();
+        tmp_affine3d_.linear() = foot_holds_planner_->getBaseRotationReference();
         rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
-        tmp_affine3d_.translation().z() = cmds_->getBaseHeight();
+        tmp_affine3d_.translation().z() = foot_holds_planner_->getBaseHeight();
         id_prob_->_waistRPY->setReference(tmp_affine3d_);
 
         id_prob_->_waistZ->setReference(tmp_affine3d_);
-        id_prob_->_com->setReference(Eigen::Vector3d::Zero(),cmds_->getBaseLinearVelocityReference());
+
+        com_planner_->update(period.toSec());
+        id_prob_->_com->setReference(Eigen::Vector3d::Zero(),com_planner_->getComVelocity());
 
         if(inertia_compensation_active_)
         {
@@ -812,7 +816,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->_postural->setGains(Kp_postural_,Kd_postural_);
 
         // Set the desired base height
-        kin_->setDesiredBaseHeight(cmds_->getBaseHeight());
+        kin_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
 
         // Update the desired joint positions from the ik and set that to the postural
         // task
@@ -1017,7 +1021,7 @@ StateEstimator* Controller::getStateEstimator() const
 
 FootholdsPlanner* Controller::getFootholdsPlanner() const
 {
-    return cmds_.get();
+    return foot_holds_planner_.get();
 }
 
 LegsKinematics* Controller::getLegsKinematics() const
