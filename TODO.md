@@ -1,5 +1,8 @@
 # TODO list
 
+- switch stack for arm
+- add trajectory for arm
+- ICP
 - Web app
 - Clean solo, test it without inertia comp.
 - Add kinova arm on aliengo
