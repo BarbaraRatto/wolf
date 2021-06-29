@@ -21,7 +21,7 @@ ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Pt
   RtLogger::getLogger().addPublisher(CLASS_NAME"/com_velocity_ref",com_velocity_ref_);
 }
 
-void ComPlanner::update(double dt)
+void ComPlanner::update(double /*dt*/)
 {
 
   // Euristic computation of a com velocity based on the
