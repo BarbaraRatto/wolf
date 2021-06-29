@@ -5,7 +5,7 @@ namespace wb_controller {
 #define CLASS_NAME "LegsKinematics"
 
 LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
-  : clik_gain_(1.0), base_height_control_active_(false)
+  : base_height_control_active_(false), clik_gain_(1.0)
 {
 
   assert(gait_generator);
@@ -37,6 +37,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   xbot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   base_height_ = tmp_affine3d_.translation()(2);
+
+  des_joint_positions_ = current_joint_positions;
 
   double delta_z = des_base_height_ - base_height_;
 
@@ -99,7 +101,6 @@ double LegsKinematics::getClikGain()
   return clik_gain_;
 }
 
-
 const Eigen::VectorXd& LegsKinematics::getDesiredJointPositions()
 {
   return des_joint_positions_;
@@ -155,13 +156,13 @@ bool LegsKinematics::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd&
         if(q(i)<qmin(i))
         {
             q(i) = qmin(i);
-            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the minimum limit of "<<qmin(i));
+            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the minimum limit of "<<qmin(i));
             violated_limits = true;
         }
         if(q(i)>qmax(i))
         {
             q(i) = qmax(i);
-            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum limit of "<<qmax(i));
+            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum limit of "<<qmax(i));
             violated_limits = true;
         }
     }
