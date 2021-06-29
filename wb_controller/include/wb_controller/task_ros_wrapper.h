@@ -47,6 +47,7 @@ public:
     virtual void updateReference() {}
     virtual void dynamicReconfigureUpdate() {}
     virtual void createInteractiveMarker() {}
+    virtual void reset() {}
 
 protected:
 
@@ -144,13 +145,7 @@ public:
         TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>(nh,task)
     {
 
-        task_->getActualPose(tmp_affine3d_);
-
-        rt_affine3d_.initRT(tmp_affine3d_);
-
-        tmp_quaterniond_ = tmp_affine3d_.linear();
-
-        createInteractiveMarker();
+        reset();
 
         // Load params
         Eigen::Matrix6d Kp = Eigen::Matrix6d::Zero();
@@ -269,10 +264,24 @@ public:
         TaskRosWrapperBase::dynamicReconfigureUpdate();
     }
 
+
+    virtual void reset() override
+    {
+      task_->getActualPose(tmp_affine3d_);
+
+      rt_affine3d_.initRT(tmp_affine3d_);
+
+      tmp_quaterniond_ = tmp_affine3d_.linear();
+
+      createInteractiveMarker();
+    }
+
+private:
+
     virtual void createInteractiveMarker() override
     {
 
-      marker_.reset(new interactive_markers::InteractiveMarkerServer(task_->getTaskID()));
+      marker_ = std::make_shared<interactive_markers::InteractiveMarkerServer>(task_->getTaskID());
 
       // create an interactive marker for our server
       visualization_msgs::InteractiveMarker int_marker;
@@ -349,13 +358,14 @@ public:
 
     }
 
+
 protected:
 
     virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
     {
-        ROS_INFO_STREAM( feedback->marker_name << " is now at "
-                         << feedback->pose.position.x << ", " << feedback->pose.position.y
-                         << ", " << feedback->pose.position.z );
+        //ROS_INFO_STREAM( feedback->marker_name << " is now at "
+        //                 << feedback->pose.position.x << ", " << feedback->pose.position.y
+        //                 << ", " << feedback->pose.position.z );
 
         Eigen::Vector3d translation_reference(feedback->pose.position.x,feedback->pose.position.y,feedback->pose.position.z);
         Eigen::Quaterniond orientation_reference(feedback->pose.orientation.w,feedback->pose.orientation.x,feedback->pose.orientation.y,feedback->pose.orientation.z);
