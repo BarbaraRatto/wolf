@@ -28,6 +28,7 @@
 
 // STD
 #include <atomic>
+#include <mutex>
 
 namespace OpenSoT{
 
@@ -40,6 +41,8 @@ class IDProblem
 public:
 
     typedef std::shared_ptr<IDProblem> Ptr;
+
+    enum stacks_t {NONE=0,WALKING,MANIPULATION};
 
     /**
      * @brief IDProblem constructor
@@ -127,6 +130,22 @@ public:
          */
     void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
 
+
+    /**
+         * @brief Select the stack type to use
+         */
+    void selectStack(const stacks_t &stack);
+
+    /**
+         * @brief Get the current stack type
+         */
+    unsigned int getCurrentStack();
+
+    /**
+         * @brief Switch between WALKING and MANIPULATION stack
+         */
+    void switchStack();
+
     /**
      * @brief Cartesian tasks
      */
@@ -192,12 +211,12 @@ private:
     /**
      * @brief the final ID stack
      */
-    AutoStack::Ptr _stack;
+    std::map<unsigned int,AutoStack::Ptr> _stacks;
 
     /**
      * @brief _solver iHQP solver
      */
-    solvers::iHQP::Ptr _solver;
+    std::unique_ptr<solvers::iHQP> _solver;
 
     /**
      * @brief _id inverse dynamics computation & variable helper
@@ -226,6 +245,10 @@ private:
     std::atomic<double> _z_force_lower_lim;
 
     unsigned int idx_grfs_start_;
+
+    std::atomic<unsigned int> _current_stack;
+
+    std::mutex _solver_lock;
 
 };
 
