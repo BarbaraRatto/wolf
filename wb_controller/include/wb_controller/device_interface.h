@@ -132,6 +132,9 @@ public:
         case(button_t::SELECT):
             f_select_ = f;
             break;
+        case(button_t::ONE):
+            f_one_ = f;
+            break;
         default:
             ROS_WARN("Wrong button selected!");
             break;
@@ -168,6 +171,9 @@ public:
           if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[8])))
               f_select_();
 
+          if(f_one_ && joy_one_button_trigger_.update(static_cast<bool>(msg->buttons[0])))
+              f_one_();
+
           update();
 
         }
@@ -175,9 +181,14 @@ public:
 
     funct_t f_select_;
     funct_t f_start_;
+    funct_t f_one_;
+    funct_t f_two_;
+    funct_t f_three_;
+    funct_t f_four_;
 
     wb_controller::Trigger joy_select_button_trigger_;
     wb_controller::Trigger joy_start_button_trigger_;
+    wb_controller::Trigger joy_one_button_trigger_;
     wb_controller::AxisToTrigger joy_up_down_trigger_;
 
 };
