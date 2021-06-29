@@ -82,6 +82,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   // Check if the desired positions are valid and clamp them
   jointLimitsCheck(des_joint_positions_,qmin_,qmax_);
+
+  return true;
 }
 
 void LegsKinematics::setClikGain(const double& clik_gain)
