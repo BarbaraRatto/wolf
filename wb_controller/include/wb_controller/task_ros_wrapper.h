@@ -46,6 +46,7 @@ public:
     virtual void publish(const ros::Time& /*time*/) = 0;
     virtual void updateReference() {}
     virtual void dynamicReconfigureUpdate() {}
+    virtual void createInteractiveMarker() {}
 
 protected:
 
@@ -149,7 +150,7 @@ public:
 
         tmp_quaterniond_ = tmp_affine3d_.linear();
 
-        createInteractiveMarker(tmp_affine3d_);
+        createInteractiveMarker();
 
         // Load params
         Eigen::Matrix6d Kp = Eigen::Matrix6d::Zero();
@@ -268,37 +269,7 @@ public:
         TaskRosWrapperBase::dynamicReconfigureUpdate();
     }
 
-protected:
-
-    virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
-    {
-        ROS_INFO_STREAM( feedback->marker_name << " is now at "
-                         << feedback->pose.position.x << ", " << feedback->pose.position.y
-                         << ", " << feedback->pose.position.z );
-
-        Eigen::Vector3d translation_reference(feedback->pose.position.x,feedback->pose.position.y,feedback->pose.position.z);
-        Eigen::Quaterniond orientation_reference(feedback->pose.orientation.w,feedback->pose.orientation.x,feedback->pose.orientation.y,feedback->pose.orientation.z);
-        Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
-        Eigen::Matrix3d R;
-
-        wb_controller::quatToRotMat(orientation_reference,R);
-
-        pose_reference.translation() = translation_reference;
-        pose_reference.linear() = R.transpose();
-
-        /*quaternion.x() = feedback->pose.orientation.x;
-        quaternion.y() = feedback->pose.orientation.y;
-        quaternion.z() = feedback->pose.orientation.z;
-        quaternion.w() = feedback->pose.orientation.w;
-        quatToRotMat(quaternion,world_R_task);*/
-
-        // FIXME no orientation yet
-        rt_affine3d_.writeFromNonRT(pose_reference);
-    }
-
-private:
-
-    void createInteractiveMarker(const Eigen::Affine3d& initial_pose)
+    virtual void createInteractiveMarker() override
     {
 
       marker_.reset(new interactive_markers::InteractiveMarkerServer(task_->getTaskID()));
@@ -308,6 +279,8 @@ private:
       int_marker.header.frame_id = task_->getBaseLink();
       int_marker.name = task_->getTaskID();
       int_marker.description = task_->getTaskID();
+      Eigen::Affine3d initial_pose;
+      task_->getActualPose(initial_pose);
 
       wb_controller::affine3dToPose(initial_pose,int_marker.pose);
 
@@ -375,6 +348,35 @@ private:
       marker_->applyChanges();
 
     }
+
+protected:
+
+    virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+    {
+        ROS_INFO_STREAM( feedback->marker_name << " is now at "
+                         << feedback->pose.position.x << ", " << feedback->pose.position.y
+                         << ", " << feedback->pose.position.z );
+
+        Eigen::Vector3d translation_reference(feedback->pose.position.x,feedback->pose.position.y,feedback->pose.position.z);
+        Eigen::Quaterniond orientation_reference(feedback->pose.orientation.w,feedback->pose.orientation.x,feedback->pose.orientation.y,feedback->pose.orientation.z);
+        Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
+        Eigen::Matrix3d R;
+
+        wb_controller::quatToRotMat(orientation_reference,R);
+
+        pose_reference.translation() = translation_reference;
+        pose_reference.linear() = R.transpose();
+
+        /*quaternion.x() = feedback->pose.orientation.x;
+        quaternion.y() = feedback->pose.orientation.y;
+        quaternion.z() = feedback->pose.orientation.z;
+        quaternion.w() = feedback->pose.orientation.w;
+        quatToRotMat(quaternion,world_R_task);*/
+
+        // FIXME no orientation yet
+        rt_affine3d_.writeFromNonRT(pose_reference);
+    }
+
 };
 
 // COM - GENERIC
