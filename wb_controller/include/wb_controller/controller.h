@@ -152,6 +152,11 @@ public:
          */
     LegsKinematics* getLegsKinematics() const;
 
+    bool selectStack(const std::string &stack);
+
+    void switchStack();
+
+
 private:
 
     /** @brief Joint names */

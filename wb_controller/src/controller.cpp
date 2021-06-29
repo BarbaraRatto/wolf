@@ -358,6 +358,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     kin_.reset(new LegsKinematics(gait_generator_,xbot_model_));
     kin_->setClikGain(default_clik_gain);
     kin_->activateBaseHeightControl();
+    des_joint_positions_ = kin_->getJointHomePositions();
 
     std::string estimation_position_type;
     if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
@@ -374,6 +375,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joy_handler_.reset(new JoyHandler(controller_nh,foot_holds_planner_));
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
     joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
+    //joy_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE);
 
     keyboard_handler_.reset(new TwistHandler(controller_nh,foot_holds_planner_));
 
@@ -543,6 +545,9 @@ void Controller::dynamicReconfigureCallback(wb_controller::controllerConfig &con
         Kd_stance_leg_(2,2) = config.kd_kfe_stance;
         ROS_INFO_NAMED(CLASS_NAME,"Set Kp and Kd for the postural");
         break;
+     case 15:
+        selectStack(config.stacks);
+        break;
     default:
         break;
     }
@@ -559,6 +564,32 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
         return false;
     }
     return true;
+}
+
+bool Controller::selectStack(const std::string& stack)
+{
+   if(id_prob_)
+   {
+       if(stack.compare("walking") == 0)
+         id_prob_->selectStack(OpenSoT::IDProblem::stacks_t::WALKING);
+       else if(stack.compare("manipulation") == 0)
+         id_prob_->selectStack(OpenSoT::IDProblem::stacks_t::MANIPULATION);
+       else
+       {
+         ROS_ERROR_NAMED(CLASS_NAME,"Wrong stack!");
+         return false;
+       }
+   }
+
+   return true;
+}
+
+void Controller::switchStack()
+{
+  if(id_prob_)
+    id_prob_->switchStack();
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
 }
 
 bool Controller::setGaitType(const std::string& gait_type)
@@ -827,21 +858,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         id_prob_->_postural->setReference(des_joint_positions_,des_joint_velocities_);
 
-        // Solver Update
-        id_prob_->update();
-
         // Get the solver solution
-        x_ = des_joint_efforts_solver_; // Store the old desired efforts, to apply in case the solver gets mad
-        if(!id_prob_->solve(x_))
+        //x_ = des_joint_efforts_solver_; // Store the old desired efforts, to apply in case the solver gets mad
+        if(!id_prob_->solve(des_joint_efforts_solver_))
         {
-            ROS_ERROR("OpenSoT::IDProblem: unable to solve");
+            ROS_WARN_NAMED(CLASS_NAME,"OpenSoT::IDProblem::solve() skipping one step.");
+            pid_active_ = true;
         }
         else
-            des_joint_efforts_solver_ = x_;
+            pid_active_ = false;
 
         id_prob_->getGroundReactionForces(des_contact_forces_);
-
-        pid_active_ = false;
 
     }
     else // Use a position PID controller
@@ -851,7 +878,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     if(pid_active_)
     {
-        des_joint_positions_ = kin_->getJointHomePositions();
+        des_joint_velocities_.fill(0.0);
         des_joint_efforts_solver_.fill(0.0);
         pid_scale_ = 1.0;
     }
