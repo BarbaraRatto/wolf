@@ -22,7 +22,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInt
     Eigen::Matrix6d contact_matrix;
     contact_matrix.setZero();
     contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-    qp_estimation_.reset(new OpenSoT::floating_base_estimation::qp_estimation(xbot_model_,feet_names,contact_matrix));
+    qp_estimation_ = std::make_shared<OpenSoT::floating_base_estimation::qp_estimation>(xbot_model_,feet_names,contact_matrix);
 
     int n_dofs = xbot_model_->getJointNum();
     joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
