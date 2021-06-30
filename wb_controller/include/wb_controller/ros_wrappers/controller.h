@@ -98,15 +98,6 @@ public:
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
 
-        // Create the realtime publishers
-        //ci_joint_states_rt_pub_.reset(new realtime_tools::RealtimePublisher<sensor_msgs::JointState>(root_nh, "ci/joint_states", 4));
-        //ci_joint_states_rt_pub_->msg_.name.resize(wb_controller::_dof_names.size());
-        //ci_joint_states_rt_pub_->msg_.position.resize(wb_controller::_dof_names.size());
-        //ci_joint_states_rt_pub_->msg_.velocity.resize(wb_controller::_dof_names.size());
-        //ci_joint_states_rt_pub_->msg_.effort.resize(wb_controller::_dof_names.size());
-        //for (unsigned int i = 0; i < wb_controller::_dof_names.size(); i++)
-        //    ci_joint_states_rt_pub_->msg_.name[i] = wb_controller::_dof_names[i];
-
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = "world"; //FIXME
         contact_forces_pub_->msg_.name.resize(4);
@@ -114,9 +105,6 @@ public:
         contact_forces_pub_->msg_.contact_positions.resize(4);
         contact_forces_pub_->msg_.contact_forces.resize(4);
         contact_forces_pub_->msg_.des_contact_forces.resize(4);
-
-        joint_positions_xbot_.resize(static_cast<Eigen::Index>(wb_controller::_dof_names.size()));
-        joint_velocities_xbot_.resize(static_cast<Eigen::Index>(wb_controller::_dof_names.size()));
 
         // Set the callback for the dynamic reconfigure server
         server_.reset(new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh));
@@ -226,42 +214,18 @@ public:
           contact_forces_pub_->unlockAndPublish();
       }
 
-      //if(ci_joint_states_rt_pub_.get() && ci_joint_states_rt_pub_->trylock())
-      //{
-      //    controller_->getXbotModel()->getJointPosition(joint_positions_xbot_);
-      //    controller_->getXbotModel()->getJointVelocity(joint_velocities_xbot_);
-      //
-      //    for(unsigned int i = 0; i < joint_positions_.size(); i++)
-      //    {
-      //        ci_joint_states_rt_pub_->msg_.position[i]  = joint_positions_xbot_(i);
-      //        ci_joint_states_rt_pub_->msg_.velocity[i]  = joint_velocities_xbot_(i);
-      //        ci_joint_states_rt_pub_->msg_.effort[i]    = controller_->getDesiredJointEfforts()(i);
-      //    }
-      //    ci_joint_states_rt_pub_->msg_.header.stamp = time;
-      //    ci_joint_states_rt_pub_->unlockAndPublish();
-      //}
-
-
-
-
     };
 
 protected:
 
     std::shared_ptr<dynamic_reconfigure::Server<wb_controller::controllerConfig>> server_;
     wb_controller::controllerConfig default_config_;
-    /** @brief Real time publisher - desired joint states */
-    //std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
     /** @brief Real time publisher - contact forces */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
     wb_controller::Controller* controller_;
 
 private:
 
-    /** @brief XBOT joint positions */
-    Eigen::VectorXd joint_positions_xbot_;
-    /** @brief XBOT joint velocities */
-    Eigen::VectorXd joint_velocities_xbot_;
 };
 
 #endif // ROS_WRAPPERS_CONTROLLER_H

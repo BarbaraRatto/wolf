@@ -795,7 +795,6 @@ LegsKinematics* Controller::getLegsKinematics() const
     return kin_.get();
 }
 
-
 XBot::ModelInterface* Controller::getXbotModel() const
 {
     return xbot_model_.get();
@@ -807,7 +806,9 @@ const std::vector<std::string>& Controller::getFeetNames() const
 }
 
 const Eigen::Vector3d& Controller::getDesiredContactForces(const std::string& contact_name) const
-{   //TODO
+{
+
+    //TODO
     //for(unsigned int i=0; i <feet_names_.size(); i++) // FIXME these should be contacts i.e. including the arm
     //{
     //    contact_forces_pub_->msg_.des_contact_forces[i].force.x = des_contact_forces_.segment(6*i,3)(0);
@@ -815,7 +816,6 @@ const Eigen::Vector3d& Controller::getDesiredContactForces(const std::string& co
     //    contact_forces_pub_->msg_.des_contact_forces[i].force.z = des_contact_forces_.segment(6*i,3)(2);
     //}
 }
-
 
 const Eigen::VectorXd& Controller::getDesiredJointEfforts() const
 {

@@ -3,14 +3,8 @@
 
 // ROS
 #include <ros/ros.h>
-#include <realtime_tools/realtime_publisher.h>
-#include <realtime_tools/realtime_buffer.h>
 #include <tf/transform_broadcaster.h>
-#include <geometry_msgs/WrenchStamped.h>
-#include <sensor_msgs/JointState.h>
-#include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
-#include <dynamic_reconfigure/server.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // ROS control
@@ -234,10 +228,6 @@ private:
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
     OpenSoT::IDProblem::Ptr id_prob_;
-    /** @brief Real time publisher - desired joint states */
-    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
-    /** @brief Real time publisher - contact forces */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */
@@ -252,8 +242,6 @@ private:
     std::vector<double> joint_d_gain_;
     /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
-    /** @brief ROS dynamic reconfigure */
-    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::controllerConfig>> server_;
     /** @brief ROS dynamic reconfigure config struct */
     controllerConfig default_config_;
     /** @brief IMU Accelerometer */
@@ -337,21 +325,6 @@ private:
          * @brief update the imu reading from the imu interface
          */
     void readImu();
-
-    /**
-         * @brief init the ROS publishers
-         */
-    void initPublishers(const ros::NodeHandle& root_nh, const ros::NodeHandle& controller_nh);
-
-    /**
-         * @brief publish on ROS
-         */
-    void publish(const ros::Time& time, const ros::Duration& period);
-
-    /**
-         * @brief Update the dynamic reconfigure interface
-         */
-    void dynamicReconfigureUpdate();
 
 };
 
