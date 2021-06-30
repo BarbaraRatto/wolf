@@ -71,32 +71,22 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     else
         ground_truth_ = gt_hw->getHandle("ground_truth");
 
-    if (!controller_nh.getParam("joints", joint_names_))
+    // Create the quadruped robot object, it wraps the xbot model with some meta information
+    std::string urdf, srdf;
+    if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
     {
-        ROS_ERROR_NAMED(CLASS_NAME,"No joints given in the namespace: %s.", controller_nh.getNamespace().c_str());
-        return false;
+        throw std::runtime_error("No robot_description given in namespace /");
     }
-    if (!controller_nh.getParam("feet", feet_names_))
+    if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
     {
-        ROS_ERROR_NAMED(CLASS_NAME,"No feet given in the namespace: %s.", controller_nh.getNamespace().c_str());
-        return false;
+        throw std::runtime_error("No robot_semantic_description given in namespace /");
     }
-    if (!controller_nh.getParam("arm_tip", arm_tip_name_))
-    {
-        ROS_WARN_NAMED(CLASS_NAME,"No arm tip name given in the namespace: %s, proceeding without using the arm.", controller_nh.getNamespace().c_str());
-        arm_tip_name_ = std::string();
-    }
-    if (!controller_nh.getParam("hips", hips_names_))
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"No hips given in the namespace: %s.", controller_nh.getNamespace().c_str());
-        return false;
-    }
-    if (!controller_nh.getParam("imu_sensor", imu_name_))
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"No imu_sensor given in the namespace: %s.", controller_nh.getNamespace().c_str());
-        return false;
-    }
-
+    robot_model_.reset(new QuadrupedRobot(urdf,srdf));
+    //FIXME
+    xbot_model_ = robot_model_->getXBotModel();
+    joint_names_ = robot_model_->getJointNames();
+    feet_names_ = robot_model_->getFootNames();
+    hips_names_ = robot_model_->getHipNames();
 
     // Setting up joint handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
@@ -117,6 +107,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     try
     {
+        imu_name_ = "trunk_imu"; //FIXME note the hardcoded name...
         ROS_DEBUG_STREAM("Found imu sensor: "<<imu_name_);
         imu_sensor_ = imu_hw->getHandle(imu_name_);
     }
@@ -201,76 +192,21 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
             return false;
         }
     }
+
     double default_clik_gain = 0.0; // Default value
     if (!controller_nh.getParam("gains/clik_gain", default_clik_gain))
     {
         ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
     }
 
-    // Assume we are working with a dog
-    if(hips_names_.size()!=N_LEGS)
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of hips!");
-        return false;
-    }
-    if(feet_names_.size()!=N_LEGS)
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Wrong number of feet!");
-        return false;
-    }
-    hips_names_ = sortByLegName(hips_names_);
-    feet_names_ = sortByLegName(feet_names_);
 
-    // Create the ModelInterface from XBot
-    XBot::ConfigOptions opt;
-    std::string urdf, srdf, problem;
 
-    if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot_description given in namespace /");
-        return false;
-    }
-    if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot_semantic_description given in namespace /");
-        return false;
-    }
-    if(!opt.set_urdf(urdf))
-    {
-        ROS_ERROR("Unable to load urdf");
-        return false;
-    }
-    if(!opt.set_srdf(srdf))
-    {
-        ROS_ERROR("Unable to load srdf");
-        return false;
-    }
-    if(!opt.generate_jidmap())
-    {
-        ROS_ERROR("Unable to load jidmap");
-        return false;
-    }
-    opt.set_parameter("is_model_floating_base", true);
-    std::string model_type = "RBDL";
-    opt.set_parameter<std::string>("model_type", model_type);
-    xbot_model_ = XBot::ModelInterface::getModel(opt);
-
-    _dof_names = xbot_model_->getEnabledJointNames();
 
     // Initialize the inertia related matrices
     xbot_model_->getInertiaMatrix(M_);
     Mi_.setZero(M_.rows(), M_.cols());
     Kp_postural_.setZero(M_.rows(), M_.cols());
     Kd_postural_.setZero(M_.rows(), M_.cols());
-
-    // Check if the joint names in the ROS config file are in the same order as the one in the virtual model:
-    assert(_dof_names.size() == joint_names_.size()+FLOATING_BASE_DOFS);
-    for(unsigned int i=0;i<joint_names_.size();i++)
-        if(_dof_names[i+FLOATING_BASE_DOFS]!=joint_names_[i])
-        {
-            ROS_ERROR_STREAM_NAMED(CLASS_NAME,"Joint names in the robot model type "<<model_type<< " are not in the same order as in the ROS config file of the controller.");
-            return false;
-        }
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -370,9 +306,9 @@ bool Controller::selectStack(const std::string& stack)
    if(id_prob_)
    {
        if(stack.compare("walking") == 0)
-         id_prob_->selectStack(OpenSoT::IDProblem::stacks_t::WALKING);
+         id_prob_->selectStack(IDProblem::stacks_t::WALKING);
        else if(stack.compare("manipulation") == 0)
-         id_prob_->selectStack(OpenSoT::IDProblem::stacks_t::MANIPULATION);
+         id_prob_->selectStack(IDProblem::stacks_t::MANIPULATION);
        else
        {
          ROS_ERROR_NAMED(CLASS_NAME,"Wrong stack!");
@@ -621,6 +557,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_feet[feet_names_[i]]->setActive(false);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
                 ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
+                id_prob_->_postural_feet_swing[feet_names_[i]]->setActive(true);
+                id_prob_->_postural_feet_stance[feet_names_[i]]->setActive(false);
 
                 if(inertia_compensation_active_)
                 {
@@ -641,6 +579,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 id_prob_->_feet[feet_names_[i]]->setActive(true);
                 id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
                 ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
+                id_prob_->_postural_feet_swing[feet_names_[i]]->setActive(false);
+                id_prob_->_postural_feet_stance[feet_names_[i]]->setActive(true);
             }
         }
 
@@ -770,7 +710,7 @@ void Controller::stopping(const ros::Time& /*time*/)
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
 }
 
-OpenSoT::IDProblem* Controller::getIDProblem() const
+IDProblem* Controller::getIDProblem() const
 {
   return id_prob_.get();
 }

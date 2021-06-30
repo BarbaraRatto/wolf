@@ -6,7 +6,6 @@
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
-#include <OpenSoT/tasks/MinimizeVariable.h>
 #include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/utils/AutoStack.h>
@@ -25,12 +24,13 @@
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
 #include <wb_controller/ros_wrappers/tasks.h>
+#include <wb_controller/quadruped_robot.h>
 
 // STD
 #include <atomic>
 #include <mutex>
 
-namespace OpenSoT{
+namespace wb_controller{
 
 /**
  * @brief The IDProblem class wraps the tasks, constraints and the solver used to solve the ID
@@ -50,7 +50,7 @@ public:
      * @param model pointer to external model
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name = std::string());
+    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model);
     ~IDProblem();
 
     /**
@@ -120,12 +120,6 @@ public:
     void setLowerForceBoundZ(const double& force);
 
     /**
-     * @brief set the weight for the forces minimization task
-     * @param weight
-     */
-    void setMinFsWeight(const double& weight);
-
-    /**
          * @brief Ros dynamic reconfigure callback
          */
     void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
@@ -149,17 +143,12 @@ public:
     /**
      * @brief Cartesian tasks
      */
-    std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
-    tasks::acceleration::Cartesian::Ptr _arm;
-    tasks::acceleration::Cartesian::Ptr _waistRPY;
-    tasks::acceleration::Cartesian::Ptr _waistZ;
-    tasks::acceleration::CoM::Ptr _com;
-    tasks::acceleration::AngularMomentum::Ptr _angular_momentum;
-
-    /**
-     * @brief Forces minimization tasks
-     */
-    std::vector<tasks::MinimizeVariable::Ptr> _minfs;
+    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> _feet;
+    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> _arms;
+    OpenSoT::tasks::acceleration::Cartesian::Ptr _waistRPY;
+    OpenSoT::tasks::acceleration::Cartesian::Ptr _waistZ;
+    OpenSoT::tasks::acceleration::CoM::Ptr _com;
+    OpenSoT::tasks::acceleration::AngularMomentum::Ptr _angular_momentum;
 
     /**
      * @brief Expose the tasks to ROS
@@ -169,22 +158,22 @@ public:
     /**
      * @brief _posture a postural task
      */
-    tasks::acceleration::Postural::Ptr _postural;
+    OpenSoT::tasks::acceleration::Postural::Ptr _postural;
 
     /**
      * @brief _x_lims some bounds
      */
-    constraints::GenericConstraint::Ptr _qddot_lims;
+    OpenSoT::constraints::GenericConstraint::Ptr _qddot_lims;
 
     /**
      * @brief wrench bounds
      */
-    constraints::force::WrenchesLimits::Ptr _wrenches_lims;
+    OpenSoT::constraints::force::WrenchesLimits::Ptr _wrenches_lims;
 
     /**
      * @brief _model
      */
-    XBot::ModelInterface::Ptr _model;
+    QuadrupedRobot::Ptr _model;
 
 private:
 
@@ -196,27 +185,27 @@ private:
     /**
      * @brief _dynamics_con constraint relates the floating base with the contact forces
      */
-    constraints::TaskToConstraint::Ptr _dynamics_con;
+    OpenSoT::constraints::TaskToConstraint::Ptr _dynamics_con;
 
     /**
      * @brief _dynamics_task constraint relates the floating base with the contact forces
      */
-    tasks::acceleration::DynamicFeasibility::Ptr _dynamics_task;
+    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr _dynamics_task;
 
     /**
      * @brief _friction_cones constraints
      */
-    constraints::force::FrictionCones::Ptr _friction_cones;
+    OpenSoT::constraints::force::FrictionCones::Ptr _friction_cones;
 
     /**
      * @brief the final ID stack
      */
-    std::map<unsigned int,AutoStack::Ptr> _stacks;
+    std::map<unsigned int,OpenSoT::AutoStack::Ptr> _stacks;
 
     /**
      * @brief _solver iHQP solver
      */
-    std::unique_ptr<solvers::iHQP> _solver;
+    std::unique_ptr<OpenSoT::solvers::iHQP> _solver;
 
     /**
      * @brief _id inverse dynamics computation & variable helper
@@ -249,6 +238,10 @@ private:
     std::atomic<unsigned int> _current_stack;
 
     std::mutex _solver_lock;
+
+    std::vector<std::string> foot_names_;
+    std::vector<std::string> arm_names_;
+    std::vector<std::string> contact_names_;
 
 };
 

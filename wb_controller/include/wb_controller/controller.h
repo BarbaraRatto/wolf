@@ -15,8 +15,6 @@
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <dls_hardware_interface/ground_truth_interface.h>
-// ADVR
-#include <XBotCoreModel/XBotCoreModel.h>
 // STD
 #include <atomic>
 #include <thread>
@@ -33,6 +31,7 @@
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/controllerConfig.h>
 #include <wb_controller/ros_wrappers/interface.h>
+#include <wb_controller/quadruped_robot.h>
 // Eigen
 #include <Eigen/Geometry>
 
@@ -131,7 +130,7 @@ public:
     /**
          * @brief Get the id problem
          */
-    OpenSoT::IDProblem* getIDProblem() const;
+    IDProblem* getIDProblem() const;
 
     /**
          * @brief Get the gait generator pointer
@@ -225,6 +224,7 @@ private:
     /** @brief Solver's solution (i.e. efforts) */
     Eigen::VectorXd x_;
     /** @brief Xbot robot model */
+    QuadrupedRobot::Ptr robot_model_; // FIXME
     XBot::ModelInterface::Ptr xbot_model_;
     /** @brief Dynamic problem formulation */
     OpenSoT::IDProblem::Ptr id_prob_;
