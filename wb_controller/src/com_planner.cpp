@@ -8,12 +8,13 @@ namespace wb_controller {
 
 ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner)
 {
-  assert(state_estimator_);
+
   state_estimator_ = state_estimator;
-  assert(foothold_planner);
   foothold_planner_ = foothold_planner;
+
   feet_order_ = {"rf_foot","rh_foot","lh_foot","lf_foot","rf_foot"};
   com_velocity_ref_.setZero();
+  com_position_ref_.setZero();
 
   c_ = c_ref_ = c_filt_ = 1.0;
 
@@ -90,6 +91,11 @@ void ComPlanner::update(double /*dt*/)
 const Eigen::Vector3d &ComPlanner::getComVelocity() const
 {
   return com_velocity_ref_;
+}
+
+const Eigen::Vector3d &ComPlanner::getComPosition() const
+{
+  return com_position_ref_;
 }
 
 }; // namespace

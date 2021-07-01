@@ -4,21 +4,21 @@ namespace wb_controller {
 
 #define CLASS_NAME "LegsKinematics"
 
-LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
+LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
   : base_height_control_active_(false), clik_gain_(1.0)
 {
 
   assert(gait_generator);
   gait_generator_ = gait_generator;
-  assert(xbot_model);
-  xbot_model_ = xbot_model;
+  assert(robot_model);
+  robot_model_ = robot_model;
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
-  xbot_model_->getRobotState("home", qhome_);
-  xbot_model_->setJointPosition(qhome_);
+  robot_model_->getXBotModel()->getRobotState("home", qhome_);
+  robot_model_->getXBotModel()->setJointPosition(qhome_);
 
-  xbot_model_->getJointLimits(qmin_, qmax_);
+  robot_model_->getXBotModel()->getJointLimits(qmin_, qmax_);
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
@@ -35,19 +35,19 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInt
 bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
 {
 
-  xbot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   base_height_ = tmp_affine3d_.translation()(2);
 
   des_joint_positions_ = current_joint_positions;
 
   double delta_z = des_base_height_ - base_height_;
 
-  const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+  const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
 
   for(unsigned int i = 0; i<feet_names.size(); i++)
   {
-    xbot_model_->getJacobian(feet_names[i],J_);
-    xbot_model_->getPose(feet_names[i],world_T_foot_);
+    robot_model_->getXBotModel()->getJacobian(feet_names[i],J_);
+    robot_model_->getXBotModel()->getPose(feet_names[i],world_T_foot_);
 
     J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*i);
 
@@ -136,7 +136,7 @@ void LegsKinematics::reset()
   des_joint_positions_ = qhome_;
   qstance_ = qhome_;
   qswing_ = qhome_;
-  xbot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
 }
 

@@ -5,8 +5,8 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
-#include <XBotInterface/ModelInterface.h>
 #include <wb_controller/gait_generator.h>
+#include <wb_controller/quadruped_robot.h>
 
 namespace wb_controller
 {
@@ -31,7 +31,7 @@ public:
 
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
-    FootholdsPlanner(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max = 0.3, double step_height_max = 0.3);
+    FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, double step_length_max = 0.3, double step_height_max = 0.3);
 
     void update(const double& period,const Eigen::Vector3d& base_position); // OpenLoop Orientation
 
@@ -162,7 +162,7 @@ private:
     Eigen::Matrix3d world_R_hf_;
 
     GaitGenerator::Ptr gait_generator_;
-    XBot::ModelInterface::Ptr xbot_model_;
+    QuadrupedRobot::Ptr robot_model_;
 
     Eigen::Affine3d world_T_foot_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
     std::vector<Eigen::Vector3d> hf_X_initial_footholds_;

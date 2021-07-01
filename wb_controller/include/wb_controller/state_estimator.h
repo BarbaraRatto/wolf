@@ -5,10 +5,10 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
-#include <XBotInterface/ModelInterface.h>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
 #include <wb_controller/gait_generator.h>
+#include <wb_controller/quadruped_robot.h>
 
 namespace wb_controller
 {
@@ -29,7 +29,7 @@ public:
 
     enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z};
 
-    StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model);
+    StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
 
     //~StateEstimator()
 
@@ -148,14 +148,22 @@ private:
     XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
     /** @brief Contact estimation */
     std::map<std::string,XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
-    /** @brief Feet positions w.r.t base */
+    /** @brief Foot positions w.r.t base */
     std::map<std::string,Eigen::Vector3d> base_X_foot_;
-    /** @brief Feet positions w.r.t world */
+    /** @brief Foot positions w.r.t world */
     std::map<std::string,Eigen::Vector3d> world_X_foot_;
-    /** @brief Feet pose w.r.t base */
+    /** @brief Foot pose w.r.t base */
     std::map<std::string,Eigen::Affine3d> base_T_foot_;
-    /** @brief Feet pose w.r.t world */
+    /** @brief Foot pose w.r.t world */
     std::map<std::string,Eigen::Affine3d> world_T_foot_;
+    /** @brief Arm positions w.r.t base */
+    std::map<std::string,Eigen::Vector3d> base_X_arm_;
+    /** @brief Arm positions w.r.t world */
+    std::map<std::string,Eigen::Vector3d> world_X_arm_;
+    /** @brief Arm pose w.r.t base */
+    std::map<std::string,Eigen::Affine3d> base_T_arm_;
+    /** @brief Arm pose w.r.t world */
+    std::map<std::string,Eigen::Affine3d> world_T_arm_;
     /** @brief GRF contacts */
     std::map<std::string,bool> contacts_;
     /** @brief GRF contact forces */
@@ -189,7 +197,7 @@ private:
 
     Eigen::Vector3d tmp_vector3d_;
 
-    XBot::ModelInterface::Ptr xbot_model_;
+    QuadrupedRobot::Ptr robot_model_;
 
     GaitGenerator::Ptr gait_generator_;
 

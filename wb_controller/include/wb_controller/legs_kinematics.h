@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include <wb_controller/geometry.h>
 #include <wb_controller/gait_generator.h>
-#include <XBotInterface/ModelInterface.h>
+#include <wb_controller/quadruped_robot.h>
 
 namespace wb_controller
 {
@@ -25,7 +25,7 @@ public:
    */
   typedef std::shared_ptr<const LegsKinematics> ConstPtr;
 
-  LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model);
+  LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
 
   /**
        * @brief Compute the desired joint positions and velocities
@@ -72,7 +72,7 @@ public:
 
 private:
 
-  XBot::ModelInterface::Ptr xbot_model_;
+  QuadrupedRobot::Ptr robot_model_;
 
   GaitGenerator::Ptr gait_generator_;
 

@@ -26,6 +26,7 @@ public:
   const std::vector<std::string>& getJointNames() const;
   const std::vector<std::string>& getArmNames() const;
   const std::vector<std::string>& getContactNames() const;
+  const std::vector<std::string>& getLimbNames() const;
   XBot::ModelInterface::Ptr getXBotModel();
 
   const unsigned int& getNumberArms() const;
@@ -34,11 +35,12 @@ public:
 private:
 
   XBot::ModelInterface::Ptr xbot_model_;
-  std::vector<std::string> foot_names_;
+  std::vector<std::string> foot_names_; // foot tip names
   std::vector<std::string> hip_names_;
   std::vector<std::string> joint_names_;
-  std::vector<std::string> arm_names_;
-  std::vector<std::string> contact_names_;
+  std::vector<std::string> arm_names_; // arm tip names
+  std::vector<std::string> contact_names_; // foot + arm names
+  std::vector<std::string> limb_names_; // chain names
 
   unsigned int n_legs_;
   unsigned int n_arms_;

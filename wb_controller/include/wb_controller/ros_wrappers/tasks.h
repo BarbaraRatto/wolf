@@ -1,25 +1,12 @@
-#ifndef TASK_ROS_WRAPPER_H
-#define TASK_ROS_WRAPPER_H
+#ifndef ROS_WRAPPERS_TASKS_H
+#define ROS_WRAPPERS_TASKS_H
 
 // OpenSoT
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
-#include <OpenSoT/tasks/MinimizeVariable.h>
-#include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
-#include <OpenSoT/constraints/GenericConstraint.h>
-#include <OpenSoT/utils/AutoStack.h>
-#include <OpenSoT/solvers/iHQP.h>
-#include <OpenSoT/utils/InverseDynamics.h>
-#include <OpenSoT/constraints/force/FrictionCone.h>
-#include <OpenSoT/constraints/force/WrenchLimits.h>
 
 // ROS
-#include <ros/ros.h>
-#include <dynamic_reconfigure/server.h>
-#include <interactive_markers/interactive_marker_server.h>
-#include <realtime_tools/realtime_publisher.h>
-#include <realtime_tools/realtime_buffer.h>
 #include <wb_controller/CartesianTask.h>
 #include <wb_controller/JointsTask.h>
 #include <wb_controller/taskGenericConfig.h>
@@ -27,43 +14,11 @@
 #include <wb_controller/taskCartesianConfig.h>
 
 // WB
+#include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/geometry.h>
-#include <wb_controller/utils.h>
-
-// STD
-#include <atomic>
-
-class TaskRosWrapperInterface
-{
-
-public:
-
-    typedef std::shared_ptr<TaskRosWrapperInterface> Ptr;
-
-    TaskRosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
-    virtual ~TaskRosWrapperInterface(){spinner_->stop();}
-
-    virtual void publish(const ros::Time& /*time*/) = 0;
-    virtual void updateReference() {}
-    virtual void dynamicReconfigureUpdate() {}
-
-protected:
-
-    std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_;
-    std::shared_ptr<ros::AsyncSpinner> spinner_;
-
-    Eigen::Affine3d       tmp_affine3d_;
-    Eigen::VectorXd       tmp_vectorxd_;
-    Eigen::Vector3d       tmp_vector3d_;
-    Eigen::Vector6d       tmp_vector6d_;
-    Eigen::Quaterniond    tmp_quaterniond_;
-
-    realtime_tools::RealtimeBuffer<Eigen::Affine3d> rt_affine3d_;
-
-};
 
 template <typename task_ptr_t, typename msg_t, typename config_t>
-class TaskRosWrapperBase : public TaskRosWrapperInterface
+class TaskRosWrapperBase : public RosWrapperInterface
 {
 
 public:
@@ -272,7 +227,7 @@ protected:
 
     virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
     {
-        ROS_INFO_STREAM( feedback->marker_name << " is now at "
+        ROS_DEBUG_STREAM( feedback->marker_name << " is now at "
                          << feedback->pose.position.x << ", " << feedback->pose.position.y
                          << ", " << feedback->pose.position.z );
 
@@ -286,13 +241,6 @@ protected:
         pose_reference.translation() = translation_reference;
         pose_reference.linear() = R.transpose();
 
-        /*quaternion.x() = feedback->pose.orientation.x;
-        quaternion.y() = feedback->pose.orientation.y;
-        quaternion.z() = feedback->pose.orientation.z;
-        quaternion.w() = feedback->pose.orientation.w;
-        quatToRotMat(quaternion,world_R_task);*/
-
-        // FIXME no orientation yet
         rt_affine3d_.writeFromNonRT(pose_reference);
     }
 
@@ -314,10 +262,9 @@ private:
       // create a grey box marker
       visualization_msgs::Marker box_marker;
       box_marker.type = visualization_msgs::Marker::SPHERE;
-
-      box_marker.scale.x = 0.1;
-      box_marker.scale.y = 0.1;
-      box_marker.scale.z = 0.1;
+      box_marker.scale.x = 0.2;
+      box_marker.scale.y = 0.2;
+      box_marker.scale.z = 0.2;
       box_marker.color.r = 0.5;
       box_marker.color.g = 0.5;
       box_marker.color.b = 0.5;
@@ -515,5 +462,5 @@ typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controlle
 typedef TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig> ComWrapper;
 typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig> PosturalWrapper;
 
-#endif // TASK_ROS_WRAPPER_H
+#endif // ROS_WRAPPERS_TASKS_H
 

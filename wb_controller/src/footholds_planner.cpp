@@ -6,19 +6,19 @@ namespace wb_controller {
 
 #define CLASS_NAME "FootholdsPlanner"
 
-FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model, double step_length_max, double step_height_max)
+FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, double step_length_max, double step_height_max)
 {
 
     assert(gait_generator);
     gait_generator_ = gait_generator;
-    assert(xbot_model);
-    xbot_model_ = xbot_model;
+    assert(robot_model);
+    robot_model_ = robot_model;
     assert(step_length_max>=0.0);
     step_length_max_ = step_length_max;
     assert(step_height_max>=0.0);
     step_height_max_ = step_height_max;
 
-    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
     for(unsigned int i=0;i<feet_names.size();i++)
     {
         steps_length_[feet_names[i]] = 0.0;
@@ -64,13 +64,13 @@ void FootholdsPlanner::update(const double& period) // OpenLoop
 
 void FootholdsPlanner::initializeFootPosition(const std::string& foot_name)
 {
-    xbot_model_->getPose(foot_name,world_T_foot_);
+    robot_model_->getXBotModel()->getPose(foot_name,world_T_foot_);
     gait_generator_->setInitialPose(foot_name,world_T_foot_);
 }
 
 void FootholdsPlanner::initializeFeetPosition()
 {
-    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
 
     for(unsigned int i=0; i<feet_names.size(); i++)
         initializeFootPosition(feet_names[i]);
@@ -82,7 +82,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
     ROS_DEBUG_NAMED(CLASS_NAME,"update");
 
-    xbot_model_->getPose("base_link",world_T_base_);
+    robot_model_->getXBotModel()->getPose("base_link",world_T_base_);
 
     ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.translation()" << world_T_base_.translation());
     ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.linear()" << world_T_base_.linear());
@@ -141,7 +141,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
     calculateFeetStep();
 
-    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
         // Set the initial pose for the next swing
@@ -165,7 +165,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
 void FootholdsPlanner::calculateFeetStep()
 {
-    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
 
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
@@ -193,7 +193,7 @@ void FootholdsPlanner::calculateFeetStep()
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
             // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
-            xbot_model_->getPose(feet_names[i],"base_link",base_T_foot_);
+            robot_model_->getXBotModel()->getPose(feet_names[i],"base_link",base_T_foot_);
             // current foot position in the horizontal frame
             hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
             //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
@@ -241,7 +241,7 @@ void FootholdsPlanner::calculateFeetStep()
 
 void FootholdsPlanner::resetFeetStep()
 {
-    const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
 
     for(unsigned int i=0; i<feet_names.size(); i++)
     {
@@ -343,11 +343,11 @@ void FootholdsPlanner::setInitialOffsets()
 {
     if(!offsets_applied_)
     {
-        const std::vector<std::string>& hips_names = gait_generator_->getHipsNames();
+        const std::vector<std::string>& hips_names = robot_model_->getHipNames();
         for(unsigned int i=0; i<hips_names.size(); i++)
         {
-            xbot_model_->getPose(gait_generator_->getFeetNames()[i],"base_link",base_T_foot_);
-            xbot_model_->getPose(hips_names[i],"base_link",base_T_hip_);
+            robot_model_->getXBotModel()->getPose(gait_generator_->getFootNames()[i],"base_link",base_T_foot_);
+            robot_model_->getXBotModel()->getPose(hips_names[i],"base_link",base_T_hip_);
             // initial feet offsets in the horizontal frame
             hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
             // initial hip positions, we assume the base starts horizontal (TODO)

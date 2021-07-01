@@ -29,6 +29,7 @@
 // STD
 #include <atomic>
 #include <mutex>
+#include <memory>
 
 namespace wb_controller{
 
@@ -61,27 +62,30 @@ public:
     bool solve(Eigen::VectorXd& x);
 
     /**
-     * @brief get the ground reaction forces call this after solve()
-     * @param grfs from the solver
+     * @brief get the contact wrenches, to call after solve()
      */
-    void getGroundReactionForces(Eigen::VectorXd& grfs);
+    const std::vector<Eigen::Vector6d>& getContactWrenches() const;
 
     /**
-     * @brief update call after the model.update() to update the autostack
-     * @param x input state q
+     * @brief get the joint accelerations, to call after solve()
      */
-    void update();
+    const Eigen::VectorXd& getJointAccelerations() const;
 
     /**
-     * @brief reset the tasks
+     * @brief swing with a specific foot i.e. release the contact
      */
-    void reset();
+    void swingWithFoot(const std::string& foot_name);
+
+    /**
+     * @brief stance with a specific foot i.e. activate the contact
+     */
+    void stanceWithFoot(const std::string& foot_name);
 
     /**
      * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
      * @param task name to update
      */
-    void updateReference(const std::string& task_name);
+    void setExternalReference(const std::string& task_name);
 
     /**
      * @brief publish the ros topics related to the tasks
@@ -120,6 +124,20 @@ public:
     void setLowerForceBoundZ(const double& force);
 
     /**
+     * @brief set the angular reference and height for the waist (aka base)
+     * @param Rot rotation matrix
+     * @param z height
+     */
+    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z);
+
+    /**
+     * @brief set the position and velocity reference for the CoM
+     * @param position
+     * @param velocity
+     */
+    void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
+
+    /**
          * @brief Ros dynamic reconfigure callback
          */
     void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
@@ -143,37 +161,37 @@ public:
     /**
      * @brief Cartesian tasks
      */
-    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> _feet;
-    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> _arms;
-    OpenSoT::tasks::acceleration::Cartesian::Ptr _waistRPY;
-    OpenSoT::tasks::acceleration::Cartesian::Ptr _waistZ;
-    OpenSoT::tasks::acceleration::CoM::Ptr _com;
-    OpenSoT::tasks::acceleration::AngularMomentum::Ptr _angular_momentum;
+    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> feet_;
+    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> arms_;
+    OpenSoT::tasks::acceleration::Cartesian::Ptr waistRPY_;
+    OpenSoT::tasks::acceleration::Cartesian::Ptr waistZ_;
+    OpenSoT::tasks::acceleration::CoM::Ptr com_;
+    OpenSoT::tasks::acceleration::AngularMomentum::Ptr angular_momentum_;
 
     /**
      * @brief Expose the tasks to ROS
      */
-    std::map<std::string,RosWrapperInterface::Ptr> _tasks_ros;
+    std::map<std::string,RosWrapperInterface::Ptr> tasks_ros_;
 
     /**
-     * @brief _posture a postural task
+     * @brief postural_ a postural task
      */
-    OpenSoT::tasks::acceleration::Postural::Ptr _postural;
+    OpenSoT::tasks::acceleration::Postural::Ptr postural_;
 
     /**
-     * @brief _x_lims some bounds
+     * @brief qddot_lims_ some bounds
      */
-    OpenSoT::constraints::GenericConstraint::Ptr _qddot_lims;
+    OpenSoT::constraints::GenericConstraint::Ptr qddot_lims_;
 
     /**
-     * @brief wrench bounds
+     * @brief wrenches_lims_ bounds
      */
-    OpenSoT::constraints::force::WrenchesLimits::Ptr _wrenches_lims;
+    OpenSoT::constraints::force::WrenchesLimits::Ptr wrenches_lims_;
 
     /**
      * @brief _model
      */
-    QuadrupedRobot::Ptr _model;
+    QuadrupedRobot::Ptr model_;
 
 private:
 
@@ -183,65 +201,80 @@ private:
     void dynamicReconfigureUpdate();
 
     /**
-     * @brief _dynamics_con constraint relates the floating base with the contact forces
+     * @brief update call after the model.update() to update the autostack
      */
-    OpenSoT::constraints::TaskToConstraint::Ptr _dynamics_con;
+    void update();
 
     /**
-     * @brief _dynamics_task constraint relates the floating base with the contact forces
+     * @brief dynamics_con_ constraint relates the floating base with the contact forces
      */
-    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr _dynamics_task;
+    OpenSoT::constraints::TaskToConstraint::Ptr dynamics_con_;
 
     /**
-     * @brief _friction_cones constraints
+     * @brief dynamics_task_ constraint relates the floating base with the contact forces
      */
-    OpenSoT::constraints::force::FrictionCones::Ptr _friction_cones;
+    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr dynamics_task_;
 
     /**
-     * @brief the final ID stack
+     * @brief friction_cones_ constraints
      */
-    std::map<unsigned int,OpenSoT::AutoStack::Ptr> _stacks;
+    OpenSoT::constraints::force::FrictionCones::Ptr friction_cones_;
 
     /**
-     * @brief _solver iHQP solver
+     * @brief map of stacks
      */
-    std::unique_ptr<OpenSoT::solvers::iHQP> _solver;
+    std::map<unsigned int,OpenSoT::AutoStack::Ptr> stacks_;
 
     /**
-     * @brief _id inverse dynamics computation & variable helper
+     * @brief solver_ iHQP solver
      */
-    OpenSoT::utils::InverseDynamics::Ptr _id;
+    std::unique_ptr<OpenSoT::solvers::iHQP> solver_;
 
     /**
-     * @brief _x decision variables
+     * @brief id_ inverse dynamics computation & variable helper
      */
-    Eigen::VectorXd _x;
+    OpenSoT::utils::InverseDynamics::Ptr id_;
 
-    Eigen::VectorXd _qddot;
-    std::vector<Eigen::Vector6d> _contact_wrenches;
+    /**
+     * @brief x_ full solver solution
+     */
+    Eigen::VectorXd x_;
 
-    Eigen::Vector6d _wrench_upper_lims;
-    Eigen::Vector6d _wrench_lower_lims;
+    /**
+     * @brief qddot_ joint accelerations solution
+     */
+    Eigen::VectorXd qddot_;
+
+    /**
+     * @brief contact_wrenches_ contacts solution
+     */
+    std::vector<Eigen::Vector6d> contact_wrenches_;
+
+    /**
+     * @brief wrench limitis
+     */
+    Eigen::Vector6d wrench_upper_lims_;
+    Eigen::Vector6d wrench_lower_lims_;
 
     /** @brief ROS dynamic reconfigure */
     std::shared_ptr<dynamic_reconfigure::Server<wb_controller::problemConfig>> server_;
     /** @brief ROS dynamic reconfigure config struct */
     wb_controller::problemConfig default_config_;
 
-    std::atomic<double> _mu;
-    std::atomic<double> _x_force_lower_lim;
-    std::atomic<double> _y_force_lower_lim;
-    std::atomic<double> _z_force_lower_lim;
+    std::atomic<double> mu_;
+    std::atomic<double> x_force_lower_lim_;
+    std::atomic<double> y_force_lower_lim_;
+    std::atomic<double> z_force_lower_lim_;
 
-    unsigned int idx_grfs_start_;
+    std::atomic<unsigned int> current_stack_;
 
-    std::atomic<unsigned int> _current_stack;
-
-    std::mutex _solver_lock;
+    std::mutex solver_lock_;
 
     std::vector<std::string> foot_names_;
     std::vector<std::string> arm_names_;
     std::vector<std::string> contact_names_;
+
+    Eigen::Affine3d tmp_affine3d_;
 
 };
 

@@ -4,7 +4,7 @@
 #include "test_common_utils.h"
 
 static wb_controller::QuadrupedRobot::Ptr _robot;
-static OpenSoT::IDProblem::Ptr _id_problem;
+static wb_controller::IDProblem::Ptr _id_problem;
 
 // TEST CASES
 TEST(IDProblem, Constructor)

@@ -82,11 +82,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         throw std::runtime_error("No robot_semantic_description given in namespace /");
     }
     robot_model_.reset(new QuadrupedRobot(urdf,srdf));
-    //FIXME
-    xbot_model_ = robot_model_->getXBotModel();
     joint_names_ = robot_model_->getJointNames();
-    feet_names_ = robot_model_->getFootNames();
-    hips_names_ = robot_model_->getHipNames();
 
     // Setting up joint handles:
     for (unsigned int i = 0; i < joint_names_.size(); i++)
@@ -199,14 +195,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
     }
 
-
-
-
     // Initialize the inertia related matrices
-    xbot_model_->getInertiaMatrix(M_);
+    robot_model_->getXBotModel()->getInertiaMatrix(M_);
     Mi_.setZero(M_.rows(), M_.cols());
     Kp_postural_.setZero(M_.rows(), M_.cols());
     Kd_postural_.setZero(M_.rows(), M_.cols());
+
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -219,8 +213,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_solver_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_pids_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
-    x_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    des_contact_forces_.resize(FLOATING_BASE_DOFS*N_LEGS); // 24 = 6 dofs * 4 leg
+    des_contact_forces_.resize(robot_model_->getContactNames().size(),Eigen::Vector6d::Zero());
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -231,16 +224,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.fill(0.0);
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
-    x_.fill(0.0);
     imu_orientation_.normalize();
     pid_scale_ = 1.0;
 
-    gait_generator_.reset(new GaitGenerator(feet_names_,hips_names_,"crawl","ellipse"));
-    foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,xbot_model_));
-    state_estimator_.reset(new StateEstimator(gait_generator_,xbot_model_));
+    gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),"crawl","ellipse"));
+    foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
+    state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
     com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_));
 
-    kin_.reset(new LegsKinematics(gait_generator_,xbot_model_));
+    kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
     kin_->setClikGain(default_clik_gain);
     kin_->activateBaseHeightControl();
     des_joint_positions_ = kin_->getJointHomePositions();
@@ -248,9 +240,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joy_handler_.reset(new JoyHandler(controller_nh,foot_holds_planner_));
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
     joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
-    //joy_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE);
+    //joy_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE); // FIXME
 
-    keyboard_handler_.reset(new TwistHandler(controller_nh,foot_holds_planner_));
+    //keyboard_handler_.reset(new TwistHandler(controller_nh,foot_holds_planner_)); //FIXME
 
     // initialize the filters
     cutoff_hz_gyro_ = 300.;
@@ -271,7 +263,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_gyroscope_filter_.setTimeStep(period_);
 
     // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME
 
     RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
@@ -290,9 +282,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
 bool Controller::setSwingFrequency(const double& swing_frequency)
 {
+    const std::vector<std::string>& foot_names = robot_model_->getFootNames();
     if(gait_generator_)
-        for(unsigned int i=0; i < feet_names_.size(); i++)
-            gait_generator_->setSwingFrequency(feet_names_[i],swing_frequency);
+        for(unsigned int i=0; i < foot_names.size(); i++)
+            gait_generator_->setSwingFrequency(foot_names[i],swing_frequency);
     else
     {
         ROS_WARN_NAMED(CLASS_NAME,"gait_generator not initialized yet.");
@@ -385,7 +378,7 @@ void Controller::toggleSolver()
     if(!solver_created_)
     {
         ROS_INFO("Reset the solver");
-        id_prob_.reset(new OpenSoT::IDProblem(nh_,xbot_model_,feet_names_,arm_tip_name_));
+        id_prob_.reset(new IDProblem(nh_,robot_model_));
         solver_created_ = true;
     }
 
@@ -503,9 +496,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->initializeFeetPosition();
 
-            // Reset the tasks
-            //id_prob_->reset(); // FIXME
-
             kin_->reset();
 
             des_joint_positions_ = kin_->getJointHomePositions();
@@ -514,30 +504,28 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
 
-            //dynamicReconfigureUpdate(); // FIXME Why is it here?
+            // FIXME Why is it here?
             ros_wrapper_->dynamicReconfigureUpdate();
 
             init_done_ = true;
-
         }
+
+        const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+        const std::vector<std::string>& arm_names  = robot_model_->getArmNames();
+
+        // Set the pose refenreces through ROS markers for the arms
+        for(unsigned int i = 0; i<arm_names.size(); i++)
+          id_prob_->setExternalReference(arm_names[i]);
 
         foot_holds_planner_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
 
-        // FIXME I should add something to the FootholdsPlanner!!!
-        // Get the external reference (interactive marker) for the arm if available
-        id_prob_->updateReference(arm_tip_name_);
+        rotTorpy(foot_holds_planner_->getBaseRotationReference().transpose(),des_base_rpy_);
+         // Set the pose reference for the waist
+        id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
 
-        // Set the task reference for the waist
-        id_prob_->_waistRPY->getReference(tmp_affine3d_);
-        tmp_affine3d_.linear() = foot_holds_planner_->getBaseRotationReference();
-        rotTorpy(tmp_affine3d_.linear().transpose(),des_base_rpy_);
-        tmp_affine3d_.translation().z() = foot_holds_planner_->getBaseHeight();
-        id_prob_->_waistRPY->setReference(tmp_affine3d_);
-
-        id_prob_->_waistZ->setReference(tmp_affine3d_);
-
+        // Set the velocity reference for the Com, note that the position is zero
         com_planner_->update(period.toSec());
-        id_prob_->_com->setReference(Eigen::Vector3d::Zero(),com_planner_->getComVelocity());
+        id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
         if(inertia_compensation_active_)
         {
@@ -545,20 +533,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                     = M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS).inverse();
         }
 
-        for(unsigned int i = 0; i<feet_names_.size(); i++)
+        for(unsigned int i = 0; i<foot_names.size(); i++)
         {
             // Update the reference for the feet tasks, this is only used for visualization pourposes
-            id_prob_->_feet[feet_names_[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
+            //id_prob_->_feet[foot_names[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
 
             // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
             // Set the wrench limits to enstablish the contacts
-            if(gait_generator_->isSwinging(feet_names_[i]))
+            if(gait_generator_->isSwinging(foot_names[i]))
             {
-                id_prob_->_feet[feet_names_[i]]->setActive(false);
-                id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(true);
-                ROS_DEBUG_STREAM("Swinging: "<< feet_names_[i]);
-                id_prob_->_postural_feet_swing[feet_names_[i]]->setActive(true);
-                id_prob_->_postural_feet_stance[feet_names_[i]]->setActive(false);
+                id_prob_->swingWithFoot(foot_names[i]);
+                ROS_DEBUG_STREAM("Swinging: "<< foot_names[i]);
 
                 if(inertia_compensation_active_)
                 {
@@ -576,15 +561,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kp_stance_leg_;
                 Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_stance_leg_;
 
-                id_prob_->_feet[feet_names_[i]]->setActive(true);
-                id_prob_->_wrenches_lims->getWrenchLimits(feet_names_[i])->releaseContact(false);
-                ROS_DEBUG_STREAM("Stance: "<< feet_names_[i]);
-                id_prob_->_postural_feet_swing[feet_names_[i]]->setActive(false);
-                id_prob_->_postural_feet_stance[feet_names_[i]]->setActive(true);
+                id_prob_->stanceWithFoot(foot_names[i]);
+                ROS_DEBUG_STREAM("Stance: "<< foot_names[i]);
             }
         }
 
-        id_prob_->_postural->setGains(Kp_postural_,Kd_postural_);
+        id_prob_->postural_->setGains(Kp_postural_,Kd_postural_); // FIXME
 
         // Set the desired base height
         kin_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
@@ -596,20 +578,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         des_joint_positions_ = kin_->getDesiredJointPositions();
         des_joint_velocities_ = kin_->getDesiredJointVelocities();
 
-        id_prob_->_postural->setReference(des_joint_positions_,des_joint_velocities_);
+        id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Get the solver solution
-        //x_ = des_joint_efforts_solver_; // Store the old desired efforts, to apply in case the solver gets mad
         if(!id_prob_->solve(des_joint_efforts_solver_))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"OpenSoT::IDProblem::solve() skipping one step.");
+            ROS_WARN_NAMED(CLASS_NAME,"IDProblem::solve() skipping one step.");
             pid_active_ = true;
         }
         else
             pid_active_ = false;
-
-        id_prob_->getGroundReactionForces(des_contact_forces_);
-
     }
     else // Use a position PID controller
     {
@@ -649,6 +627,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Publish
     ros_wrapper_->publish(time);
+
     RtLogger::getLogger().publish(time);
 }
 
@@ -735,26 +714,16 @@ LegsKinematics* Controller::getLegsKinematics() const
     return kin_.get();
 }
 
-XBot::ModelInterface* Controller::getXbotModel() const
+QuadrupedRobot* Controller::getRobotModel() const
 {
-    return xbot_model_.get();
+    return robot_model_.get();
 }
 
-const std::vector<std::string>& Controller::getFeetNames() const
+std::vector<Eigen::Vector6d>& Controller::getDesiredContactForces()
 {
-    return feet_names_;
-}
-
-const Eigen::Vector3d& Controller::getDesiredContactForces(const std::string& contact_name) const
-{
-
-    //TODO
-    //for(unsigned int i=0; i <feet_names_.size(); i++) // FIXME these should be contacts i.e. including the arm
-    //{
-    //    contact_forces_pub_->msg_.des_contact_forces[i].force.x = des_contact_forces_.segment(6*i,3)(0);
-    //    contact_forces_pub_->msg_.des_contact_forces[i].force.y = des_contact_forces_.segment(6*i,3)(1);
-    //    contact_forces_pub_->msg_.des_contact_forces[i].force.z = des_contact_forces_.segment(6*i,3)(2);
-    //}
+    if(id_prob_)
+      des_contact_forces_ = id_prob_->getContactWrenches();
+      return des_contact_forces_;
 }
 
 const Eigen::VectorXd& Controller::getDesiredJointEfforts() const

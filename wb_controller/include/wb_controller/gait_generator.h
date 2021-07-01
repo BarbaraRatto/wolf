@@ -18,53 +18,53 @@ class Gait
 {
 
 public:
-  Gait(const std::vector<std::string>& feet_names, const std::string& gait_type)
+  Gait(const std::vector<std::string>& foot_names, const std::string& gait_type)
   {
     ROS_INFO_STREAM("Selected " << gait_type << " gait");
 
-    assert(feet_names.size() == N_LEGS);
+    assert(foot_names.size() == N_LEGS);
 
-    auto ordered_feet_names = sortByLegName(feet_names);
+    auto ordered_foot_names = sortByLegPrefix(foot_names);
 
     if(std::strcmp(gait_type.c_str(),"trot")==0)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],0));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],1));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],1));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RF],1));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LH],1));
       next_feet_to_move_.resize(2);
       max_priority_ = 1;
     }
     else if(std::strcmp(gait_type.c_str(),"crawl")==0)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],1));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],2));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],3));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],1));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RF],2));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LH],3));
       next_feet_to_move_.resize(1);
       max_priority_ = 3;
     }
     else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
     else if(std::strcmp(gait_type.c_str(),"one_foot_rh")==0)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
     else if(std::strcmp(gait_type.c_str(),"one_foot_rf")==0)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RF],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
     else if(std::strcmp(gait_type.c_str(),"one_foot_lh")==0)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LH],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
@@ -117,19 +117,17 @@ public:
      */
   typedef std::shared_ptr<const GaitGenerator> ConstPtr;
 
-  GaitGenerator(const std::vector<std::string>& feet_names, const std::vector<std::string>& hips_names, const std::string& gait_type, const std::string& trajectory_type)
+  GaitGenerator(const std::vector<std::string>& foot_names, const std::string& gait_type, const std::string& trajectory_type)
   {
-    assert(feet_names.size()==N_LEGS);// We assume we are working with a dog
-    assert(hips_names.size()==N_LEGS);
-    feet_names_ = feet_names;
-    hips_names_ = hips_names;
-    for(unsigned int i = 0; i<feet_names.size(); i++)
+    assert(foot_names.size()==N_LEGS);// We assume we are working with a dog
+    foot_names_ = foot_names;
+    for(unsigned int i = 0; i<foot_names.size(); i++)
     {
-      feet_[feet_names[i]].state_machine.reset(new FootStateMachine());
-      feet_[feet_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
-      feet_[feet_names[i]].contact_state = false;
-      feet_[feet_names[i]].trigger_stance = false;
-      feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
+      feet_[foot_names[i]].state_machine.reset(new FootStateMachine());
+      feet_[foot_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
+      feet_[foot_names[i]].contact_state = false;
+      feet_[foot_names[i]].trigger_stance = false;
+      feet_[foot_names[i]].initial_pose = Eigen::Affine3d::Identity();
     }
 
     setSwingFrequency(0.0);
@@ -137,7 +135,7 @@ public:
     gait_buffer_.resize(2);
 
     for(unsigned int i=0; i<gait_buffer_.size(); i++)
-      gait_buffer_[i].reset(new Gait(feet_names,gait_type));
+      gait_buffer_[i].reset(new Gait(foot_names,gait_type));
 
     current_gait_idx_ = 0;
     next_gait_idx_ = 1;
@@ -147,6 +145,11 @@ public:
     activate_swing_ = false;
 
     gait_type_ = gait_type;
+  }
+
+  const std::vector<std::string>& getFootNames()
+  {
+    return foot_names_;
   }
 
   void switchGait()
@@ -159,7 +162,7 @@ public:
 
   void setGaitType(const std::string& gait_type)
   {
-    gait_buffer_[next_gait_idx_].reset(new Gait(feet_names_,gait_type));
+    gait_buffer_[next_gait_idx_].reset(new Gait(foot_names_,gait_type));
     change_gait_ = true;
     gait_type_ = gait_type;
   }
@@ -287,14 +290,22 @@ public:
     return feet_[foot_name].trajectory->getSwingFrequency();
   }
 
-  const std::vector<std::string>& getFeetNames()
+  double getAvgSwingFrequency()
   {
-    return feet_names_;
+    double avg = 0.0;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      avg = avg + it->second.trajectory->getSwingFrequency();
+    avg = avg / feet_.size();
+    return avg;
   }
 
-  const std::vector<std::string>& getHipsNames()
+  double getAvgDutyFactor()
   {
-    return hips_names_;
+    double avg = 0.0;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      avg = avg + it->second.state_machine->getDutyFactor();
+    avg = avg / feet_.size();
+    return avg;
   }
 
   const std::string& getGaitType()
@@ -459,6 +470,7 @@ private:
   typedef std::shared_ptr<Gait> gait_ptr_t;
 
   std::vector<std::string> scheduled_feet_;
+  std::vector<std::string> foot_names_;
 
   feet_t feet_;
   std::vector<gait_ptr_t > gait_buffer_;
@@ -466,9 +478,6 @@ private:
   std::atomic<unsigned int> next_gait_idx_;
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
-
-  std::vector<std::string> feet_names_;
-  std::vector<std::string> hips_names_;
 
   std::string gait_type_;
 

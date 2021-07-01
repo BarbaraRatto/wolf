@@ -30,6 +30,8 @@ public:
 
   const Eigen::Vector3d& getComVelocity() const;
 
+  const Eigen::Vector3d& getComPosition() const;
+
 private:
 
   double c_, c_filt_, c_ref_;
@@ -37,6 +39,7 @@ private:
   StateEstimator::Ptr state_estimator_;
   FootholdsPlanner::Ptr foothold_planner_;
   Eigen::Vector3d com_velocity_ref_;
+  Eigen::Vector3d com_position_ref_;
   Eigen::Vector3d base_X_com_;
 
   Eigen::Vector2d p0_;

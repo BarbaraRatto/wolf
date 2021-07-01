@@ -89,7 +89,7 @@ extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
 extern std::vector<std::string> _joints_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
-inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
+inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
     // Sort the names following order
     assert(names.size() == N_LEGS);

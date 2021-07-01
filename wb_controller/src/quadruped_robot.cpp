@@ -92,19 +92,21 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     throw std::runtime_error("Wrong number of hips, check the SRDF file!");
   }
 
-  hip_names_ = sortByLegName(hip_names_);
-  foot_names_ = sortByLegName(foot_names_);
 
-  // Check if the joint names in the ROS config file are in the same order as the one in the virtual model:
-  //assert(_dof_names.size() == joint_names_.size()+FLOATING_BASE_DOFS);
-  //for(unsigned int i=0;i<joint_names_.size();i++)
-  //    if(_dof_names[i+FLOATING_BASE_DOFS]!=joint_names_[i])
-  //    {
-  //        throw std::runtime_error("Joint names in the robot model type "<<model_type<< " are not in the same order as in the ROS config file of the controller.");
-  //        return false;
-  //    }
+  hip_names_ = sortByLegPrefix(hip_names_);
+  foot_names_ = sortByLegPrefix(foot_names_);
 
-  contact_names_.insert( foot_names_.end(), arm_names_.begin(), arm_names_.end() );
+  std::vector<std::string> limbs;
+  limbs = xbot_model_->getChainNames();
+
+  for(unsigned int i = 0; i < limbs.size(); i++) // Remove virtual_chain
+      if(limbs[i].find("virtual_chain") == std::string::npos)
+          limb_names_.push_back(limbs[i]);
+
+  limb_names_ = sortByLegPrefix(limb_names_);
+
+  contact_names_ = foot_names_;
+  contact_names_.insert( contact_names_.end(), arm_names_.begin(), arm_names_.end() );
 
 }
 
@@ -133,6 +135,11 @@ const std::vector<std::string>& QuadrupedRobot::getContactNames() const
   return contact_names_;
 }
 
+const std::vector<std::string>& QuadrupedRobot::getLimbNames() const
+{
+  return limb_names_;
+}
+
 XBot::ModelInterface::Ptr QuadrupedRobot::getXBotModel()
 {
   return xbot_model_;
@@ -142,6 +149,7 @@ const unsigned int& QuadrupedRobot::getNumberArms() const
 {
   return n_arms_;
 }
+
 const unsigned int& QuadrupedRobot::getNumberLegs() const
 {
   return n_legs_;

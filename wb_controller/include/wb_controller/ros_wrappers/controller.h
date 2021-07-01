@@ -98,13 +98,14 @@ public:
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
 
+        unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = "world"; //FIXME
-        contact_forces_pub_->msg_.name.resize(4);
-        contact_forces_pub_->msg_.contact.resize(4);
-        contact_forces_pub_->msg_.contact_positions.resize(4);
-        contact_forces_pub_->msg_.contact_forces.resize(4);
-        contact_forces_pub_->msg_.des_contact_forces.resize(4);
+        contact_forces_pub_->msg_.name.resize(n_contacts);
+        contact_forces_pub_->msg_.contact.resize(n_contacts);
+        contact_forces_pub_->msg_.contact_positions.resize(n_contacts);
+        contact_forces_pub_->msg_.contact_forces.resize(n_contacts);
+        contact_forces_pub_->msg_.des_contact_forces.resize(n_contacts);
 
         // Set the callback for the dynamic reconfigure server
         server_.reset(new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh));
@@ -162,8 +163,8 @@ public:
         if(controller_->getGaitGenerator())
         {
             default_config_.gaits = controller_->getGaitGenerator()->getGaitType();
-            default_config_.swing_frequency = controller_->getGaitGenerator()->getSwingFrequency(controller_->getFeetNames()[0]); // FIXME - HACK
-            default_config_.duty_factor = controller_->getGaitGenerator()->getDutyFactor(controller_->getFeetNames()[0]); // FIXME - HACK
+            default_config_.swing_frequency = controller_->getGaitGenerator()->getAvgSwingFrequency();
+            default_config_.duty_factor = controller_->getGaitGenerator()->getAvgDutyFactor();
         }
         if(controller_->getFootholdsPlanner())
         {
@@ -190,25 +191,26 @@ public:
       if(controller_->getIDProblem())
           controller_->getIDProblem()->publish(time);
 
-      const std::vector<std::string>& feet_names = controller_->getFeetNames();
+      const std::vector<std::string>& contact_names = controller_->getRobotModel()->getContactNames();
+      std::string current_contact_name;
       if(contact_forces_pub_.get() && contact_forces_pub_->trylock())
       {
-          for(unsigned int i=0; i <feet_names.size(); i++)
+          for(unsigned int i=0; i <contact_names.size(); i++)
           {
-              contact_forces_pub_->msg_.name[i] = feet_names[i];
-              contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(feet_names[i]);
-              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getFeetPositionInWorld().at(feet_names[i])(0);
-              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getFeetPositionInWorld().at(feet_names[i])(1);
-              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getFeetPositionInWorld().at(feet_names[i])(2);
+              current_contact_name = contact_names[i];
+              contact_forces_pub_->msg_.name[i] = current_contact_name;
+              contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(current_contact_name);
+              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getFeetPositionInWorld().at(current_contact_name)(0);
+              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getFeetPositionInWorld().at(current_contact_name)(1);
+              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getFeetPositionInWorld().at(current_contact_name)(2);
 
-              contact_forces_pub_->msg_.contact_forces[i].force.x = controller_->getStateEstimator()->getContactForces().at(feet_names[i])(0);
-              contact_forces_pub_->msg_.contact_forces[i].force.y = controller_->getStateEstimator()->getContactForces().at(feet_names[i])(1);
-              contact_forces_pub_->msg_.contact_forces[i].force.z = controller_->getStateEstimator()->getContactForces().at(feet_names[i])(2);
+              contact_forces_pub_->msg_.contact_forces[i].force.x = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(0);
+              contact_forces_pub_->msg_.contact_forces[i].force.y = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(1);
+              contact_forces_pub_->msg_.contact_forces[i].force.z = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(2);
 
-              // TODO
-              //contact_forces_pub_->msg_.des_contact_forces[i].force.x = des_contact_forces_.segment(6*i,3)(0);
-              //contact_forces_pub_->msg_.des_contact_forces[i].force.y = des_contact_forces_.segment(6*i,3)(1);
-              //contact_forces_pub_->msg_.des_contact_forces[i].force.z = des_contact_forces_.segment(6*i,3)(2);
+              contact_forces_pub_->msg_.des_contact_forces[i].force.x = controller_->getDesiredContactForces()[i](0);
+              contact_forces_pub_->msg_.des_contact_forces[i].force.y = controller_->getDesiredContactForces()[i](1);
+              contact_forces_pub_->msg_.des_contact_forces[i].force.z = controller_->getDesiredContactForces()[i](2);
           }
           contact_forces_pub_->msg_.header.stamp = time;
           contact_forces_pub_->unlockAndPublish();
