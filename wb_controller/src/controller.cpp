@@ -350,9 +350,9 @@ void Controller::toggleBaseHeightControl()
         kin_->toggleBaseHeightControl();
 
         if(kin_->isBaseHeightControlActive())
-            ROS_INFO("Base height control is ON");
+            ROS_INFO_NAMED(CLASS_NAME,"Base height control is ON");
         else
-            ROS_INFO("Base height control is OFF");
+            ROS_INFO_NAMED(CLASS_NAME,"Base height control is OFF");
     }
     else
     {
@@ -365,7 +365,7 @@ void Controller::toggleSolver()
 {
     if(!solver_created_)
     {
-        ROS_INFO("Reset the solver");
+        ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
         id_prob_.reset(new IDProblem(nh_,robot_model_));
         solver_created_ = true;
     }
@@ -376,9 +376,9 @@ void Controller::toggleSolver()
     solver_started_=!solver_started_;
 
     if(solver_started_)
-        ROS_INFO("Solver integration is ON");
+        ROS_INFO_NAMED(CLASS_NAME,"Solver integration is ON");
     else
-        ROS_INFO("Solver integration is OFF");
+        ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
 
 }
 
@@ -387,9 +387,9 @@ void Controller::toggleInertiaCompensation()
     inertia_compensation_active_=!inertia_compensation_active_;
 
     if(inertia_compensation_active_)
-        ROS_INFO("Inertia compensation is ON");
+        ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is ON");
     else
-        ROS_INFO("Inertia compensation is OFF");
+        ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is OFF");
 }
 
 void Controller::readJoints()
@@ -621,7 +621,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
 void Controller::odomPublisher()
 {
-    ROS_INFO("Start the odomPublisher");
+    ROS_INFO_NAMED(CLASS_NAME,"Start the odomPublisher");
 
     Eigen::Affine3d base_pose, world_pose;
     Eigen::Vector3d position;
@@ -664,7 +664,7 @@ void Controller::odomPublisher()
         std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
 
     }
-    ROS_INFO("Stop the odomPublisher");
+    ROS_INFO_NAMED(CLASS_NAME,"Stop the odomPublisher");
 }
 
 void Controller::stopping(const ros::Time& /*time*/)
