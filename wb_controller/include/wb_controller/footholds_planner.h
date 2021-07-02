@@ -85,7 +85,7 @@ public:
 
 private:
 
-    void calculateFeetStep();
+    void calculateFootSteps();
 
     void resetFeetStep();
 

@@ -139,7 +139,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
         break;
     };
 
-    calculateFeetStep();
+    calculateFootSteps();
 
     const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
     for(unsigned int i=0; i<feet_names.size(); i++)
@@ -163,27 +163,27 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
     gait_generator_->update(period);
 }
 
-void FootholdsPlanner::calculateFeetStep()
+void FootholdsPlanner::calculateFootSteps()
 {
-    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
+    const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
 
-    for(unsigned int i=0; i<feet_names.size(); i++)
+    for(unsigned int i=0; i<foot_names.size(); i++)
     {
         //if(gait_generator_->isLiftOff(feet_names[i]))
-        if(gait_generator_->isSwinging(feet_names[i]))
+        if(gait_generator_->isSwinging(foot_names[i]))
         {
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"*********");
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"CalculateFeetStep for foot "<<feet_names[i]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"CalculateFootSteps for foot "<<foot_names[i]);
 
             // 1) Compute the displacement of the foot produced by the linear velocity command
             hf_delta_hip_.setZero(); // \f$\deltaL_{x,y,0}\f$
-            hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
-            hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
+            hf_delta_hip_(0) = hf_base_linear_velocity_(0)*1.0/gait_generator_->getSwingFrequency(foot_names[i]);
+            hf_delta_hip_(1) = hf_base_linear_velocity_(1)*1.0/gait_generator_->getSwingFrequency(foot_names[i]);
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Linear part): "<<hf_delta_hip_.transpose());
 
             // 2) Compute the displacement of the foot produced by the angular velocity command
             hf_delta_heding_.setZero(); // \f$\deltaL_{h,0}\f$
-            hf_delta_heding_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(feet_names[i]);
+            hf_delta_heding_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(foot_names[i]);
             hf_delta_heding_ = hf_delta_heding_.cross(hf_X_initial_hips_[i]);
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_heding_ (Angular part): "<<hf_delta_heding_.transpose());
 
@@ -193,7 +193,7 @@ void FootholdsPlanner::calculateFeetStep()
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
             // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
-            robot_model_->getXBotModel()->getPose(feet_names[i],"base_link",base_T_foot_);
+            robot_model_->getXBotModel()->getPose(foot_names[i],"base_link",base_T_foot_);
             // current foot position in the horizontal frame
             hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
             //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
@@ -219,22 +219,22 @@ void FootholdsPlanner::calculateFeetStep()
                 ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step length is greater than: "<<step_length_max_);
             }
 
-            steps_length_[feet_names[i]]         = step_length_;
-            steps_heading_[feet_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + yaw_base_;
-            steps_height_[feet_names[i]]         = step_height_;
-            steps_heading_rate_[feet_names[i]]   = hf_base_angular_velocity_(2);
+            steps_length_[foot_names[i]]         = step_length_;
+            steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + yaw_base_;
+            steps_height_[foot_names[i]]         = step_height_;
+            steps_heading_rate_[foot_names[i]]   = hf_base_angular_velocity_(2);
 
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_length["<<feet_names[i]<<"]: "<<steps_length_[feet_names[i]]);
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_["<<feet_names[i]<<"]: "<<steps_heading_[feet_names[i]]);
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height_["<<feet_names[i]<<"]: "<<steps_height_[feet_names[i]]);
-            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate_["<<feet_names[i]<<"]: "<<steps_heading_rate_[feet_names[i]]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_length["<<foot_names[i]<<"]: "<<steps_length_[foot_names[i]]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_["<<foot_names[i]<<"]: "<<steps_heading_[foot_names[i]]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height_["<<foot_names[i]<<"]: "<<steps_height_[foot_names[i]]);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate_["<<foot_names[i]<<"]: "<<steps_heading_rate_[foot_names[i]]);
         }
         else // if(gait_generator_->isTouchDown(feet_names[i]))
         {
-            steps_length_[feet_names[i]]         = 0.0;
-            steps_heading_[feet_names[i]]        = 0.0;
-            steps_height_[feet_names[i]]         = 0.0;
-            steps_heading_rate_[feet_names[i]]   = 0.0;
+            steps_length_[foot_names[i]]         = 0.0;
+            steps_heading_[foot_names[i]]        = 0.0;
+            steps_height_[foot_names[i]]         = 0.0;
+            steps_heading_rate_[foot_names[i]]   = 0.0;
         }
     }
 }
