@@ -1,6 +1,6 @@
 # TODO list
 
-- switch stack for arm
+- terrain estimator / state estimator
 - add trajectory for arm
 - ICP
 - Web app

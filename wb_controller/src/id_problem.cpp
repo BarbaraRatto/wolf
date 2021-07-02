@@ -277,7 +277,7 @@ void IDProblem::setLowerForceBoundZ(const double& force)
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<force);
 }
 
-void IDProblem::selectStack(const stacks_t& stack)
+void IDProblem::selectStack(const stacks_t& stack) //FIXME
 {
 
   if(current_stack_ != stack)

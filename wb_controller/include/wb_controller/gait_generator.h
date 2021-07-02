@@ -18,15 +18,35 @@ class Gait
 {
 
 public:
-  Gait(const std::vector<std::string>& foot_names, const std::string& gait_type)
-  {
-    ROS_INFO_STREAM("Selected " << gait_type << " gait");
 
+  enum gait_t {CRAWL=0,TROT,ONE_FOOT_LF,ONE_FOOT_RH,ONE_FOOT_RF,ONE_FOOT_LH};
+
+  static inline std::string enum_to_string(const Gait::gait_t& gait_type)
+  {
+    switch(gait_type)
+    {
+       case Gait::gait_t::CRAWL:
+          return "CRAWL";
+       case Gait::gait_t::TROT:
+          return "TROT";
+    };
+  }
+
+  static inline Gait::gait_t string_to_enum(const std::string& gait_type)
+  {
+    if (gait_type == "CRAWL")
+      return Gait::gait_t::CRAWL;
+    else if (gait_type == "TROT")
+      return Gait::gait_t::TROT;
+  }
+
+  Gait(const std::vector<std::string>& foot_names, const gait_t& gait_type)
+  {
     assert(foot_names.size() == N_LEGS);
 
     auto ordered_foot_names = sortByLegPrefix(foot_names);
 
-    if(std::strcmp(gait_type.c_str(),"trot")==0)
+    if(gait_type == TROT)
     {
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],0));
@@ -35,7 +55,7 @@ public:
       next_feet_to_move_.resize(2);
       max_priority_ = 1;
     }
-    else if(std::strcmp(gait_type.c_str(),"crawl")==0)
+    else if(gait_type == CRAWL)
     {
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],1));
@@ -44,25 +64,25 @@ public:
       next_feet_to_move_.resize(1);
       max_priority_ = 3;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
+    else if(gait_type == ONE_FOOT_LF)
     {
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_rh")==0)
+    else if(gait_type == ONE_FOOT_RH)
     {
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_rf")==0)
+    else if(gait_type == ONE_FOOT_RF)
     {
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RF],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_lh")==0)
+    else if(gait_type == ONE_FOOT_LH)
     {
       schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LH],0));
       next_feet_to_move_.resize(1);
@@ -101,6 +121,7 @@ private:
 
   std::vector<std::string> next_feet_to_move_;
 
+
 };
 
 class GaitGenerator
@@ -117,7 +138,7 @@ public:
      */
   typedef std::shared_ptr<const GaitGenerator> ConstPtr;
 
-  GaitGenerator(const std::vector<std::string>& foot_names, const std::string& gait_type, const std::string& trajectory_type)
+  GaitGenerator(const std::vector<std::string>& foot_names, const Gait::gait_t& gait_type, const std::string& trajectory_type)
   {
     assert(foot_names.size()==N_LEGS);// We assume we are working with a dog
     foot_names_ = foot_names;
@@ -154,17 +175,22 @@ public:
 
   void switchGait()
   {
-    if(gait_type_ == "trot")
-      setGaitType("crawl");
+    if(gait_type_ == Gait::gait_t::TROT)
+      setGaitType(Gait::gait_t::CRAWL);
     else
-      setGaitType("trot");
+      setGaitType(Gait::gait_t::TROT);
   }
 
-  void setGaitType(const std::string& gait_type)
+  void setGaitType(const Gait::gait_t& gait_type)
   {
     gait_buffer_[next_gait_idx_].reset(new Gait(foot_names_,gait_type));
     change_gait_ = true;
     gait_type_ = gait_type;
+  }
+
+  void setGaitTypeName(const std::string& gait_type_name)
+  {
+    setGaitType(Gait::string_to_enum(gait_type_name));
   }
 
   const Eigen::Affine3d& getReference(const std::string& foot_name)
@@ -308,9 +334,14 @@ public:
     return avg;
   }
 
-  const std::string& getGaitType()
+  const Gait::gait_t& getGaitType()
   {
     return gait_type_;
+  }
+
+  std::string getGaitTypeName()
+  {
+    return Gait::enum_to_string(gait_type_);
   }
 
   void setStepLength(const double& length)
@@ -479,7 +510,7 @@ private:
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
 
-  std::string gait_type_;
+  Gait::gait_t gait_type_;
 
 };
 

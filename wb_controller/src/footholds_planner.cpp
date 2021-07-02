@@ -537,7 +537,12 @@ double FootholdsPlanner::getStepHeight() const
 
 double FootholdsPlanner::getStepLength() const
 {
-    return step_length_;
+  return step_length_;
+}
+
+const Gait::gait_t &FootholdsPlanner::getGaitType() const
+{
+  return gait_generator_->getGaitType();
 }
 
 }; // namespace

@@ -160,9 +160,11 @@ public:
     void dynamicReconfigureUpdate()
     {
 
+        default_config_.stacks = "WALKING";
+
         if(controller_->getGaitGenerator())
         {
-            default_config_.gaits = controller_->getGaitGenerator()->getGaitType();
+            default_config_.gaits = controller_->getGaitGenerator()->getGaitTypeName();
             default_config_.swing_frequency = controller_->getGaitGenerator()->getAvgSwingFrequency();
             default_config_.duty_factor = controller_->getGaitGenerator()->getAvgDutyFactor();
         }

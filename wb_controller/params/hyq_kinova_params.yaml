@@ -1,8 +1,7 @@
 wb_controller:
   type: wb_controller/Controller
   publish_rate: 250
-  imu_sensor: trunk_imu
-  default_swing_frequency: 3.0
+  default_swing_frequency: 5.0
   default_contact_threshold: 50.0
   default_base_linear_velocity: 0.2
   default_base_angular_velocity: 0.2

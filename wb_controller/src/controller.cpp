@@ -191,7 +191,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     Kp_postural_.setZero(M_.rows(), M_.cols());
     Kd_postural_.setZero(M_.rows(), M_.cols());
 
-
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -217,7 +216,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_orientation_.normalize();
     pid_scale_ = 1.0;
 
-    gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),"crawl","ellipse"));
+    gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),Gait::CRAWL,"ellipse"));
     foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
     state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
     com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_));
@@ -314,7 +313,7 @@ bool Controller::setGaitType(const std::string& gait_type)
     try
     {
         if(gait_generator_)
-            gait_generator_->setGaitType(gait_type);
+            gait_generator_->setGaitTypeName(gait_type);
         else
         {
             ROS_WARN_NAMED(CLASS_NAME,"gait_generator not initialized yet.");

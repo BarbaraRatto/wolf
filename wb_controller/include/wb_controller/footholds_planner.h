@@ -79,6 +79,7 @@ public:
     double getAngularVelocity() const ;
     double getStepHeight() const ;
     double getStepLength() const ;
+    const Gait::gait_t& getGaitType() const;
 
     void setInitialOffsets();
 
