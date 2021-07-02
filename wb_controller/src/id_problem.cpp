@@ -48,9 +48,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     {
         arms_[arm_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(arm_names_[i], *model_->getXBotModel(), arm_names_[i],
                                                                "base_link", id_->getJointsAccelerationAffine());
-        arms_[arm_names_[i]]->setLambda(1,1);
+        arms_[arm_names_[i]]->setLambda(1.,1.);
         arms_[arm_names_[i]]->setWeightIsDiagonalFlag(true);
-
     }
     //   --------------------------
     angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_->getXBotModel(),id_->getJointsAccelerationAffine());
@@ -81,10 +80,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     // Here we create the constraints & bounds
     //
     dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_->getXBotModel(),
-                                                                          id_->getJointsAccelerationAffine(), id_->getContactsWrenchAffine(), contact_names_);
+                                                                          id_->getJointsAccelerationAffine(), id_->getContactsWrenchAffine(), foot_names_);
 
     dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
-
 
     OpenSoT::constraints::force::FrictionCones::friction_cones mus;
     Eigen::Matrix3d R; R.setIdentity();
@@ -93,7 +91,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
         mus.push_back(std::pair<Eigen::Matrix3d,double> (R,mu_));
     friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_->getXBotModel(),mus);
 
-    /// HERE WE SET SOME BOUNDS
     Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(model_->getXBotModel()->getJointNum());
     Eigen::VectorXd xmin = -xmax;
 
@@ -108,7 +105,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
 
     wrenches_lims_ = std::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
-                             contact_names_, wrench_lower_lims_, wrench_upper_lims_,id_->getContactsWrenchAffine());
+                             foot_names_, wrench_lower_lims_, wrench_upper_lims_,id_->getContactsWrenchAffine());
 
     std::list<unsigned int> idx_Y  = {0,1};   //xy
     std::list<unsigned int> id_Z   = {2};     //z
@@ -130,34 +127,46 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                        / (postural_ + com_ + angular_momentum_)
                        )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
-    if(arm_names_.size()>0)
+    if(arm_names_.size() > 0)
     {
-
       OpenSoT::tasks::Aggregated::Ptr arm_aggregated;
-      for(unsigned int i=0;i<arm_names_.size()-1;i++)
-         arm_aggregated = arms_[arm_names_[i]] + arms_[arm_names_[i+1]];
+      if(arm_names_.size() == 1)
+        arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
+      else if(arm_names_.size() > 1)
+      {
+        for(unsigned int i=1;i<arm_names_.size();i++)
+           arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
 
-      // Stack manipolazione con arm wrt world
-      //stacks_[MANIPULATION] = ( (feet_aggregated)
-      //                        / (com_%idx_Y)
-      //                        / (0.5*waistRPY_%id_RPY + 0.25*waistZ_%id_Z + arm_aggregated + 50.0*com_%id_Z + angular_momentum_)
-      //                        / (postural_)
-      //                        )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
-      //
-      //// Stack base_link camminata, ok ad alte frequenze
-      //stacks_[WALKING] = ( (feet_aggregated)
-      //                   / (waistRPY_%id_RPY)
-      //                   / (arm_aggregated)
-      //                   / (postural_ + com_ + angular_momentum_)
-      //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+        // Stack manipolazione con arm wrt world
+        //stacks_[MANIPULATION] = ( (feet_aggregated)
+        //                        / (com_%idx_Y)
+        //                        / (0.5*waistRPY_%id_RPY + 0.25*waistZ_%id_Z + arm_aggregated + 50.0*com_%id_Z + angular_momentum_)
+        //                        / (postural_)
+        //                        )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+        //
+        //// Stack base_link camminata, ok ad alte frequenze
+        //stacks_[WALKING] = ( (feet_aggregated)
+        //                   / (waistRPY_%id_RPY)
+        //                   / (arm_aggregated)
+        //                   / (postural_ + com_ + angular_momentum_)
+        //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+      }
 
       stacks_[MANIPULATION]->getStack()[2] = stacks_[MANIPULATION]->getStack()[2] + arm_aggregated;
-
       auto it = stacks_[WALKING]->getStack().begin() + 2;
       stacks_[WALKING]->getStack().insert(it, arm_aggregated);
-      stacks_[WALKING]->getStack()[2] = stacks_[MANIPULATION]->getStack()[2] + arm_aggregated;
-
     }
+
+    //std::cout<<"MANIPULATION STACK:"<<std::endl;
+    //for(unsigned l = 0; l < stacks_[MANIPULATION]->getStack().size(); ++l)
+    //  std::cout<<"  level "<<l<<": "<<stacks_[MANIPULATION]->getStack()[l]->getTaskID()<<std::endl;
+    //std::cout<<std::endl;
+    //
+    //std::cout<<"WALKING STACK:"<<std::endl;
+    //for(unsigned l = 0; l < stacks_[WALKING]->getStack().size(); ++l)
+    //  std::cout<<"  level "<<l<<": "<<stacks_[WALKING]->getStack()[l]->getTaskID()<<std::endl;
+    //std::cout<<std::endl;
+
     //else
     //{
     //

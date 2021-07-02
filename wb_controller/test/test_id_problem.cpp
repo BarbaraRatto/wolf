@@ -19,7 +19,7 @@ int main(int argc, char** argv)
   testing::InitGoogleTest(&argc, argv);
   ros::NodeHandle root_nh;
 
-  _robot.reset(createRobotModel(root_nh));
+  _robot.reset(wb_controller::createRobotModel(root_nh));
 
   ros::AsyncSpinner spinner(1);
   spinner.start();

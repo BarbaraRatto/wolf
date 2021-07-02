@@ -197,12 +197,14 @@ public:
       {
           for(unsigned int i=0; i <contact_names.size(); i++)
           {
+
               current_contact_name = contact_names[i];
+
               contact_forces_pub_->msg_.name[i] = current_contact_name;
               contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(current_contact_name);
-              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getFeetPositionInWorld().at(current_contact_name)(0);
-              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getFeetPositionInWorld().at(current_contact_name)(1);
-              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getFeetPositionInWorld().at(current_contact_name)(2);
+              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(0);
+              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(1);
+              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(2);
 
               contact_forces_pub_->msg_.contact_forces[i].force.x = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(0);
               contact_forces_pub_->msg_.contact_forces[i].force.y = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(1);
@@ -211,6 +213,7 @@ public:
               contact_forces_pub_->msg_.des_contact_forces[i].force.x = controller_->getDesiredContactForces()[i](0);
               contact_forces_pub_->msg_.des_contact_forces[i].force.y = controller_->getDesiredContactForces()[i](1);
               contact_forces_pub_->msg_.des_contact_forces[i].force.z = controller_->getDesiredContactForces()[i](2);
+
           }
           contact_forces_pub_->msg_.header.stamp = time;
           contact_forces_pub_->unlockAndPublish();

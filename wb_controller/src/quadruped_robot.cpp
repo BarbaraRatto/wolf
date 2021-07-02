@@ -92,7 +92,6 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     throw std::runtime_error("Wrong number of hips, check the SRDF file!");
   }
 
-
   hip_names_ = sortByLegPrefix(hip_names_);
   foot_names_ = sortByLegPrefix(foot_names_);
 
@@ -103,11 +102,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       if(limbs[i].find("virtual_chain") == std::string::npos)
           limb_names_.push_back(limbs[i]);
 
-  limb_names_ = sortByLegPrefix(limb_names_);
-
   contact_names_ = foot_names_;
   contact_names_.insert( contact_names_.end(), arm_names_.begin(), arm_names_.end() );
-
 }
 
 const std::vector<std::string>& QuadrupedRobot::getFootNames() const

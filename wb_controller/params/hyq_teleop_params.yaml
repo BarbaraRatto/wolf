@@ -1,10 +1,10 @@
 wb_controller:
   type: wb_controller/Controller
   publish_rate: 250
-  imu_sensor: trunk_imu
-  default_swing_frequency: 3.0
+  default_duty_factor: 0.3
+  default_swing_frequency: 5.0
   default_contact_threshold: 50.0
-  default_base_linear_velocity: 0.2
+  default_base_linear_velocity: 0.35
   default_base_angular_velocity: 0.2
   default_step_height: 0.05
   default_z_lower_force: 20.0
@@ -47,7 +47,7 @@ wb_controller:
           Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
           Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
 
-      TCP:
-          Kp: {x: 50.0, y: 50.0, z: 50.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
-          Kd: {x: 10.0, y: 10.0, z: 10.0, roll: 2.0, pitch: 2.0, yaw: 2.0}
+      teleop_link5:
+          Kp: {x: 300.0, y: 300.0, z: 300.0, roll: 100.0, pitch: 100.0, yaw: 100.0}
+          Kd: {x: 50.0, y: 50.0, z: 50.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
 

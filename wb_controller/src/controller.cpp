@@ -71,17 +71,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     else
         ground_truth_ = gt_hw->getHandle("ground_truth");
 
-    // Create the quadruped robot object, it wraps the xbot model with some meta information
-    std::string urdf, srdf;
-    if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
-    {
-        throw std::runtime_error("No robot_description given in namespace /");
-    }
-    if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
-    {
-        throw std::runtime_error("No robot_semantic_description given in namespace /");
-    }
-    robot_model_.reset(new QuadrupedRobot(urdf,srdf));
+    robot_model_.reset(createRobotModel(root_nh));
     joint_names_ = robot_model_->getJointNames();
 
     // Setting up joint handles:
@@ -142,12 +132,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         // Check if the values are positive
         if(joint_p_gain_[i]<0.0 || joint_i_gain_[i]<0.0 || joint_d_gain_[i]<0.0)
         {
-            ROS_ERROR("PID gains must be positive!");
+            ROS_ERROR_NAMED(CLASS_NAME,"PID gains must be positive!");
             return false;
         }
-        ROS_DEBUG("P value for joint %i is: %f",i,joint_p_gain_[i]);
-        ROS_DEBUG("I value for joint %i is: %f",i,joint_i_gain_[i]);
-        ROS_DEBUG("D value for joint %i is: %f",i,joint_d_gain_[i]);
+        ROS_DEBUG_NAMED(CLASS_NAME,"P value for joint %i is: %f",i,joint_p_gain_[i]);
+        ROS_DEBUG_NAMED(CLASS_NAME,"I value for joint %i is: %f",i,joint_i_gain_[i]);
+        ROS_DEBUG_NAMED(CLASS_NAME,"D value for joint %i is: %f",i,joint_d_gain_[i]);
 
         pids_[i].setGains(joint_p_gain_[i],joint_i_gain_[i],joint_d_gain_[i],0,0);
         //pids_[i].initDynamicReconfig(controller_nh); // FIXME change namespace for the pids
@@ -195,7 +185,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
     }
 
-    // Initialize the inertia related matrices
+    // Initialize the inertia related matrices // FIXME
     robot_model_->getXBotModel()->getInertiaMatrix(M_);
     Mi_.setZero(M_.rows(), M_.cols());
     Kp_postural_.setZero(M_.rows(), M_.cols());
@@ -241,7 +231,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
     joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
     //joy_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE); // FIXME
-
     //keyboard_handler_.reset(new TwistHandler(controller_nh,foot_holds_planner_)); //FIXME
 
     // initialize the filters
@@ -536,7 +525,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
             // Update the reference for the feet tasks, this is only used for visualization pourposes
-            //id_prob_->_feet[foot_names[i]]->setReference(gait_generator_->getReference(feet_names_[i]),gait_generator_->getReferenceDot(feet_names_[i]));
+            id_prob_->feet_[foot_names[i]]->setReference(gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i])); //FIXME
 
             // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
             // Set the wrench limits to enstablish the contacts

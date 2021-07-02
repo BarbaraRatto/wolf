@@ -89,6 +89,8 @@ public:
 
     const std::map<std::string,Eigen::Affine3d>& getFeetPoseInBase() const;
 
+    const std::map<std::string, Eigen::Vector3d> &getContactPositionInWorld() const;
+
     void startContactsEstimation();
 
     void stopContactsEstimation();
@@ -163,7 +165,9 @@ private:
     /** @brief Arm pose w.r.t base */
     std::map<std::string,Eigen::Affine3d> base_T_arm_;
     /** @brief Arm pose w.r.t world */
-    std::map<std::string,Eigen::Affine3d> world_T_arm_;
+    std::map<std::string,Eigen::Affine3d> world_T_arm_; 
+    /** @brief Contact positions w.r.t world */
+    std::map<std::string,Eigen::Vector3d> world_X_contact_;
     /** @brief GRF contacts */
     std::map<std::string,bool> contacts_;
     /** @brief GRF contact forces */

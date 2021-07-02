@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "test_state_estimation");
     ros::NodeHandle root_nh;
 
-    _robot.reset(createRobotModel(root_nh));
+    _robot.reset(wb_controller::createRobotModel(root_nh));
 
     Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
     contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();

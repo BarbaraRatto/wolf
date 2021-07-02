@@ -70,10 +70,10 @@ void FootholdsPlanner::initializeFootPosition(const std::string& foot_name)
 
 void FootholdsPlanner::initializeFeetPosition()
 {
-    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
+    const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
 
-    for(unsigned int i=0; i<feet_names.size(); i++)
-        initializeFootPosition(feet_names[i]);
+    for(unsigned int i=0; i<foot_names.size(); i++)
+        initializeFootPosition(foot_names[i]);
 }
 
 void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation) // ClosedLoop

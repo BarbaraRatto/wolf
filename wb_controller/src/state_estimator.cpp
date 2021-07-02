@@ -25,7 +25,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
     Eigen::Matrix6d contact_matrix;
     contact_matrix.setZero();
     contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-    qp_estimation_ = std::make_shared<OpenSoT::floating_base_estimation::qp_estimation>(robot_model_->getXBotModel(),contact_names,contact_matrix);
+    qp_estimation_ = std::make_shared<OpenSoT::floating_base_estimation::qp_estimation>(robot_model_->getXBotModel(),foot_names,contact_matrix);
 
     int n_dofs = robot_model_->getXBotModel()->getJointNum();
     joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
@@ -44,6 +44,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
     {
         contacts_[contact_names[i]] = true;
         contact_forces_[contact_names[i]] = Eigen::Vector3d::Zero();
+        world_X_contact_[contact_names[i]] = Eigen::Vector3d::Zero();
     }
 
     for(unsigned int i=0;i<foot_names.size();i++)
@@ -241,6 +242,11 @@ const std::map<std::string,bool>& StateEstimator::getContacts() const
     return contacts_;
 }
 
+const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionInWorld() const
+{
+    return world_X_contact_;
+}
+
 const std::map<std::string,Eigen::Vector3d>& StateEstimator::getFeetPositionInWorld() const
 {
     return world_X_foot_;
@@ -309,16 +315,20 @@ void StateEstimator::update(const double& period)
         // Feet position in base/trunk
         robot_model_->getXBotModel()->getPose(foot_names[i],"base_link",base_T_foot_[foot_names[i]]);
         base_X_foot_[foot_names[i]] = base_T_foot_[foot_names[i]].translation();
+
+        world_X_contact_[foot_names[i]] = world_X_foot_[foot_names[i]];
     }
 
     for(unsigned int i=0; i<arm_names.size(); i++)
     {
         // Arms position in world
-        robot_model_->getXBotModel()->getPose(arm_names[i],world_T_foot_[arm_names[i]]);
-        world_X_arm_[arm_names[i]] = world_T_foot_[arm_names[i]].translation();
+        robot_model_->getXBotModel()->getPose(arm_names[i],world_T_arm_[arm_names[i]]);
+        world_X_arm_[arm_names[i]] = world_T_arm_[arm_names[i]].translation();
         // Arms position in base/trunk
-        robot_model_->getXBotModel()->getPose(arm_names[i],"base_link",base_T_foot_[arm_names[i]]);
-        base_X_arm_[arm_names[i]] = base_T_foot_[arm_names[i]].translation();
+        robot_model_->getXBotModel()->getPose(arm_names[i],"base_link",base_T_arm_[arm_names[i]]);
+        base_X_arm_[arm_names[i]] = base_T_arm_[arm_names[i]].translation();
+
+        world_X_contact_[arm_names[i]] = world_X_arm_[arm_names[i]];
     }
 
     updateContactState();
@@ -336,7 +346,6 @@ void StateEstimator::updateContactState()
     const std::vector<std::string>& foot_names = robot_model_->getFootNames();
     for(unsigned int i=0; i<foot_names.size(); i++)
     {
-
         force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
 
         tmp_vector3d_ = world_T_foot_[foot_names[i]] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
@@ -358,15 +367,17 @@ void StateEstimator::updateContactState()
             qp_estimation_->setContactState(foot_names[i],gait_generator_->isTrajectoryFinished(foot_names[i]));
             gait_generator_->setContactState(foot_names[i],false);
         }
+
     }
 
     // Update contact state for the arms
     const std::vector<std::string>& arm_names = robot_model_->getArmNames();
     for(unsigned int i=0; i<arm_names.size(); i++)
     {
+
       force_torque_sensors_[arm_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_arm
 
-      tmp_vector3d_ = world_T_arm_[arm_names[i]] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_arm
+      tmp_vector3d_ = world_T_arm_[arm_names[i]] * tmp_vector3d_; // contact_force_world = world_T_arm * contact_force_arm
 
       if(contacts_estimation_active_)
           contacts_[arm_names[i]] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
