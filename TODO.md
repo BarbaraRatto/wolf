@@ -1,28 +1,27 @@
 # TODO list
 
+- Kinova arm link 4 instead of end effector
+- Aliengo and Anymal don't work properly... could it be a gains problem?
+- Postural gains still in the controller... fix!
 - terrain estimator / state estimator
 - add trajectory for arm
 - ICP
 - Web app
 - Clean solo, test it without inertia comp.
 - Add kinova arm on aliengo
-- Clean contact forces stuff
 - Angular momentum task
 - Convex hull in acceleration
 - Arm controlled in velocity (no state estimation)
 - State estimation
 - Clean Ros interfaces
-- add com/icp to stabilize the robot at low freq swings ML thesis
 - Experiments on the real robot
 - Fix device interface Add XBOX
 - IK with joint limits
 - change names dls -> wb ( can not because of the compatibility with the real hardware )
 - push recovery
-- terrain estimator
 - step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)
-- clean the descriptions, load the homing from the srdf
 - remove sensors and clean up the urdfs! In progress...
 - rviz config inside single robots
