@@ -113,8 +113,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     std::list<unsigned int> idx_YZ = {0,1,2}; //xyz
 
     OpenSoT::tasks::Aggregated::Ptr feet_aggregated;
-    for(unsigned int i=0;i<foot_names_.size()-1;i++) // This is ok because we always have more than two legs
-      feet_aggregated = feet_[foot_names_[i]]%idx_YZ + feet_[foot_names_[i+1]]%idx_YZ;
+    feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_YZ,feet_[foot_names_[0]]->getXSize());
+    for(unsigned int i=1;i<foot_names_.size();i++)
+      feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_YZ;
 
     stacks_[MANIPULATION] = ( (feet_aggregated)
                             / (com_%idx_Y)
