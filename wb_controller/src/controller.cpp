@@ -531,7 +531,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             if(gait_generator_->isSwinging(foot_names[i]))
             {
                 id_prob_->swingWithFoot(foot_names[i]);
-                ROS_DEBUG_STREAM("Swinging: "<< foot_names[i]);
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
 
                 if(inertia_compensation_active_)
                 {
@@ -550,7 +550,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                 Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_stance_leg_;
 
                 id_prob_->stanceWithFoot(foot_names[i]);
-                ROS_DEBUG_STREAM("Stance: "<< foot_names[i]);
+                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
             }
         }
 
