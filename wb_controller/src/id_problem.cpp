@@ -137,45 +137,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
       {
         for(unsigned int i=1;i<arm_names_.size();i++)
            arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
-
-        // Stack manipolazione con arm wrt world
-        //stacks_[MANIPULATION] = ( (feet_aggregated)
-        //                        / (com_%idx_Y)
-        //                        / (0.5*waistRPY_%id_RPY + 0.25*waistZ_%id_Z + arm_aggregated + 50.0*com_%id_Z + angular_momentum_)
-        //                        / (postural_)
-        //                        )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
-        //
-        //// Stack base_link camminata, ok ad alte frequenze
-        //stacks_[WALKING] = ( (feet_aggregated)
-        //                   / (waistRPY_%id_RPY)
-        //                   / (arm_aggregated)
-        //                   / (postural_ + com_ + angular_momentum_)
-        //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
       }
 
       stacks_[MANIPULATION]->getStack()[2] = stacks_[MANIPULATION]->getStack()[2] + arm_aggregated;
       auto it = stacks_[WALKING]->getStack().begin() + 2;
       stacks_[WALKING]->getStack().insert(it, arm_aggregated);
     }
-
-    //std::cout<<"MANIPULATION STACK:"<<std::endl;
-    //for(unsigned l = 0; l < stacks_[MANIPULATION]->getStack().size(); ++l)
-    //  std::cout<<"  level "<<l<<": "<<stacks_[MANIPULATION]->getStack()[l]->getTaskID()<<std::endl;
-    //std::cout<<std::endl;
-    //
-    //std::cout<<"WALKING STACK:"<<std::endl;
-    //for(unsigned l = 0; l < stacks_[WALKING]->getStack().size(); ++l)
-    //  std::cout<<"  level "<<l<<": "<<stacks_[WALKING]->getStack()[l]->getTaskID()<<std::endl;
-    //std::cout<<std::endl;
-
-    //else
-    //{
-    //
-    //   stacks_[WALKING] = ( (feet_aggregated)
-    //                      / (waistRPY_%id_RPY)
-    //                      / (postural_ + com_ + angular_momentum_) // Dunno if it really change anything with the angular momentum and the com task
-    //                      )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
-    //}
 
     for (auto& tmp_map : stacks_)
         tmp_map.second->update(Eigen::VectorXd(1));
