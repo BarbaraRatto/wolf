@@ -286,9 +286,9 @@ bool Controller::selectStack(const std::string& stack)
 {
    if(id_prob_)
    {
-       if(stack.compare("walking") == 0)
+       if(stack == "WALKING")
          id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-       else if(stack.compare("manipulation") == 0)
+       else if(stack == "MANIPULATION")
          id_prob_->selectStack(IDProblem::stacks_t::MANIPULATION);
        else
        {
@@ -499,11 +499,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         }
 
         const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-        const std::vector<std::string>& arm_names  = robot_model_->getArmNames();
-
-        // Set the pose refenreces through ROS markers for the arms
-        for(unsigned int i = 0; i<arm_names.size(); i++)
-          id_prob_->setExternalReference(arm_names[i]);
 
         foot_holds_planner_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
 

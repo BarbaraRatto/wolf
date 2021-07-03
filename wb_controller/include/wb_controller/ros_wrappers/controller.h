@@ -152,6 +152,10 @@ public:
             controller_->getLegsKinematics()->setClikGain(config.clik_gain);
             ROS_INFO_STREAM("Set x err gain at "<< config.clik_gain);
             break;
+        case 10:
+            controller_->selectStack(config.stacks);
+            ROS_INFO_STREAM("Selected stack "<< config.stacks);
+            break;
         default:
             break;
         }

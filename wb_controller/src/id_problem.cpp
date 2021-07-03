@@ -38,7 +38,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     {
 
         feet_[foot_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(foot_names_[i], *model_->getXBotModel(), foot_names_[i],
-                                                                               "world", id_->getJointsAccelerationAffine());
+                                                                               WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
         feet_[foot_names_[i]]->setLambda(0.,0.);
         feet_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
     }
@@ -47,7 +47,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     for(unsigned int i=0; i<arm_names_.size(); i++)
     {
         arms_[arm_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(arm_names_[i], *model_->getXBotModel(), arm_names_[i],
-                                                               "base_link", id_->getJointsAccelerationAffine());
+                                                               BASE_LINK_FRAME_NAME, id_->getJointsAccelerationAffine());
         arms_[arm_names_[i]]->setLambda(1.,1.);
         arms_[arm_names_[i]]->setWeightIsDiagonalFlag(true);
     }
@@ -58,13 +58,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     angular_momentum_->setReference(Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
     angular_momentum_->setMomentumGain(Eigen::Matrix3d::Identity());
     //   --------------------------
-    waistRPY_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *model_->getXBotModel(), "base_link",
-                                                                          "world", id_->getJointsAccelerationAffine());
+    waistRPY_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *model_->getXBotModel(), BASE_LINK_FRAME_NAME,
+                                                                          WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
     waistRPY_->setLambda(1.,1.);
     waistRPY_->setWeightIsDiagonalFlag(true);
     //   --------------------------
-    waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_->getXBotModel(), "base_link",
-                                                                        "world", id_->getJointsAccelerationAffine());
+    waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_->getXBotModel(), BASE_LINK_FRAME_NAME,
+                                                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
     waistZ_->setLambda(1.,1.);
     waistZ_->setWeightIsDiagonalFlag(true);
     //   --------------------------
@@ -156,12 +156,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     tasks_ros_["waistRPY"] = std::make_shared<CartesianWrapper>(nh,waistRPY_); // WAIST RPY
     tasks_ros_["waistZ"] = std::make_shared<CartesianWrapper>(nh,waistZ_); // WAIST Z
     tasks_ros_["postural"] = std::make_shared<PosturalWrapper>(nh,postural_); // POSTURAL
+    tasks_ros_["postural"]->OPTIONS.set_ext_gains = false;
     tasks_ros_["com"] = std::make_shared<ComWrapper>(nh,com_); // CoM
     for(unsigned int i=0; i<foot_names_.size(); i++)
         tasks_ros_[foot_names_[i]] = std::make_shared<CartesianWrapper>(nh,feet_[foot_names_[i]]); // FEET
     for(unsigned int i=0; i<arm_names_.size(); i++)
+    {
         tasks_ros_[arm_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[arm_names_[i]]); // ARMS
-
+        tasks_ros_[arm_names_[i]]->OPTIONS.set_ext_reference = true;
+    }
     for (auto& tmp_map : tasks_ros_)
         tmp_map.second->dynamicReconfigureUpdate();
 
@@ -247,42 +250,32 @@ void IDProblem::setLowerForceBoundZ(const double& force)
 
 void IDProblem::selectStack(const stacks_t& stack) //FIXME
 {
-
   if(current_stack_ != stack)
   {
+    if(arm_names_.size()>0)
+    {
+      if(stack == stacks_t::WALKING)
+      {
+        std::cout << "WALKING" << std::endl;
+        for (auto& tmp_map : arms_)
+          tmp_map.second->setBaseLink(BASE_LINK_FRAME_NAME);
+      }
+      else if (stack == stacks_t::MANIPULATION)
+      {
+        std::cout << "MANIPULATION" << std::endl;
+        for (auto& tmp_map : arms_)
+          tmp_map.second->setBaseLink(WORLD_FRAME_NAME);
+      }
+      else {
+        ROS_WARN_NAMED(CLASS_NAME,"Wrong stack!");
+      }
+    }
+    getchar();
+    //for (unsigned int i=0;i<arm_names_.size();i++)
+    //  tasks_ros_[arm_names_[i]]->reset();
     current_stack_ = stack;
 
     solver_lock_.lock();
-
-    switch (current_stack_)
-    {
-      case stacks_t::WALKING:
-        if(arm_names_.size()>0)
-          for (auto& tmp_map : arms_)
-          {
-            tmp_map.second->setBaseLink("base_link");
-            tmp_map.second->update(Eigen::VectorXd(1));
-          }
-          ROS_INFO_NAMED(CLASS_NAME,"STACK WALKING SELECTED");
-          break;
-      case stacks_t::MANIPULATION:
-        if(arm_names_.size()>0)
-          for (auto& tmp_map : arms_)
-          {
-            tmp_map.second->setBaseLink("world");
-            tmp_map.second->update(Eigen::VectorXd(1));
-          }
-          ROS_INFO_NAMED(CLASS_NAME,"STACK MANIPULATION SELECTED");
-          break;
-      default:
-        ROS_WARN_NAMED(CLASS_NAME,"Wrong stack selected!");
-        return;
-    };
-
-    for (unsigned int i=0;i<arm_names_.size();i++)
-      tasks_ros_[arm_names_[i]]->reset();
-
-    //std::cout << "solver_ = std::make_unique<OpenSoT::solvers::iHQP>" << std::endl;
     if(solver_.get()!=nullptr)
       solver_.release();
     solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[current_stack_]->getStack(), stacks_[current_stack_]->getBounds(),1e6); //, 1e6);
@@ -317,15 +310,19 @@ void IDProblem::update()
         if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
             wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
     }
+    // Update the external lambda/references etc...
+    for (auto& tmp_map : tasks_ros_)
+        tmp_map.second->update();
+
     // Update the problem
     stacks_[current_stack_]->update(Eigen::VectorXd(1));
 }
 
-void IDProblem::setExternalReference(const std::string& task_name)
-{
-    if(tasks_ros_.count(task_name))
-        tasks_ros_[task_name]->updateReference();
-}
+//void IDProblem::setExternalReference(const std::string& task_name)
+//{
+//    if(tasks_ros_.count(task_name))
+//        tasks_ros_[task_name]->setExternalReference();
+//}
 
 void IDProblem::publish(const ros::Time& time)
 {

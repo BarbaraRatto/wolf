@@ -18,7 +18,7 @@
 #include <wb_controller/geometry.h>
 
 template <typename task_ptr_t, typename msg_t, typename config_t>
-class TaskRosWrapperBase : public RosWrapperInterface
+class TaskRosWrapperBase : public TaskRosWrapperInterface
 {
 
 public:
@@ -27,6 +27,10 @@ public:
     {
         assert(task);
         task_ = task;
+
+        rt_lambda1_ = task_->getLambda();
+        rt_lambda2_ = task_->getLambda2();
+        rt_weight_diag_ = task_->getWeight()(0,0);
 
         rt_pub_.reset(new realtime_tools::RealtimePublisher<msg_t>(nh, task->getTaskID(), 4));
 
@@ -41,14 +45,18 @@ public:
         switch(level)
         {
         case 0:
-            task_->setLambda(config.lambda1,config.lambda2);
+            //task_->setLambda(config.lambda1,config.lambda2);
+            rt_lambda1_ = config.lambda1;
+            rt_lambda2_ = config.lambda2;
+            ROS_INFO_STREAM("Set lambda1 and lambda2 for task "<<task_->getTaskID()<<" to "<<rt_lambda1_ << " and "<<rt_lambda2_);
             break;
         case 1:
             if(config.weight_diag>=0)
             {
                 //task_->setWeight(Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight_diag);
-                task_->setWeight(config.weight_diag);
-                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_->getTaskID()<<" to "<<task_->getWeight()(0,0));
+                //task_->setWeight(config.weight_diag);
+                rt_weight_diag_ = config.weight_diag;
+                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_->getTaskID()<<" to "<<rt_weight_diag_);
             }
             else
                 ROS_WARN("Weight diagonal value has to be positive definite!");
@@ -65,6 +73,14 @@ public:
     }
 
     virtual void publish(const ros::Time& /*time*/) = 0;
+
+    virtual void update()
+    {
+        if(OPTIONS.set_ext_lambda)
+          task_->setLambda(rt_lambda1_,rt_lambda2_);
+        if(OPTIONS.set_ext_weight)
+          task_->setWeight(rt_weight_diag_);
+    }
 
 protected:
 
@@ -100,7 +116,7 @@ public:
 
         task_->getActualPose(tmp_affine3d_);
 
-        rt_affine3d_.initRT(tmp_affine3d_);
+        rt_pose_reference_.initRT(tmp_affine3d_);
 
         tmp_quaterniond_ = tmp_affine3d_.linear();
 
@@ -136,7 +152,8 @@ public:
           Kd = Eigen::Matrix6d::Identity();
         }
 
-        task_->setGains(Kp,Kd);
+        rt_Kp_.initRT(Kp);
+        rt_Kd_.initRT(Kd);
     }
 
     virtual void publish(const ros::Time& time) override
@@ -166,10 +183,44 @@ public:
         }
     }
 
-    virtual void updateReference()
+    virtual void update()
     {
-        // Set the task reference for the cartesian task
-        task_->setReference(*rt_affine3d_.readFromRT());
+        TaskRosWrapperBase::update();
+        if(OPTIONS.set_ext_gains)
+          setExternalGains();
+        if(OPTIONS.set_ext_reference)
+          setExternalReference();
+    }
+
+    virtual Eigen::Affine3d& getExternalReference() override
+    {
+        return *rt_pose_reference_.readFromRT();
+    }
+
+    virtual void setExternalReference() override
+    {
+        task_->setReference(*rt_pose_reference_.readFromRT());
+    }
+
+    void getExternalGains(Eigen::MatrixBase<Eigen::Matrix6d>& Kp, Eigen::MatrixBase<Eigen::Matrix6d>& Kd)
+    {
+        Kp = *rt_Kp_.readFromRT();
+        Kd = *rt_Kd_.readFromRT();
+    }
+
+    Eigen::MatrixBase<Eigen::Matrix6d>& getExternalKp()
+    {
+        return *rt_Kp_.readFromRT();
+    }
+
+    Eigen::MatrixBase<Eigen::Matrix6d>& getExternalKd()
+    {
+        return *rt_Kd_.readFromRT();
+    }
+
+    virtual void setExternalGains() override
+    {
+        task_->setGains(*rt_Kp_.readFromRT(),*rt_Kd_.readFromRT());
     }
 
     virtual void dynamicReconfigureCallback(wb_controller::taskCartesianConfig &config, uint32_t level)
@@ -195,9 +246,10 @@ public:
             Kd(4,4) = config.kd_pitch;
             Kd(5,5) = config.kd_yaw;
 
-            task_->setGains(Kp,Kd);
-
             ROS_INFO_STREAM("Set Kp and Kd for task: "<<task_->getTaskID());
+
+            rt_Kp_.writeFromNonRT(Kp);
+            rt_Kd_.writeFromNonRT(Kd);
 
             break;
         }
@@ -241,7 +293,7 @@ protected:
         pose_reference.translation() = translation_reference;
         pose_reference.linear() = R.transpose();
 
-        rt_affine3d_.writeFromNonRT(pose_reference);
+        rt_pose_reference_.writeFromNonRT(pose_reference);
     }
 
 private:

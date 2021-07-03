@@ -1,6 +1,6 @@
 # TODO list
 
-- Kinova arm link 4 instead of end effector
+- Remove Robot namespace
 - Aliengo and Anymal don't work properly... could it be a gains problem?
 - Postural gains still in the controller... fix!
 - terrain estimator / state estimator

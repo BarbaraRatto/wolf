@@ -81,11 +81,11 @@ public:
      */
     void stanceWithFoot(const std::string& foot_name);
 
-    /**
-     * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
-     * @param task name to update
-     */
-    void setExternalReference(const std::string& task_name);
+    ///**
+    // * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
+    // * @param task name to update
+    // */
+    //void setExternalReference(const std::string& task_name);
 
     /**
      * @brief publish the ros topics related to the tasks
@@ -171,7 +171,7 @@ public:
     /**
      * @brief Expose the tasks to ROS
      */
-    std::map<std::string,RosWrapperInterface::Ptr> tasks_ros_;
+    std::map<std::string,TaskRosWrapperInterface::Ptr> tasks_ros_;
 
     /**
      * @brief postural_ a postural task
