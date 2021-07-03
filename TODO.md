@@ -1,5 +1,6 @@
 # TODO list
 
+- Remove ros from IDProblem
 - Remove Robot namespace
 - Aliengo and Anymal don't work properly... could it be a gains problem?
 - Postural gains still in the controller... fix!
@@ -13,7 +14,6 @@
 - Convex hull in acceleration
 - Arm controlled in velocity (no state estimation)
 - State estimation
-- Clean Ros interfaces
 - Experiments on the real robot
 - Fix device interface Add XBOX
 - IK with joint limits
