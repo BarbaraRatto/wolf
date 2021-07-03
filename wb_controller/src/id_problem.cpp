@@ -131,9 +131,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     if(arm_names_.size() > 0)
     {
       OpenSoT::tasks::Aggregated::Ptr arm_aggregated;
-      if(arm_names_.size() == 1)
-        arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
-      else if(arm_names_.size() > 1)
+      arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
+      if(arm_names_.size() > 1)
       {
         for(unsigned int i=1;i<arm_names_.size();i++)
            arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
@@ -252,17 +251,16 @@ void IDProblem::selectStack(const stacks_t& stack) //FIXME
 {
   if(current_stack_ != stack)
   {
+    solver_lock_.lock();
     if(arm_names_.size()>0)
     {
       if(stack == stacks_t::WALKING)
       {
-        std::cout << "WALKING" << std::endl;
         for (auto& tmp_map : arms_)
           tmp_map.second->setBaseLink(BASE_LINK_FRAME_NAME);
       }
       else if (stack == stacks_t::MANIPULATION)
       {
-        std::cout << "MANIPULATION" << std::endl;
         for (auto& tmp_map : arms_)
           tmp_map.second->setBaseLink(WORLD_FRAME_NAME);
       }
@@ -270,17 +268,17 @@ void IDProblem::selectStack(const stacks_t& stack) //FIXME
         ROS_WARN_NAMED(CLASS_NAME,"Wrong stack!");
       }
     }
-    getchar();
     //for (unsigned int i=0;i<arm_names_.size();i++)
     //  tasks_ros_[arm_names_[i]]->reset();
-    current_stack_ = stack;
 
-    solver_lock_.lock();
     if(solver_.get()!=nullptr)
       solver_.release();
-    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[current_stack_]->getStack(), stacks_[current_stack_]->getBounds(),1e6); //, 1e6);
+    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[stack]->getStack(), stacks_[stack]->getBounds(),1e6); //, 1e6);
     // , OpenSoT::solvers::solver_back_ends::OSQP);
     // , OpenSoT::solvers::solver_back_ends::eiQuadProg);
+
+    current_stack_ = stack;
+
     solver_lock_.unlock();
   }
 }
@@ -335,15 +333,15 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
     update();
 
     bool res_solv = false;
-    bool resid_ = false;
+    bool res_id = false;
     if (solver_lock_.try_lock())
     {
       res_solv = solver_->solve(x_);
       if(res_solv)
-        resid_ = id_->computedTorque(x_, tau, qddot_, contact_wrenches_);
+        res_id = id_->computedTorque(x_, tau, qddot_, contact_wrenches_);
       solver_lock_.unlock();
     }
-    return (res_solv && resid_);
+    return (res_solv && res_id);
 }
 
 const std::vector<Eigen::Vector6d>& IDProblem::getContactWrenches() const
