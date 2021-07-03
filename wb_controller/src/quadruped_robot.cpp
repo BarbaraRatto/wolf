@@ -59,10 +59,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   if(n_arms_ > N_ARMS)
   {
     throw std::runtime_error("Wrong number of arms, check the SRDF file!");
-  }
-  if(n_arms_ == N_ARMS) // Note: in the future we could have more than 1 ARM
-    for(unsigned int i = 0; i<n_arms_; i++)
-      arm_names_.push_back(xbot_model_->arm(i).getTipLinkName());
+  } 
 
   const srdf_advr::Model& srdf_model = xbot_model_->getSrdf();
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
@@ -73,6 +70,12 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     {
       for(unsigned int j=0;j<chains.size();j++)
         foot_names_.push_back(chains[j].second);
+    }
+    // Parse the arm tip_link from the SRDF file
+    if(srdf_model.getGroups()[i].name_.find("arm") != std::string::npos)
+    {
+      for(unsigned int j=0;j<chains.size();j++)
+        arm_names_.push_back(chains[j].second);
     }
     // Parse the hip tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("hip") != std::string::npos)
