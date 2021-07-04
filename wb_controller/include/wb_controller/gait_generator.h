@@ -1,5 +1,5 @@
-#ifndef LOCOMOTION_H
-#define LOCOMOTION_H
+#ifndef GAIT_GENERATOR_H
+#define GAIT_GENERATOR_H
 
 #include <ros/ros.h>
 #include <Eigen/Core>
