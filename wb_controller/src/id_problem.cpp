@@ -112,14 +112,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     std::list<unsigned int> id_RPY = {3,4,5}; //r,p,y
     std::list<unsigned int> idx_YZ = {0,1,2}; //xyz
 
-    OpenSoT::tasks::Aggregated::Ptr feet_aggregated;
+    OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;
     feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_YZ,feet_[foot_names_[0]]->getXSize());
     for(unsigned int i=1;i<foot_names_.size();i++)
       feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_YZ;
 
     stacks_[MANIPULATION] = ( (feet_aggregated)
                             / (com_%idx_Y)
-                            / (0.5*waistRPY_%id_RPY + 0.25*waistZ_%id_Z + 50.0*com_%id_Z + angular_momentum_)
+                            / (0.5*waistRPY_%id_RPY + 0.25*waistZ_%id_Z + 50.0*com_%id_Z)
                             / (postural_)
                             )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
@@ -130,7 +130,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
     if(arm_names_.size() > 0)
     {
-      OpenSoT::tasks::Aggregated::Ptr arm_aggregated;
       arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
       if(arm_names_.size() > 1)
       {
@@ -138,7 +137,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
            arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
       }
 
-      stacks_[MANIPULATION]->getStack()[2] = stacks_[MANIPULATION]->getStack()[2] + arm_aggregated;
+      stacks_[MANIPULATION]->getStack()[2] = arm_aggregated + stacks_[MANIPULATION]->getStack()[2]; // It doesn't work...
       auto it = stacks_[WALKING]->getStack().begin() + 2;
       stacks_[WALKING]->getStack().insert(it, arm_aggregated);
     }
@@ -247,38 +246,42 @@ void IDProblem::setLowerForceBoundZ(const double& force)
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<force);
 }
 
-void IDProblem::selectStack(const stacks_t& stack) //FIXME
+void IDProblem::selectStack(const stacks_t& stack)
 {
+
   if(current_stack_ != stack)
   {
     solver_lock_.lock();
-    if(arm_names_.size()>0)
-    {
-      if(stack == stacks_t::WALKING)
-      {
-        for (auto& tmp_map : arms_)
-          tmp_map.second->setBaseLink(BASE_LINK_FRAME_NAME);
-      }
-      else if (stack == stacks_t::MANIPULATION)
-      {
-        for (auto& tmp_map : arms_)
-          tmp_map.second->setBaseLink(WORLD_FRAME_NAME);
-      }
-      else {
-        ROS_WARN_NAMED(CLASS_NAME,"Wrong stack!");
-      }
-    }
-    //for (unsigned int i=0;i<arm_names_.size();i++)
-    //  tasks_ros_[arm_names_[i]]->reset();
-
-    if(solver_.get()!=nullptr)
-      solver_.release();
-    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[stack]->getStack(), stacks_[stack]->getBounds(),1e6); //, 1e6);
-    // , OpenSoT::solvers::solver_back_ends::OSQP);
-    // , OpenSoT::solvers::solver_back_ends::eiQuadProg);
 
     current_stack_ = stack;
 
+    if(arm_names_.size()>0)
+    {
+      Eigen::Affine3d actual_pose;
+      std::string frame;
+
+      if(stack == stacks_t::WALKING)
+        frame = BASE_LINK_FRAME_NAME;
+      else if (stack == stacks_t::MANIPULATION)
+        frame = WORLD_FRAME_NAME;
+      else
+        ROS_WARN_NAMED(CLASS_NAME,"Wrong stack!");
+
+      for (auto& tmp_map : arms_)
+      {
+         tmp_map.second->setBaseLink(frame);
+         tmp_map.second->update(Eigen::VectorXd(1));
+      }
+
+      for (unsigned int i=0;i<arm_names_.size();i++)
+        tasks_ros_[arm_names_[i]]->reset();
+    }
+
+    if(solver_.get()!=nullptr)
+      solver_.release();
+    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[current_stack_]->getStack(), stacks_[current_stack_]->getBounds(),1e6); //, 1e6);
+    // , OpenSoT::solvers::solver_back_ends::OSQP);
+    // , OpenSoT::solvers::solver_back_ends::eiQuadProg);
     solver_lock_.unlock();
   }
 }
@@ -299,15 +302,15 @@ unsigned int IDProblem::getCurrentStack()
 void IDProblem::update()
 {
     // Update the mu and the wrench limits
-    wrench_lower_lims_(0) = x_force_lower_lim_;
-    wrench_lower_lims_(1) = y_force_lower_lim_;
-    wrench_lower_lims_(2) = z_force_lower_lim_;
-    for (auto& tmp_map : feet_)
-    {
-        friction_cones_->getFrictionCone(tmp_map.first)->setMu(mu_);
-        if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
-            wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
-    }
+    //wrench_lower_lims_(0) = x_force_lower_lim_;
+    //wrench_lower_lims_(1) = y_force_lower_lim_;
+    //wrench_lower_lims_(2) = z_force_lower_lim_;
+    //for (auto& tmp_map : feet_)
+    //{
+    //    friction_cones_->getFrictionCone(tmp_map.first)->setMu(mu_);
+    //    if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
+    //        wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
+    //}
     // Update the external lambda/references etc...
     for (auto& tmp_map : tasks_ros_)
         tmp_map.second->update();
@@ -330,12 +333,11 @@ void IDProblem::publish(const ros::Time& time)
 
 bool IDProblem::solve(Eigen::VectorXd& tau)
 {
-    update();
-
     bool res_solv = false;
     bool res_id = false;
     if (solver_lock_.try_lock())
     {
+      update();
       res_solv = solver_->solve(x_);
       if(res_solv)
         res_id = id_->computedTorque(x_, tau, qddot_, contact_wrenches_);

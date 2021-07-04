@@ -28,14 +28,16 @@ public:
         assert(task);
         task_ = task;
 
+        task_id_ = task->getTaskID();
+
         rt_lambda1_ = task_->getLambda();
         rt_lambda2_ = task_->getLambda2();
         rt_weight_diag_ = task_->getWeight()(0,0);
 
-        rt_pub_.reset(new realtime_tools::RealtimePublisher<msg_t>(nh, task->getTaskID(), 4));
+        rt_pub_.reset(new realtime_tools::RealtimePublisher<msg_t>(nh,task_id_, 4));
 
         //ros::NodeHandle task_nh(nh.getNamespace()+"/"+task->getTaskID());
-        ros::NodeHandle task_nh(task->getTaskID());
+        ros::NodeHandle task_nh(task_id_);
         server_.reset(new dynamic_reconfigure::Server<config_t>(task_nh));
         server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
     }
@@ -45,18 +47,15 @@ public:
         switch(level)
         {
         case 0:
-            //task_->setLambda(config.lambda1,config.lambda2);
             rt_lambda1_ = config.lambda1;
             rt_lambda2_ = config.lambda2;
-            ROS_INFO_STREAM("Set lambda1 and lambda2 for task "<<task_->getTaskID()<<" to "<<rt_lambda1_ << " and "<<rt_lambda2_);
+            ROS_INFO_STREAM("Set lambda1 and lambda2 for task "<<task_id_<<" to "<<rt_lambda1_ << " and "<<rt_lambda2_);
             break;
         case 1:
             if(config.weight_diag>=0)
             {
-                //task_->setWeight(Eigen::MatrixXd::Identity(task_->getTaskSize(),task_->getTaskSize()) * config.weight_diag);
-                //task_->setWeight(config.weight_diag);
                 rt_weight_diag_ = config.weight_diag;
-                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_->getTaskID()<<" to "<<rt_weight_diag_);
+                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_id_<<" to "<<rt_weight_diag_);
             }
             else
                 ROS_WARN("Weight diagonal value has to be positive definite!");
@@ -114,13 +113,15 @@ public:
         TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>(nh,task)
     {
 
-        task_->getActualPose(tmp_affine3d_);
+        Eigen::Affine3d actual_pose;
+        task_->getActualPose(actual_pose);
+        rt_pose_reference_.initRT(actual_pose);
 
-        rt_pose_reference_.initRT(tmp_affine3d_);
-
-        tmp_quaterniond_ = tmp_affine3d_.linear();
-
-        createInteractiveMarker(tmp_affine3d_);
+        // Create the interactive marker
+        marker_server_.reset(new interactive_markers::InteractiveMarkerServer(task_id_));
+        visualization_msgs::InteractiveMarker&& marker = createInteractiveMarker(actual_pose,task_->getBaseLink());
+        marker_server_->insert(marker,boost::bind(&TaskRosWrapper::processFeedback, this, _1));
+        marker_server_->applyChanges();
 
         // Load params
         Eigen::Matrix6d Kp = Eigen::Matrix6d::Zero();
@@ -128,14 +129,14 @@ public:
         bool use_identity = false;
         for(unsigned int i=0; i<wb_controller::_cartesian_names.size(); i++)
         {
-            if (!nh.getParam("gains/"+task_->getTaskID()+"/Kp/" + wb_controller::_cartesian_names[i] , Kp(i,i)))
+            if (!nh.getParam("gains/"+task_id_+"/Kp/" + wb_controller::_cartesian_names[i] , Kp(i,i)))
             {
-                ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_->getTaskID().c_str(),nh.getNamespace().c_str());
+                ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
                 use_identity = true;
             }
-            if (!nh.getParam("gains/"+task_->getTaskID()+"/Kd/"  + wb_controller::_cartesian_names[i] , Kd(i,i)))
+            if (!nh.getParam("gains/"+task_id_+"/Kd/"  + wb_controller::_cartesian_names[i] , Kd(i,i)))
             {
-                ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_->getTaskID().c_str(),nh.getNamespace().c_str());
+                ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
                 use_identity = true;
             }
             // Check if the values are positive
@@ -183,7 +184,7 @@ public:
         }
     }
 
-    virtual void update()
+    virtual void update() override
     {
         TaskRosWrapperBase::update();
         if(OPTIONS.set_ext_gains)
@@ -223,7 +224,7 @@ public:
         task_->setGains(*rt_Kp_.readFromRT(),*rt_Kd_.readFromRT());
     }
 
-    virtual void dynamicReconfigureCallback(wb_controller::taskCartesianConfig &config, uint32_t level)
+    virtual void dynamicReconfigureCallback(wb_controller::taskCartesianConfig &config, uint32_t level) override
     {
         TaskRosWrapperBase::dynamicReconfigureCallback(config,level);
         switch(level)
@@ -246,7 +247,7 @@ public:
             Kd(4,4) = config.kd_pitch;
             Kd(5,5) = config.kd_yaw;
 
-            ROS_INFO_STREAM("Set Kp and Kd for task: "<<task_->getTaskID());
+            ROS_INFO_STREAM("Set Kp and Kd for task: "<<task_id_);
 
             rt_Kp_.writeFromNonRT(Kp);
             rt_Kd_.writeFromNonRT(Kd);
@@ -255,7 +256,7 @@ public:
         }
     }
 
-    virtual void dynamicReconfigureUpdate()
+    virtual void dynamicReconfigureUpdate() override
     {
 
         default_config_.kp_x     = task_->getKp()(0,0);
@@ -275,13 +276,26 @@ public:
         TaskRosWrapperBase::dynamicReconfigureUpdate();
     }
 
+    virtual void reset() override
+    {
+        Eigen::Affine3d pose;
+        task_->getActualPose(pose);
+        rt_pose_reference_.writeFromNonRT(pose);
+
+        marker_server_->clear();
+        marker_server_->applyChanges();
+        visualization_msgs::InteractiveMarker&& marker = createInteractiveMarker(pose,task_->getBaseLink());
+        marker_server_->insert(marker,boost::bind(&TaskRosWrapper::processFeedback, this, _1));
+        marker_server_->applyChanges();
+    }
+
 protected:
 
     virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
     {
         ROS_DEBUG_STREAM( feedback->marker_name << " is now at "
                          << feedback->pose.position.x << ", " << feedback->pose.position.y
-                         << ", " << feedback->pose.position.z );
+                         << ", " << feedback->pose.position.z << " frame " << feedback->header.frame_id );
 
         Eigen::Vector3d translation_reference(feedback->pose.position.x,feedback->pose.position.y,feedback->pose.position.z);
         Eigen::Quaterniond orientation_reference(feedback->pose.orientation.w,feedback->pose.orientation.x,feedback->pose.orientation.y,feedback->pose.orientation.z);
@@ -298,29 +312,22 @@ protected:
 
 private:
 
-    void createInteractiveMarker(const Eigen::Affine3d& initial_pose)
+    visualization_msgs::InteractiveMarker createInteractiveMarker(const Eigen::Affine3d& initial_pose, const std::string& frame)
     {
-
-      marker_.reset(new interactive_markers::InteractiveMarkerServer(task_->getTaskID()));
 
       // create an interactive marker for our server
       visualization_msgs::InteractiveMarker int_marker;
-      int_marker.header.frame_id = task_->getBaseLink();
-      int_marker.name = task_->getTaskID();
-      int_marker.description = task_->getTaskID();
+      int_marker.header.frame_id = frame;
+      int_marker.name = task_id_;
+      int_marker.description = task_id_;
 
       wb_controller::affine3dToPose(initial_pose,int_marker.pose);
 
       // create a grey box marker
       visualization_msgs::Marker box_marker;
       box_marker.type = visualization_msgs::Marker::SPHERE;
-      box_marker.scale.x = 0.2;
-      box_marker.scale.y = 0.2;
-      box_marker.scale.z = 0.2;
-      box_marker.color.r = 0.5;
-      box_marker.color.g = 0.5;
-      box_marker.color.b = 0.5;
-      box_marker.color.a = 0.5;
+      box_marker.scale.x = box_marker.scale.y = box_marker.scale.z = 0.2;
+      box_marker.color.r = box_marker.color.g = box_marker.color.b = box_marker.color.a = 0.5 ;
 
       // create a non-interactive control which contains the box
       visualization_msgs::InteractiveMarkerControl box_control;
@@ -331,8 +338,6 @@ private:
       int_marker.controls.push_back( box_control );
 
       visualization_msgs::InteractiveMarkerControl control;
-
-      //control.orientation_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_3D;
 
       control.orientation.w = 1;
       control.orientation.x = 1;
@@ -369,12 +374,16 @@ private:
 
       // add the interactive marker to our collection &
       // tell the server to call processFeedback() when feedback arrives for it
-      marker_->insert(int_marker, boost::bind(&TaskRosWrapper::processFeedback, this, _1));
-
-      // 'commit' changes and send to all clients
-      marker_->applyChanges();
+      //marker_->insert(int_marker, );
+      //
+      //// 'commit' changes and send to all clients
+      //marker_->applyChanges();
+      return int_marker;
 
     }
+
+    std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_server_;
+    visualization_msgs::InteractiveMarker marker_;
 };
 
 // COM - GENERIC
@@ -490,7 +499,7 @@ public:
 
             task_->setGains(Kp,Kd);
 
-            ROS_INFO_STREAM("Set Kp and Kd for task: "<<task_->getTaskID());
+            ROS_INFO_STREAM("Set Kp and Kd for task: "<<task_id_);
 
             break;
         }

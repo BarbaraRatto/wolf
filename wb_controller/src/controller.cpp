@@ -229,7 +229,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joy_handler_.reset(new JoyHandler(controller_nh,foot_holds_planner_));
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
     joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
-    //joy_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE); // FIXME
+    joy_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE); // FIXME
     //keyboard_handler_.reset(new TwistHandler(controller_nh,foot_holds_planner_)); //FIXME
 
     // initialize the filters

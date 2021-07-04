@@ -31,11 +31,11 @@ wb_controller:
       rh_hfe_joint: {p: 300.0, i: 0.0, d: 10.0}
       rh_kfe_joint: {p: 200.0, i: 0.0, d: 6.0}
 
-      joint1: {p: 200.0, i: 0.0, d: 10.0}
-      joint2: {p: 200.0, i: 0.0, d: 10.0}
-      joint3: {p: 200.0, i: 0.0, d: 10.0}
-      joint4: {p: 200.0, i: 0.0, d: 10.0}
-      joint5: {p: 200.0, i: 0.0, d: 10.0}
+      joint1: {p: 1000.0, i: 0.0, d: 100.0}
+      joint2: {p: 1000.0, i: 0.0, d: 100.0}
+      joint3: {p: 1000.0, i: 0.0, d: 100.0}
+      joint4: {p: 1000.0, i: 0.0, d: 100.0}
+      joint5: {p: 1000.0, i: 0.0, d: 100.0}
 
       kp_swing: {haa: 100.0, hfe: 100.0, kfe: 100.0}
       kd_swing: {haa: 5.0, hfe: 5.0, kfe: 5.0}

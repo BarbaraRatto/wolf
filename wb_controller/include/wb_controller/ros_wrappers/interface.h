@@ -58,7 +58,7 @@ public:
      * @brief getExternalLambda, RT-SAFE
      * @return return the lambda created from the dynamic reconfigure interface
      */
-    virtual void getExternalLambda(double& lambda1, double& lambda2) {}
+    virtual void getExternalLambda(double& /*lambda1*/, double& /*lambda2*/) {}
     /**
      * @brief setExternalReference set the external reference to the task, RT-SAFE
      */
@@ -96,15 +96,15 @@ public:
      */
     virtual void update() = 0;
 
+    virtual void reset() {};
+
  protected:
 
-    Eigen::Affine3d       tmp_affine3d_;
     Eigen::VectorXd       tmp_vectorxd_;
-    Eigen::Vector3d       tmp_vector3d_;
+    Eigen::Affine3d       tmp_affine3d_;
     Eigen::Vector6d       tmp_vector6d_;
+    Eigen::Vector3d       tmp_vector3d_;
     Eigen::Quaterniond    tmp_quaterniond_;
-
-    std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_;
 
     realtime_tools::RealtimeBuffer<Eigen::Affine3d> rt_pose_reference_;
     realtime_tools::RealtimeBuffer<Eigen::Matrix6d> rt_Kp_;
@@ -112,6 +112,8 @@ public:
     std::atomic<double> rt_lambda1_;
     std::atomic<double> rt_lambda2_;
     std::atomic<double> rt_weight_diag_;
+
+    std::string task_id_;
 
 };
 
