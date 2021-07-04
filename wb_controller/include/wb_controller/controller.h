@@ -21,17 +21,18 @@
 #include <chrono>
 #include <memory>
 // Controller
+#include <wb_controller/quadruped_robot.h>
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/legs_kinematics.h>
 #include <wb_controller/footholds_planner.h>
 #include <wb_controller/com_planner.h>
 #include <wb_controller/state_estimator.h>
-#include <wb_controller/device_interface.h>
 #include <wb_controller/id_problem.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/controllerConfig.h>
 #include <wb_controller/ros_wrappers/interface.h>
-#include <wb_controller/quadruped_robot.h>
+#include <wb_controller/devices/interface.h>
+
 // Eigen
 #include <Eigen/Geometry>
 
@@ -255,10 +256,8 @@ private:
     LegsKinematics::Ptr kin_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
-    /** @brief Joy handler */
-    JoyHandler::Ptr joy_handler_;
-    /** @brief Keyboard handler */
-    TwistHandler::Ptr keyboard_handler_;
+    /** @brief Device handler */
+    DeviceHandlerInterface::Ptr device_handler_;
     /** @brief Foot holds Planner */
     FootholdsPlanner::Ptr foot_holds_planner_;
     /** @brief CoM Planner */

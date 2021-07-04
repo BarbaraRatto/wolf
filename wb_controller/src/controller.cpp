@@ -11,6 +11,7 @@
 
 #include <wb_controller/controller.h>
 #include <wb_controller/ros_wrappers/controller.h>
+#include <wb_controller/devices/joy.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -226,10 +227,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     kin_->activateBaseHeightControl();
     des_joint_positions_ = kin_->getJointHomePositions();
 
-    joy_handler_.reset(new JoyHandler(controller_nh,foot_holds_planner_));
-    joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
-    joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
-    joy_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE); // FIXME
+    device_handler_.reset(new JoyHandler(controller_nh,this));
+    //device_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
+    //device_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
+    //device_handler_->addButtonHandler(boost::bind(&Controller::switchStack,this),JoyHandler::ONE); // FIXME
     //keyboard_handler_.reset(new TwistHandler(controller_nh,foot_holds_planner_)); //FIXME
 
     // initialize the filters
