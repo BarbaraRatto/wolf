@@ -28,7 +28,6 @@ find_package(XBotInterface REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
-  cfg/problem.cfg
   cfg/taskCartesian.cfg
   cfg/taskGeneric.cfg
   cfg/taskPostural.cfg

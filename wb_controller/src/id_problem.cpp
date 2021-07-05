@@ -17,13 +17,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     arm_names_     = model_->getArmNames();
     contact_names_ = model_->getContactNames();
 
-    // Load some params from the ROS server
-    double default_z_lower_force = 20; // [N]
-    if (!nh.getParam("default_z_lower_force", default_z_lower_force))
-    {
-        ROS_WARN_NAMED(CLASS_NAME,"No default z lower force given in namespace %s, using a default value of %f.", nh.getNamespace().c_str(),default_z_lower_force);
-    }
-
     //
     //  This utility internally creates the right variables which later we will use to
     //  create all the tasks and constraints
@@ -99,7 +92,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
     x_force_lower_lim_ = -2000;
     y_force_lower_lim_ = -2000;
-    z_force_lower_lim_ = default_z_lower_force;
+    z_force_lower_lim_ = 0.5*(model_->getXBotModel()->getMass()/N_LEGS);
 
     wrench_upper_lims_<<2000,2000,2000,Eigen::Vector3d::Zero();
     wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
@@ -166,45 +159,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     for (auto& tmp_map : tasks_ros_)
         tmp_map.second->dynamicReconfigureUpdate();
 
-    // Set the callback for the dynamic reconfigure server
-    ros::NodeHandle problem_nh("problem");
-    server_.reset(new dynamic_reconfigure::Server<wb_controller::problemConfig>(problem_nh));
-    server_->setCallback(boost::bind(&IDProblem::dynamicReconfigureCallback, this, _1, _2));
-
-    dynamicReconfigureUpdate();
-
     selectStack(stacks_t::WALKING);
 }
 
 IDProblem::~IDProblem()
 {
-}
-
-void IDProblem::dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level)
-{
-    switch(level)
-    {
-    case 0:
-        setFrictionConesMu(config.mu);
-        break;
-    case 1:
-        setLowerForceBound(config.x_force_lower_lim,config.y_force_lower_lim,config.z_force_lower_lim);
-        break;
-    default:
-        break;
-    }
-}
-
-void IDProblem::dynamicReconfigureUpdate()
-{
-    // Update the config for dynamic reconfigure
-    default_config_.mu = mu_;
-    default_config_.x_force_lower_lim = x_force_lower_lim_;
-    default_config_.y_force_lower_lim = y_force_lower_lim_;
-    default_config_.z_force_lower_lim = z_force_lower_lim_;
-
-    if(server_)
-        server_->updateConfig(default_config_);
 }
 
 void IDProblem::setFrictionConesMu(const double& mu)
@@ -302,28 +261,22 @@ unsigned int IDProblem::getCurrentStack()
 void IDProblem::update()
 {
     // Update the mu and the wrench limits
-    //wrench_lower_lims_(0) = x_force_lower_lim_;
-    //wrench_lower_lims_(1) = y_force_lower_lim_;
-    //wrench_lower_lims_(2) = z_force_lower_lim_;
-    //for (auto& tmp_map : feet_)
-    //{
-    //    friction_cones_->getFrictionCone(tmp_map.first)->setMu(mu_);
-    //    if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
-    //        wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
-    //}
-    // Update the external lambda/references etc...
+    wrench_lower_lims_(0) = x_force_lower_lim_;
+    wrench_lower_lims_(1) = y_force_lower_lim_;
+    wrench_lower_lims_(2) = z_force_lower_lim_;
+    for (auto& tmp_map : feet_)
+    {
+        friction_cones_->getFrictionCone(tmp_map.first)->setMu(mu_);
+        if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
+            wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
+    }
+    //Update the external lambda/references etc...
     for (auto& tmp_map : tasks_ros_)
         tmp_map.second->update();
 
     // Update the problem
     stacks_[current_stack_]->update(Eigen::VectorXd(1));
 }
-
-//void IDProblem::setExternalReference(const std::string& task_name)
-//{
-//    if(tasks_ros_.count(task_name))
-//        tasks_ros_[task_name]->setExternalReference();
-//}
 
 void IDProblem::publish(const ros::Time& time)
 {
@@ -379,7 +332,7 @@ void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z)
 
 void IDProblem::setComReference(const Eigen::Vector3d& position, const Eigen::Vector3d& velocity)
 {
-  com_->setReference(position,velocity); // To fix, it should be used only when trotting or with the arm
+  com_->setReference(position,velocity);
 }
 
 } // namespace

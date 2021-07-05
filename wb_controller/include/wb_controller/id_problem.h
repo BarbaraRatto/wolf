@@ -17,8 +17,6 @@
 
 // ROS
 #include <ros/ros.h>
-#include <dynamic_reconfigure/server.h>
-#include <wb_controller/problemConfig.h>
 
 // WB
 #include <wb_controller/geometry.h>
@@ -81,12 +79,6 @@ public:
      */
     void stanceWithFoot(const std::string& foot_name);
 
-    ///**
-    // * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
-    // * @param task name to update
-    // */
-    //void setExternalReference(const std::string& task_name);
-
     /**
      * @brief publish the ros topics related to the tasks
      * @param ros current time
@@ -136,12 +128,6 @@ public:
      * @param velocity
      */
     void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
-
-    /**
-         * @brief Ros dynamic reconfigure callback
-         */
-    void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
-
 
     /**
          * @brief Select the stack type to use
@@ -194,11 +180,6 @@ public:
     QuadrupedRobot::Ptr model_;
 
 private:
-
-    /**
-         * @brief Update the dynamic reconfigure interface
-         */
-    void dynamicReconfigureUpdate();
 
     /**
      * @brief update call after the model.update() to update the autostack
@@ -255,11 +236,6 @@ private:
      */
     Eigen::Vector6d wrench_upper_lims_;
     Eigen::Vector6d wrench_lower_lims_;
-
-    /** @brief ROS dynamic reconfigure */
-    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::problemConfig>> server_;
-    /** @brief ROS dynamic reconfigure config struct */
-    wb_controller::problemConfig default_config_;
 
     std::atomic<double> mu_;
     std::atomic<double> x_force_lower_lim_;
