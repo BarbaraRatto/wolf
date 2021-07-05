@@ -12,15 +12,8 @@
 
 namespace wb_controller
 {
-
-//#define STACK_1
-//#define STACK_2
-//#define STACK_3
-//#define STACK_4
-#define STACK_5
 //#define ROBOT_REAL
 #define REACHING_MOTION
-
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4 // Fixed number of legs supported
 #define N_ARMS 1 // Fixed number of arms supported
