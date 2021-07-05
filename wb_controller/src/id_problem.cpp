@@ -107,18 +107,18 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     wrenches_lims_ = std::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
                              foot_names_, wrench_lower_lims_, wrench_upper_lims_,id_->getContactsWrenchAffine());
 
-    std::list<unsigned int> idx_Y  = {0,1};   //xy
-    std::list<unsigned int> id_Z   = {2};     //z
-    std::list<unsigned int> id_RPY = {3,4,5}; //r,p,y
-    std::list<unsigned int> idx_YZ = {0,1,2}; //xyz
+    std::list<unsigned int> idx_XYZ  = {0,1,2}; //xyz
+    std::list<unsigned int> idx_XY   = {0,1};   //xy
+    std::list<unsigned int> id_Z     = {2};     //z
+    std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
 
     OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;
-    feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_YZ,feet_[foot_names_[0]]->getXSize());
+    feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_XYZ,feet_[foot_names_[0]]->getXSize());
     for(unsigned int i=1;i<foot_names_.size();i++)
-      feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_YZ;
+      feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_XYZ;
 
     stacks_[MANIPULATION] = ( (feet_aggregated)
-                            / (com_%idx_Y)
+                            / (com_%idx_XY)
                             / (0.5*waistRPY_%id_RPY + 0.25*waistZ_%id_Z + 50.0*com_%id_Z)
                             / (postural_)
                             )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;

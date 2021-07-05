@@ -28,8 +28,6 @@
 #include <wb_controller/com_planner.h>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/id_problem.h>
-#include <wb_controller/ContactForces.h>
-#include <wb_controller/controllerConfig.h>
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/devices/interface.h>
 

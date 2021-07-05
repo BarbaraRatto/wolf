@@ -80,6 +80,8 @@ public:
     double getStepHeight() const ;
     double getStepLength() const ;
     const Gait::gait_t& getGaitType() const;
+    Eigen::Vector3d& getVirtualFoothold(const std::string& foot_name) ;
+    Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
 
     void setInitialOffsets();
 
@@ -168,6 +170,9 @@ private:
     Eigen::Affine3d world_T_foot_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
     std::vector<Eigen::Vector3d> hf_X_initial_footholds_;
     std::vector<Eigen::Vector3d> hf_X_initial_hips_;
+
+    std::map<std::string,Eigen::Vector3d> desired_foothold_;
+    std::map<std::string,Eigen::Vector3d> virtual_foothold_;
 
     double yaw_base_;
     double step_length_;

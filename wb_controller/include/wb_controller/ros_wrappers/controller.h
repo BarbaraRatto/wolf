@@ -15,11 +15,11 @@
 
 // ROS
 #include <wb_controller/controllerConfig.h>
+#include <wb_controller/ContactForces.h>
+#include <wb_controller/FootHolds.h>
 
 // WBC
 #include <wb_controller/controller.h>
-
-// WB
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/geometry.h>
 
@@ -100,12 +100,19 @@ public:
 
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
-        contact_forces_pub_->msg_.header.frame_id = "world"; //FIXME
+        contact_forces_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
         contact_forces_pub_->msg_.name.resize(n_contacts);
         contact_forces_pub_->msg_.contact.resize(n_contacts);
         contact_forces_pub_->msg_.contact_positions.resize(n_contacts);
         contact_forces_pub_->msg_.contact_forces.resize(n_contacts);
         contact_forces_pub_->msg_.des_contact_forces.resize(n_contacts);
+
+        unsigned int n_feet = controller_->getRobotModel()->getNumberLegs();
+        foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::FootHolds>(controller_nh, "foot_holds", 4));
+        foot_holds_pub_->msg_.header.frame_id = BASE_LINK_FRAME_NAME;
+        foot_holds_pub_->msg_.name.resize(n_feet);
+        foot_holds_pub_->msg_.desired_foothold.resize(n_feet);
+        foot_holds_pub_->msg_.virtual_foothold.resize(n_feet);
 
         // Set the callback for the dynamic reconfigure server
         server_.reset(new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh));
@@ -203,9 +210,7 @@ public:
       {
           for(unsigned int i=0; i <contact_names.size(); i++)
           {
-
               current_contact_name = contact_names[i];
-
               contact_forces_pub_->msg_.name[i] = current_contact_name;
               contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(current_contact_name);
               contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(0);
@@ -219,10 +224,28 @@ public:
               contact_forces_pub_->msg_.des_contact_forces[i].force.x = controller_->getDesiredContactForces()[i](0);
               contact_forces_pub_->msg_.des_contact_forces[i].force.y = controller_->getDesiredContactForces()[i](1);
               contact_forces_pub_->msg_.des_contact_forces[i].force.z = controller_->getDesiredContactForces()[i](2);
-
           }
           contact_forces_pub_->msg_.header.stamp = time;
           contact_forces_pub_->unlockAndPublish();
+      }
+
+      const std::vector<std::string>& foot_names = controller_->getRobotModel()->getFootNames();
+      std::string current_foot_names;
+      if(foot_holds_pub_.get() && foot_holds_pub_->trylock())
+      {
+          for(unsigned int i=0; i <foot_names.size(); i++)
+          {
+              current_foot_names = foot_names[i];
+              foot_holds_pub_->msg_.name[i] = current_foot_names;
+              foot_holds_pub_->msg_.desired_foothold[i].x = controller_->getFootholdsPlanner()->getDesiredFoothold(foot_names[i]).x();
+              foot_holds_pub_->msg_.desired_foothold[i].y = controller_->getFootholdsPlanner()->getDesiredFoothold(foot_names[i]).y();
+              foot_holds_pub_->msg_.desired_foothold[i].z = controller_->getFootholdsPlanner()->getDesiredFoothold(foot_names[i]).z();
+              foot_holds_pub_->msg_.virtual_foothold[i].x = controller_->getFootholdsPlanner()->getVirtualFoothold(foot_names[i]).x();
+              foot_holds_pub_->msg_.virtual_foothold[i].y = controller_->getFootholdsPlanner()->getVirtualFoothold(foot_names[i]).y();
+              foot_holds_pub_->msg_.virtual_foothold[i].z = controller_->getFootholdsPlanner()->getVirtualFoothold(foot_names[i]).z();
+          }
+          foot_holds_pub_->msg_.header.stamp = time;
+          foot_holds_pub_->unlockAndPublish();
       }
 
     };
@@ -233,6 +256,8 @@ protected:
     wb_controller::controllerConfig default_config_;
     /** @brief Real time publisher - contact forces */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
+    /** @brief Real time publisher - foot holds */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::FootHolds>> foot_holds_pub_;
     wb_controller::Controller* controller_;
 
 private:

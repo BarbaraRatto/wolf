@@ -18,12 +18,15 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
     assert(step_height_max>=0.0);
     step_height_max_ = step_height_max;
 
-    const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
-    for(unsigned int i=0;i<feet_names.size();i++)
+    const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
+    for(unsigned int i=0;i<foot_names.size();i++)
     {
-        steps_length_[feet_names[i]] = 0.0;
-        steps_heading_[feet_names[i]] = 0.0;
-        steps_height_[feet_names[i]] = 0.0;
+        steps_length_[foot_names[i]] = 0.0;
+        steps_heading_[foot_names[i]] = 0.0;
+        steps_height_[foot_names[i]] = 0.0;
+
+        desired_foothold_[foot_names[i]] = Eigen::Vector3d::Zero();
+        virtual_foothold_[foot_names[i]] = Eigen::Vector3d::Zero();
     }
 
     resetVelocyScales();
@@ -218,6 +221,9 @@ void FootholdsPlanner::calculateFootSteps()
                 step_length_ = step_length_max_;
                 ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step length is greater than: "<<step_length_max_);
             }
+
+            //desired_foothold_[foot_names[i]] = base_T_foot_ * hf_delta_foot_; // FIXME
+            virtual_foothold_[foot_names[i]] = hf_X_initial_footholds_[i];
 
             steps_length_[foot_names[i]]         = step_length_;
             steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + yaw_base_;
@@ -543,6 +549,16 @@ double FootholdsPlanner::getStepLength() const
 const Gait::gait_t &FootholdsPlanner::getGaitType() const
 {
   return gait_generator_->getGaitType();
+}
+
+Eigen::Vector3d &FootholdsPlanner::getVirtualFoothold(const std::string& foot_name)
+{
+  return virtual_foothold_[foot_name];
+}
+
+Eigen::Vector3d &FootholdsPlanner::getDesiredFoothold(const std::string& foot_name)
+{
+  return desired_foothold_[foot_name];
 }
 
 }; // namespace

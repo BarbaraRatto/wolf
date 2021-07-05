@@ -14,6 +14,7 @@
 #include <wb_controller/utils.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/CartesianTask.h>
+#include <wb_controller/FootHolds.h>
 #include <rviz_visual_tools/rviz_visual_tools.h>
 
 namespace wb_controller
@@ -77,47 +78,98 @@ private:
 
 };
 
-class CoMVisualizer {
+template<class msg_t>
+class SphereVisualizer {
+
+public:
+
+  SphereVisualizer(ros::NodeHandle& nh, const std::string& topic_name, const std::string& marker_topic, const std::string& frame="world")
+  {
+    cnt_ = 0;
+    decimate_ = 10;
+
+    subscriber_ = nh.subscribe(topic_name, 1, &SphereVisualizer::callback, this);
+    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(frame,marker_topic,topic_name));
+  }
+
+  virtual ~SphereVisualizer() {}
+
+  virtual void callback(const msg_t& msg) = 0;
+
+protected:
+
+  void createSphere(const geometry_msgs::Point& origin, rviz_visual_tools::colors color)
+  {
+    origin_.x() = origin.x;
+    origin_.y() = origin.y;
+    origin_.z() = origin.z;
+    visual_tools_->publishSphere(origin_,color,rviz_visual_tools::XXLARGE);
+    visual_tools_->trigger();
+  }
+
+  void createSphere(const geometry_msgs::Vector3& origin, rviz_visual_tools::colors color)
+  {
+    origin_.x() = origin.x;
+    origin_.y() = origin.y;
+    origin_.z() = origin.z;
+    visual_tools_->publishSphere(origin_,color,rviz_visual_tools::XXLARGE);
+    visual_tools_->trigger();
+  }
+
+  Eigen::Vector3d origin_;
+  unsigned int cnt_;
+  unsigned int decimate_;
+  ros::Subscriber subscriber_;
+  rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+
+};
+
+class CoMVisualizer : public SphereVisualizer<wb_controller::CartesianTask> {
 
   public:
 
   CoMVisualizer(ros::NodeHandle& nh)
+    :SphereVisualizer<wb_controller::CartesianTask>(nh,"CoM","com_visual_marker")
   {
-        cnt_ = 0;
-        decimate_ = 10;
-
-        subscriber_ = nh.subscribe("CoM", 1, &CoMVisualizer::callbackCoM, this);
-        visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","com_visual_marker"));
   }
 
-  void callbackCoM(const wb_controller::CartesianTask& msg)
+  ~CoMVisualizer() {}
+
+  virtual void callback(const wb_controller::CartesianTask& msg)
   {
     if(cnt_++%decimate_==0)
     {
         visual_tools_->deleteAllMarkers();
-
-        createSphere(msg.pose_actual,rviz_visual_tools::GREEN);
-        createSphere(msg.pose_reference,rviz_visual_tools::BLUE);
+        SphereVisualizer::createSphere(msg.pose_actual.position,rviz_visual_tools::GREEN);
+        SphereVisualizer::createSphere(msg.pose_reference.position,rviz_visual_tools::BLUE);
     }
   }
 
-private:
+};
 
-  void createSphere(const geometry_msgs::Pose& pose, rviz_visual_tools::colors color)
+class FootHoldsVisualizer : public SphereVisualizer<wb_controller::FootHolds> {
+
+  public:
+
+  FootHoldsVisualizer(ros::NodeHandle& nh)
+    :SphereVisualizer<wb_controller::FootHolds>(nh,"foot_holds","footholds_visual_marker","base_link")
   {
-    pose_.linear() = Eigen::Matrix3d::Identity();
-    pose_.translation().x() = pose.position.x;
-    pose_.translation().y() = pose.position.y;
-    pose_.translation().z() = pose.position.z;
-    visual_tools_->publishSphere(pose_,color,rviz_visual_tools::XXLARGE);
-    visual_tools_->trigger();
   }
 
-  unsigned int cnt_;
-  unsigned int decimate_;
-  Eigen::Isometry3d pose_;
-  ros::Subscriber subscriber_;
-  rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+  ~FootHoldsVisualizer() {}
+
+  virtual void callback(const wb_controller::FootHolds& msg)
+  {
+    if(cnt_++%decimate_==0)
+    {
+        visual_tools_->deleteAllMarkers();
+        for(unsigned int i=0;i<msg.name.size();i++)
+        {
+          createSphere(msg.desired_foothold[i],rviz_visual_tools::BLUE);
+          createSphere(msg.virtual_foothold[i],rviz_visual_tools::RED);
+        }
+    }
+  }
 
 };
 
@@ -136,6 +188,7 @@ int main(int argc, char **argv)
 
   wb_controller::ContactForcesVisualizer cfv(node);
   wb_controller::CoMVisualizer comv(node);
+  wb_controller::FootHoldsVisualizer fhv(node);
 
   ros::spin();
 
