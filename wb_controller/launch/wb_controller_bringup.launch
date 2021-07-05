@@ -94,7 +94,7 @@
           	type="rviz"
           	name="rviz"
           	pkg="rviz"
-          	args="-d $(find wb_controller)/rviz_files/wbc.rviz" />
+                args="-d $(find wb_controller)/rviz_files/$(arg robot_name)_wbc.rviz" />
    </group>
 
 </launch>
