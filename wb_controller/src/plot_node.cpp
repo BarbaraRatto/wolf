@@ -87,6 +87,7 @@ public:
   {
     cnt_ = 0;
     decimate_ = 10;
+    origin_ = Eigen::Isometry3d::Identity();
 
     subscriber_ = nh.subscribe(topic_name, 1, &SphereVisualizer::callback, this);
     visual_tools_.reset(new rviz_visual_tools::RvizVisualTools(frame,marker_topic,topic_name));
@@ -100,23 +101,23 @@ protected:
 
   void createSphere(const geometry_msgs::Point& origin, rviz_visual_tools::colors color)
   {
-    origin_.x() = origin.x;
-    origin_.y() = origin.y;
-    origin_.z() = origin.z;
+    origin_.translation().x() = origin.x;
+    origin_.translation().y() = origin.y;
+    origin_.translation().z() = origin.z;
     visual_tools_->publishSphere(origin_,color,rviz_visual_tools::XXLARGE);
     visual_tools_->trigger();
   }
 
   void createSphere(const geometry_msgs::Vector3& origin, rviz_visual_tools::colors color)
   {
-    origin_.x() = origin.x;
-    origin_.y() = origin.y;
-    origin_.z() = origin.z;
+    origin_.translation().x() = origin.x;
+    origin_.translation().y() = origin.y;
+    origin_.translation().z() = origin.z;
     visual_tools_->publishSphere(origin_,color,rviz_visual_tools::XXLARGE);
     visual_tools_->trigger();
   }
 
-  Eigen::Vector3d origin_;
+  Eigen::Isometry3d origin_;
   unsigned int cnt_;
   unsigned int decimate_;
   ros::Subscriber subscriber_;
@@ -141,7 +142,7 @@ class CoMVisualizer : public SphereVisualizer<wb_controller::CartesianTask> {
     {
         visual_tools_->deleteAllMarkers();
         SphereVisualizer::createSphere(msg.pose_actual.position,rviz_visual_tools::GREEN);
-        SphereVisualizer::createSphere(msg.pose_reference.position,rviz_visual_tools::BLUE);
+        //SphereVisualizer::createSphere(msg.pose_reference.position,rviz_visual_tools::BLUE);
     }
   }
 
@@ -165,7 +166,7 @@ class FootHoldsVisualizer : public SphereVisualizer<wb_controller::FootHolds> {
         visual_tools_->deleteAllMarkers();
         for(unsigned int i=0;i<msg.name.size();i++)
         {
-          createSphere(msg.desired_foothold[i],rviz_visual_tools::BLUE);
+          //createSphere(msg.desired_foothold[i],rviz_visual_tools::BLUE);
           createSphere(msg.virtual_foothold[i],rviz_visual_tools::RED);
         }
     }
