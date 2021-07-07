@@ -14,7 +14,7 @@ namespace wb_controller
 {
 //#define ROBOT_REAL
 #define GRAVITY 9.81
-#define REACHING_MOTION
+//#define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4 // Fixed number of legs supported
 #define N_ARMS 1 // Fixed number of arms supported
