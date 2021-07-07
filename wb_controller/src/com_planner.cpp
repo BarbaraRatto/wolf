@@ -89,8 +89,7 @@ void ComPlanner::update(double /*dt*/)
   if(foothold_planner_->getGaitType() == Gait::CRAWL) // With the crawl the robot moves approx half the speed
     com_velocity_ref_ = 0.5 * com_velocity_ref_;
 
-  com_position_ref_(2) = foothold_planner_->getBaseHeight();
-
+  //com_position_ref_(2) = foothold_planner_->getBaseHeight();
 }
 
 const Eigen::Vector3d &ComPlanner::getComVelocity() const

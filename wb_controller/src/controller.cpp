@@ -525,7 +525,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set the pose reference for the waist
     id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
 
-    // Set the velocity reference for the Com, note that the position is zero
+    // Set the velocity and position reference for the Com
     com_planner_->update(period.toSec());
     id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
