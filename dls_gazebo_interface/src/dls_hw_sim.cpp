@@ -139,7 +139,7 @@ namespace dls_gazebo_interface
     return true;
   }
 
-  void DlsRobotHwSim::readSim(ros::Time time, ros::Duration period)
+  void DlsRobotHwSim::readSim(ros::Time /*time*/, ros::Duration period)
   {
 
     for (unsigned int j=0; j < n_dof_; j++) {
