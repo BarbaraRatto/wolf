@@ -13,6 +13,7 @@
 namespace wb_controller
 {
 //#define ROBOT_REAL
+#define GRAVITY 9.81
 #define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4 // Fixed number of legs supported
@@ -166,6 +167,84 @@ public:
 private:
     double axis_old_value_;
     status_t status_;
+
+};
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+class AvgFilter
+{
+public:
+    typedef std::shared_ptr<AvgFilter> Ptr;
+
+    AvgFilter(unsigned int n)
+    {
+       n_ = n;
+       avg_ = 0.0;
+    }
+
+    double update(double value)
+    {
+        avg_ = (avg_ * (n_-1) + value) / n_;
+        return avg_;
+    }
+
+
+private:
+
+    unsigned int n_;
+    double avg_;
+
+};
+
+class MovingAvgFilter
+{
+
+public:
+  typedef std::shared_ptr<MovingAvgFilter> Ptr;
+
+  MovingAvgFilter(unsigned int n)
+  {
+    window_.resize(n);
+    for(unsigned int i=0; i<n; i++)
+      window_[i] = 0.0;
+    window_idx_ = 0;
+    sum_ = 0.0;
+    filter_complete_ = false;
+  }
+
+  double update(double value)
+  {
+      unsigned int n = window_.size();
+      double res = 0.0;
+
+      sum_ -= window_[window_idx_];
+      sum_ += value;
+      window_[window_idx_] = value;
+
+      if (!filter_complete_ && window_idx_ == n - 1) {
+          filter_complete_ = true;
+        }
+        if (filter_complete_) {
+          res = sum_ / n;
+        } else {
+          res = sum_ / (window_idx_+1);
+        }
+
+      window_idx_ = (window_idx_+1) % n;
+
+      return res;
+  }
+
+private:
+
+  double sum_;
+  std::vector<double> window_;
+  unsigned int window_idx_;
+  bool filter_complete_;
+
 
 };
 
