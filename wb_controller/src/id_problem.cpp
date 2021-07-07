@@ -94,6 +94,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   y_force_lower_lim_ = -2000;
   z_force_lower_lim_ = 0.1*GRAVITY*(model_->getXBotModel()->getMass()/N_LEGS);
 
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot's weight is: "<<model_->getXBotModel()->getMass());
+
   wrench_upper_lims_<<2000,2000,2000,Eigen::Vector3d::Zero();
   wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
 
@@ -104,6 +106,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   std::list<unsigned int> idx_XY   = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
+  std::list<unsigned int> id_legs  = {6,7,8,9,10,11,12,13,14,15,16,17};
+
+
 
   OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;
   feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_XYZ,feet_[foot_names_[0]]->getXSize());
@@ -118,7 +123,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   stacks_[WALKING] = ( (feet_aggregated)
                        / (waistRPY_%id_RPY)
-                       / (postural_ + com_ + angular_momentum_)
+                       / (postural_%id_legs + com_)
                        )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   if(arm_names_.size() > 0)

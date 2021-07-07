@@ -203,8 +203,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   // Initialize the inertia related matrices // FIXME
   robot_model_->getXBotModel()->getInertiaMatrix(M_);
   Mi_.setZero(M_.rows(), M_.cols());
-  Kp_postural_.setZero(M_.rows(), M_.cols());
-  Kd_postural_.setZero(M_.rows(), M_.cols());
+  Kp_postural_.setIdentity(M_.rows(), M_.cols());
+  Kd_postural_.setIdentity(M_.rows(), M_.cols());
+
+  Kp_postural_ = 30.0 * Kp_postural_;
 
   // Resize the variables
   joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
