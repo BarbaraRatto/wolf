@@ -112,13 +112,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   stacks_[MANIPULATION] = ( (feet_aggregated)
                             / (com_%idx_XY)
-                            / (0.5*waistRPY_%id_RPY + 0.25*waistZ_%id_Z + 50.0*com_%id_Z)
+                            / (waistRPY_%id_RPY + waistZ_%id_Z + 50.0*com_%id_Z)
                             / (postural_)
                             )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   stacks_[WALKING] = ( (feet_aggregated)
                        / (waistRPY_%id_RPY)
-                       / (postural_ + com_ + angular_momentum_)
+                       / (postural_ + com_)
                        )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   if(arm_names_.size() > 0)
@@ -160,9 +160,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     tmp_map.second->dynamicReconfigureUpdate();
 
   selectStack(stacks_t::WALKING);
-
-
-  //RtLogger::getLogger().addPublisher(CLASS_NAME"/period",period_);
 }
 
 IDProblem::~IDProblem()

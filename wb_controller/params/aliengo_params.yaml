@@ -1,12 +1,10 @@
 wb_controller:
   type: wb_controller/Controller
-  publish_rate: 250
-  default_swing_frequency: 2.5
-  default_contact_threshold: 15.0
-  default_base_linear_velocity: 0.4
+  default_swing_frequency: 4.2
+  default_contact_threshold: 4.0
+  default_base_linear_velocity: 0.25
   default_base_angular_velocity: 0.2
   default_step_height: 0.065
-  default_z_lower_force: 2.5
   max_step_height: 0.15
   max_step_length: 0.5
   estimation_position_type: ground_truth
@@ -34,8 +32,8 @@ wb_controller:
       kp_swing: {haa: 100.0, hfe: 100.0, kfe: 100.0}
       kd_swing: {haa: 5.0, hfe: 5.0, kfe: 5.0}
 
-      kp_stance: {haa: 300.0, hfe: 300.0, kfe: 300.0}
-      kd_stance: {haa: 20.0, hfe: 20.0, kfe: 20.0}
+      kp_stance: {haa: 400.0, hfe: 400.0, kfe: 400.0}
+      kd_stance: {haa: 60.0, hfe: 60.0, kfe: 60.0}
 
       waistRPY:
           Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}

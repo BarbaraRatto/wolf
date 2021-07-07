@@ -52,6 +52,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
   hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
   hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
+  hardware_interface::ContactSwitchSensorInterface* cs_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
 
   // Hardware interfaces checks
   if(!jt_hw)
@@ -74,6 +75,19 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   robot_model_.reset(createRobotModel(root_nh));
   joint_names_ = robot_model_->getJointNames();
+
+  if(!cs_hw)
+  {
+    ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
+    return false;
+  }
+  else
+  {
+    contact_sensors_["lf_foot"] = cs_hw->getHandle("lf_foot_contact_sensor");
+    contact_sensors_["rf_foot"] = cs_hw->getHandle("rf_foot_contact_sensor");
+    contact_sensors_["lh_foot"] = cs_hw->getHandle("lh_foot_contact_sensor");
+    contact_sensors_["rh_foot"] = cs_hw->getHandle("rh_foot_contact_sensor");
+  }
 
   // Setting up joint handles:
   for (unsigned int i = 0; i < joint_names_.size(); i++)
@@ -464,6 +478,16 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
   }
 
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+  Eigen::Vector3d force; // FIXME
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+  {
+     force[0] = contact_sensors_[foot_names[i]].getForce()[0];
+     force[1] = contact_sensors_[foot_names[i]].getForce()[1];
+     force[2] = contact_sensors_[foot_names[i]].getForce()[2];
+     state_estimator_->setContactForces(foot_names[i],force);
+  }
+
   state_estimator_->update(period.toSec());
 
   if(solver_started_) // Use the ID solver to calculate the torques
@@ -494,8 +518,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
       init_done_ = true;
     }
-
-    const std::vector<std::string>& foot_names = robot_model_->getFootNames();
 
     foot_holds_planner_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
 

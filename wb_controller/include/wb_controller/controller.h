@@ -15,6 +15,7 @@
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <dls_hardware_interface/ground_truth_interface.h>
+#include <dls_hardware_interface/contact_switch_sensor_interface.h>
 // STD
 #include <atomic>
 #include <thread>
@@ -39,7 +40,8 @@ namespace wb_controller
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
                                                                          hardware_interface::ImuSensorInterface,
-                                                                         hardware_interface::GroundTruthInterface>
+                                                                         hardware_interface::GroundTruthInterface,
+                                                                         hardware_interface::ContactSwitchSensorInterface>
 {
 public:
 
@@ -69,7 +71,7 @@ public:
          * @brief Initializes sample controller
          * @param hardware_interface::RobotHW* robot hardware interface
          * @param ros::NodeHandle& Root node handle
-         * @param ros::NodeHandle& Supervisor node handle
+         * @param ros::NodeHandle& Controller node handle
          */
     bool init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh);
 
@@ -196,6 +198,8 @@ private:
     hardware_interface::ImuSensorHandle imu_sensor_;
     /** @brief Ground Thruth */
     hardware_interface::GroundTruthHandle ground_truth_;
+    /** @brief Ground Thruth */
+    std::map<std::string,hardware_interface::ContactSwitchSensorHandle> contact_sensors_;
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */
