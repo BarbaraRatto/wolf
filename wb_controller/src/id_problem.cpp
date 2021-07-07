@@ -92,7 +92,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   x_force_lower_lim_ = -2000;
   y_force_lower_lim_ = -2000;
-  z_force_lower_lim_ = 0.5*(model_->getXBotModel()->getMass()/N_LEGS);
+  z_force_lower_lim_ = 0.1*GRAVITY*(model_->getXBotModel()->getMass()/N_LEGS);
 
   wrench_upper_lims_<<2000,2000,2000,Eigen::Vector3d::Zero();
   wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
