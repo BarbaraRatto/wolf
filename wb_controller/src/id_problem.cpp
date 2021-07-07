@@ -219,9 +219,7 @@ void IDProblem::selectStack(const stacks_t& stack)
 
     if(arm_names_.size()>0)
     {
-      Eigen::Affine3d actual_pose;
       std::string frame;
-
       if(stack == stacks_t::WALKING)
         frame = BASE_LINK_FRAME_NAME;
       else if (stack == stacks_t::MANIPULATION)
