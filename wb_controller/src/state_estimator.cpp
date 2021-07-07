@@ -84,8 +84,10 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   contact_force_th_ = 0.0; // [N]
 
+  use_external_forces_ = false;
+
   // Contact force estimation reset
-  force_estimation_.reset(new XBot::Cartesian::Utils::ForceEstimation(robot_model_->getXBotModel()));
+  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimation>(robot_model_->getXBotModel());
 
   // Contact estimation reset
   std::vector<int> dofs = {0,1,2}; // x y z
@@ -218,6 +220,20 @@ const std::string& StateEstimator::getOrientationEstimationType()
       return tmp_map.first;
 }
 
+void StateEstimator::setContactForces(const std::string& name, const Eigen::Vector3d force)
+{
+  if(use_external_forces_ == false)
+    use_external_forces_ = true;
+
+  if(contact_forces_.count(name)> 0)
+  {
+    contact_forces_[name] = force;
+  }
+  else {
+    ROS_WARN_NAMED(CLASS_NAME,"Wrong contact name!");
+  }
+}
+
 const Eigen::Affine3d& StateEstimator::getFloatingBasePose() const
 {
   return floating_base_pose_;
@@ -346,16 +362,17 @@ void StateEstimator::updateContactState()
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
   {
-    force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
-
-    tmp_vector3d_ = world_T_foot_[foot_names[i]] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
+    if(!use_external_forces_)
+    {
+      force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
+      tmp_vector3d_ = world_T_foot_[foot_names[i]] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
+      contact_forces_[foot_names[i]] = tmp_vector3d_;
+    }
 
     if(contacts_estimation_active_)
-      contacts_[foot_names[i]] = (tmp_vector3d_.dot(terrain_normal_) >= contact_force_th_ ? true : false);
+      contacts_[foot_names[i]] = (contact_forces_[foot_names[i]].dot(terrain_normal_) >= contact_force_th_ ? true : false);
     else
       contacts_[foot_names[i]] = true;
-
-    contact_forces_[foot_names[i]] = tmp_vector3d_;
 
     if(haptic_contact_loop_active_)
     {
@@ -367,7 +384,6 @@ void StateEstimator::updateContactState()
       qp_estimation_->setContactState(foot_names[i],gait_generator_->isTrajectoryFinished(foot_names[i]));
       gait_generator_->setContactState(foot_names[i],false);
     }
-
   }
 
   // Update contact state for the arms

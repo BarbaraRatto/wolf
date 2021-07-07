@@ -77,6 +77,8 @@ public:
 
     const std::string& getOrientationEstimationType();
 
+    void setContactForces(const std::string &name, const Eigen::Vector3d force);
+
     const std::map<std::string,Eigen::Vector3d>& getContactForces() const;
 
     const std::map<std::string,bool>& getContacts() const;
@@ -208,6 +210,8 @@ private:
     std::atomic<unsigned int> estimation_orientation_;
 
     std::atomic<unsigned int> estimation_position_;
+
+    std::atomic<bool> use_external_forces_;
 
     /** @brief Base estimation */
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
