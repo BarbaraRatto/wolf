@@ -121,10 +121,17 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                             / (postural_)
                             )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
+  // Original stack, it doesn't work with aliengo e anymal
+  //int stack_pos_offset = 2;
+  //stacks_[WALKING] = ( (feet_aggregated)
+  //                     / (waistRPY_%id_RPY)
+  //                     / (postural_ + com_ + angular_momentum_)
+  //                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+
+  int stack_pos_offset = 1;
   stacks_[WALKING] = ( (feet_aggregated)
-                       / (waistRPY_%id_RPY)
-                       / (postural_%id_legs + com_)
-                       )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+                     / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
+                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   if(arm_names_.size() > 0)
   {
@@ -136,7 +143,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     }
 
     stacks_[MANIPULATION]->getStack()[2] = arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
-    auto it = stacks_[WALKING]->getStack().begin() + 2;
+    auto it = stacks_[WALKING]->getStack().begin() + stack_pos_offset;
     stacks_[WALKING]->getStack().insert(it, arm_aggregated);
   }
 
@@ -241,7 +248,7 @@ void IDProblem::selectStack(const stacks_t& stack)
 
     if(solver_.get()!=nullptr)
       solver_.release();
-    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[current_stack_]->getStack(), stacks_[current_stack_]->getBounds(),1e6); //, 1e6);
+    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[current_stack_]->getStack(), stacks_[current_stack_]->getBounds(),1e3); //, 1e6);
     // , OpenSoT::solvers::solver_back_ends::OSQP);
     // , OpenSoT::solvers::solver_back_ends::eiQuadProg);
     solver_lock_.unlock();

@@ -526,11 +526,11 @@ void StateEstimator::updateFloatingBase(const double& period)
     estimated_z /= feet_in_stance;
     // Update the qp estimation based on the new virtual model state
     //termporarily commented to save time
-    //qp_estimation_->update();
+    qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-    floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
+    //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
-    //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
     floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
     break;
   case estimation_t::GROUND_TRUTH:

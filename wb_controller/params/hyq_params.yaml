@@ -38,7 +38,7 @@ wb_controller:
       kd_stance: {haa: 60.0, hfe: 60.0, kfe: 60.0}
 
       waistRPY:
-          Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
-          Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
+          Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 500.0, pitch: 300.0, yaw: 100.0}
+          Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 20.0}
 
 
