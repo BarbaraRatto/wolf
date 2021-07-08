@@ -206,7 +206,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   Kp_postural_.setIdentity(M_.rows(), M_.cols());
   Kd_postural_.setIdentity(M_.rows(), M_.cols());
 
-  Kp_postural_ = 30.0 * Kp_postural_;
+  //Kp_postural_ = 30.0 * Kp_postural_;
 
   // Resize the variables
   joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -254,6 +254,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
     return false;
   }
+
+  if(!root_nh.getParam("/internal_wrench",use_contact_sensors_)) // Use the contact sensors
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
+  else
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
 
   qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
   qdot_filter_.setDamping(1.0);
@@ -481,14 +486,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
   }
 
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  Eigen::Vector3d force; // FIXME
-  for(unsigned int i = 0; i<foot_names.size(); i++)
-  {
-     force[0] = contact_sensors_[foot_names[i]].getForce()[0];
-     force[1] = contact_sensors_[foot_names[i]].getForce()[1];
-     force[2] = contact_sensors_[foot_names[i]].getForce()[2];
-     state_estimator_->setContactForces(foot_names[i],force);
-  }
+
+  if(use_contact_sensors_)
+    for(unsigned int i = 0; i<foot_names.size(); i++)
+    {
+       tmp_vector3d_[0] = contact_sensors_[foot_names[i]].getForce()[0];
+       tmp_vector3d_[1] = contact_sensors_[foot_names[i]].getForce()[1];
+       tmp_vector3d_[2] = contact_sensors_[foot_names[i]].getForce()[2];
+       state_estimator_->setContactForces(foot_names[i],tmp_vector3d_);
+    }
 
   state_estimator_->update(period.toSec());
 

@@ -15,6 +15,7 @@
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
+    <param name="internal_wrench" value="$(arg internal_wrench)"/>
     <param name="robot_name" type="str"  value="$(arg robot_name)" />
 
     <!-- Load the robot description -->

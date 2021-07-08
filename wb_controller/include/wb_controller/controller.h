@@ -280,6 +280,8 @@ private:
     std::atomic<double> cutoff_hz_qdot_;
     /** @brief True if the solver istance has been created */
     bool solver_created_;
+    /** @brief True if the controller uses the external contact sensors */
+    bool use_contact_sensors_;
 
     /** @brief True if the solver is started */
     std::atomic<bool> solver_started_;
