@@ -307,7 +307,7 @@
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="rf_tigh">
+    <link name="rf_upperleg">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -345,7 +345,7 @@
     <!-- upperleg joint -->
     <joint name="rf_hfe_joint" type="revolute">
         <parent link="rf_hip"/>
-        <child link="rf_tigh"/>
+        <child link="rf_upperleg"/>
         <origin xyz="0.0635                    -0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
@@ -373,7 +373,7 @@
     </link>  
     <!-- lowerleg joint -->
     <joint name="rf_kfe_joint" type="revolute">
-        <parent link="rf_tigh"/>
+        <parent link="rf_upperleg"/>
         <child link="rf_lowerleg"/>
         <origin xyz="0.0 -0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
