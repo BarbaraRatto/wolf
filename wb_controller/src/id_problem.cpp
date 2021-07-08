@@ -116,8 +116,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_XYZ;
 
   stacks_[MANIPULATION] = ( (feet_aggregated)
-                            / (com_%idx_XY)
-                            / (waistRPY_%id_RPY + waistZ_%id_Z + 50.0*com_%id_Z)
+                            / (com_)
+                            / (waistRPY_%id_RPY + waistZ_%id_Z)
                             / (postural_)
                             )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
@@ -142,7 +142,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
         arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
     }
 
-    stacks_[MANIPULATION]->getStack()[2] = arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
+    stacks_[MANIPULATION]->getStack()[2] = 10.0* arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
     auto it = stacks_[WALKING]->getStack().begin() + stack_pos_offset;
     stacks_[WALKING]->getStack().insert(it, arm_aggregated);
   }
