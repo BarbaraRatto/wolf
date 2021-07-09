@@ -64,6 +64,7 @@ public:
     void decreaseStepHeight();
     void increaseSwingFrequency();
     void decreaseSwingFrequency();
+    void setComCorrection(const Eigen::Vector2d& delta_com) ;
 
     // Gets
     unsigned int getCmd();
@@ -151,6 +152,8 @@ private:
 
     Eigen::Matrix3d world_R_base_;
     Eigen::Matrix3d hf_R_base_;
+
+    Eigen::Vector2d delta_com_;
 
     bool offsets_applied_;
 

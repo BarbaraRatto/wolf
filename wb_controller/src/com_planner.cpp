@@ -41,6 +41,8 @@ void ComPlanner::update(double /*dt*/)
   base_X_com_ = world_T_base.inverse() * state_estimator_->getComPosition();
   p0_ = base_X_com_.head(2); // This should be defined w.r.t base
 
+  foothold_planner_->setComCorrection(p0_);
+
   base_velocity_xy_ = foothold_planner_->getBaseLinearVelocityReference().head(2);
   base_velocity_xy_versor_ = base_velocity_xy_ / base_velocity_xy_.norm();
 

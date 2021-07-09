@@ -52,7 +52,10 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
     offsets_applied_ = false;
 
+    delta_com_.fill(0.0);
+
     RtLogger::getLogger().addPublisher(CLASS_NAME"/desired_height",base_position_(2));
+    RtLogger::getLogger().addPublisher(CLASS_NAME"/delta_com",delta_com_);
 }
 
 void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_position) // OpenLoop Orientation
@@ -206,6 +209,7 @@ void FootholdsPlanner::calculateFootSteps()
             // 5) Sum everything to obtain the new foothold displacement w.r.t hf
             hf_delta_foot_.setZero();
             hf_delta_foot_.head(2) =  hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
+            hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + delta_com_;
             ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
             // 6) Sum everything to obtain the new foothold displacement w.r.t world
@@ -428,6 +432,11 @@ void FootholdsPlanner::increaseStepHeight()
 void FootholdsPlanner::decreaseStepHeight()
 {
   setStepHeight(step_height_ - 0.01); // Decrease step height
+}
+
+void FootholdsPlanner::setComCorrection(const Eigen::Vector2d &delta_com)
+{
+  delta_com_ = delta_com;
 }
 
 void FootholdsPlanner::setLinearVelocity(const double linear)
