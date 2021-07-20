@@ -26,10 +26,11 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = 0.0;
 
-    desired_foothold_[foot_names[i]] = Eigen::Vector3d::Zero();
-    virtual_foothold_[foot_names[i]] = Eigen::Vector3d::Zero();
-    current_foothold_hf_[foot_names[i]] = Eigen::Vector3d::Zero();
-    current_foothold_[foot_names[i]] = Eigen::Vector3d::Zero();
+    robot_model_->getXBotModel()->getPose(foot_names[i],"base_link",base_T_foot_);
+    desired_foothold_[foot_names[i]]    = base_T_foot_.translation();
+    virtual_foothold_[foot_names[i]]    = base_T_foot_.translation();
+    current_foothold_hf_[foot_names[i]] = hf_R_base_ * base_T_foot_.translation();
+    current_foothold_[foot_names[i]]    = base_T_foot_.translation();
   }
 
   resetVelocyScales();
