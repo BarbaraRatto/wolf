@@ -625,6 +625,11 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   base_length_ = footholds_planner_ptr_->robot_model_->getBaseLength();
   base_width_  = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
+  //signs_["lf_foot"] = std::make_pair<int,int>(-1,1);
+  //signs_["rf_foot"] = std::make_pair<int,int>(1,1);
+  //signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
+  //signs_["rh_foot"] = std::make_pair<int,int>(1,1);
+
   signs_["lf_foot"] = std::make_pair<int,int>(-1,1);
   signs_["rf_foot"] = std::make_pair<int,int>(1,1);
   signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
@@ -645,6 +650,9 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   prev_robot_moving_ = false;
 
   th_ = 0.03;
+  K_pr_lx_ = 0;
+  K_pr_ly_ = 0;
+  K_pr_r_  = 0;
 
   error_filter_.resize(3);
 
@@ -653,6 +661,9 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher("PushRecovery/error",error_);
 
   RtGuiClient::getIstance().addDoubleSlider("PushRecovery","th",0.0,1.0,&th_);
+  RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_lx",0.0,100.0,&K_pr_lx_);
+  RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_ly",0.0,100.0,&K_pr_ly_);
+  RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_r",0.0,100.0,&K_pr_r_);
 }
 
 bool PushRecovery::update(const double& period)
@@ -693,10 +704,7 @@ bool PushRecovery::update(const double& period)
   Eigen::Matrix3d I = footholds_planner_ptr_->world_R_hf_.transpose() * footholds_planner_ptr_->robot_model_->getFloatingBaseInertia();
   double t_inertia = I(2,2);
 
-  // Gains
-  double K_pr_lx = 1;
-  double K_pr_ly = 1;
-  double K_pr_r =  1;
+
 
   // Filter the push velocity
   base_velocity_filt_ = velocity_filter_.process(base_velocity_);
@@ -733,28 +741,31 @@ bool PushRecovery::update(const double& period)
 
     for(unsigned int i=0;i<foot_names.size();i++)
     {
-      double Z0h  = footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2);
+      double Z0h  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
       double st_p = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
       double C1_pr=Z0h/GRAVITY/st_p; //C1_pr should be positive
+
+      //getchar();
 
       // 0 LF 1 RF 2 LH 3 RH
       //enum _leg_id {LF=0,LH,RF,RH};
 
-      deltas_[foot_names[i]].x() = C1_pr*(K_pr_lx*(error_(0))+ signs_[foot_names[i]].first  * K_pr_r*C2_pr*(error_(2)));
-      deltas_[foot_names[i]].y() = C1_pr*(K_pr_ly*(error_(1))+ signs_[foot_names[i]].second * K_pr_r*C3_pr*(error_(2)));
+      //deltas_[foot_names[i]].x() = C1_pr*(K_pr_lx_*(error_(0))+ signs_[foot_names[i]].first  * K_pr_r_*C2_pr*(error_(2)));
+      //deltas_[foot_names[i]].y() = C1_pr*(K_pr_ly_*(error_(1))+ signs_[foot_names[i]].second * K_pr_r_*C3_pr*(error_(2)));
 
-      //double onOff_x, onOff_y ,onOff_psi;
-      //onOff_x = onOff_y = onOff_psi = 1;
-      //double r = sqrt(t_length*t_length + t_width*t_width)/2;
-      //double rx = t_length/2;
-      //double ry = t_width/2;
-      //double tau_t = sqrt(Z0h/GRAVITY);
-      //double tau_r = sqrt(Z0h*t_inertia/t_mass/GRAVITY/(r*r));
-      //double Cx_pr = onOff_x * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_lx) / sinh(st_p/tau_t) );
-      //double Cy_pr = onOff_y * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_ly) / sinh(st_p/tau_t) );
-      //double Cr_pr = onOff_psi * tau_r * ( cosh(st_p/tau_r) / sinh(st_p/tau_r) - (1 - K_pr_r) / sinh(st_p/tau_r) );
-      //deltas_[foot_names[i]].x() = Cx_pr * error_(0) + signs_[foot_names[i]].first * Cr_pr * ry * error_(2);
-      //deltas_[foot_names[i]].y() = Cy_pr * error_(1) + signs_[foot_names[i]].second * Cr_pr * rx * error_(2);
+
+      double onOff_x, onOff_y ,onOff_psi;
+      onOff_x = onOff_y = onOff_psi = 1;
+      double r = sqrt(t_length*t_length + t_width*t_width)/2;
+      double rx = t_length/2;
+      double ry = t_width/2;
+      double tau_t = sqrt(Z0h/GRAVITY);
+      double tau_r = sqrt(Z0h*t_inertia/t_mass/GRAVITY/(r*r));
+      double Cx_pr = onOff_x * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_lx_) / sinh(st_p/tau_t) );
+      double Cy_pr = onOff_y * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_ly_) / sinh(st_p/tau_t) );
+      double Cr_pr = onOff_psi * tau_r * ( cosh(st_p/tau_r) / sinh(st_p/tau_r) - (1 - K_pr_r_) / sinh(st_p/tau_r) );
+      deltas_[foot_names[i]].x() = Cx_pr * error_(0) + signs_[foot_names[i]].first * Cr_pr * ry * error_(2);
+      deltas_[foot_names[i]].y() = Cy_pr * error_(1) + signs_[foot_names[i]].second * Cr_pr * rx * error_(2);
 
       if(deltas_[foot_names[i]].x() > max_delta_)
         deltas_[foot_names[i]].x() = max_delta_;

@@ -47,6 +47,10 @@ private:
   bool prev_robot_moving_;
 
   double th_;
+  // Gains
+  double K_pr_lx_;
+  double K_pr_ly_;
+  double K_pr_r_;
 
   std::vector<AvgFilter> error_filter_;
 
