@@ -34,7 +34,11 @@ protected:
 
   void update() // This work as a kind of state machine
   {
-      if(start_swing_ && controller_ptr_->getIDProblem()->getCurrentStack() == wb_controller::IDProblem::stacks_t::WALKING)
+      unsigned int current_stack = wb_controller::IDProblem::stacks_t::NONE;
+      if(controller_ptr_->getIDProblem()!=nullptr)
+        current_stack = controller_ptr_->getIDProblem()->getCurrentStack();
+
+      if(start_swing_ && current_stack == wb_controller::IDProblem::stacks_t::WALKING)
       {
           controller_ptr_->getFootholdsPlanner()->setCmd(wb_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
           controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
