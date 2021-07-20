@@ -234,7 +234,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   imu_orientation_.normalize();
   pid_scale_ = 1.0;
 
-  gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),Gait::CRAWL,"ellipse"));
+  gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),Gait::TROT,"ellipse"));
   foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
   com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_));
