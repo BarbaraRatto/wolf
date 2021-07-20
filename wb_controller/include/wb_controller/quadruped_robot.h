@@ -19,6 +19,8 @@ public:
 
   typedef std::shared_ptr<const QuadrupedRobot> ConstPtr;
 
+  enum robot_states_t {INIT,WALKING,MANIPULATION};
+
   QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
   const std::vector<std::string>& getFootNames() const;
@@ -32,6 +34,15 @@ public:
   const unsigned int& getNumberArms() const;
   const unsigned int& getNumberLegs() const;
 
+  const double& getBaseLength() const;
+  const double& getBaseWidth() const;
+
+  const double& getRobotMass() const;
+  const Eigen::Matrix3d& getFloatingBaseInertia() const;
+
+  robot_states_t getRobotState();
+  bool setRobotState(robot_states_t robot_state);
+
 private:
 
   XBot::ModelInterface::Ptr xbot_model_;
@@ -44,6 +55,15 @@ private:
 
   unsigned int n_legs_;
   unsigned int n_arms_;
+
+  double base_length_;
+  double base_width_;
+  double mass_;
+
+  Eigen::MatrixXd M_;
+  Eigen::Matrix3d Ifb_;
+
+  std::atomic<robot_states_t> robot_state_;
 
 };
 

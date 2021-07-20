@@ -107,6 +107,21 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   contact_names_ = foot_names_;
   contact_names_.insert( contact_names_.end(), arm_names_.begin(), arm_names_.end() );
+
+  // Calculate approx base length and width based on the hip positions
+  // Hips order: "lf","lh","rf","rh"
+  Eigen::Affine3d pose_lf, pose_lh, pose_rf, pose_rh;
+  xbot_model_->getPose(hip_names_[0],BASE_LINK_FRAME_NAME,pose_lf);
+  xbot_model_->getPose(hip_names_[1],BASE_LINK_FRAME_NAME,pose_lh);
+  xbot_model_->getPose(hip_names_[2],BASE_LINK_FRAME_NAME,pose_rf);
+  xbot_model_->getPose(hip_names_[3],BASE_LINK_FRAME_NAME,pose_rh);
+  base_width_  = std::abs(pose_lf.translation().y() - pose_rf.translation().y());
+  base_length_ = std::abs(pose_lf.translation().x() - pose_lh.translation().x());
+
+  mass_ = xbot_model_->getMass();
+
+  xbot_model_->getInertiaMatrix(M_);
+  Ifb_ = M_.block(3,3,3,3);
 }
 
 const std::vector<std::string>& QuadrupedRobot::getFootNames() const
@@ -153,5 +168,38 @@ const unsigned int& QuadrupedRobot::getNumberLegs() const
 {
   return n_legs_;
 }
+
+const double &QuadrupedRobot::getBaseLength() const
+{
+  return base_length_;
+}
+
+const double &QuadrupedRobot::getBaseWidth() const
+{
+  return base_width_;
+}
+
+const double &QuadrupedRobot::getRobotMass() const
+{
+  return mass_;
+}
+
+const Eigen::Matrix3d &QuadrupedRobot::getFloatingBaseInertia() const
+{
+  return Ifb_;
+}
+
+QuadrupedRobot::robot_states_t QuadrupedRobot::getRobotState()
+{
+  return robot_state_;
+}
+
+bool QuadrupedRobot::setRobotState(QuadrupedRobot::robot_states_t robot_state)
+{
+  robot_state_ = robot_state;
+  return true;
+}
+
+
 
 };
