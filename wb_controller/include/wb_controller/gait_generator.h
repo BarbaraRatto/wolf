@@ -336,12 +336,12 @@ public:
 
   double getStancePeriod(const std::string& foot_name)
   {
-    feet_[foot_name].state_machine->getStancePeriod();
+    return feet_[foot_name].state_machine->getStancePeriod();
   }
 
   double getSwingPeriod(const std::string& foot_name)
   {
-    feet_[foot_name].state_machine->getSwingPeriod();
+    return feet_[foot_name].state_machine->getSwingPeriod();
   }
 
   const Gait::gait_t& getGaitType()
