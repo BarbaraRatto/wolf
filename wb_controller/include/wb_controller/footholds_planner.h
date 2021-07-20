@@ -11,8 +11,51 @@
 namespace wb_controller
 {
 
+class FootholdsPlanner;
+
+class PushRecovery
+{
+
+public:
+  /**
+   * @brief Shared pointer to PushRecovery
+   */
+  typedef std::shared_ptr<PushRecovery> Ptr;
+
+  PushRecovery(FootholdsPlanner* const footholds_planner_ptr);
+
+  bool update(const double& period);
+
+  const Eigen::Vector2d& getDelta(const std::string& foot_name);
+
+  void setMaxDelta(const double &max);
+
+private:
+
+  FootholdsPlanner* footholds_planner_ptr_;
+  double base_mass_;
+  double base_length_;
+  double base_width_;
+  std::map<std::string,Eigen::Vector2d> deltas_;
+  std::map<std::string,std::pair<int,int> > signs_;
+  Eigen::Vector3d cmd_velocity_;
+  Eigen::Vector3d base_velocity_;
+  Eigen::Vector3d base_velocity_filt_;
+  Eigen::Vector3d error_;
+  double max_delta_;
+  bool robot_moving_;
+  bool prev_robot_moving_;
+
+  double th_;
+
+  std::vector<AvgFilter> error_filter_;
+
+  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
+
+};
+
 /**
- * @brief This class gets inputs from
+ * @brief This class plans the footholds for the feet
  */
 class FootholdsPlanner
 {
@@ -55,8 +98,8 @@ public:
     void setBaseVelocityScaleRoll(const double scale);
     void setBaseVelocityScalePitch(const double scale);
     void setBaseVelocityScaleYaw(const double scale);
-    void setLinearVelocity(const double linear);
-    void setAngularVelocity(const double angular);
+    void setLinearVelocityCmd(const double linear);
+    void setAngularVelocityCmd(const double angular);
     void setStepHeight(const double height);
     void setMaxStepHeight(const double max);
     void setMaxStepLength(const double max);
@@ -68,19 +111,24 @@ public:
 
     // Gets
     unsigned int getCmd();
-    const Eigen::Vector3d& getBasePositionReference() const ;
-    const Eigen::Vector3d& getBaseLinearVelocityReference() const ;
-    const Eigen::Matrix3d& getBaseRotationReference() const ;
+    const Eigen::Vector3d& getBasePositionReference() const;
+    const Eigen::Vector3d& getBaseLinearVelocityReference() const;
+    const Eigen::Vector3d& getBaseAngularVelocityReference() const;
+    const Eigen::Vector3d& getBaseLinearVelocityReferenceHF() const;
+    const Eigen::Vector3d& getBaseAngularVelocityReferenceHF() const;
+    const Eigen::Matrix3d& getBaseRotationReference() const;
     const double& getStepLength(const std::string& foot_name);
     const double& getStepHeading(const std::string& foot_name);
     const double& getStepHeight(const std::string& foot_name);
     const double& getStepHeadingRate(const std::string& foot_name);
-    const double& getBaseHeight() const ;
-    double getLinearVelocity() const ;
-    double getAngularVelocity() const ;
+    const double& getBaseHeight() const;
+    double getLinearVelocityCmd() const;
+    double getAngularVelocityCmd() const ;
     double getStepHeight() const ;
     double getStepLength() const ;
     const Gait::gait_t& getGaitType() const;
+    Eigen::Vector3d& getCurrentFoothold(const std::string& foot_name) ;
+    Eigen::Vector3d& getCurrentFootholdHF(const std::string& foot_name) ;
     Eigen::Vector3d& getVirtualFoothold(const std::string& foot_name) ;
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
 
@@ -116,11 +164,12 @@ private:
     std::atomic<double>  base_angular_velocity_scale_roll_;
     std::atomic<double>  base_angular_velocity_scale_pitch_;
     std::atomic<double>  base_angular_velocity_scale_yaw_;
-    std::atomic<double>  base_linear_velocity_;
-    std::atomic<double>  base_angular_velocity_;
+    std::atomic<double>  base_linear_velocity_cmd_;
+    std::atomic<double>  base_angular_velocity_cmd_;
     std::atomic<double>  step_height_max_;
     std::atomic<double>  step_length_max_;
     std::atomic<double>  step_height_;
+    std::atomic<bool>    push_detected_;
 
     /** @brief Base linear velocity w.r.t horizontal frame
      * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
@@ -165,6 +214,7 @@ private:
     Eigen::Matrix3d base_rotation_reference_;
     Eigen::Vector3d base_position_reference_;
     Eigen::Vector3d base_linear_velocity_reference_;
+    Eigen::Vector3d base_angular_velocity_reference_;
     Eigen::Matrix3d world_R_hf_;
 
     GaitGenerator::Ptr gait_generator_;
@@ -176,9 +226,14 @@ private:
 
     std::map<std::string,Eigen::Vector3d> desired_foothold_;
     std::map<std::string,Eigen::Vector3d> virtual_foothold_;
+    std::map<std::string,Eigen::Vector3d> current_foothold_;
+    std::map<std::string,Eigen::Vector3d> current_foothold_hf_;
 
     double yaw_base_;
     double step_length_;
+
+    friend class PushRecovery;
+    PushRecovery::Ptr push_recovery_;
 };
 
 } // namespace

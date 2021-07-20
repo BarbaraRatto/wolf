@@ -5,6 +5,7 @@
 #include <vector>
 #include <assert.h>
 #include <rt_logger/rt_logger.h>
+#include <rt_gui/rt_gui_client.h>
 #include <XBotInterface/TypedefAndEnums.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
@@ -179,7 +180,8 @@ class AvgFilter
 public:
     typedef std::shared_ptr<AvgFilter> Ptr;
 
-    AvgFilter(unsigned int n)
+
+    AvgFilter(unsigned int n=10)
     {
        n_ = n;
        avg_ = 0.0;
@@ -189,6 +191,17 @@ public:
     {
         avg_ = (avg_ * (n_-1) + value) / n_;
         return avg_;
+    }
+
+    void setN(const unsigned int& n)
+    {
+      assert(n>0);
+      n_ = n;
+    }
+
+    void reset()
+    {
+      avg_ = 0.0;
     }
 
 

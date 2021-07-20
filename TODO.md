@@ -1,5 +1,6 @@
 # TODO list
 
+- Move odom thread to state_estimator
 - Remove ros from IDProblem
 - Remove Robot namespace
 - Aliengo and Anymal don't work properly... could it be a gains problem?

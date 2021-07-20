@@ -92,8 +92,8 @@ public:
         controller_->getGaitGenerator()->setSwingFrequency(default_swing_frequency);
         controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
 
-        controller_->getFootholdsPlanner()->setLinearVelocity(default_base_linear_velocity);
-        controller_->getFootholdsPlanner()->setAngularVelocity(default_base_angular_velocity);
+        controller_->getFootholdsPlanner()->setLinearVelocityCmd(default_base_linear_velocity);
+        controller_->getFootholdsPlanner()->setAngularVelocityCmd(default_base_angular_velocity);
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
@@ -140,11 +140,11 @@ public:
             ROS_INFO_STREAM("Set swing frequency to "<< config.swing_frequency);
             break;
         case 5:
-            controller_->getFootholdsPlanner()->setLinearVelocity(config.base_linear_vel);
+            controller_->getFootholdsPlanner()->setLinearVelocityCmd(config.base_linear_vel);
             ROS_INFO_STREAM("Set base linear velocity to "<< config.base_linear_vel);
             break;
         case 6:
-            controller_->getFootholdsPlanner()->setAngularVelocity(config.base_angular_vel);
+            controller_->getFootholdsPlanner()->setAngularVelocityCmd(config.base_angular_vel);
             ROS_INFO_STREAM("Set base angular velocity to "<< config.base_angular_vel);
             break;
         case 7:
@@ -181,8 +181,8 @@ public:
         }
         if(controller_->getFootholdsPlanner())
         {
-            default_config_.base_linear_vel = controller_->getFootholdsPlanner()->getLinearVelocity();
-            default_config_.base_angular_vel = controller_->getFootholdsPlanner()->getAngularVelocity();
+            default_config_.base_linear_vel = controller_->getFootholdsPlanner()->getLinearVelocityCmd();
+            default_config_.base_angular_vel = controller_->getFootholdsPlanner()->getAngularVelocityCmd();
             default_config_.step_height = controller_->getFootholdsPlanner()->getStepHeight();
         }
         if(controller_->getStateEstimator())
