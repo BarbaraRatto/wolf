@@ -606,6 +606,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
   if(pid_active_)
   {
+    des_joint_positions_ = kin_->getJointHomePositions();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
     pid_scale_ = 1.0;
