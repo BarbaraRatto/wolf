@@ -334,6 +334,16 @@ public:
     return avg;
   }
 
+  double getStancePeriod(const std::string& foot_name)
+  {
+    feet_[foot_name].state_machine->getStancePeriod();
+  }
+
+  double getSwingPeriod(const std::string& foot_name)
+  {
+    feet_[foot_name].state_machine->getSwingPeriod();
+  }
+
   const Gait::gait_t& getGaitType()
   {
     return gait_type_;
