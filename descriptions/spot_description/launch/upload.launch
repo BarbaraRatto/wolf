@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<launch>
+	<arg name="sensors" default="true"/>
+        <arg name="task_period" default="0.004"/>
+        <arg name="arm_enabled" default="false"/>
+        <arg name="arm_name" default="teleop"/>
+
+	<!-- Load the sensors that measured the internal wrench in the joints -->
+	<arg name="internal_wrench" default="false"/>
+
+        <!-- send spot urdf to param server -->
+        <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find spot_description)/robots/spot.urdf.xacro'
+        arm_enabled:=$(arg arm_enabled) arm_name:=$(arg arm_name) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period)"/>
+
+        <group if="$(arg arm_enabled)">
+              <param name="robot_semantic_description" command="$(find xacro)/xacro --inorder '$(find spot_description)/robots/spot_$(arg arm_name).srdf.xacro'" />
+        </group>
+        <group unless="$(arg arm_enabled)">
+            <param name="robot_semantic_description" command="$(find xacro)/xacro --inorder '$(find spot_description)/robots/spot.srdf.xacro'" />
+        </group>
+
+</launch>
+
