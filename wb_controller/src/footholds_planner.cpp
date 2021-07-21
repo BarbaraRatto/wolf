@@ -460,6 +460,11 @@ void FootholdsPlanner::setComCorrection(const Eigen::Vector2d &delta_com)
   delta_com_ = delta_com;
 }
 
+void FootholdsPlanner::setComVelocityRef(const Eigen::Vector3d &com_vel_ref)
+{
+  com_vel_ref_ = com_vel_ref;
+}
+
 void FootholdsPlanner::setLinearVelocityCmd(const double linear)
 {
   base_linear_velocity_cmd_ = linear;
@@ -625,11 +630,6 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   base_length_ = footholds_planner_ptr_->robot_model_->getBaseLength();
   base_width_  = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
-  //signs_["lf_foot"] = std::make_pair<int,int>(-1,1);
-  //signs_["rf_foot"] = std::make_pair<int,int>(1,1);
-  //signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
-  //signs_["rh_foot"] = std::make_pair<int,int>(1,1);
-
   signs_["lf_foot"] = std::make_pair<int,int>(-1,1);
   signs_["rf_foot"] = std::make_pair<int,int>(1,1);
   signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
@@ -640,30 +640,46 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   deltas_["lh_foot"].setZero();
   deltas_["rh_foot"].setZero();
 
-  double cutoff_freq = 10.;
-  velocity_filter_.setOmega(2.0*M_PI*cutoff_freq);
+  cutoff_freq_ = 10.;
+  velocity_filter_.setOmega(2.0*M_PI*cutoff_freq_);
   velocity_filter_.setDamping(1.0);
 
-  max_delta_ = 0.5 * footholds_planner_ptr_->step_length_max_;
+  max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
-  robot_moving_ = false;
-  prev_robot_moving_ = false;
+  static_th_dot_.resize(3);
+  static_th_dot_(0) = 0.03; // x
+  static_th_dot_(1) = 0.03; // y
+  static_th_dot_(2) = 0.03; // yaw
 
-  th_ = 0.03;
-  K_pr_lx_ = 0;
-  K_pr_ly_ = 0;
-  K_pr_r_  = 0;
+  dynamic_th_dot_.resize(3);
+  dynamic_th_dot_(0) = 0.5; // x
+  dynamic_th_dot_(1) = 0.5; // y
+  dynamic_th_dot_(2) = 0.5; // yaw
 
-  error_filter_.resize(3);
+  th_dot_ = static_th_dot_;
+
+  K_pr_lx_ = 0.1;
+  K_pr_ly_ = 0.1;
+  K_pr_r_  = 0.1;
+
+  compute_deltas_ = true;
+
+  prev_gait_ = footholds_planner_ptr_->gait_generator_->getGaitType();
 
   RtLogger::getLogger().addPublisher("PushRecovery/cmd_velocity",cmd_velocity_);
   RtLogger::getLogger().addPublisher("PushRecovery/base_velocity",base_velocity_);
   RtLogger::getLogger().addPublisher("PushRecovery/error",error_);
+  RtLogger::getLogger().addPublisher("PushRecovery/delta_lf",deltas_["lf_foot"]);
+  RtLogger::getLogger().addPublisher("PushRecovery/delta_rf",deltas_["rf_foot"]);
+  RtLogger::getLogger().addPublisher("PushRecovery/delta_lh",deltas_["lh_foot"]);
+  RtLogger::getLogger().addPublisher("PushRecovery/delta_rh",deltas_["rh_foot"]);
 
-  RtGuiClient::getIstance().addDoubleSlider("PushRecovery","th",0.0,1.0,&th_);
-  RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_lx",0.0,100.0,&K_pr_lx_);
-  RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_ly",0.0,100.0,&K_pr_ly_);
-  RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_r",0.0,100.0,&K_pr_r_);
+  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","static_th_dot",0.0,1.0,&static_th_dot_);
+  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","dynamic_th_dot",0.0,1.0,&dynamic_th_dot_);
+  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_lx",0.0,100.0,&K_pr_lx_);
+  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_ly",0.0,100.0,&K_pr_ly_);
+  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_r",0.0,100.0,&K_pr_r_);
+  //RtGuiClient::getIstance().addBool("PushRecovery","push_recovery_on",&push_recovery_on_);
 }
 
 bool PushRecovery::update(const double& period)
@@ -672,120 +688,98 @@ bool PushRecovery::update(const double& period)
 
   velocity_filter_.setTimeStep(period);
 
-  Eigen::Vector6d twist;
-  Eigen::Vector3d base_vel_ref_hf = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF();
+  cmd_velocity_(0) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(0);//footholds_planner_ptr_->com_vel_ref_(0);//footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(0);
+  cmd_velocity_(1) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);//footholds_planner_ptr_->com_vel_ref_(1);//footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);
+  cmd_velocity_(2) = footholds_planner_ptr_->getBaseAngularVelocityReferenceHF()(2);
 
-  double Vx = base_vel_ref_hf(0);
-  double Vy = base_vel_ref_hf(1);
-  double Psit = footholds_planner_ptr_->getBaseAngularVelocityReferenceHF()(2);
+  footholds_planner_ptr_->robot_model_->getXBotModel()->getFloatingBaseTwist(base_twist_);
+  base_twist_.head(3) = footholds_planner_ptr_->world_R_hf_.transpose() * base_twist_.head(3);
 
-  cmd_velocity_(0) = Vx;
-  cmd_velocity_(1) = Vy;
-  cmd_velocity_(2) = Psit;
+  // Note: we use the com instead of the base because we control the com
+  footholds_planner_ptr_->robot_model_->getXBotModel()->getCOMVelocity(com_vel_hf_);
+  com_vel_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * com_vel_hf_;
 
-  footholds_planner_ptr_->robot_model_->getXBotModel()->getFloatingBaseTwist(twist);
-  twist.head(3) = footholds_planner_ptr_->world_R_hf_.transpose() * twist.head(3);
+  base_velocity_(0) = base_twist_(0);//com_vel_hf_(0);
+  base_velocity_(1) = base_twist_(1);//com_vel_hf_(1);
+  base_velocity_(2) = base_twist_(5);
 
-  Eigen::Vector3d com_vel_hf;
-  footholds_planner_ptr_->robot_model_->getXBotModel()->getCOMVelocity(com_vel_hf);
-  com_vel_hf = footholds_planner_ptr_->world_R_hf_.transpose() * com_vel_hf;
-
-  double Body_Xd_HF = com_vel_hf(0);
-  double Body_Yd_HF = com_vel_hf(1);
-  double Body_Yawd  = twist(5);
-
-  base_velocity_(0) = Body_Xd_HF;
-  base_velocity_(1) = Body_Yd_HF;
-  base_velocity_(2) = Body_Yawd ;
-
-  double t_width  = footholds_planner_ptr_->robot_model_->getBaseWidth();
-  double t_length = footholds_planner_ptr_->robot_model_->getBaseLength();
-  double t_mass   = footholds_planner_ptr_->robot_model_->getRobotMass();
-  Eigen::Matrix3d I = footholds_planner_ptr_->world_R_hf_.transpose() * footholds_planner_ptr_->robot_model_->getFloatingBaseInertia();
-  double t_inertia = I(2,2);
-
-
+  I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * footholds_planner_ptr_->robot_model_->getFloatingBaseInertia();
+  base_inertia_z_ = I_hf_(2,2);
 
   // Filter the push velocity
   base_velocity_filt_ = velocity_filter_.process(base_velocity_);
 
-  //if(footholds_planner_ptr_->getBaseLinearVelocityReferenceHF().norm()>0)
-  //{
-  //  robot_moving_ = true;
-  //}
-  //else {
-  //  robot_moving_ = false;
-  //}
+  error_ = base_velocity_filt_ - cmd_velocity_;
 
-  //if(prev_robot_moving_!=robot_moving_)
-  //{
-  //  prev_robot_moving_ = robot_moving_;
-  //  for(unsigned int i=0;i<3;i++)
-  //    error_filter_[i].reset();
-  //}
+  if(cmd_velocity_.norm() > 0.0) // Moving
+    th_dot_ = dynamic_th_dot_;
+  else
+    th_dot_ = static_th_dot_;
 
-  for(unsigned int i=0;i<3;i++)
-    error_(i) = base_velocity_filt_(i) - cmd_velocity_(i);
-
-  if(std::abs(error_(0)) < th_ && std::abs(error_(1)) < th_)
+  if(std::abs(error_(0)) < th_dot_(0) && std::abs(error_(1)) < th_dot_(1) && std::abs(error_(2)) < th_dot_(2))
+  {
     push_detected = false;
+    stop_time_ = 0.0;
+  }
+  else
+  {
+    stop_time_+=period;
+  }
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-  if (push_detected)
+  if(compute_deltas_)
   {
-
-    double Sr=std::sin(std::atan(t_width/t_length));
-    double Cr=std::cos(std::atan(t_width/t_length));
-    double C2_pr=Sr*Sr*t_inertia/t_width/t_mass; //C2_pr is a positive coefficient
-    double C3_pr=Cr*Cr*t_inertia/t_length/t_mass; //C3_pr is a positive coefficient
-
-    for(unsigned int i=0;i<foot_names.size();i++)
+    if (push_detected)
     {
-      double Z0h  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
-      double st_p = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
-      double C1_pr=Z0h/GRAVITY/st_p; //C1_pr should be positive
+      double Sr = std::sin(std::atan(base_width_/base_length_));
+      double Cr = std::cos(std::atan(base_width_/base_length_));
+      double C2_pr = Sr*Sr*base_inertia_z_/base_width_/base_mass_; //C2_pr is a positive coefficient
+      double C3_pr = Cr*Cr*base_inertia_z_/base_length_/base_mass_; //C3_pr is a positive coefficient
 
-      //getchar();
+      for(unsigned int i=0;i<foot_names.size();i++)
+      {
+        double Z0h  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
+        double st_p = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
+        double C1_pr = Z0h/GRAVITY/st_p; //C1_pr should be positive
 
-      // 0 LF 1 RF 2 LH 3 RH
-      //enum _leg_id {LF=0,LH,RF,RH};
+        //getchar();
 
-      //deltas_[foot_names[i]].x() = C1_pr*(K_pr_lx_*(error_(0))+ signs_[foot_names[i]].first  * K_pr_r_*C2_pr*(error_(2)));
-      //deltas_[foot_names[i]].y() = C1_pr*(K_pr_ly_*(error_(1))+ signs_[foot_names[i]].second * K_pr_r_*C3_pr*(error_(2)));
+        // 0 LF 1 RF 2 LH 3 RH
+        //enum _leg_id {LF=0,LH,RF,RH};
 
+        deltas_[foot_names[i]].x() = C1_pr*(K_pr_lx_*(error_(0))+ signs_[foot_names[i]].first  * K_pr_r_*C2_pr*(error_(2)));
+        deltas_[foot_names[i]].y() = C1_pr*(K_pr_ly_*(error_(1))+ signs_[foot_names[i]].second * K_pr_r_*C3_pr*(error_(2)));
 
-      double onOff_x, onOff_y ,onOff_psi;
-      onOff_x = onOff_y = onOff_psi = 1;
-      double r = sqrt(t_length*t_length + t_width*t_width)/2;
-      double rx = t_length/2;
-      double ry = t_width/2;
-      double tau_t = sqrt(Z0h/GRAVITY);
-      double tau_r = sqrt(Z0h*t_inertia/t_mass/GRAVITY/(r*r));
-      double Cx_pr = onOff_x * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_lx_) / sinh(st_p/tau_t) );
-      double Cy_pr = onOff_y * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_ly_) / sinh(st_p/tau_t) );
-      double Cr_pr = onOff_psi * tau_r * ( cosh(st_p/tau_r) / sinh(st_p/tau_r) - (1 - K_pr_r_) / sinh(st_p/tau_r) );
-      deltas_[foot_names[i]].x() = Cx_pr * error_(0) + signs_[foot_names[i]].first * Cr_pr * ry * error_(2);
-      deltas_[foot_names[i]].y() = Cy_pr * error_(1) + signs_[foot_names[i]].second * Cr_pr * rx * error_(2);
+        //double onOff_x, onOff_y ,onOff_psi;
+        //onOff_x = onOff_y = onOff_psi = 1;
+        //double r = sqrt(t_length*t_length + t_width*t_width)/2;
+        //double rx = t_length/2;
+        //double ry = t_width/2;
+        //double tau_t = sqrt(Z0h/GRAVITY);
+        //double tau_r = sqrt(Z0h*t_inertia/t_mass/GRAVITY/(r*r));
+        //double Cx_pr = onOff_x * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_lx_) / sinh(st_p/tau_t) );
+        //double Cy_pr = onOff_y * tau_t * ( cosh(st_p/tau_t) / sinh(st_p/tau_t) - (1 - K_pr_ly_) / sinh(st_p/tau_t) );
+        //double Cr_pr = onOff_psi * tau_r * ( cosh(st_p/tau_r) / sinh(st_p/tau_r) - (1 - K_pr_r_) / sinh(st_p/tau_r) );
+        //deltas_[foot_names[i]].x() = Cx_pr * error_(0) + signs_[foot_names[i]].first * Cr_pr * ry * error_(2);
+        //deltas_[foot_names[i]].y() = Cy_pr * error_(1) + signs_[foot_names[i]].second * Cr_pr * rx * error_(2);
 
-      if(deltas_[foot_names[i]].x() > max_delta_)
-        deltas_[foot_names[i]].x() = max_delta_;
-      if(deltas_[foot_names[i]].x() < -max_delta_)
-        deltas_[foot_names[i]].x() = -max_delta_;
+        if(deltas_[foot_names[i]].x() > max_delta_)
+          deltas_[foot_names[i]].x() = max_delta_;
+        if(deltas_[foot_names[i]].x() < -max_delta_)
+          deltas_[foot_names[i]].x() = -max_delta_;
 
-      if(deltas_[foot_names[i]].y() > max_delta_)
-        deltas_[foot_names[i]].y() = max_delta_;
-      if(deltas_[foot_names[i]].y() < -max_delta_)
-        deltas_[foot_names[i]].y() = -max_delta_;
+        if(deltas_[foot_names[i]].y() > max_delta_)
+          deltas_[foot_names[i]].y() = max_delta_;
+        if(deltas_[foot_names[i]].y() < -max_delta_)
+          deltas_[foot_names[i]].y() = -max_delta_;
+      }
     }
-
   }
   else
   {
     for(unsigned int i=0;i<foot_names.size();i++)
       deltas_[foot_names[i]].setZero();
-
   }
-
 
   return push_detected;
 }
