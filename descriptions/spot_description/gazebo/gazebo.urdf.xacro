@@ -12,7 +12,7 @@
 
 		<plugin filename="libgazebo_ros_p3d.so" name="gazebo_ros_p3d">
                         <robotNamespace>/spot</robotNamespace>
-                        <bodyName>body</bodyName>
+                        <bodyName>base_link</bodyName>
 			<topicName>ground_truth</topicName>
 			<frameName>world</frameName>
 			<xyzOffsets>0 0 0</xyzOffsets>

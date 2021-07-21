@@ -67,16 +67,17 @@
 
     <!-- foot -->
     <xacro:property name="foot_mass" value="0.06"/>
+    <xacro:property name="foot_radius" value="0.034"/>
 
     <!-- Floating-base Joint -->
     <link name="world"/>
     <joint name="floating_base_joint" type="floating">
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="world"/>
-      <child link="body"/>
+      <child link="base_link"/>
     </joint>
 
-    <link name="body">
+    <link name="base_link">
         <visual>
             <geometry>
                 <mesh filename="package://spot_description/meshes/body.dae" />
@@ -97,24 +98,17 @@
         </inertial>
     </link>
 
-    <link name="base_link"/>
-    <joint name="base_link_joint" type="fixed">
-        <origin xyz="0 0 0" rpy="0 0 0" />
-        <parent link="body" />
-        <child link="base_link" />
-    </joint>
-
     <link name="front_rail"/>
     <joint name="front_rail_joint" type="fixed">
         <origin xyz="0.223 0 0.0805" rpy="0 0 0" />
-        <parent link="body" />
+        <parent link="base_link" />
         <child link="front_rail" />
     </joint>
 
     <link name="rear_rail"/>
     <joint name="rear_rail_joint" type="fixed">
         <origin xyz="-0.223 0 0.0805" rpy="0 0 0" />
-        <parent link="body" />
+        <parent link="base_link" />
         <child link="rear_rail" />
     </joint>
 
@@ -141,7 +135,7 @@
     <joint name="lf_haa_joint" type="revolute">
         <origin xyz="0.29785 0.05500 0.00000" rpy="0 0 0" />
         <axis xyz="1 0 0" />
-        <parent link="body" />
+        <parent link="base_link" />
         <child link="lf_hip" />
         <limit effort="1000" velocity="1000.00" lower="-0.78539816339744827899" upper="0.78539816339744827899" />
     </joint>
@@ -184,12 +178,12 @@
             </geometry>
         </collision>
         <inertial>
-            <origin rpy="0 0 0" xyz="${upperleg_com_x} ${upperleg_com_y*1} ${upperleg_com_z}"/>
-            <mass value="${upperleg_mass}"/>
+            <origin rpy="0 0 0" xyz="${lowerleg_com_x} ${lowerleg_com_y*1} ${lowerleg_com_z}"/>
+            <mass value="${lowerleg_mass}"/>
             <inertia
-                ixx="${upperleg_ixx}" ixy="${upperleg_ixy*1}" ixz="${upperleg_ixz}"
-                iyy="${upperleg_iyy}" iyz="${upperleg_iyz*1}"
-                izz="${upperleg_izz}"/>
+                ixx="${lowerleg_ixx}" ixy="${lowerleg_ixy*1}" ixz="${lowerleg_ixz}"
+                iyy="${lowerleg_iyy}" iyz="${lowerleg_iyz*1}"
+                izz="${lowerleg_izz}"/>
         </inertial>
     </link>
     <joint name="lf_kfe_joint" type="revolute">
@@ -205,6 +199,26 @@
         <child link="lf_foot" />
     </joint>
     <link name="lf_foot">
+    <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius-0.01}"/>
+        </geometry>
+        <material name="green"/>
+    </visual>
+    <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius}"/>
+        </geometry>
+    </collision>
+    <inertial>
+        <mass value="${foot_mass}"/>
+        <inertia
+            ixx="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" ixy="0.0" ixz="0.0"
+            iyy="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" iyz="0.0"
+            izz="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}"/>
+    </inertial>
     </link>
 
     <link name="rf_hip">
@@ -230,7 +244,7 @@
     <joint name="rf_haa_joint" type="revolute">
         <origin xyz="0.29785 -0.05500 0.00000" rpy="0 0 0" />
         <axis xyz="1 0 0" />
-        <parent link="body" />
+        <parent link="base_link" />
         <child link="rf_hip" />
         <limit effort="1000" velocity="1000.00" lower="-0.78539816339744827899" upper="0.78539816339744827899" />
     </joint>
@@ -273,12 +287,12 @@
             </geometry>
         </collision>
         <inertial>
-            <origin rpy="0 0 0" xyz="${upperleg_com_x} ${upperleg_com_y*-1} ${upperleg_com_z}"/>
-            <mass value="${upperleg_mass}"/>
+            <origin rpy="0 0 0" xyz="${lowerleg_com_x} ${lowerleg_com_y*-1} ${lowerleg_com_z}"/>
+            <mass value="${lowerleg_mass}"/>
             <inertia
-                ixx="${upperleg_ixx}" ixy="${upperleg_ixy*-1}" ixz="${upperleg_ixz}"
-                iyy="${upperleg_iyy}" iyz="${upperleg_iyz*-1}"
-                izz="${upperleg_izz}"/>
+                ixx="${lowerleg_ixx}" ixy="${lowerleg_ixy*-1}" ixz="${lowerleg_ixz}"
+                iyy="${lowerleg_iyy}" iyz="${lowerleg_iyz*-1}"
+                izz="${lowerleg_izz}"/>
         </inertial>
     </link>
     <joint name="rf_kfe_joint" type="revolute">
@@ -294,6 +308,26 @@
         <child link="rf_foot" />
     </joint>
     <link name="rf_foot">
+    <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius-0.01}"/>
+        </geometry>
+        <material name="green"/>
+    </visual>
+    <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius}"/>
+        </geometry>
+    </collision>
+    <inertial>
+        <mass value="${foot_mass}"/>
+        <inertia
+            ixx="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" ixy="0.0" ixz="0.0"
+            iyy="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" iyz="0.0"
+            izz="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}"/>
+    </inertial>
     </link>
 
     <link name="lh_hip">
@@ -319,7 +353,7 @@
     <joint name="lh_haa_joint" type="revolute">
         <origin xyz="-0.29785 0.05500 0.00000" rpy="0 0 0" />
         <axis xyz="1 0 0" />
-        <parent link="body" />
+        <parent link="base_link" />
         <child link="lh_hip" />
         <limit effort="1000" velocity="1000.00" lower="-0.78539816339744827899" upper="0.78539816339744827899" />
     </joint>
@@ -362,12 +396,12 @@
             </geometry>
         </collision>
         <inertial>
-            <origin rpy="0 0 0" xyz="${upperleg_com_x} ${upperleg_com_y*1} ${upperleg_com_z}"/>
-            <mass value="${upperleg_mass}"/>
+            <origin rpy="0 0 0" xyz="${lowerleg_com_x} ${lowerleg_com_y*1} ${lowerleg_com_z}"/>
+            <mass value="${lowerleg_mass}"/>
             <inertia
-                ixx="${upperleg_ixx}" ixy="${upperleg_ixy*1}" ixz="${upperleg_ixz}"
-                iyy="${upperleg_iyy}" iyz="${upperleg_iyz*1}"
-                izz="${upperleg_izz}"/>
+                ixx="${lowerleg_ixx}" ixy="${lowerleg_ixy*1}" ixz="${lowerleg_ixz}"
+                iyy="${lowerleg_iyy}" iyz="${lowerleg_iyz*1}"
+                izz="${lowerleg_izz}"/>
         </inertial>
     </link>
     <joint name="lh_kfe_joint" type="revolute">
@@ -383,6 +417,26 @@
         <child link="lh_foot" />
     </joint>
     <link name="lh_foot">
+    <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius-0.01}"/>
+        </geometry>
+        <material name="green"/>
+    </visual>
+    <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius}"/>
+        </geometry>
+    </collision>
+    <inertial>
+        <mass value="${foot_mass}"/>
+        <inertia
+            ixx="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" ixy="0.0" ixz="0.0"
+            iyy="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" iyz="0.0"
+            izz="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}"/>
+    </inertial>
     </link>
 
     <link name="rh_hip">
@@ -408,7 +462,7 @@
     <joint name="rh_haa_joint" type="revolute">
         <origin xyz="-0.29785 -0.05500 0.00000" rpy="0 0 0" />
         <axis xyz="1 0 0" />
-        <parent link="body" />
+        <parent link="base_link" />
         <child link="rh_hip" />
         <limit effort="1000" velocity="1000.00" lower="-0.78539816339744827899" upper="0.78539816339744827899" />
     </joint>
@@ -451,12 +505,12 @@
             </geometry>
         </collision>
         <inertial>
-            <origin rpy="0 0 0" xyz="${upperleg_com_x} ${upperleg_com_y*-1} ${upperleg_com_z}"/>
-            <mass value="${upperleg_mass}"/>
+            <origin rpy="0 0 0" xyz="${lowerleg_com_x} ${lowerleg_com_y*-1} ${lowerleg_com_z}"/>
+            <mass value="${lowerleg_mass}"/>
             <inertia
-                ixx="${upperleg_ixx}" ixy="${upperleg_ixy*-1}" ixz="${upperleg_ixz}"
-                iyy="${upperleg_iyy}" iyz="${upperleg_iyz*-1}"
-                izz="${upperleg_izz}"/>
+                ixx="${lowerleg_ixx}" ixy="${lowerleg_ixy*-1}" ixz="${lowerleg_ixz}"
+                iyy="${lowerleg_iyy}" iyz="${lowerleg_iyz*-1}"
+                izz="${lowerleg_izz}"/>
         </inertial>
     </link>
     <joint name="rh_kfe_joint" type="revolute">
@@ -472,6 +526,26 @@
         <child link="rh_foot" />
     </joint>
     <link name="rh_foot">
+    <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius-0.01}"/>
+        </geometry>
+        <material name="green"/>
+    </visual>
+    <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+            <sphere radius="${foot_radius}"/>
+        </geometry>
+    </collision>
+    <inertial>
+        <mass value="${foot_mass}"/>
+        <inertia
+            ixx="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" ixy="0.0" ixz="0.0"
+            iyy="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}" iyz="0.0"
+            izz="${(2*foot_mass)/5.0*(foot_radius*foot_radius)}"/>
+    </inertial>
     </link>
 
     <!-- Standard accessories. -->
