@@ -12,6 +12,8 @@ class TrajectoryInterface
 
 public:
 
+  const std::string CLASS_NAME = "TrajectoryInterface";
+
   TrajectoryInterface()
   {
     pose_reference_ = initial_pose_ = pose_ = Eigen::Affine3d::Identity();
@@ -76,6 +78,7 @@ public:
     twist_reference_.setZero();
   }
 
+
   void setStepHeadingRate(const double& heading_rate)
   {
     heading_rate_ = heading_rate;
@@ -121,7 +124,7 @@ public:
     if(swing_frequency >= 0.0)
       swing_frequency_ = swing_frequency;
     else
-      ROS_WARN("Swing frequency has to be positive definite!");
+      ROS_WARN_NAMED(CLASS_NAME,"Swing frequency has to be positive definite!");
   }
 
   double getSwingFrequency()

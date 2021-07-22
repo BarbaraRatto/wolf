@@ -20,8 +20,6 @@ using namespace rt_gui;
 
 namespace wb_controller {
 
-#define CLASS_NAME "Controller"
-
 std::vector<std::string> _dof_names = {}; // To be loaded from the robot model
 std::vector<std::string> _cartesian_names = {"x","y","z","roll","pitch","yaw"}; // This is our standard cartesian dofs order
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
@@ -272,15 +270,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   // Spawn the odom publisher thread
   odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_",joint_velocities_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt",joint_velocities_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_solver",des_joint_efforts_solver_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_pids",des_joint_efforts_pids_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/period",period_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_",joint_velocities_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_pids_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
 
   ros_wrapper_.reset(new ControllerRosWrapper(root_nh,controller_nh,this));
 

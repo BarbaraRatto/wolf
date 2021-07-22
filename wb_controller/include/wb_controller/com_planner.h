@@ -14,6 +14,8 @@ class ComPlanner
 
 public:
 
+  const std::string CLASS_NAME = "ComPlanner";
+
   /**
    * @brief Shared pointer to ComPlanner
    */

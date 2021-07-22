@@ -15,6 +15,8 @@ class QuadrupedRobot
 
 public:
 
+  const std::string CLASS_NAME = "QuadrupedRobot";
+
   typedef std::shared_ptr<QuadrupedRobot> Ptr;
 
   typedef std::shared_ptr<const QuadrupedRobot> ConstPtr;

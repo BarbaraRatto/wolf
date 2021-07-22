@@ -15,6 +15,8 @@ class TerrainEstimator {
 
 public:
 
+    const std::string CLASS_NAME = "TerrainEstimator";
+
     /**
      * @brief Shared pointer to TerrainEstimator
      */
@@ -70,7 +72,6 @@ private:
     Eigen::Vector3d pos_;
     Eigen::Matrix3d R_;
     Eigen::Affine3d T_;
-    std::vector<Eigen::Vector3d> feet_position_;
 
     GaitGenerator::Ptr gait_generator_;
     StateEstimator::Ptr state_estimator_;

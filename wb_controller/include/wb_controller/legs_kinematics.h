@@ -15,6 +15,8 @@ class LegsKinematics
 
 public:
 
+  const std::string CLASS_NAME = "LegsKinematics";
+
   /**
    * @brief Shared pointer to LegsKinematics
    */

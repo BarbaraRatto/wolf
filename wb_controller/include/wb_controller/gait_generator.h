@@ -19,6 +19,8 @@ class Gait
 
 public:
 
+  const std::string CLASS_NAME = "Gait";
+
   enum gait_t {CRAWL=0,TROT,ONE_FOOT_LF,ONE_FOOT_RH,ONE_FOOT_RF,ONE_FOOT_LH};
 
   static inline std::string enum_to_string(const Gait::gait_t& gait_type)
@@ -127,6 +129,8 @@ private:
 class GaitGenerator
 {
 public:
+
+  const std::string CLASS_NAME = "GaitGenerator";
 
   /**
      * @brief Shared pointer to GaitGenerator
@@ -262,6 +266,14 @@ public:
     bool result = false;
     for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
       result = result || it->second.state_machine->isStance();
+    return result;
+  }
+
+  bool isAllFootInStance()
+  {
+    bool result = false;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      result = result && it->second.state_machine->isStance();
     return result;
   }
 
@@ -445,7 +457,7 @@ public:
         }
         it->second.trajectory->update(period);
 
-        ROS_DEBUG_STREAM("Update trajectory for foot "<< it->first);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Update trajectory for foot "<< it->first);
       }
       else
       {
@@ -455,7 +467,7 @@ public:
         }
         it->second.trajectory->standBy();
 
-        ROS_DEBUG_STREAM("StandBy trajectory for foot "<< it->first);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"StandBy trajectory for foot "<< it->first);
       }
     }
 
@@ -495,7 +507,7 @@ private:
 
   TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
   {
-    ROS_INFO_STREAM("Selected " << trajectory_type << " trajectory");
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected " << trajectory_type << " trajectory");
     if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
     {
       return new Ellipse();
@@ -504,7 +516,7 @@ private:
     {
       throw std::runtime_error("Wrong trajectory type!");
     }
-    return NULL;
+    return nullptr;
   }
 
   typedef std::map<std::string,feet_status_t> feet_t;

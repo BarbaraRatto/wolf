@@ -4,8 +4,6 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-#define CLASS_NAME "ComPlanner"
-
 ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner)
 {
 
@@ -18,8 +16,8 @@ ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Pt
 
   c_ = c_ref_ = c_filt_ = 1.0;
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/c",c_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/com_velocity_ref",com_velocity_ref_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/c",c_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_velocity_ref",com_velocity_ref_);
 }
 
 void ComPlanner::update(double /*dt*/)

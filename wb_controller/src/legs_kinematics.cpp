@@ -2,8 +2,6 @@
 
 namespace wb_controller {
 
-#define CLASS_NAME "LegsKinematics"
-
 LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
   : base_height_control_active_(false), clik_gain_(1.0)
 {

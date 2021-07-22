@@ -45,6 +45,8 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 {
 public:
 
+     const std::string CLASS_NAME = "Controller";
+
     /**
      * @brief Shared pointer to Controller
      */

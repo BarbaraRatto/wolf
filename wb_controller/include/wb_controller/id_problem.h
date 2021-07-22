@@ -39,6 +39,8 @@ class IDProblem
 
 public:
 
+    const std::string CLASS_NAME = "IDProblem";
+
     typedef std::shared_ptr<IDProblem> Ptr;
 
     enum stacks_t {NONE=0,WALKING,MANIPULATION};

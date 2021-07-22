@@ -6,8 +6,6 @@ using namespace OpenSoT;
 
 namespace wb_controller {
 
-#define CLASS_NAME "IDProblem"
-
 IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   model_(model),
   current_stack_(stacks_t::NONE)
