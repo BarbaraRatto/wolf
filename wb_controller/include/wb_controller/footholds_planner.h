@@ -17,6 +17,9 @@ class PushRecovery
 {
 
 public:
+
+  const std::string CLASS_NAME = "PushRecovery";
+
   /**
    * @brief Shared pointer to PushRecovery
    */
@@ -51,13 +54,13 @@ private:
   Eigen::VectorXd dynamic_th_dot_;
   Eigen::VectorXd static_th_dot_;
   Eigen::Vector3d th_dot_;
-  double stop_time_;
-  Gait::gait_t prev_gait_;
   double cutoff_freq_;
   // Gains
   double K_pr_lx_;
   double K_pr_ly_;
   double K_pr_r_;
+  // Support variables
+  double Sr_, Cr_, C2_pr_, C3_pr_, Z0h_, st_p_, C1_pr_;
 
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
 
@@ -70,6 +73,8 @@ class FootholdsPlanner
 {
 
 public:
+
+    const std::string CLASS_NAME = "FootholdsPlanner";
 
     /**
      * @brief Shared pointer to FootholdsPlanner
