@@ -235,13 +235,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),Gait::TROT,"ellipse"));
   foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
-  com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_));
 
   terrain_estimator_.reset(new TerrainEstimator(gait_generator_,state_estimator_));
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
   terrain_estimator_->setMinPitch(-M_PI);
+
+  com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_,terrain_estimator_));
 
   kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
   kin_->setClikGain(default_clik_gain);

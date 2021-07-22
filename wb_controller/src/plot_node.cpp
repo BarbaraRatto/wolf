@@ -56,7 +56,7 @@ private:
       vector_(0) = normal.x;
       vector_(1) = normal.y;
       vector_(2) = normal.z;
-      norm_ = vector_.norm();
+      norm_ = vector_.norm()+0.00001;
 
       R_ = Eigen::Quaterniond().setFromTwoVectors(Eigen::Vector3d::UnitX(),vector_/norm_).toRotationMatrix();
       pose_.linear() = R_;
@@ -111,7 +111,7 @@ private:
       vector_(0) = normal.x;
       vector_(1) = normal.y;
       vector_(2) = normal.z;
-      norm_ = vector_.norm();
+      norm_ = vector_.norm()+0.00001;
 
       R_ = Eigen::Quaterniond().setFromTwoVectors(Eigen::Vector3d::UnitX(),vector_/norm_).toRotationMatrix();
       pose_.linear() = R_;
@@ -155,8 +155,8 @@ class ContactForcesVisualizer {
         //Display an arrow along the x-axis of a pose.
         for(unsigned int i=0; i<msg.contact.size();i++)
         {
-                createArrow(msg.des_contact_forces[i].force,msg.contact_positions[i],rviz_visual_tools::BLUE);
-                createArrow(msg.contact_forces[i].force,msg.contact_positions[i],rviz_visual_tools::GREEN);
+           createArrow(msg.des_contact_forces[i].force,msg.contact_positions[i],rviz_visual_tools::BLUE);
+           createArrow(msg.contact_forces[i].force,msg.contact_positions[i],rviz_visual_tools::GREEN);
         }
     }
   }
