@@ -269,7 +269,7 @@ public:
     return result;
   }
 
-  bool isAllFootInStance()
+  bool isAllFeetInStance()
   {
     bool result = false;
     for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)

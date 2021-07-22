@@ -116,10 +116,10 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   T_.linear() = R_; // world_T_terrain
 
   // 8- Update the swing trajectories
-  gait_generator_->setStepRoll(roll_out_);
-  gait_generator_->setStepPitch(pitch_out_);
-  gait_generator_->setStepRollRate(roll_rate_);
-  gait_generator_->setStepPitchRate(pitch_rate_);
+  //gait_generator_->setStepRoll(roll_out_);
+  //gait_generator_->setStepPitch(pitch_out_);
+  //gait_generator_->setStepRollRate(roll_rate_);
+  //gait_generator_->setStepPitchRate(pitch_rate_);
 
   // 9 - Update the state estimator (to align the contact forces with the
   // terrain)
