@@ -59,7 +59,9 @@ public:
 
     const Eigen::Affine3d& getPose() const;
 
-    const std::vector<Eigen::Vector3d>& getFeetPosition() const;
+    const std::map<std::string,Eigen::Vector3d>& getFootPositions() const;
+
+    Eigen::Vector3d& getFootPosition(const std::string &foot_name);
 
 private:
 
@@ -102,6 +104,8 @@ private:
     double base_adjustment_dot_;
     double base_adjustment_dot_filt_;
     double base_adjustment_prev_;
+
+    std::map<std::string,Eigen::Vector3d> foot_positions_;
 
     /** @brief Trigger the update of the terrain estimator */
     bool update_;

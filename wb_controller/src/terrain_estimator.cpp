@@ -14,6 +14,8 @@ TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstim
   assert(state_estimator);
   state_estimator_ = state_estimator;
 
+  foot_positions_ = state_estimator_->getFeetPositionInWorld();
+
   update_ = false;
 
   A_.resize(N_LEGS,3);
@@ -116,10 +118,10 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   T_.linear() = R_; // world_T_terrain
 
   // 8- Update the swing trajectories
-  //gait_generator_->setStepRoll(roll_out_);
-  //gait_generator_->setStepPitch(pitch_out_);
-  //gait_generator_->setStepRollRate(roll_rate_);
-  //gait_generator_->setStepPitchRate(pitch_rate_);
+  gait_generator_->setStepRoll(roll_out_);
+  gait_generator_->setStepPitch(pitch_out_);
+  gait_generator_->setStepRollRate(roll_rate_);
+  gait_generator_->setStepPitchRate(pitch_rate_);
 
   // 9 - Update the state estimator (to align the contact forces with the
   // terrain)
@@ -150,36 +152,36 @@ void TerrainEstimator::update()
 {
 
   auto foot_names = gait_generator_->getFootNames();
-  auto foot_positions = state_estimator_->getFeetPositionInWorld();
+  foot_positions_ = state_estimator_->getFeetPositionInWorld();
 
-  A_(0,0) = foot_positions[foot_names[0]](0);
-  A_(0,1) = foot_positions[foot_names[0]](1);
+  A_(0,0) = foot_positions_[foot_names[0]](0);
+  A_(0,1) = foot_positions_[foot_names[0]](1);
   A_(0,2) = 1.0;
-  b_(0)   = -foot_positions[foot_names[0]](2);
+  b_(0)   = -foot_positions_[foot_names[0]](2);
 
-  A_(1,0) = foot_positions[foot_names[1]](0);
-  A_(1,1) = foot_positions[foot_names[1]](1);
+  A_(1,0) = foot_positions_[foot_names[1]](0);
+  A_(1,1) = foot_positions_[foot_names[1]](1);
   A_(1,2) = 1.0;
-  b_(1)   = -foot_positions[foot_names[1]](2);
+  b_(1)   = -foot_positions_[foot_names[1]](2);
 
-  A_(2,0) = foot_positions[foot_names[2]](0);
-  A_(2,1) = foot_positions[foot_names[2]](1);
+  A_(2,0) = foot_positions_[foot_names[2]](0);
+  A_(2,1) = foot_positions_[foot_names[2]](1);
   A_(2,2) = 1.0;
-  b_(2)   = -foot_positions[foot_names[2]](2);
+  b_(2)   = -foot_positions_[foot_names[2]](2);
 
-  A_(3,0) = foot_positions[foot_names[3]](0);
-  A_(3,1) = foot_positions[foot_names[3]](1);
+  A_(3,0) = foot_positions_[foot_names[3]](0);
+  A_(3,1) = foot_positions_[foot_names[3]](1);
   A_(3,2) = 1.0;
-  b_(3)   = -foot_positions[foot_names[3]](2);
+  b_(3)   = -foot_positions_[foot_names[3]](2);
 
   double avg_x = 0.0;
   double avg_y = 0.0;
   double avg_z = 0.0;
   for(unsigned int i = 0; i<foot_names.size(); i++)
   {
-    avg_x = avg_x + foot_positions[foot_names[i]](0);
-    avg_y = avg_y + foot_positions[foot_names[i]](1);
-    avg_z = avg_z + foot_positions[foot_names[i]](2);
+    avg_x = avg_x + foot_positions_[foot_names[i]](0);
+    avg_y = avg_y + foot_positions_[foot_names[i]](1);
+    avg_z = avg_z + foot_positions_[foot_names[i]](2);
   }
 
   avg_x = avg_x/N_LEGS;
@@ -237,7 +239,17 @@ const Eigen::Matrix3d& TerrainEstimator::getOrientation() const
 
 const Eigen::Affine3d& TerrainEstimator::getPose() const
 {
-    return T_;
+  return T_;
+}
+
+const std::map<string, Eigen::Vector3d>& TerrainEstimator::getFootPositions() const
+{
+  return foot_positions_;
+}
+
+Eigen::Vector3d& TerrainEstimator::getFootPosition(const std::string& foot_name)
+{
+  return foot_positions_[foot_name];
 }
 
 const Eigen::Vector3d& TerrainEstimator::getPosition() const

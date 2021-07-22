@@ -37,7 +37,9 @@ add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
                  ContactForces.msg
-                 FootHolds.msg)
+                 FootHolds.msg
+                 TerrainEstimation.msg
+                 FrictionCones.msg)
 
 generate_messages(
     DEPENDENCIES

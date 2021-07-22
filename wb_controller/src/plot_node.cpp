@@ -14,11 +14,124 @@
 #include <wb_controller/utils.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/CartesianTask.h>
+#include <wb_controller/FrictionCones.h>
+#include <wb_controller/TerrainEstimation.h>
 #include <wb_controller/FootHolds.h>
 #include <rviz_visual_tools/rviz_visual_tools.h>
 
 namespace wb_controller
 {
+
+class FrictionConesVisualizer
+{
+
+public:
+
+  typedef std::shared_ptr<FrictionConesVisualizer> Ptr;
+
+  FrictionConesVisualizer(ros::NodeHandle& nh)
+  {
+    cnt_ = 0;
+    decimate_ = 10;
+
+    subscriber_ = nh.subscribe("friction_cones", 1, &FrictionConesVisualizer::callbackFrictionCones, this);
+    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","friction_cones_visual_marker"));
+  }
+
+  inline void callbackFrictionCones(const wb_controller::FrictionCones &msg)
+  {
+    if(cnt_++%decimate_==0)
+    {
+        visual_tools_->deleteAllMarkers();
+
+        for(unsigned int i=0; i<msg.foot_positions.size();i++)
+           createCone(msg.cone_axis[i],msg.foot_positions[i]);
+    }
+  }
+
+private:
+
+  void createCone(const geometry_msgs::Vector3& normal, const geometry_msgs::Vector3& position)
+  {
+      vector_(0) = normal.x;
+      vector_(1) = normal.y;
+      vector_(2) = normal.z;
+      norm_ = vector_.norm();
+
+      R_ = Eigen::Quaterniond().setFromTwoVectors(Eigen::Vector3d::UnitX(),vector_/norm_).toRotationMatrix();
+      pose_.linear() = R_;
+      pose_.translation().x() = position.x;
+      pose_.translation().y() = position.y;
+      pose_.translation().z() = position.z;
+
+      visual_tools_->publishCone(pose_,M_PI);
+      visual_tools_->trigger();
+  }
+
+  unsigned int cnt_;
+  unsigned int decimate_;
+  Eigen::Isometry3d pose_;
+  Eigen::Vector3d vector_;
+  double norm_;
+  Eigen::Matrix3d R_;
+  ros::Subscriber subscriber_;
+  rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+
+};
+
+class TerrainEstimationVisualizer
+{
+
+public:
+
+  typedef std::shared_ptr<TerrainEstimationVisualizer> Ptr;
+
+  TerrainEstimationVisualizer(ros::NodeHandle& nh)
+  {
+    cnt_ = 0;
+    decimate_ = 10;
+
+    subscriber_ = nh.subscribe("terrain_estimation", 1, &TerrainEstimationVisualizer::callbackTerrainEstimation, this);
+    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world","terrain_estimation_visual_marker"));
+  }
+
+  inline void callbackTerrainEstimation(const wb_controller::TerrainEstimation &msg)
+  {
+    if(cnt_++%decimate_==0)
+    {
+        visual_tools_->deleteAllMarkers();
+        createPlane(msg.terrain_normal,msg.central_point);
+    }
+  }
+
+private:
+
+  void createPlane(const geometry_msgs::Vector3& normal, const geometry_msgs::Vector3& position)
+  {
+      vector_(0) = normal.x;
+      vector_(1) = normal.y;
+      vector_(2) = normal.z;
+      norm_ = vector_.norm();
+
+      R_ = Eigen::Quaterniond().setFromTwoVectors(Eigen::Vector3d::UnitX(),vector_/norm_).toRotationMatrix();
+      pose_.linear() = R_;
+      pose_.translation().x() = position.x;
+      pose_.translation().y() = position.y;
+      pose_.translation().z() = position.z;
+
+      visual_tools_->publishYZPlane(pose_);
+      visual_tools_->trigger();
+  }
+
+  unsigned int cnt_;
+  unsigned int decimate_;
+  Eigen::Isometry3d pose_;
+  Eigen::Vector3d vector_;
+  double norm_;
+  Eigen::Matrix3d R_;
+  ros::Subscriber subscriber_;
+  rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+};
 
 class ContactForcesVisualizer {
 
@@ -174,8 +287,6 @@ class FootHoldsVisualizer : public SphereVisualizer<wb_controller::FootHolds> {
 
 };
 
-
-
 } // namespace
 
 int main(int argc, char **argv)
@@ -190,6 +301,7 @@ int main(int argc, char **argv)
   wb_controller::ContactForcesVisualizer cfv(node);
   wb_controller::CoMVisualizer comv(node);
   wb_controller::FootHoldsVisualizer fhv(node);
+  wb_controller::TerrainEstimationVisualizer tev(node);
 
   ros::spin();
 

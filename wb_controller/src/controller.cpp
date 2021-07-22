@@ -237,6 +237,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
   com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_));
 
+  terrain_estimator_.reset(new TerrainEstimator(gait_generator_,state_estimator_));
+  terrain_estimator_->setMaxRoll(M_PI);
+  terrain_estimator_->setMinRoll(-M_PI);
+  terrain_estimator_->setMaxPitch(M_PI);
+  terrain_estimator_->setMinPitch(-M_PI);
+
   kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
   kin_->setClikGain(default_clik_gain);
   kin_->activateBaseHeightControl();
@@ -497,6 +503,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
   state_estimator_->update(period.toSec());
 
+  terrain_estimator_->computeTerrainEstimation(period.toSec());
+
   if(solver_started_) // Use the ID solver to calculate the torques
   {
     if(!init_done_) // FIXME Prepare a proper start up and rest procedure
@@ -718,6 +726,11 @@ StateEstimator* Controller::getStateEstimator() const
 FootholdsPlanner* Controller::getFootholdsPlanner() const
 {
   return foot_holds_planner_.get();
+}
+
+TerrainEstimator* Controller::getTerrainEstimator() const
+{
+  return terrain_estimator_.get();
 }
 
 LegsKinematics* Controller::getLegsKinematics() const
