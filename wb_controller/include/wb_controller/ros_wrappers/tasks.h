@@ -408,6 +408,9 @@ public:
             task_->getActualPose(tmp_vector3d_);
             // Pose - Translation
             wb_controller::vector3dToPosePosition(tmp_vector3d_,rt_pub_->msg_.pose_actual);
+            // Velocity reference
+            tmp_vector3d_ = task_->getCachedVelocityReference();
+            wb_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.twist_reference.linear);
 
             // REFERENCE VALUES
             task_->getReference(tmp_vector3d_);
