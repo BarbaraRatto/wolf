@@ -1,25 +1,19 @@
 # TODO list
 
+- Export to params the push recovery
+- Move terrain estimator inside state estimator as a subclass
+- Remove dynamic reconfigure
 - Move odom thread to state_estimator
-- Remove ros from IDProblem
-- Remove Robot namespace
-- Aliengo and Anymal don't work properly... could it be a gains problem?
 - Postural gains still in the controller... fix!
-- terrain estimator / state estimator
 - add trajectory for arm
-- ICP
 - Web app
 - Clean solo, test it without inertia comp.
-- Add kinova arm on aliengo
-- Angular momentum task
 - Convex hull in acceleration
-- Arm controlled in velocity (no state estimation)
 - State estimation
 - Experiments on the real robot
 - Fix device interface Add XBOX
 - IK with joint limits
 - change names dls -> wb ( can not because of the compatibility with the real hardware )
-- push recovery
 - step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
