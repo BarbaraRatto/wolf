@@ -236,18 +236,18 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
 
-  terrain_estimator_.reset(new TerrainEstimator(gait_generator_,state_estimator_));
+  kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
+  kin_->setClikGain(default_clik_gain);
+  kin_->activateBaseHeightControl();
+  des_joint_positions_ = kin_->getJointHomePositions();
+
+  terrain_estimator_.reset(new TerrainEstimator(gait_generator_,state_estimator_,kin_));
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
   terrain_estimator_->setMinPitch(-M_PI);
 
   com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_,terrain_estimator_));
-
-  kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
-  kin_->setClikGain(default_clik_gain);
-  kin_->activateBaseHeightControl();
-  des_joint_positions_ = kin_->getJointHomePositions();
 
   device_handler_.reset(new JoyHandler(controller_nh,this));
 
@@ -544,6 +544,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set the velocity and position reference for the Com
     com_planner_->update(period.toSec());
     id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
+
+    id_prob_->setFrictionConesR(terrain_estimator_->getOrientation().transpose());
 
     if(inertia_compensation_active_)
     {
