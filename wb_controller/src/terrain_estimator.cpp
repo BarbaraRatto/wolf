@@ -5,7 +5,7 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstimator::Ptr state_estimator)
+TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstimator::Ptr state_estimator, LegsKinematics::Ptr kin)
 {
 
   assert(gait_generator);
@@ -13,6 +13,9 @@ TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstim
 
   assert(state_estimator);
   state_estimator_ = state_estimator;
+
+  assert(kin);
+  kin_ = kin;
 
   foot_positions_ = state_estimator_->getFeetPositionInWorld();
 
@@ -38,8 +41,6 @@ TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstim
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/pitch",pitch_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_adjustment",base_adjustment_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_adjustment_dot",base_adjustment_dot_);
-
-
 }
 
 
@@ -134,6 +135,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   base_adjustment_dot_ = (base_adjustment_ - base_adjustment_prev_)/dt;
   base_adjustment_prev_ = base_adjustment_;
 
+  //kin_->setDesiredBaseAdjustmentDot(base_adjustment_dot_);
 
   return true;
 }

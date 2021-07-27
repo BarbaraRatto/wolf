@@ -7,6 +7,7 @@
 #include <atomic>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/gait_generator.h>
+#include <wb_controller/legs_kinematics.h>
 
 namespace wb_controller
 {
@@ -29,7 +30,9 @@ public:
 
     enum estimation_t {NONE=0,FLAT_TERRAIN,ROUGH_TERRAIN};
 
-    TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstimator::Ptr state_estimator);
+    TerrainEstimator(GaitGenerator::Ptr gait_generator,
+                     StateEstimator::Ptr state_estimator,
+                     LegsKinematics::Ptr kin);
 
     void setEstimationType();
 
@@ -77,6 +80,7 @@ private:
 
     GaitGenerator::Ptr gait_generator_;
     StateEstimator::Ptr state_estimator_;
+    LegsKinematics::Ptr kin_;
 
     double roll_;
     double pitch_;

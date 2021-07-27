@@ -72,7 +72,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
       if(base_height_control_active_)
       {
         x_err_ << 0, 0, -delta_z;
-        qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (clik_gain_ * x_err_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
+        xdot_ff_ << x_dot_adj_, 0, 0;
+        qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (clik_gain_ * x_err_ + xdot_ff_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
       }
 
       des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);  // Don't generate velocities for the feet in stance
@@ -136,6 +137,8 @@ void LegsKinematics::reset()
   qswing_ = qhome_;
   robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
+  xdot_ff_.setZero();
+  x_dot_adj_ = 0.0;
 }
 
 void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
@@ -171,6 +174,11 @@ void LegsKinematics::setDesiredBaseHeight(const double& des_base_height)
 {
   // TODO Add checks
   des_base_height_ = des_base_height;
+}
+
+void LegsKinematics::setDesiredBaseAdjustmentDot(const double &x_dot)
+{
+  x_dot_adj_ = x_dot;
 }
 
 void LegsKinematics::activateBaseHeightControl()
