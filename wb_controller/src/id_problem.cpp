@@ -75,12 +75,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
 
-  OpenSoT::constraints::force::FrictionCones::friction_cones mus;
-  Eigen::Matrix3d R; R.setIdentity();
-  mu_ = 0.7;
+  OpenSoT::constraints::force::FrictionCones::friction_cones fcs;
+  fc_.second = 0.7; // mu
+  fc_.first.setIdentity();
   for(unsigned int i = 0; i < foot_names_.size(); i++)
-    mus.push_back(std::pair<Eigen::Matrix3d,double> (R,mu_));
-  friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_->getXBotModel(),mus);
+    fcs.push_back(fc_);
+  friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_->getXBotModel(),fcs);
 
   Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(model_->getXBotModel()->getJointNum());
   Eigen::VectorXd xmin = -xmax;
@@ -105,8 +105,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
   std::list<unsigned int> id_legs  = {6,7,8,9,10,11,12,13,14,15,16,17};
-
-
 
   OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;
   feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_XYZ,feet_[foot_names_[0]]->getXSize());
@@ -180,11 +178,16 @@ void IDProblem::setFrictionConesMu(const double& mu)
 {
   if(mu>=0.0 && mu<=1.0)
   {
-    mu_ = mu;
+    fc_.second = mu;
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set mu to: "<<mu);
   }
   else
     ROS_WARN_NAMED(CLASS_NAME,"Mu has to be between 0 and 1!");
+}
+
+void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
+{
+   fc_.first = R;
 }
 
 void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,const double& z_force)
@@ -274,7 +277,7 @@ void IDProblem::update()
   wrench_lower_lims_(2) = z_force_lower_lim_;
   for (auto& tmp_map : feet_)
   {
-    friction_cones_->getFrictionCone(tmp_map.first)->setMu(mu_);
+    friction_cones_->getFrictionCone(tmp_map.first)->setFrictionCone(fc_);
     if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
