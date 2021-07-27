@@ -280,6 +280,23 @@ public:
           terrain_estimation_pub_->unlockAndPublish();
       }
 
+      if(friction_cones_pub_.get() && friction_cones_pub_->trylock())
+      {
+          for(unsigned int i=0; i <foot_names.size(); i++)
+          {
+              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).x();
+              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).y();
+              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).z();
+
+              friction_cones_pub_->msg_.cone_axis[i].x = controller_->getTerrainEstimator()->getTerrainNormal().x();
+              friction_cones_pub_->msg_.cone_axis[i].y = controller_->getTerrainEstimator()->getTerrainNormal().y();
+              friction_cones_pub_->msg_.cone_axis[i].z = controller_->getTerrainEstimator()->getTerrainNormal().z();
+          }
+          friction_cones_pub_->msg_.header.stamp = time;
+          friction_cones_pub_->unlockAndPublish();
+      }
+
+
     };
 
 protected:
