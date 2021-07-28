@@ -5,7 +5,10 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstimator::Ptr state_estimator, LegsKinematics::Ptr kin)
+TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator,
+                                   StateEstimator::Ptr state_estimator,
+                                   LegsKinematics::Ptr kin,
+                                   FootholdsPlanner::Ptr foot_holds_planner)
 {
 
   assert(gait_generator);
@@ -16,6 +19,9 @@ TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstim
 
   assert(kin);
   kin_ = kin;
+
+  assert(foot_holds_planner);
+  foot_holds_planner_ = foot_holds_planner;
 
   foot_positions_ = state_estimator_->getFeetPositionInWorld();
 
@@ -137,6 +143,9 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   base_adjustment_prev_ = base_adjustment_;
 
   kin_->setDesiredBaseAdjustmentDot(base_adjustment_dot_);
+
+  // 11 - Adjust the references for the desired base height and orientation (roll and pitch)
+  foot_holds_planner_->setTerrainTransform(T_);
 
   return true;
 }

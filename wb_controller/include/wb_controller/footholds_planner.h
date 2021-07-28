@@ -123,6 +123,7 @@ public:
     void decreaseSwingFrequency();
     void setComCorrection(const Eigen::Vector2d& delta_com);
     void setComVelocityRef(const Eigen::Vector3d& com_vel_ref);
+    void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
 
     // Gets
     unsigned int getCmd();
@@ -219,6 +220,8 @@ private:
 
     Eigen::Vector2d delta_com_;
     Eigen::Vector3d com_vel_ref_;
+
+    Eigen::Affine3d world_T_terrain_;
 
     bool offsets_applied_;
 

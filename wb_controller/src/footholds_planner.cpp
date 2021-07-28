@@ -56,6 +56,8 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   delta_com_.fill(0.0);
 
+  world_T_terrain_ = Eigen::Affine3d::Identity();
+
   push_recovery_ = std::make_shared<PushRecovery>(this);
   push_detected_ = false;
 
@@ -344,8 +346,10 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
 
   base_position_reference_ = base_position_;
 
-  // This is the base height computed w.r.t world
-  //base_position_(2);
+  // This is the base height reference computed w.r.t terrain ( reference = reference_world - reference_terrain )
+  //base_position_(2) = base_position_(2) + world_T_terrain_.translation().z();
+  // base_position_reference_.head(2) = base_position_.head(2);
+  //base_position_reference_(2) = base_position_(2) + world_T_terrain_.translation().z();
 }
 
 void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
@@ -363,9 +367,9 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   base_orientation_ = base_angular_velocity_reference_ * period + base_orientation_;
 
-  // This is the base rotation computed w.r.t world
+  // This is the base rotation reference computed w.r.t terrain
   rpyToRot(base_orientation_,base_rotation_reference_);
-  base_rotation_reference_.transposeInPlace();
+  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
 }
 
 void FootholdsPlanner::setInitialOffsets()
@@ -461,6 +465,11 @@ void FootholdsPlanner::setComCorrection(const Eigen::Vector2d &delta_com)
 void FootholdsPlanner::setComVelocityRef(const Eigen::Vector3d &com_vel_ref)
 {
   com_vel_ref_ = com_vel_ref;
+}
+
+void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrain)
+{
+  world_T_terrain_ = world_T_terrain;
 }
 
 void FootholdsPlanner::setLinearVelocityCmd(const double linear)
@@ -572,7 +581,7 @@ const double& FootholdsPlanner::getStepHeadingRate(const std::string& foot_name)
 
 const double& FootholdsPlanner::getBaseHeight() const
 {
-  return base_position_(2);
+  return base_position_reference_(2);
 }
 
 double FootholdsPlanner::getLinearVelocityCmd() const

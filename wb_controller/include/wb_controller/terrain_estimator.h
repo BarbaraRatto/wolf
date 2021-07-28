@@ -8,6 +8,7 @@
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/legs_kinematics.h>
+#include <wb_controller/footholds_planner.h>
 
 namespace wb_controller
 {
@@ -32,7 +33,8 @@ public:
 
     TerrainEstimator(GaitGenerator::Ptr gait_generator,
                      StateEstimator::Ptr state_estimator,
-                     LegsKinematics::Ptr kin);
+                     LegsKinematics::Ptr kin,
+                     FootholdsPlanner::Ptr foot_holds_planner);
 
     void setEstimationType();
 
@@ -81,6 +83,7 @@ private:
     GaitGenerator::Ptr gait_generator_;
     StateEstimator::Ptr state_estimator_;
     LegsKinematics::Ptr kin_;
+    FootholdsPlanner::Ptr foot_holds_planner_;
 
     double roll_;
     double pitch_;
