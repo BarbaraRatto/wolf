@@ -371,6 +371,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         state_estimator_->setOrientationEstimationType(estimation_orientation_type);
 
     joy_handler_.reset(new JoyHandler(controller_nh,cmds_));
+
+    joy_handler_->enableXBOXLayout();
+
     joy_handler_->addButtonHandler(boost::bind(&Controller::toggleSolver,this),JoyHandler::START);
     joy_handler_->addButtonHandler(boost::bind(&GaitGenerator::switchGait,gait_generator_.get()),JoyHandler::SELECT);
 
