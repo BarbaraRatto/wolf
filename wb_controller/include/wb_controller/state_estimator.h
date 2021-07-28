@@ -51,6 +51,8 @@ public:
 
     void setTerrainNormal(const Eigen::Vector3d& terrain_normal);
 
+    void setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point);
+
     void setImuOrientation(const Eigen::Quaterniond& imu_orientation);
 
     void setImuGyroscope(const Eigen::Vector3d& imu_gyroscope);
@@ -187,6 +189,8 @@ private:
     std::atomic<bool> haptic_contact_loop_active_;
 
     Eigen::Vector3d terrain_normal_;
+
+    Eigen::Vector3d terrain_central_point_;
 
     Eigen::Matrix3d mapRPYderivativesToOmega_;
 

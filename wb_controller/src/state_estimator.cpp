@@ -164,6 +164,11 @@ void StateEstimator::setTerrainNormal(const Eigen::Vector3d &terrain_normal)
   terrain_normal_ = terrain_normal;
 }
 
+void StateEstimator::setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point)
+{
+  terrain_central_point_ = terrain_central_point;
+}
+
 void StateEstimator::setImuOrientation(const Eigen::Quaterniond& imu_orientation)
 {
   imu_orientation_ = imu_orientation;
@@ -538,7 +543,8 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
-    floating_base_position_ << gt_position_;
+    floating_base_position_.head(2) << gt_position_.head(2);
+    floating_base_position_(2) =  gt_position_(2) - terrain_central_point_(2); // Adjust the height wrt the terrain
     break;
   default:
     // The base does not move

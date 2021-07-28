@@ -127,6 +127,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   // 9 - Update the state estimator (to align the contact forces with the
   // terrain)
   state_estimator_->setTerrainNormal(terrain_normal_);
+  state_estimator_->setTerrainCentralPoint(pos_);
 
   // 10 - Base adjustment, compute the offsets to help adapting the posture based
   // on the terrain, for now, we compute only an adjustment along the x axis.
@@ -135,7 +136,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   base_adjustment_dot_ = (base_adjustment_ - base_adjustment_prev_)/dt;
   base_adjustment_prev_ = base_adjustment_;
 
-  //kin_->setDesiredBaseAdjustmentDot(base_adjustment_dot_);
+  kin_->setDesiredBaseAdjustmentDot(base_adjustment_dot_);
 
   return true;
 }
