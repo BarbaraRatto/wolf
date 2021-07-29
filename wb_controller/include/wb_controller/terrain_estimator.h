@@ -106,10 +106,8 @@ private:
     std::atomic<double> roll_rate_;
     std::atomic<double> pitch_rate_;
 
-    double base_adjustment_; // FIXME: atomic
-    double base_adjustment_filt_;
+    double base_adjustment_;
     double base_adjustment_dot_;
-    double base_adjustment_dot_filt_;
     double base_adjustment_prev_;
 
     std::map<std::string,Eigen::Vector3d> foot_positions_;
@@ -118,6 +116,7 @@ private:
     bool update_;
 
     Eigen::Matrix3d tmp_matrix3d_;
+    Eigen::Vector3d tmp_vector3d_;
 
 
 };

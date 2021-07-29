@@ -214,85 +214,83 @@ public:
 
   Ellipse()
   {
-    xyz = xyz_rotated = xyz_dot = Eigen::Vector3d::Zero();
-    world_R_swing = swing_R_world = S = Ear = Eigen::Matrix3d::Zero();
+    xyz_ = xyz_rotated_ = xyz_dot_ = Eigen::Vector3d::Zero();
+    world_R_swing_ = swing_R_world_ = S_ = Ear_ = Eigen::Matrix3d::Zero();
   }
 
 protected:
 
   const Eigen::Affine3d& trajectoryFunction(const double& time)
   {
-    rpy(0) = roll_;
-    rpy(1) = pitch_;
-    rpy(2) = yaw_;
+    rpy_(0) = roll_;
+    rpy_(1) = pitch_;
+    rpy_(2) = yaw_;
 
-    xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
-    xyz(1) = 0.0;
-    xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
+    xyz_(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
+    xyz_(1) = 0.0;
+    xyz_(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 
-    rpyToRot(rpy,swing_R_world);
+    rpyToRot(rpy_,swing_R_world_);
 
-    world_R_swing.noalias() = swing_R_world.transpose();
+    world_R_swing_.noalias() = swing_R_world_.transpose();
 
-    xyz_rotated.noalias() = world_R_swing * xyz;
+    xyz_rotated_.noalias() = world_R_swing_ * xyz_;
 
-    pose_.translation() = initial_pose_.translation() + xyz_rotated;
+    pose_.translation() = initial_pose_.translation() + xyz_rotated_;
 
     return pose_;
   }
 
   const Eigen::Vector6d& trajectoryFunctionDot(const double& time)
   {
+    rpy_rates_.setZero();
+    omegas_.setZero();
+    rpy_.setZero();
 
-    // FIXME Where are the RATES?
-    rpy_rates.setZero();
-    omegas.setZero();
-    rpy.setZero();
+    rpy_rates_(0) = roll_rate_;
+    rpy_rates_(1) = pitch_rate_;
+    rpy_rates_(2) = yaw_rate_;
 
-    rpy_rates(0) = roll_rate_;
-    rpy_rates(1) = pitch_rate_;
-    rpy_rates(2) = yaw_rate_;
+    rpy_(0) = roll_;
+    rpy_(1) = pitch_;
+    rpy_(2) = yaw_;
 
-    rpy(0) = roll_;
-    rpy(1) = pitch_;
-    rpy(2) = yaw_;
+    rpyToEarWorld(rpy_,Ear_); // Are we sure?
 
-    rpyToEar(rpy,Ear);
+    omegas_ = Ear_ * rpy_rates_;
 
-    omegas = Ear * rpy_rates;
+    S_(0,1) = -omegas_(2);
+    S_(1,0) =  omegas_(2);
 
-    S(0,1) = -omegas(2);
-    S(1,0) =  omegas(2);
+    S_(0,2) =  omegas_(1);
+    S_(2,0) = -omegas_(1);
 
-    S(0,2) =  omegas(1);
-    S(2,0) = -omegas(1);
+    S_(1,2) = -omegas_(0);
+    S_(2,1) =  omegas_(0);
 
-    S(1,2) = -omegas(0);
-    S(2,1) =  omegas(0);
-
-    xyz_dot(0) = M_PI * swing_frequency_ * length_/2 * std::sin(M_PI * (swing_frequency_ * time));
-    xyz_dot(1) = 0.0;
-    xyz_dot(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
+    xyz_dot_(0) = M_PI * swing_frequency_ * length_/2 * std::sin(M_PI * (swing_frequency_ * time));
+    xyz_dot_(1) = 0.0;
+    xyz_dot_(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
 
     twist_.setZero(); // No angular velocities
-    twist_.head(3) = S * xyz_rotated + world_R_swing * xyz_dot;
+    twist_.head(3) = S_ * xyz_rotated_ + world_R_swing_ * xyz_dot_;
 
     return twist_;
   }
 
 private:
 
-  Eigen::Vector3d xyz;
-  Eigen::Vector3d xyz_dot;
-  Eigen::Vector3d xyz_rotated;
-  Eigen::Matrix3d world_R_swing;
-  Eigen::Matrix3d swing_R_world;
-  Eigen::Matrix3d S;
-  Eigen::Matrix3d Ear;
+  Eigen::Vector3d xyz_;
+  Eigen::Vector3d xyz_dot_;
+  Eigen::Vector3d xyz_rotated_;
+  Eigen::Matrix3d world_R_swing_;
+  Eigen::Matrix3d swing_R_world_;
+  Eigen::Matrix3d S_;
+  Eigen::Matrix3d Ear_;
 
-  Eigen::Vector3d rpy;
-  Eigen::Vector3d rpy_rates;
-  Eigen::Vector3d omegas;
+  Eigen::Vector3d rpy_;
+  Eigen::Vector3d rpy_rates_;
+  Eigen::Vector3d omegas_;
 };
 
 } // namespace

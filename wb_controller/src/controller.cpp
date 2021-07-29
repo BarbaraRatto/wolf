@@ -238,7 +238,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
   kin_->setClikGain(default_clik_gain);
-  kin_->activateBaseHeightControl();
+  //kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
 
   terrain_estimator_.reset(new TerrainEstimator(gait_generator_,state_estimator_,kin_,foot_holds_planner_));
@@ -372,7 +372,6 @@ void Controller::toggleBaseHeightControl()
   if(state_estimator_->getPositionEstimationType() == "estimated_z" || state_estimator_->getPositionEstimationType() == "ground_truth")
   {
     kin_->toggleBaseHeightControl();
-
     if(kin_->isBaseHeightControlActive())
       ROS_INFO_NAMED(CLASS_NAME,"Base height control is ON");
     else

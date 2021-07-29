@@ -39,7 +39,7 @@ public:
 
   void setDesiredBaseHeight(const double& des_base_height);
 
-  void setDesiredBaseAdjustmentDot(const double& x_dot);
+  void setDesiredBaseAdjustmentDot(const Eigen::Vector3d& xdot);
 
   bool setJointHomePositions(Eigen::VectorXd& qhome);
 
@@ -86,7 +86,7 @@ private:
   std::atomic<double> clik_gain_;
 
   std::atomic<double> des_base_height_;
-  std::atomic<double> x_dot_adj_;
+
   double base_height_;
 
   /** @brief Stance joints position */

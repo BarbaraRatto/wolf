@@ -141,8 +141,8 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   base_adjustment_ = terrain_h_base * std::tan(pitch_out_);
   base_adjustment_dot_ = (base_adjustment_ - base_adjustment_prev_)/dt;
   base_adjustment_prev_ = base_adjustment_;
-
-  kin_->setDesiredBaseAdjustmentDot(base_adjustment_dot_);
+  tmp_vector3d_ << base_adjustment_dot_, 0.0, 0.0;
+  kin_->setDesiredBaseAdjustmentDot(tmp_vector3d_);
 
   // 11 - Adjust the references for the desired base height and orientation (roll and pitch)
   foot_holds_planner_->setTerrainTransform(T_);

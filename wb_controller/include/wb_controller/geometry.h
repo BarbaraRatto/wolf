@@ -150,20 +150,14 @@ inline void pitchToRot(const double& pitch, Eigen::Matrix3d& R)
 
 }
 
-/** \brief Function to compute the linear tranformation matrix between euler
+/**
+ * @brief Function to compute the linear tranformation matrix between euler
  * rates (in ZYX convention) and omega vector, where omega is expressed in world
  * coordinates to get the component expressed in the world ortogonal frame.
- *
- * I need to multiply  the components of the vector of euler rate which is
- * expressed the rpy (non orthogonal) by the roll pitch yaw axis expressed in
- * the world frame I need to express the yaw/pitch/roll axis in world frame,
- * since we do first the rotation in the z axis, wz = yaw_d therefore
- * z = z' =[0;0;1] then we rotate about pitch so we have component for this
- * rotation in wy and -wx (y'= [-sin(yaw; cos(yaw) ;0]) if we consider roll
- * after the pitch we will have the roll axis after yaw and pitch rotation to
- * be x'' = cos(pitch)*x' -sin(pitch)*[0;0;1] where x' = [cos(yaw);sin(yaw);0]
+ * @param rpy
+ * @return Ear
 */
-inline void rpyToEarInv(const Eigen::Vector3d& rpy, Eigen::Matrix3d& EarInv){
+inline void rpyToEarWorld(const Eigen::Vector3d& rpy, Eigen::Matrix3d& Ear){
 
     const double& pitch = rpy(1);
     const double& yaw = rpy(2);
@@ -174,19 +168,19 @@ inline void rpyToEarInv(const Eigen::Vector3d& rpy, Eigen::Matrix3d& EarInv){
     double c_p = std::cos(pitch);
     double s_p = std::sin(pitch);
 
-    EarInv <<  c_p*c_y, -s_y,    0,
-               c_p*s_y,  c_y,    0,
-               -s_p,     0,      1;
+    Ear <<  c_p*c_y, -s_y,    0,
+            c_p*s_y,  c_y,    0,
+            -s_p,     0,      1;
 }
 
 /**
  * @brief rpyToEar Function to compute the linear tranformation matrix between
  * euler rates (in ZYX convention) and omega vector where omega is expressed
- * in base coordinates (is R*EarInv)
+ * in base coordinates (is R*EarWorld)
  * @param rpy
- * @return
+ * @return Ear
  */
-inline void rpyToEar(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
+inline void rpyToEarBase(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
 
     const double& roll = rpy(0);
     const double& pitch = rpy(1);
@@ -198,8 +192,34 @@ inline void rpyToEar(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
     double s_p = std::sin(pitch);
 
     Ear<< 1,   0,    -s_p,
-          0,   c_r,  c_p*s_r,
-          0,  -s_r,  c_p*c_r;
+            0,   c_r,  c_p*s_r,
+            0,  -s_r,  c_p*c_r;
+    /*Ear<< 1,   0,    s_p,
+          0,   c_r,  -c_p*s_r,
+          0,   s_r,  c_p*c_r;*/
+}
+
+/**
+ * @brief rpyToInvEar Function to compute the linear tranformation matrix between
+ * omega vector and euler rates (this computes the inverse matrix of rpyToEarBase
+ * @param rpy
+ * @return EarInv
+ */
+inline void rpyToEarBaseInv(const Eigen::Vector3d & rpy, Eigen::Matrix3d& EarInv){
+
+    const double& roll = rpy(0);
+    const double& pitch = rpy(1);
+
+    double c_r = std::cos(roll);
+    double s_r = std::sin(roll);
+
+    double c_p = std::cos(pitch);
+    double s_p = std::sin(pitch);
+
+    EarInv <<1, (s_p*s_r)/c_p,   (c_r*s_p)/c_p,
+             0,          c_r,         -s_r,
+             0,          s_r/c_p,   c_r/c_p;
+
 }
 
 /**

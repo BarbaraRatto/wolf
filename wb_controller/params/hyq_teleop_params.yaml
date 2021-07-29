@@ -51,3 +51,7 @@ wb_controller:
           Kp: {x: 300.0, y: 300.0, z: 300.0, roll: 100.0, pitch: 100.0, yaw: 100.0}
           Kd: {x: 50.0, y: 50.0, z: 50.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
 
+      waistZ:
+          Kp: {x: 0.0, y: 0.0, z: 100.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+          Kd: {x: 0.0, y: 0.0, z: 10.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+

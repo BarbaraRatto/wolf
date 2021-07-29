@@ -31,8 +31,8 @@ wb_controller:
       rh_hfe_joint: {p: 300.0, i: 0.0, d: 15.0}
       rh_kfe_joint: {p: 200.0, i: 0.0, d: 15.0}
 
-      kp_swing: {haa: 100.0, hfe: 100.0, kfe: 100.0}
-      kd_swing: {haa: 5.0, hfe: 5.0, kfe: 5.0}
+      kp_swing: {haa: 300.0, hfe: 300.0, kfe: 300.0}
+      kd_swing: {haa: 50.0, hfe: 50.0, kfe: 50.0}
 
       kp_stance: {haa: 400.0, hfe: 400.0, kfe: 400.0}
       kd_stance: {haa: 60.0, hfe: 60.0, kfe: 60.0}
@@ -40,5 +40,9 @@ wb_controller:
       waistRPY:
           Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 500.0, pitch: 300.0, yaw: 100.0}
           Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 20.0}
+
+      waistZ:
+          Kp: {x: 0.0, y: 0.0, z: 100.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+          Kd: {x: 0.0, y: 0.0, z: 10.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
 
 

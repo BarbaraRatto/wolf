@@ -456,10 +456,10 @@ void StateEstimator::updateFloatingBase(const double& period)
     }
 #ifdef ROBOT_REAL
     //IMU is in base frame in the real robot
-    rpyToEar(base_rpy_,mapRPYderivativesToOmega_);
+    rpyToEarBase(base_rpy_,mapRPYderivativesToOmega_);
 #else
     //IMU in gazebo is in the world frame
-    rpyToEarInv(base_rpy_,mapRPYderivativesToOmega_);
+    rpyToEarWorld(base_rpy_,mapRPYderivativesToOmega_);
 #endif
     // Map the omegas in the base into rpy derivatives and integrate
     base_rpy_ += (mapRPYderivativesToOmega_.inverse() * imu_gyroscope_) * period;

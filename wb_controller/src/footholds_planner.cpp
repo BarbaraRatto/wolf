@@ -344,12 +344,11 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
 
   base_position_ = base_linear_velocity_reference_ * period + base_position_;
 
-  base_position_reference_ = base_position_;
+  //base_position_reference_ = base_position_;
 
   // This is the base height reference computed w.r.t terrain ( reference = reference_world - reference_terrain )
-  //base_position_(2) = base_position_(2) + world_T_terrain_.translation().z();
-  // base_position_reference_.head(2) = base_position_.head(2);
-  //base_position_reference_(2) = base_position_(2) + world_T_terrain_.translation().z();
+  base_position_reference_.head(2) = base_position_.head(2);
+  base_position_reference_(2) = base_position_(2) + world_T_terrain_.translation().z();
 }
 
 void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
@@ -460,11 +459,6 @@ void FootholdsPlanner::decreaseStepHeight()
 void FootholdsPlanner::setComCorrection(const Eigen::Vector2d &delta_com)
 {
   delta_com_ = delta_com;
-}
-
-void FootholdsPlanner::setComVelocityRef(const Eigen::Vector3d &com_vel_ref)
-{
-  com_vel_ref_ = com_vel_ref;
 }
 
 void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrain)
@@ -701,8 +695,8 @@ bool PushRecovery::update(const double& period)
 
   velocity_filter_.setTimeStep(period);
 
-  cmd_velocity_(0) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(0);//footholds_planner_ptr_->com_vel_ref_(0);//footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(0);
-  cmd_velocity_(1) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);//footholds_planner_ptr_->com_vel_ref_(1);//footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);
+  cmd_velocity_(0) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(0);
+  cmd_velocity_(1) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);
   cmd_velocity_(2) = footholds_planner_ptr_->getBaseAngularVelocityReferenceHF()(2);
 
   footholds_planner_ptr_->robot_model_->getXBotModel()->getFloatingBaseTwist(base_twist_);

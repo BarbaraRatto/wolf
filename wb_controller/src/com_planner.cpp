@@ -17,8 +17,8 @@ ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Pt
 
   c_ = c_ref_ = c_filt_ = 1.0;
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/c",c_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_velocity_ref",com_velocity_ref_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_delta_xy",p0_);
 }
 
 void ComPlanner::update(double /*dt*/)
@@ -93,9 +93,6 @@ void ComPlanner::update(double /*dt*/)
 
   if(foothold_planner_->getGaitType() == Gait::CRAWL) // With the crawl the robot moves approx half the speed
     com_velocity_ref_ = 0.5 * com_velocity_ref_;
-
-  //com_position_ref_(2) = foothold_planner_->getBaseHeight();
-  foothold_planner_->setComVelocityRef(com_velocity_ref_);
 }
 
 const Eigen::Vector3d &ComPlanner::getComVelocity() const
