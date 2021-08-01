@@ -91,6 +91,16 @@ public:
     return duty_factor_;
   }
 
+  double getStancePeriod()
+  {
+    return T_stance_;
+  }
+
+  double getSwingPeriod()
+  {
+    return T_swing_;
+  }
+
   void update(const double& period, const bool& contact)
   {
 

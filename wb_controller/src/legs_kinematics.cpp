@@ -2,23 +2,21 @@
 
 namespace wb_controller {
 
-#define CLASS_NAME "LegsKinematics"
-
-LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model)
-  : clik_gain_(1.0), base_height_control_active_(false)
+LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
+  : base_height_control_active_(false), clik_gain_(1.0)
 {
 
   assert(gait_generator);
   gait_generator_ = gait_generator;
-  assert(xbot_model);
-  xbot_model_ = xbot_model;
+  assert(robot_model);
+  robot_model_ = robot_model;
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
-  xbot_model_->getRobotState("home", qhome_);
-  xbot_model_->setJointPosition(qhome_);
+  robot_model_->getXBotModel()->getRobotState("home", qhome_);
+  robot_model_->getXBotModel()->setJointPosition(qhome_);
 
-  xbot_model_->getJointLimits(qmin_, qmax_);
+  robot_model_->getXBotModel()->getJointLimits(qmin_, qmax_);
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
@@ -35,17 +33,19 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInt
 bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
 {
 
-  xbot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   base_height_ = tmp_affine3d_.translation()(2);
+
+  des_joint_positions_ = current_joint_positions;
 
   double delta_z = des_base_height_ - base_height_;
 
-  const std::vector<std::string>& feet_names = gait_generator_->getFeetNames();
+  const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
 
   for(unsigned int i = 0; i<feet_names.size(); i++)
   {
-    xbot_model_->getJacobian(feet_names[i],J_);
-    xbot_model_->getPose(feet_names[i],world_T_foot_);
+    robot_model_->getXBotModel()->getJacobian(feet_names[i],J_);
+    robot_model_->getXBotModel()->getPose(feet_names[i],world_T_foot_);
 
     J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*i);
 
@@ -72,7 +72,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
       if(base_height_control_active_)
       {
         x_err_ << 0, 0, -delta_z;
-        qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (clik_gain_ * x_err_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
+        xdot_ff_ << x_dot_adj_, 0, 0;
+        qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (clik_gain_ * x_err_ + xdot_ff_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
       }
 
       des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);  // Don't generate velocities for the feet in stance
@@ -82,6 +83,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   // Check if the desired positions are valid and clamp them
   jointLimitsCheck(des_joint_positions_,qmin_,qmax_);
+
+  return true;
 }
 
 void LegsKinematics::setClikGain(const double& clik_gain)
@@ -96,7 +99,6 @@ double LegsKinematics::getClikGain()
 {
   return clik_gain_;
 }
-
 
 const Eigen::VectorXd& LegsKinematics::getDesiredJointPositions()
 {
@@ -133,8 +135,10 @@ void LegsKinematics::reset()
   des_joint_positions_ = qhome_;
   qstance_ = qhome_;
   qswing_ = qhome_;
-  xbot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
+  xdot_ff_.setZero();
+  x_dot_adj_ = 0.0;
 }
 
 void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
@@ -153,13 +157,13 @@ bool LegsKinematics::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd&
         if(q(i)<qmin(i))
         {
             q(i) = qmin(i);
-            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the minimum limit of "<<qmin(i));
+            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the minimum limit of "<<qmin(i));
             violated_limits = true;
         }
         if(q(i)>qmax(i))
         {
             q(i) = qmax(i);
-            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum limit of "<<qmax(i));
+            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum limit of "<<qmax(i));
             violated_limits = true;
         }
     }
@@ -170,6 +174,11 @@ void LegsKinematics::setDesiredBaseHeight(const double& des_base_height)
 {
   // TODO Add checks
   des_base_height_ = des_base_height;
+}
+
+void LegsKinematics::setDesiredBaseAdjustmentDot(const double &x_dot)
+{
+  x_dot_adj_ = x_dot;
 }
 
 void LegsKinematics::activateBaseHeightControl()

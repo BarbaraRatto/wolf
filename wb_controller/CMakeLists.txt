@@ -1,33 +1,33 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0)
 project(wb_controller)
 
-# C++11
 include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-std=c++17" COMPILER_SUPPORTS_CXX17)
+check_cxx_compiler_flag("-std=c++14" COMPILER_SUPPORTS_CXX14)
 check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
 check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if(COMPILER_SUPPORTS_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+if(COMPILER_SUPPORTS_CXX17)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wmaybe-uninitialized -Wuninitialized")
+elseif(COMPILER_SUPPORTS_CXX14)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wmaybe-uninitialized -Wuninitialized")
+elseif(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wmaybe-uninitialized -Wuninitialized")
 elseif(COMPILER_SUPPORTS_CXX0X)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wmaybe-uninitialized -Wuninitialized")
 else()
-    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 nor C++14 support. Please use a different C++ compiler.")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
-
 # ROS
-find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardware_interface
-    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger)
+find_package(catkin REQUIRED tf controller_interface control_toolbox wb_hardware_interface
+    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger rt_gui)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
-#find_package(PkgConfig)
-find_package(RBDL REQUIRED)
-#pkg_check_modules(RBDL REQUIRED rbdl=2.5.0)
+find_package(XBotInterface REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
-  cfg/problem.cfg
   cfg/taskCartesian.cfg
   cfg/taskGeneric.cfg
   cfg/taskPostural.cfg
@@ -36,7 +36,10 @@ generate_dynamic_reconfigure_options(
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
-                 ContactForces.msg)
+                 ContactForces.msg
+                 FootHolds.msg
+                 TerrainEstimation.msg
+                 FrictionCones.msg)
 
 generate_messages(
     DEPENDENCIES
@@ -48,24 +51,18 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
 include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
+    ${XBotInterface_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
-    ${RBDL_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/legs_kinematics.cpp)
+add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp
+    src/legs_kinematics.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
-target_link_libraries(${PROJECT_NAME} #${RBDL_LIBRARIES}
-${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 add_dependencies(plot_node ${wb_controller_EXPORTED_TARGETS})
@@ -103,13 +100,13 @@ catkin_install_python(PROGRAMS scripts/keyboard_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if (CATKIN_ENABLE_TESTING)
-  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
+  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface wb_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
   find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
   add_executable(test_state_estimation test/test_state_estimation.cpp)
-  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
   add_executable(test_id_problem test/test_id_problem.cpp)
   target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)

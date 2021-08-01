@@ -5,10 +5,10 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
-#include <XBotInterface/ModelInterface.h>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
 #include <wb_controller/gait_generator.h>
+#include <wb_controller/quadruped_robot.h>
 
 namespace wb_controller
 {
@@ -16,6 +16,8 @@ namespace wb_controller
 class StateEstimator {
 
 public:
+
+    const std::string CLASS_NAME = "StateEstimator";
 
     /**
      * @brief Shared pointer to StateEstimator
@@ -29,7 +31,7 @@ public:
 
     enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z};
 
-    StateEstimator(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model);
+    StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
 
     //~StateEstimator()
 
@@ -47,6 +49,10 @@ public:
 
     void setJointEffort(const Eigen::VectorXd& joint_efforts);
 
+    void setTerrainNormal(const Eigen::Vector3d& terrain_normal);
+
+    void setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point);
+
     void setImuOrientation(const Eigen::Quaterniond& imu_orientation);
 
     void setImuGyroscope(const Eigen::Vector3d& imu_gyroscope);
@@ -63,6 +69,8 @@ public:
 
     void setContactThreshold(const double& th);
 
+    const Eigen::Vector3d& getComPosition() const;
+
     const Eigen::Affine3d& getFloatingBasePose() const;
 
     const Eigen::Vector3d& getFloatingBasePosition() const;
@@ -75,17 +83,21 @@ public:
 
     const std::string& getOrientationEstimationType();
 
-    const std::vector<Eigen::Vector3d>& getContactForces() const;
+    void setContactForces(const std::string &name, const Eigen::Vector3d force);
 
-    const std::vector<bool>& getContacts() const;
+    const std::map<std::string,Eigen::Vector3d>& getContactForces() const;
 
-    const std::vector<Eigen::Vector3d>& getFeetPositionInWorld() const;
+    const std::map<std::string,bool>& getContacts() const;
 
-    const std::vector<Eigen::Vector3d>& getFeetPositionInBase() const;
+    const std::map<std::string,Eigen::Vector3d>& getFeetPositionInWorld() const;
 
-    const std::vector<Eigen::Affine3d>& getFeetPoseInWorld() const;
+    const std::map<std::string,Eigen::Vector3d>& getFeetPositionInBase() const;
 
-    const std::vector<Eigen::Affine3d>& getFeetPoseInBase() const;
+    const std::map<std::string,Eigen::Affine3d>& getFeetPoseInWorld() const;
+
+    const std::map<std::string,Eigen::Affine3d>& getFeetPoseInBase() const;
+
+    const std::map<std::string, Eigen::Vector3d>& getContactPositionInWorld() const;
 
     void startContactsEstimation();
 
@@ -145,19 +157,29 @@ private:
     /** @brief Contact estimation */
     XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
     /** @brief Contact estimation */
-    std::vector<XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
-    /** @brief Feet positions w.r.t base */
-    std::vector<Eigen::Vector3d> base_X_foot_;
-    /** @brief Feet positions w.r.t world */
-    std::vector<Eigen::Vector3d> world_X_foot_;
-    /** @brief Feet pose w.r.t base */
-    std::vector<Eigen::Affine3d> base_T_foot_;
-    /** @brief Feet pose w.r.t world */
-    std::vector<Eigen::Affine3d> world_T_foot_;
+    std::map<std::string,XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
+    /** @brief Foot positions w.r.t base */
+    std::map<std::string,Eigen::Vector3d> base_X_foot_;
+    /** @brief Foot positions w.r.t world */
+    std::map<std::string,Eigen::Vector3d> world_X_foot_;
+    /** @brief Foot pose w.r.t base */
+    std::map<std::string,Eigen::Affine3d> base_T_foot_;
+    /** @brief Foot pose w.r.t world */
+    std::map<std::string,Eigen::Affine3d> world_T_foot_;
+    /** @brief Arm positions w.r.t base */
+    std::map<std::string,Eigen::Vector3d> base_X_arm_;
+    /** @brief Arm positions w.r.t world */
+    std::map<std::string,Eigen::Vector3d> world_X_arm_;
+    /** @brief Arm pose w.r.t base */
+    std::map<std::string,Eigen::Affine3d> base_T_arm_;
+    /** @brief Arm pose w.r.t world */
+    std::map<std::string,Eigen::Affine3d> world_T_arm_; 
+    /** @brief Contact positions w.r.t world */
+    std::map<std::string,Eigen::Vector3d> world_X_contact_;
     /** @brief GRF contacts */
-    std::vector<bool> contacts_;
+    std::map<std::string,bool> contacts_;
     /** @brief GRF contact forces */
-    std::vector<Eigen::Vector3d> contact_forces_;
+    std::map<std::string,Eigen::Vector3d> contact_forces_;
     /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
     is consired true */
     std::atomic<double> contact_force_th_;
@@ -167,6 +189,8 @@ private:
     std::atomic<bool> haptic_contact_loop_active_;
 
     Eigen::Vector3d terrain_normal_;
+
+    Eigen::Vector3d terrain_central_point_;
 
     Eigen::Matrix3d mapRPYderivativesToOmega_;
 
@@ -187,13 +211,15 @@ private:
 
     Eigen::Vector3d tmp_vector3d_;
 
-    XBot::ModelInterface::Ptr xbot_model_;
+    QuadrupedRobot::Ptr robot_model_;
 
     GaitGenerator::Ptr gait_generator_;
 
     std::atomic<unsigned int> estimation_orientation_;
 
     std::atomic<unsigned int> estimation_position_;
+
+    std::atomic<bool> use_external_forces_;
 
     /** @brief Base estimation */
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;

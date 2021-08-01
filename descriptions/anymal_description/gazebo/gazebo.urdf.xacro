@@ -6,7 +6,7 @@
 	<gazebo>
 		<plugin name="gazebo_ros_controller_manager" filename="libgazebo_ros_control.so">
                         <robotNamespace>/anymal</robotNamespace>
-			<robotSimType>dls_gazebo_interface/DlsRobotHwSim</robotSimType>
+			<robotSimType>wb_gazebo_interface/WbRobotHwSim</robotSimType>
                         <controlPeriod>$(arg task_period)</controlPeriod>
 		</plugin>
 

@@ -154,7 +154,7 @@
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="lf_thigh">
+    <link name="lf_upperleg">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -163,7 +163,7 @@
             <material name="anymal_material"/>    
         </visual>    
         <collision>      
-            <!-- thigh with heat fins -->      
+            <!-- upperleg with heat fins -->
             <origin rpy="0.145 0 0" xyz="0 0.035 -0.125"/>      
             <geometry>        
                 <box size="0.08 0.04 0.25"/>      
@@ -189,16 +189,16 @@
             <inertia ixx="0.0120367944369" ixy="6.762065206e-05" ixz="0.000287806340448" iyy="0.0120643637939" iyz="-0.00140610131218" izz="0.00249422574881"/>    
         </inertial>  
     </link>  
-    <!-- Thigh joint -->  
+    <!-- upperleg joint -->
     <joint name="lf_hfe_joint" type="revolute">
         <parent link="lf_hip"/>
-        <child link="lf_thigh"/>
+        <child link="lf_upperleg"/>
         <origin xyz="0.0635                    0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="lf_shank">
+    <link name="lf_lowerleg">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -218,18 +218,18 @@
             <inertia ixx="0.0002104880248" ixy="-5.6750980345e-05" ixz="1.0127699391e-05" iyy="0.000676270210023" iyz="-8.22869024e-07" izz="0.000545032674924"/>    
         </inertial>  
     </link>  
-    <!-- Shank joint -->  
+    <!-- lowerleg joint -->
     <joint name="lf_kfe_joint" type="revolute">
-        <parent link="lf_thigh"/>
-        <child link="lf_shank"/>
+        <parent link="lf_upperleg"/>
+        <child link="lf_lowerleg"/>
         <origin xyz="0.0 0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <!-- Shank to Adapter joint -->  
-    <joint name="lf_shank_to_adapter" type="fixed">
-        <parent link="lf_shank"/>
+    <!-- lowerleg to Adapter joint -->
+    <joint name="lf_lowerleg_to_adapter" type="fixed">
+        <parent link="lf_lowerleg"/>
         <child link="lf_adapter"/>
         <origin rpy="0.0 0.0 0.0" xyz="0.1 -0.02 0.0"/>  
     </joint>  
@@ -307,7 +307,7 @@
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="rf_tigh">
+    <link name="rf_upperleg">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -316,7 +316,7 @@
             <material name="anymal_material"/>    
         </visual>    
         <collision>      
-            <!-- thigh with heat fins -->      
+            <!-- upperleg with heat fins -->
             <origin rpy="-0.145 0 0" xyz="0 -0.035 -0.125"/>      
             <geometry>        
                 <box size="0.08 0.04 0.25"/>      
@@ -342,16 +342,16 @@
             <inertia ixx="0.0120367944369" ixy="-6.762065206e-05" ixz="0.000287806340448" iyy="0.0120643637939" iyz="0.00140610131218" izz="0.00249422574881"/>    
         </inertial>  
     </link>  
-    <!-- Thigh joint -->  
+    <!-- upperleg joint -->
     <joint name="rf_hfe_joint" type="revolute">
         <parent link="rf_hip"/>
-        <child link="rf_tigh"/>
+        <child link="rf_upperleg"/>
         <origin xyz="0.0635                    -0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="rf_shank">
+    <link name="rf_lowerleg">
         <visual>      
             <origin rpy="0 0 0.0" xyz="0 0 0"/>      
             <geometry>        
@@ -371,18 +371,18 @@
             <inertia ixx="0.0002104880248" ixy="5.6750980345e-05" ixz="1.0127699391e-05" iyy="0.000676270210023" iyz="8.22869024e-07" izz="0.000545032674924"/>    
         </inertial>  
     </link>  
-    <!-- Shank joint -->  
+    <!-- lowerleg joint -->
     <joint name="rf_kfe_joint" type="revolute">
-        <parent link="rf_tigh"/>
-        <child link="rf_shank"/>
+        <parent link="rf_upperleg"/>
+        <child link="rf_lowerleg"/>
         <origin xyz="0.0 -0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <!-- Shank to Adapter joint -->  
-    <joint name="rf_shank_to_adapter" type="fixed">
-        <parent link="rf_shank"/>
+    <!-- lowerleg to Adapter joint -->
+    <joint name="rf_lowerleg_to_adapter" type="fixed">
+        <parent link="rf_lowerleg"/>
         <child link="rf_adapter"/>
         <origin rpy="-0.0 0.0 -0.0" xyz="0.1 0.02 0.0"/>  
     </joint>  
@@ -460,7 +460,7 @@
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="lh_thigh">
+    <link name="lh_upperleg">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -469,7 +469,7 @@
             <material name="anymal_material"/>    
         </visual>    
         <collision>      
-            <!-- thigh with heat fins -->      
+            <!-- upperleg with heat fins -->
             <origin rpy="0.145 0 0" xyz="0 0.035 -0.125"/>      
             <geometry>        
                 <box size="0.08 0.04 0.25"/>      
@@ -495,16 +495,16 @@
             <inertia ixx="0.0120367944369" ixy="-6.762065206e-05" ixz="-0.000287806340448" iyy="0.0120643637939" iyz="-0.00140610131218" izz="0.00249422574881"/>    
         </inertial>  
     </link>  
-    <!-- Thigh joint -->  
+    <!-- upperleg joint -->
     <joint name="lh_hfe_joint" type="revolute">
         <parent link="lh_hip"/>
-        <child link="lh_thigh"/>
+        <child link="lh_upperleg"/>
         <origin xyz="-0.0635                    0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="lh_shank">
+    <link name="lh_lowerleg">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -524,18 +524,18 @@
             <inertia ixx="0.0002104880248" ixy="5.6750980345e-05" ixz="-1.0127699391e-05" iyy="0.000676270210023" iyz="-8.22869024e-07" izz="0.000545032674924"/>    
         </inertial>  
     </link>  
-    <!-- Shank joint -->  
+    <!-- lowerleg joint -->
     <joint name="lh_kfe_joint" type="revolute">
-        <parent link="lh_thigh"/>
-        <child link="lh_shank"/>
+        <parent link="lh_upperleg"/>
+        <child link="lh_lowerleg"/>
         <origin xyz="-0.0 0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <!-- Shank to Adapter joint -->  
-    <joint name="lh_shank_to_adapter" type="fixed">
-        <parent link="lh_shank"/>
+    <!-- lowerleg to Adapter joint -->
+    <joint name="lh_lowerleg_to_adapter" type="fixed">
+        <parent link="lh_lowerleg"/>
         <child link="lh_adapter"/>
         <origin rpy="0.0 -0.0 -0.0" xyz="-0.1 -0.02 0.0"/>  
     </joint>  
@@ -613,7 +613,7 @@
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="rh_thigh">
+    <link name="rh_upperleg">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -622,7 +622,7 @@
             <material name="anymal_material"/>    
         </visual>    
         <collision>      
-            <!-- thigh with heat fins -->      
+            <!-- upperleg with heat fins -->
             <origin rpy="-0.145 0 0" xyz="0 -0.035 -0.125"/>      
             <geometry>        
                 <box size="0.08 0.04 0.25"/>      
@@ -648,16 +648,16 @@
             <inertia ixx="0.0120367944369" ixy="6.762065206e-05" ixz="-0.000287806340448" iyy="0.0120643637939" iyz="0.00140610131218" izz="0.00249422574881"/>    
         </inertial>  
     </link>  
-    <!-- Thigh joint -->  
+    <!-- upperleg joint -->
     <joint name="rh_hfe_joint" type="revolute">
         <parent link="rh_hip"/>
-        <child link="rh_thigh"/>
+        <child link="rh_upperleg"/>
         <origin xyz="-0.0635                    -0.041                    0.0"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <link name="rh_shank">
+    <link name="rh_lowerleg">
         <visual>      
             <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>      
             <geometry>        
@@ -677,18 +677,18 @@
             <inertia ixx="0.0002104880248" ixy="-5.6750980345e-05" ixz="-1.0127699391e-05" iyy="0.000676270210023" iyz="8.22869024e-07" izz="0.000545032674924"/>    
         </inertial>  
     </link>  
-    <!-- Shank joint -->  
+    <!-- lowerleg joint -->
     <joint name="rh_kfe_joint" type="revolute">
-        <parent link="rh_thigh"/>
-        <child link="rh_shank"/>
+        <parent link="rh_upperleg"/>
+        <child link="rh_lowerleg"/>
         <origin xyz="-0.0 -0.109 -0.25"/>    
         <axis xyz="0 1 0"/>    
         <limit command_effort="40" current="10" effort="80" gear_velocity="10" lower="-9.42" upper="9.42" velocity="15.0"/>    
         <dynamics damping="0.0" friction="0.0"/>  
     </joint>  
-    <!-- Shank to Adapter joint -->  
-    <joint name="rh_shank_to_adapter" type="fixed">
-        <parent link="rh_shank"/>
+    <!-- lowerleg to Adapter joint -->
+    <joint name="rh_lowerleg_to_adapter" type="fixed">
+        <parent link="rh_lowerleg"/>
         <child link="rh_adapter"/>
         <origin rpy="-0.0 -0.0 0.0" xyz="-0.1 0.02 0.0"/>  
     </joint>  

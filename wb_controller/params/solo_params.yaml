@@ -1,0 +1,43 @@
+wb_controller:
+  type: wb_controller/Controller
+  default_duty_factor: 0.3
+  default_swing_frequency: 4.2
+  default_contact_threshold: 4.0
+  default_base_linear_velocity: 0.25
+  default_base_angular_velocity: 0.2
+  default_step_height: 0.065
+  max_step_height: 0.15
+  max_step_length: 0.5
+  estimation_position_type: estimated_z
+  estimation_orientation_type: ground_truth
+  gains:
+
+      clik_gain: 1.0
+
+      lf_haa_joint: {p: 1.0, i: 0.0, d: 0.5}
+      lf_hfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+      lf_kfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+
+      rf_haa_joint: {p: 1.0, i: 0.0, d: 0.5}
+      rf_hfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+      rf_kfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+
+      lh_haa_joint: {p: 1.0, i: 0.0, d: 0.5}
+      lh_hfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+      lh_kfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+
+      rh_haa_joint: {p: 1.0, i: 0.0, d: 0.5}
+      rh_hfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+      rh_kfe_joint: {p: 3.0, i: 0.0, d: 0.8}
+
+      kp_swing: {haa: 5.0, hfe: 5.0, kfe: 5.0}
+      kd_swing: {haa: 0.5, hfe: 0.5, kfe: 0.5}
+
+      kp_stance: {haa: 10.0, hfe: 10.0, kfe: 10.0}
+      kd_stance: {haa: 0.5, hfe: 0.5, kfe: 0.5}
+
+      waistRPY:
+          Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 24.0, pitch: 14.0, yaw: 8.0}
+          Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 5.0, pitch: 3.0, yaw: 1.0}
+
+

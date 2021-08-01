@@ -5,24 +5,23 @@
 #include <vector>
 #include <assert.h>
 #include <rt_logger/rt_logger.h>
+#include <rt_gui/rt_gui_client.h>
 #include <XBotInterface/TypedefAndEnums.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include <wb_controller/quadruped_robot.h>
 
 namespace wb_controller
 {
-
-//#define STACK_1
-//#define STACK_2
-//#define STACK_3
-//#define STACK_4
-#define STACK_5
 //#define ROBOT_REAL
-#define REACHING_MOTION
-
+#define GRAVITY 9.81
+//#define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6
-#define N_LEGS 4
+#define N_LEGS 4 // Fixed number of legs supported
+#define N_ARMS 1 // Fixed number of arms supported
 #define THREADS_SLEEP_TIME_ms 4
+#define BASE_LINK_FRAME_NAME "base_link"
+
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
 // stays in the same position because the feet don't move relatively to the base anymore. There is no reset!
 //#define OPEN_LOOP_TRAJECTORY
@@ -68,6 +67,13 @@ inline void vector6dToTwist(const Eigen::Vector6d& vector6d, geometry_msgs::Twis
     twist.angular.z = vector6d(5);
 }
 
+inline void vector3dToVector3(const Eigen::Vector3d& vector3d, geometry_msgs::Vector3& vector3)
+{
+    vector3.x = vector3d.x();
+    vector3.y = vector3d.y();
+    vector3.z = vector3d.z();
+}
+
 template <typename T>
 inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)
 { 
@@ -81,7 +87,7 @@ extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
 extern std::vector<std::string> _joints_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
-inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
+inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
     // Sort the names following order
     assert(names.size() == N_LEGS);
@@ -93,6 +99,22 @@ inline std::vector<std::string> sortByLegName(const std::vector<std::string>& na
                 ordered_names[j] = names[i];
 
     return ordered_names;
+}
+
+inline QuadrupedRobot* createRobotModel(ros::NodeHandle& root_nh)
+{
+  // Create the quadruped robot object, it wraps the xbot model with some meta information
+  std::string urdf, srdf;
+  if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
+  {
+      throw std::runtime_error("No robot_description given in namespace /");
+  }
+  if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
+  {
+      throw std::runtime_error("No robot_semantic_description given in namespace /");
+  }
+
+  return new wb_controller::QuadrupedRobot(urdf,srdf);
 }
 
 class Trigger
@@ -146,6 +168,96 @@ public:
 private:
     double axis_old_value_;
     status_t status_;
+
+};
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+class AvgFilter
+{
+public:
+    typedef std::shared_ptr<AvgFilter> Ptr;
+
+
+    AvgFilter(unsigned int n=10)
+    {
+       n_ = n;
+       avg_ = 0.0;
+    }
+
+    double update(double value)
+    {
+        avg_ = (avg_ * (n_-1) + value) / n_;
+        return avg_;
+    }
+
+    void setN(const unsigned int& n)
+    {
+      assert(n>0);
+      n_ = n;
+    }
+
+    void reset()
+    {
+      avg_ = 0.0;
+    }
+
+
+private:
+
+    unsigned int n_;
+    double avg_;
+
+};
+
+class MovingAvgFilter
+{
+
+public:
+  typedef std::shared_ptr<MovingAvgFilter> Ptr;
+
+  MovingAvgFilter(unsigned int n)
+  {
+    window_.resize(n);
+    for(unsigned int i=0; i<n; i++)
+      window_[i] = 0.0;
+    window_idx_ = 0;
+    sum_ = 0.0;
+    filter_complete_ = false;
+  }
+
+  double update(double value)
+  {
+      unsigned int n = window_.size();
+      double res = 0.0;
+
+      sum_ -= window_[window_idx_];
+      sum_ += value;
+      window_[window_idx_] = value;
+
+      if (!filter_complete_ && window_idx_ == n - 1) {
+          filter_complete_ = true;
+        }
+        if (filter_complete_) {
+          res = sum_ / n;
+        } else {
+          res = sum_ / (window_idx_+1);
+        }
+
+      window_idx_ = (window_idx_+1) % n;
+
+      return res;
+  }
+
+private:
+
+  double sum_;
+  std::vector<double> window_;
+  unsigned int window_idx_;
+  bool filter_complete_;
+
 
 };
 
