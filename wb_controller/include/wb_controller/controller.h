@@ -14,8 +14,8 @@
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
-#include <dls_hardware_interface/ground_truth_interface.h>
-#include <dls_hardware_interface/contact_switch_sensor_interface.h>
+#include <wb_hardware_interface/ground_truth_interface.h>
+#include <wb_hardware_interface/contact_switch_sensor_interface.h>
 // STD
 #include <atomic>
 #include <thread>

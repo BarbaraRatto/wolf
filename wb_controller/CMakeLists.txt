@@ -19,7 +19,7 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardware_interface
+find_package(catkin REQUIRED tf controller_interface control_toolbox wb_hardware_interface
     realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger rt_gui)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
@@ -100,7 +100,7 @@ catkin_install_python(PROGRAMS scripts/keyboard_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if (CATKIN_ENABLE_TESTING)
-  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
+  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface wb_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
   find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})

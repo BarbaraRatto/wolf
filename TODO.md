@@ -3,6 +3,7 @@
 - Export to params the push recovery
 - Move terrain estimator inside state estimator as a subclass
 - Remove dynamic reconfigure
+- Clean wb_robot_hw, parse hardcoded info from urdf/srdf
 - Move odom thread to state_estimator
 - Postural gains still in the controller... fix!
 - add trajectory for arm
@@ -13,7 +14,6 @@
 - Experiments on the real robot
 - Fix device interface Add XBOX
 - IK with joint limits
-- change names dls
 - step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
