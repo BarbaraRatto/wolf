@@ -5,9 +5,10 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-#define CLASS_NAME "TerrainEstimator"
-
-TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstimator::Ptr state_estimator)
+TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator,
+                                   StateEstimator::Ptr state_estimator,
+                                   LegsKinematics::Ptr kin,
+                                   FootholdsPlanner::Ptr foot_holds_planner)
 {
 
   assert(gait_generator);
@@ -15,6 +16,14 @@ TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstim
 
   assert(state_estimator);
   state_estimator_ = state_estimator;
+
+  assert(kin);
+  kin_ = kin;
+
+  assert(foot_holds_planner);
+  foot_holds_planner_ = foot_holds_planner;
+
+  foot_positions_ = state_estimator_->getFeetPositionInWorld();
 
   update_ = false;
 
@@ -31,17 +40,13 @@ TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstim
   R_.setIdentity();
   T_.setIdentity();
 
-  feet_position_.resize(N_LEGS);
-
   base_adjustment_ = base_adjustment_prev_ = base_adjustment_dot_ = 0.0;
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/terrain_normal",terrain_normal_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/roll",roll_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/pitch",pitch_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/base_adjustment",base_adjustment_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/base_adjustment_dot",base_adjustment_dot_);
-
-
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/terrain_normal",terrain_normal_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/roll",roll_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/pitch",pitch_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_adjustment",base_adjustment_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_adjustment_dot",base_adjustment_dot_);
 }
 
 
@@ -59,7 +64,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
     update_ = true;
 
   // 1 - Check if the feet are all in stance
-  if(gait_generator_->allFeetInStance())
+  if(gait_generator_->isAllFeetInStance())
   {
 
     if(update_ == true)
@@ -128,6 +133,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   // 9 - Update the state estimator (to align the contact forces with the
   // terrain)
   state_estimator_->setTerrainNormal(terrain_normal_);
+  state_estimator_->setTerrainCentralPoint(pos_);
 
   // 10 - Base adjustment, compute the offsets to help adapting the posture based
   // on the terrain, for now, we compute only an adjustment along the x axis.
@@ -136,6 +142,10 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   base_adjustment_dot_ = (base_adjustment_ - base_adjustment_prev_)/dt;
   base_adjustment_prev_ = base_adjustment_;
 
+  kin_->setDesiredBaseAdjustmentDot(base_adjustment_dot_);
+
+  // 11 - Adjust the references for the desired base height and orientation (roll and pitch)
+  foot_holds_planner_->setTerrainTransform(T_);
 
   return true;
 }
@@ -153,41 +163,42 @@ double TerrainEstimator::getBaseAdjustmentDot() const
 void TerrainEstimator::update()
 {
 
-  feet_position_ = state_estimator_->getFeetPositionInWorld();
+  auto foot_names = gait_generator_->getFootNames();
+  foot_positions_ = state_estimator_->getFeetPositionInWorld();
 
-  A_(0,0) = feet_position_[0](0);
-  A_(0,1) = feet_position_[0](1);
+  A_(0,0) = foot_positions_[foot_names[0]](0);
+  A_(0,1) = foot_positions_[foot_names[0]](1);
   A_(0,2) = 1.0;
-  b_(0)   = -feet_position_[0](2);
+  b_(0)   = -foot_positions_[foot_names[0]](2);
 
-  A_(1,0) = feet_position_[1](0);
-  A_(1,1) = feet_position_[1](1);
+  A_(1,0) = foot_positions_[foot_names[1]](0);
+  A_(1,1) = foot_positions_[foot_names[1]](1);
   A_(1,2) = 1.0;
-  b_(1)   = -feet_position_[1](2);
+  b_(1)   = -foot_positions_[foot_names[1]](2);
 
-  A_(2,0) = feet_position_[2](0);
-  A_(2,1) = feet_position_[2](1);
+  A_(2,0) = foot_positions_[foot_names[2]](0);
+  A_(2,1) = foot_positions_[foot_names[2]](1);
   A_(2,2) = 1.0;
-  b_(2)   = -feet_position_[2](2);
+  b_(2)   = -foot_positions_[foot_names[2]](2);
 
-  A_(3,0) = feet_position_[3](0);
-  A_(3,1) = feet_position_[3](1);
+  A_(3,0) = foot_positions_[foot_names[3]](0);
+  A_(3,1) = foot_positions_[foot_names[3]](1);
   A_(3,2) = 1.0;
-  b_(3)   = -feet_position_[3](2);
+  b_(3)   = -foot_positions_[foot_names[3]](2);
 
   double avg_x = 0.0;
   double avg_y = 0.0;
   double avg_z = 0.0;
-  for(unsigned int i = 0; i<feet_position_.size(); i++)
+  for(unsigned int i = 0; i<foot_names.size(); i++)
   {
-    avg_x = avg_x + feet_position_[i](0);
-    avg_y = avg_y + feet_position_[i](1);
-    avg_z = avg_z + feet_position_[i](2);
+    avg_x = avg_x + foot_positions_[foot_names[i]](0);
+    avg_y = avg_y + foot_positions_[foot_names[i]](1);
+    avg_z = avg_z + foot_positions_[foot_names[i]](2);
   }
 
-  avg_x = avg_x/feet_position_.size();
-  avg_y = avg_y/feet_position_.size();
-  avg_z = avg_z/feet_position_.size();
+  avg_x = avg_x/N_LEGS;
+  avg_y = avg_y/N_LEGS;
+  avg_z = avg_z/N_LEGS;
 
   pos_ << avg_x, avg_y, avg_z;
 
@@ -240,7 +251,17 @@ const Eigen::Matrix3d& TerrainEstimator::getOrientation() const
 
 const Eigen::Affine3d& TerrainEstimator::getPose() const
 {
-    return T_;
+  return T_;
+}
+
+const std::map<string, Eigen::Vector3d>& TerrainEstimator::getFootPositions() const
+{
+  return foot_positions_;
+}
+
+Eigen::Vector3d& TerrainEstimator::getFootPosition(const std::string& foot_name)
+{
+  return foot_positions_[foot_name];
 }
 
 const Eigen::Vector3d& TerrainEstimator::getPosition() const
@@ -251,11 +272,6 @@ const Eigen::Vector3d& TerrainEstimator::getPosition() const
 const Eigen::Vector3d& TerrainEstimator::getTerrainNormal() const
 {
     return terrain_normal_;
-}
-
-const std::vector<Eigen::Vector3d>& TerrainEstimator::getFeetPosition() const
-{
-    return feet_position_;
 }
 
 } // namespace

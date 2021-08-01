@@ -28,6 +28,7 @@
 #include <wb_controller/footholds_planner.h>
 #include <wb_controller/com_planner.h>
 #include <wb_controller/state_estimator.h>
+#include <wb_controller/terrain_estimator.h>
 #include <wb_controller/id_problem.h>
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/devices/interface.h>
@@ -44,6 +45,8 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
                                                                          hardware_interface::ContactSwitchSensorInterface>
 {
 public:
+
+     const std::string CLASS_NAME = "Controller";
 
     /**
      * @brief Shared pointer to Controller
@@ -174,6 +177,11 @@ public:
     LegsKinematics* getLegsKinematics() const;
 
     /**
+         * @brief Get the terrain estimator pointer
+         */
+    TerrainEstimator* getTerrainEstimator() const;
+
+    /**
          * @brief Get Robot Model
          */
     QuadrupedRobot* getRobotModel() const;
@@ -254,6 +262,8 @@ private:
     std::shared_ptr<std::thread> odom_publisher_thread_;
     /** @brief Gait generator */
     GaitGenerator::Ptr gait_generator_;
+    /** @brief Terrain Estimator */
+    TerrainEstimator::Ptr terrain_estimator_;
     /** @brief Legs Kinematics */
     LegsKinematics::Ptr kin_;
     /** @brief Ros node handle */

@@ -20,8 +20,6 @@ using namespace rt_gui;
 
 namespace wb_controller {
 
-#define CLASS_NAME "Controller"
-
 std::vector<std::string> _dof_names = {}; // To be loaded from the robot model
 std::vector<std::string> _cartesian_names = {"x","y","z","roll","pitch","yaw"}; // This is our standard cartesian dofs order
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
@@ -237,12 +235,19 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),Gait::TROT,"ellipse"));
   foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
-  com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_));
 
   kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
   kin_->setClikGain(default_clik_gain);
   kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
+
+  terrain_estimator_.reset(new TerrainEstimator(gait_generator_,state_estimator_,kin_,foot_holds_planner_));
+  terrain_estimator_->setMaxRoll(M_PI);
+  terrain_estimator_->setMinRoll(-M_PI);
+  terrain_estimator_->setMaxPitch(M_PI);
+  terrain_estimator_->setMinPitch(-M_PI);
+
+  com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_,terrain_estimator_));
 
   device_handler_.reset(new JoyHandler(controller_nh,this));
 
@@ -272,15 +277,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   // Spawn the odom publisher thread
   odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope",imu_gyroscope_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/imu_gyroscope_filt",imu_gyroscope_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_",joint_velocities_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/joint_velocities_filt",joint_velocities_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_solver",des_joint_efforts_solver_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts_pids",des_joint_efforts_pids_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_joint_efforts",des_joint_efforts_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/des_base_rpy",des_base_rpy_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/period",period_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_",joint_velocities_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_pids_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
 
   ros_wrapper_.reset(new ControllerRosWrapper(root_nh,controller_nh,this));
 
@@ -499,6 +504,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
   state_estimator_->update(period.toSec());
 
+  terrain_estimator_->computeTerrainEstimation(period.toSec());
+
   if(solver_started_) // Use the ID solver to calculate the torques
   {
     if(!init_done_) // FIXME Prepare a proper start up and rest procedure
@@ -537,6 +544,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Set the velocity and position reference for the Com
     com_planner_->update(period.toSec());
     id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
+
+    id_prob_->setFrictionConesR(terrain_estimator_->getOrientation().transpose());
 
     if(inertia_compensation_active_)
     {
@@ -720,6 +729,11 @@ StateEstimator* Controller::getStateEstimator() const
 FootholdsPlanner* Controller::getFootholdsPlanner() const
 {
   return foot_holds_planner_.get();
+}
+
+TerrainEstimator* Controller::getTerrainEstimator() const
+{
+  return terrain_estimator_.get();
 }
 
 LegsKinematics* Controller::getLegsKinematics() const

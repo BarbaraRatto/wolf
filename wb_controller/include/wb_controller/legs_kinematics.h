@@ -15,6 +15,8 @@ class LegsKinematics
 
 public:
 
+  const std::string CLASS_NAME = "LegsKinematics";
+
   /**
    * @brief Shared pointer to LegsKinematics
    */
@@ -36,6 +38,8 @@ public:
   bool update(const double& period, const Eigen::VectorXd& current_joint_positions);
 
   void setDesiredBaseHeight(const double& des_base_height);
+
+  void setDesiredBaseAdjustmentDot(const double& x_dot);
 
   bool setJointHomePositions(Eigen::VectorXd& qhome);
 
@@ -82,6 +86,7 @@ private:
   std::atomic<double> clik_gain_;
 
   std::atomic<double> des_base_height_;
+  std::atomic<double> x_dot_adj_;
   double base_height_;
 
   /** @brief Stance joints position */
@@ -100,6 +105,8 @@ private:
   Eigen::VectorXd qmax_;
   /** @brief Feet pose w.r.t world */
   Eigen::Affine3d world_T_foot_;
+  /** @brief Feed forward term in the clik control loop */
+  Eigen::Vector3d xdot_ff_;
 
   Eigen::MatrixXd J_;
   Eigen::MatrixXd J_foot_;

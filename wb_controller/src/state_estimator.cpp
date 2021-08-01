@@ -5,8 +5,6 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-#define CLASS_NAME "StateEstimator"
-
 StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
 {
 
@@ -35,7 +33,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   floating_base_position_ = Eigen::Vector3d::Zero();
   floating_base_velocity_ = Eigen::Vector6d::Zero();
   floating_base_pose_ = Eigen::Affine3d::Identity();
-  terrain_normal_ << 0,0,1; // TODO terrain estimation
+  terrain_normal_ << 0,0,1;
   imu_orientation_.normalize();
   floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
   contacts_estimation_active_ = false;
@@ -100,12 +98,12 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
     force_torque_sensors_[contact_names[i]] = force_estimation_->add_link(contact_names[i],dofs,chain);
   }
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/floating_base_position",floating_base_position_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity",floating_base_velocity_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/floating_base_velocity_qp",floating_base_velocity_qp_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/base_rpy",base_rpy_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/actual_height",floating_base_position_(2));
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/com",com_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/floating_base_position",floating_base_position_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/floating_base_velocity",floating_base_velocity_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/floating_base_velocity_qp",floating_base_velocity_qp_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_rpy",base_rpy_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/actual_height",floating_base_position_(2));
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/com",com_);
 }
 
 void StateEstimator::setEstimationType(const std::string& position_t, const std::string& orientation_t)
@@ -159,6 +157,16 @@ void StateEstimator::setJointVelocity(const Eigen::VectorXd& joint_velocities)
 void StateEstimator::setJointEffort(const Eigen::VectorXd& joint_efforts)
 {
   joint_efforts_ = joint_efforts;
+}
+
+void StateEstimator::setTerrainNormal(const Eigen::Vector3d &terrain_normal)
+{
+  terrain_normal_ = terrain_normal;
+}
+
+void StateEstimator::setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point)
+{
+  terrain_central_point_ = terrain_central_point;
 }
 
 void StateEstimator::setImuOrientation(const Eigen::Quaterniond& imu_orientation)
@@ -535,7 +543,8 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
-    floating_base_position_ << gt_position_;
+    floating_base_position_.head(2) << gt_position_.head(2);
+    floating_base_position_(2) =  gt_position_(2) - terrain_central_point_(2); // Adjust the height wrt the terrain
     break;
   default:
     // The base does not move

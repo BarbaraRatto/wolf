@@ -7,6 +7,8 @@
 #include <atomic>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/gait_generator.h>
+#include <wb_controller/legs_kinematics.h>
+#include <wb_controller/footholds_planner.h>
 
 namespace wb_controller
 {
@@ -14,6 +16,8 @@ namespace wb_controller
 class TerrainEstimator {
 
 public:
+
+    const std::string CLASS_NAME = "TerrainEstimator";
 
     /**
      * @brief Shared pointer to TerrainEstimator
@@ -27,7 +31,10 @@ public:
 
     enum estimation_t {NONE=0,FLAT_TERRAIN,ROUGH_TERRAIN};
 
-    TerrainEstimator(GaitGenerator::Ptr gait_generator, StateEstimator::Ptr state_estimator);
+    TerrainEstimator(GaitGenerator::Ptr gait_generator,
+                     StateEstimator::Ptr state_estimator,
+                     LegsKinematics::Ptr kin,
+                     FootholdsPlanner::Ptr foot_holds_planner);
 
     void setEstimationType();
 
@@ -57,7 +64,9 @@ public:
 
     const Eigen::Affine3d& getPose() const;
 
-    const std::vector<Eigen::Vector3d>& getFeetPosition() const;
+    const std::map<std::string,Eigen::Vector3d>& getFootPositions() const;
+
+    Eigen::Vector3d& getFootPosition(const std::string &foot_name);
 
 private:
 
@@ -70,10 +79,11 @@ private:
     Eigen::Vector3d pos_;
     Eigen::Matrix3d R_;
     Eigen::Affine3d T_;
-    std::vector<Eigen::Vector3d> feet_position_;
 
     GaitGenerator::Ptr gait_generator_;
     StateEstimator::Ptr state_estimator_;
+    LegsKinematics::Ptr kin_;
+    FootholdsPlanner::Ptr foot_holds_planner_;
 
     double roll_;
     double pitch_;
@@ -101,6 +111,8 @@ private:
     double base_adjustment_dot_;
     double base_adjustment_dot_filt_;
     double base_adjustment_prev_;
+
+    std::map<std::string,Eigen::Vector3d> foot_positions_;
 
     /** @brief Trigger the update of the terrain estimator */
     bool update_;

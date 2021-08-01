@@ -5,6 +5,7 @@
 #include <Eigen/Core>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/footholds_planner.h>
+#include <wb_controller/terrain_estimator.h>
 
 namespace wb_controller
 {
@@ -13,6 +14,8 @@ class ComPlanner
 {
 
 public:
+
+  const std::string CLASS_NAME = "ComPlanner";
 
   /**
    * @brief Shared pointer to ComPlanner
@@ -24,7 +27,7 @@ public:
    */
   typedef std::shared_ptr<const ComPlanner> ConstPtr;
 
-  ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner);
+  ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator);
 
   void update(double dt);
 
@@ -38,6 +41,7 @@ private:
   std::vector<std::string> feet_order_;
   StateEstimator::Ptr state_estimator_;
   FootholdsPlanner::Ptr foothold_planner_;
+  TerrainEstimator::Ptr terrain_estimator_;
   Eigen::Vector3d com_velocity_ref_;
   Eigen::Vector3d com_position_ref_;
   Eigen::Vector3d base_X_com_;
@@ -45,6 +49,7 @@ private:
   Eigen::Vector2d p0_;
   Eigen::Vector2d p1_;
   Eigen::Vector2d p2_;
+  Eigen::Vector3d base_velocity_;
   Eigen::Vector2d base_velocity_xy_;
   Eigen::Vector2d base_velocity_xy_versor_;
   Eigen::Vector2d p_int_;

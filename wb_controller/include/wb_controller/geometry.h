@@ -70,12 +70,9 @@ inline void rotTorpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
  * @return the matrix \f${}_B R_A\f$
  *
 */
-inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
+inline void rpyToRot(const double& roll, const double& pitch, const double& yaw, Eigen::Matrix3d& R){
 
     R.setZero();
-    const double& roll = rpy(0);
-    const double& pitch = rpy(1);
-    const double& yaw = rpy(2);
 
     /*Rx <<	1   ,    0     	  ,  	  0,
             0   ,    cos(roll) ,  sin(roll),
@@ -107,6 +104,14 @@ inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
          s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*c_y  ,  s_r*c_p,
          c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*c_y  ,  c_r*c_p;
 
+}
+
+inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
+
+    const double& roll = rpy(0);
+    const double& pitch = rpy(1);
+    const double& yaw = rpy(2);
+    rpyToRot(roll,pitch,yaw,R);
 }
 
 inline void yawToRot(const double& yaw, Eigen::Matrix3d& R)

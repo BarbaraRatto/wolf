@@ -17,6 +17,9 @@ class PushRecovery
 {
 
 public:
+
+  const std::string CLASS_NAME = "PushRecovery";
+
   /**
    * @brief Shared pointer to PushRecovery
    */
@@ -33,9 +36,11 @@ public:
 private:
 
   FootholdsPlanner* footholds_planner_ptr_;
+  bool compute_deltas_;
   double base_mass_;
   double base_length_;
   double base_width_;
+  double base_inertia_z_;
   std::map<std::string,Eigen::Vector2d> deltas_;
   std::map<std::string,std::pair<int,int> > signs_;
   Eigen::Vector3d cmd_velocity_;
@@ -43,16 +48,19 @@ private:
   Eigen::Vector3d base_velocity_filt_;
   Eigen::Vector3d error_;
   double max_delta_;
-  bool robot_moving_;
-  bool prev_robot_moving_;
-
-  double th_;
+  Eigen::Vector6d base_twist_;
+  Eigen::Vector3d com_vel_hf_;
+  Eigen::Matrix3d I_hf_;
+  Eigen::VectorXd dynamic_th_dot_;
+  Eigen::VectorXd static_th_dot_;
+  Eigen::Vector3d th_dot_;
+  double cutoff_freq_;
   // Gains
   double K_pr_lx_;
   double K_pr_ly_;
   double K_pr_r_;
-
-  std::vector<AvgFilter> error_filter_;
+  // Support variables
+  double Sr_, Cr_, C2_pr_, C3_pr_, Z0h_, st_p_, C1_pr_;
 
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
 
@@ -65,6 +73,8 @@ class FootholdsPlanner
 {
 
 public:
+
+    const std::string CLASS_NAME = "FootholdsPlanner";
 
     /**
      * @brief Shared pointer to FootholdsPlanner
@@ -111,7 +121,9 @@ public:
     void decreaseStepHeight();
     void increaseSwingFrequency();
     void decreaseSwingFrequency();
-    void setComCorrection(const Eigen::Vector2d& delta_com) ;
+    void setComCorrection(const Eigen::Vector2d& delta_com);
+    void setComVelocityRef(const Eigen::Vector3d& com_vel_ref);
+    void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
 
     // Gets
     unsigned int getCmd();
@@ -207,6 +219,9 @@ private:
     Eigen::Matrix3d hf_R_base_;
 
     Eigen::Vector2d delta_com_;
+    Eigen::Vector3d com_vel_ref_;
+
+    Eigen::Affine3d world_T_terrain_;
 
     bool offsets_applied_;
 

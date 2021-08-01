@@ -17,6 +17,8 @@ class StateEstimator {
 
 public:
 
+    const std::string CLASS_NAME = "StateEstimator";
+
     /**
      * @brief Shared pointer to StateEstimator
      */
@@ -46,6 +48,10 @@ public:
     void setJointVelocity(const Eigen::VectorXd& joint_velocities);
 
     void setJointEffort(const Eigen::VectorXd& joint_efforts);
+
+    void setTerrainNormal(const Eigen::Vector3d& terrain_normal);
+
+    void setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point);
 
     void setImuOrientation(const Eigen::Quaterniond& imu_orientation);
 
@@ -91,7 +97,7 @@ public:
 
     const std::map<std::string,Eigen::Affine3d>& getFeetPoseInBase() const;
 
-    const std::map<std::string, Eigen::Vector3d> &getContactPositionInWorld() const;
+    const std::map<std::string, Eigen::Vector3d>& getContactPositionInWorld() const;
 
     void startContactsEstimation();
 
@@ -183,6 +189,8 @@ private:
     std::atomic<bool> haptic_contact_loop_active_;
 
     Eigen::Vector3d terrain_normal_;
+
+    Eigen::Vector3d terrain_central_point_;
 
     Eigen::Matrix3d mapRPYderivativesToOmega_;
 

@@ -4,13 +4,12 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-#define CLASS_NAME "ComPlanner"
-
-ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner)
+ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator)
 {
 
   state_estimator_ = state_estimator;
   foothold_planner_ = foothold_planner;
+  terrain_estimator_ = terrain_estimator;
 
   feet_order_ = {"rf_foot","rh_foot","lh_foot","lf_foot","rf_foot"};
   com_velocity_ref_.setZero();
@@ -18,8 +17,8 @@ ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Pt
 
   c_ = c_ref_ = c_filt_ = 1.0;
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/c",c_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME"/com_velocity_ref",com_velocity_ref_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/c",c_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_velocity_ref",com_velocity_ref_);
 }
 
 void ComPlanner::update(double /*dt*/)
@@ -43,7 +42,8 @@ void ComPlanner::update(double /*dt*/)
 
   foothold_planner_->setComCorrection(p0_);
 
-  base_velocity_xy_ = foothold_planner_->getBaseLinearVelocityReference().head(2);
+  base_velocity_ = foothold_planner_->getBaseLinearVelocityReference();
+  base_velocity_xy_ = base_velocity_.head(2);
   base_velocity_xy_versor_ = base_velocity_xy_ / base_velocity_xy_.norm();
 
   if(base_velocity_xy_.norm() > 0)
@@ -86,12 +86,16 @@ void ComPlanner::update(double /*dt*/)
   // Filter c
   c_ = secondOrderFilter(c_,c_filt_,c_ref_,0.5);
 
-  com_velocity_ref_.setZero();
-  com_velocity_ref_.head(2) = c_ * base_velocity_xy_;
+  //com_velocity_ref_.setZero();
+  //com_velocity_ref_.head(2) = c_ * base_velocity_xy_;
+
+  com_velocity_ref_ = terrain_estimator_->getPose().linear().transpose() * c_ * base_velocity_; // getPose(): world_T_terrain
+
   if(foothold_planner_->getGaitType() == Gait::CRAWL) // With the crawl the robot moves approx half the speed
     com_velocity_ref_ = 0.5 * com_velocity_ref_;
 
   //com_position_ref_(2) = foothold_planner_->getBaseHeight();
+  foothold_planner_->setComVelocityRef(com_velocity_ref_);
 }
 
 const Eigen::Vector3d &ComPlanner::getComVelocity() const

@@ -1,3 +1,0 @@
-std_msgs/Header header
-geometry_msgs/Vector3 position_actual
-geometry_msgs/Vector3 position_reference

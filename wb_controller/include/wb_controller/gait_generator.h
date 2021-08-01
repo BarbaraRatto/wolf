@@ -19,6 +19,8 @@ class Gait
 
 public:
 
+  const std::string CLASS_NAME = "Gait";
+
   enum gait_t {CRAWL=0,TROT,ONE_FOOT_LF,ONE_FOOT_RH,ONE_FOOT_RF,ONE_FOOT_LH};
 
   static inline std::string enum_to_string(const Gait::gait_t& gait_type)
@@ -127,6 +129,8 @@ private:
 class GaitGenerator
 {
 public:
+
+  const std::string CLASS_NAME = "GaitGenerator";
 
   /**
      * @brief Shared pointer to GaitGenerator
@@ -265,6 +269,14 @@ public:
     return result;
   }
 
+  bool isAllFeetInStance()
+  {
+    bool result = true;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      result = result && it->second.state_machine->isStance();
+    return result;
+  }
+
   void setContactState(const std::string& foot_name, const bool& contact)
   {
     feet_[foot_name].contact_state = contact;
@@ -360,10 +372,50 @@ public:
       it->second.trajectory->setStepLength(length);
   }
 
-  void setStepHeading(const double& heading)
+  void setStepRoll(const double& roll)
   {
     for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-      it->second.trajectory->setStepHeading(heading);
+      it->second.trajectory->setStepRoll(roll);
+  }
+
+  void setStepPitch(const double& pitch)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepPitch(pitch);
+  }
+
+  void setStepYaw(const double& yaw)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepYaw(yaw);
+  }
+
+  void setStepYaw(const std::string& foot_name, const double& yaw)
+  {
+    feet_[foot_name].trajectory->setStepYaw(yaw);
+  }
+
+  void setStepRollRate(const double& roll_rate)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepRollRate(roll_rate);
+  }
+
+  void setStepPitchRate(const double& pitch_rate)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepPitchRate(pitch_rate);
+  }
+
+  void setStepYawRate(const double& yaw_rate)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepYawRate(yaw_rate);
+  }
+
+  void setStepYawRate(const std::string& foot_name, const double& yaw_rate)
+  {
+    feet_[foot_name].trajectory->setStepYawRate(yaw_rate);
   }
 
   void setStepHeight(const double& height)
@@ -372,30 +424,14 @@ public:
       it->second.trajectory->setStepHeight(height);
   }
 
-  void setStepHeadingRate(const double& heading_rate)
-  {
-    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-      it->second.trajectory->setStepHeadingRate(heading_rate);
-  }
-
   void setStepLength(const std::string& foot_name, const double& length)
   {
     feet_[foot_name].trajectory->setStepLength(length);
   }
 
-  void setStepHeading(const std::string& foot_name, const double& heading)
-  {
-    feet_[foot_name].trajectory->setStepHeading(heading);
-  }
-
   void setStepHeight(const std::string& foot_name, const double& height)
   {
     feet_[foot_name].trajectory->setStepHeight(height);
-  }
-
-  void setStepHeadingRate(const std::string& foot_name, const double& heading_rate)
-  {
-    feet_[foot_name].trajectory->setStepHeadingRate(heading_rate);
   }
 
   void activateSwing()
@@ -445,7 +481,7 @@ public:
         }
         it->second.trajectory->update(period);
 
-        ROS_DEBUG_STREAM("Update trajectory for foot "<< it->first);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Update trajectory for foot "<< it->first);
       }
       else
       {
@@ -455,7 +491,7 @@ public:
         }
         it->second.trajectory->standBy();
 
-        ROS_DEBUG_STREAM("StandBy trajectory for foot "<< it->first);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"StandBy trajectory for foot "<< it->first);
       }
     }
 
@@ -495,7 +531,7 @@ private:
 
   TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
   {
-    ROS_INFO_STREAM("Selected " << trajectory_type << " trajectory");
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected " << trajectory_type << " trajectory");
     if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
     {
       return new Ellipse();
@@ -504,7 +540,7 @@ private:
     {
       throw std::runtime_error("Wrong trajectory type!");
     }
-    return NULL;
+    return nullptr;
   }
 
   typedef std::map<std::string,feet_status_t> feet_t;

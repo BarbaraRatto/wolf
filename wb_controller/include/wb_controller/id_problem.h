@@ -39,6 +39,8 @@ class IDProblem
 
 public:
 
+    const std::string CLASS_NAME = "IDProblem";
+
     typedef std::shared_ptr<IDProblem> Ptr;
 
     enum stacks_t {NONE=0,WALKING,MANIPULATION};
@@ -90,6 +92,12 @@ public:
      * @param mu value
      */
     void setFrictionConesMu(const double& mu);
+
+    /**
+     * @brief set the rotation matrix for the friction cones
+     * @param R 3d matrix
+     */
+    void setFrictionConesR(const Eigen::Matrix3d& R);
 
     /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
@@ -237,10 +245,11 @@ private:
     Eigen::Vector6d wrench_upper_lims_;
     Eigen::Vector6d wrench_lower_lims_;
 
-    std::atomic<double> mu_;
-    std::atomic<double> x_force_lower_lim_;
-    std::atomic<double> y_force_lower_lim_;
-    std::atomic<double> z_force_lower_lim_;
+    double x_force_lower_lim_;
+    double y_force_lower_lim_;
+    double z_force_lower_lim_;
+
+    OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
     std::atomic<unsigned int> current_stack_;
 
