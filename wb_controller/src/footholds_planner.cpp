@@ -653,23 +653,19 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
   max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
-  // FIXME to be exported
-  static_th_dot_.resize(3);
   static_th_dot_(0) = 0.05; // x [m/s]
   static_th_dot_(1) = 0.05; // y [m/s]
   static_th_dot_(2) = 0.05; // yaw [rad/s]
 
-  dynamic_th_dot_.resize(3);
   dynamic_th_dot_(0) = 0.5; // x [m/s]
   dynamic_th_dot_(1) = 0.5; // y [m/s]
   dynamic_th_dot_(2) = 0.5; // yaw [rad/s]
 
-  th_dot_ = static_th_dot_;
+  current_th_dot_ = static_th_dot_;
 
-  // FIXME to be exported
-  K_pr_lx_ = 0.1;
-  K_pr_ly_ = 0.1;
-  K_pr_r_  = 0.1;
+  k_x_    = 0.1;
+  k_y_    = 0.1;
+  k_yaw_  = 0.01;
 
   compute_deltas_ = true;
 
@@ -702,10 +698,10 @@ bool PushRecovery::update(const double& period)
   footholds_planner_ptr_->robot_model_->getXBotModel()->getFloatingBaseTwist(base_twist_);
   base_twist_.head(3) = footholds_planner_ptr_->world_R_hf_.transpose() * base_twist_.head(3);
 
-  // Note: we use the com instead of the base because we control the com
   footholds_planner_ptr_->robot_model_->getXBotModel()->getCOMVelocity(com_vel_hf_);
   com_vel_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * com_vel_hf_;
 
+  // Note: we could use the com instead of the base because we control the com
   base_velocity_(0) = base_twist_(0);//com_vel_hf_(0);
   base_velocity_(1) = base_twist_(1);//com_vel_hf_(1);
   base_velocity_(2) = base_twist_(5);
@@ -719,11 +715,11 @@ bool PushRecovery::update(const double& period)
   error_ = base_velocity_filt_ - cmd_velocity_;
 
   if(cmd_velocity_.norm() > 0.0) // Check if we are giving commands to the robot i.e. the robot is moving
-    th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
+    current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
   else
-    th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
+    current_th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
 
-  if(std::abs(error_(0)) < th_dot_(0) && std::abs(error_(1)) < th_dot_(1) && std::abs(error_(2)) < th_dot_(2))
+  if(std::abs(error_(0)) < current_th_dot_(0) && std::abs(error_(1)) < current_th_dot_(1) && std::abs(error_(2)) < current_th_dot_(2))
     push_detected = false;
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
@@ -742,8 +738,8 @@ bool PushRecovery::update(const double& period)
         st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
         C1_pr_ = Z0h_/GRAVITY/st_p_; //C1_pr should be positive
 
-        deltas_[foot_names[i]].x() = C1_pr_*(K_pr_lx_*(error_(0))+ signs_[foot_names[i]].first  * K_pr_r_*C2_pr_*(error_(2)));
-        deltas_[foot_names[i]].y() = C1_pr_*(K_pr_ly_*(error_(1))+ signs_[foot_names[i]].second * K_pr_r_*C3_pr_*(error_(2)));
+        deltas_[foot_names[i]].x() = C1_pr_*(k_x_*(error_(0))+ signs_[foot_names[i]].first  * k_yaw_*C2_pr_*(error_(2)));
+        deltas_[foot_names[i]].y() = C1_pr_*(k_y_*(error_(1))+ signs_[foot_names[i]].second * k_yaw_*C3_pr_*(error_(2)));
 
         if(deltas_[foot_names[i]].x() > max_delta_)
           deltas_[foot_names[i]].x() = max_delta_;
@@ -775,6 +771,22 @@ void PushRecovery::setMaxDelta(const double& max)
 {
   assert(max > 0);
   max_delta_ = max;
+}
+
+void PushRecovery::setVelocityThresholds(const Eigen::Vector3d &static_th, const Eigen::Vector3d &dynamic_th)
+{
+  static_th_dot_ = static_th;
+  dynamic_th_dot_ = dynamic_th;
+}
+
+void PushRecovery::setGains(const double &k_x, const double &k_y, const double &k_yaw)
+{
+  assert(k_x>0.0);
+  k_x_ = k_x;
+  assert(k_y>0.0);
+  k_y_ = k_y;
+  assert(k_yaw>0.0);
+  k_yaw_ = k_yaw;
 }
 
 

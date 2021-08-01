@@ -107,16 +107,16 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   if((roll_  > min_roll_ ) && (roll_  < max_roll_) &&
      (pitch_ > min_pitch_) && (pitch_ < max_pitch_))
   {
-      // 7 - Update the roll and pitch output values
-      roll_rate_ = (roll_out_ - roll_)/dt;
-      pitch_rate_ = (pitch_out_ - pitch_)/dt;
-      roll_out_  = roll_;
-      pitch_out_ = pitch_;
+    // 7 - Update the roll and pitch output values
+    roll_rate_ = (roll_out_ - roll_)/dt;
+    pitch_rate_ = (pitch_out_ - pitch_)/dt;
+    roll_out_  = roll_;
+    pitch_out_ = pitch_;
   }
   else
   {
-      ROS_WARN_STREAM_NAMED(CLASS_NAME,"Angles beyond limits!");
-      return false;
+    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Angles beyond limits!");
+    return false;
   }
 
   // Update the resulting Transformation
@@ -124,7 +124,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   T_.translation() = pos_;
   T_.linear() = R_; // world_T_terrain
 
-  // 8- Update the swing trajectories
+  // 8 - Update the swing trajectories
   gait_generator_->setStepRoll(roll_out_);
   gait_generator_->setStepPitch(pitch_out_);
   gait_generator_->setStepRollRate(roll_rate_);
@@ -206,47 +206,47 @@ void TerrainEstimator::update()
 
 void TerrainEstimator::setMinRoll(const double min)
 {
-    min_roll_ = min;
+  min_roll_ = min;
 }
 
 void TerrainEstimator::setMinPitch(const double min)
 {
-    min_pitch_ = min;
+  min_pitch_ = min;
 }
 
 void TerrainEstimator::setMaxRoll(const double max)
 {
-    max_roll_ = max;
+  max_roll_ = max;
 }
 
 void TerrainEstimator::setMaxPitch(const double max)
 {
-    max_pitch_ = max;
+  max_pitch_ = max;
 }
 
 double TerrainEstimator::getRoll() const
 {
-    return roll_out_;
+  return roll_out_;
 }
 
 double TerrainEstimator::getPitch() const
 {
-    return pitch_out_;
+  return pitch_out_;
 }
 
 double TerrainEstimator::getRollRate() const
 {
-    return roll_rate_;
+  return roll_rate_;
 }
 
 double TerrainEstimator::getPitchRate() const
 {
-    return pitch_rate_;
+  return pitch_rate_;
 }
 
 const Eigen::Matrix3d& TerrainEstimator::getOrientation() const
 {
-    return R_;
+  return R_;
 }
 
 const Eigen::Affine3d& TerrainEstimator::getPose() const
@@ -266,12 +266,12 @@ Eigen::Vector3d& TerrainEstimator::getFootPosition(const std::string& foot_name)
 
 const Eigen::Vector3d& TerrainEstimator::getPosition() const
 {
-    return pos_;
+  return pos_;
 }
 
 const Eigen::Vector3d& TerrainEstimator::getTerrainNormal() const
 {
-    return terrain_normal_;
+  return terrain_normal_;
 }
 
 } // namespace

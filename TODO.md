@@ -13,7 +13,7 @@
 - Experiments on the real robot
 - Fix device interface Add XBOX
 - IK with joint limits
-- change names dls -> wb ( can not because of the compatibility with the real hardware )
+- change names dls
 - step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
