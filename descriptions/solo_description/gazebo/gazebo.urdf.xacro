@@ -8,7 +8,7 @@
    
 
 			<robotNamespace>/solo</robotNamespace>
-			<robotSimType>dls_gazebo_interface/DlsRobotHwSim</robotSimType>
+			<robotSimType>wb_gazebo_interface/WbRobotHwSim</robotSimType>
             		<controlPeriod>$(arg task_period)</controlPeriod>
 
 		</plugin>

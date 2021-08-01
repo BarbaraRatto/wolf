@@ -2,8 +2,8 @@
 <launch>
         <arg name="sensors" default="true"/>
         <arg name="task_period" default="0.004"/>
-        <arg name="arm" default="false"/>
-
+        <arg name="arm_enabled" default="false"/>
+        <arg name="arm_name" default="teleop"/>
 
         <!-- Load the sensors that measured the internal wrench in the joints -->
         <arg name="internal_wrench" default="false"/>
