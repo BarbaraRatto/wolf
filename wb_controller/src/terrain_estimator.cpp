@@ -59,6 +59,10 @@ void TerrainEstimator::setEstimationType() // TODO
 bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 {
 
+  // Cleanup
+  roll_rate_ = 0.0;
+  pitch_rate_ = 0.0;
+
   // 0 - Update the terrain estimation everytime there is a touchdown
   if(gait_generator_->isAnyFootInTouchDown())
     update_ = true;
