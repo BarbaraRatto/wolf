@@ -171,36 +171,39 @@ public:
             controller_->toggleInertiaCompensation();
             break;
         case 2:
-            controller_->setDutyFactor(config.duty_factor);
+            controller_->getFootholdsPlanner()->togglePushRecovery();
             break;
         case 3:
-            controller_->setGaitType(config.gaits);
+            controller_->setDutyFactor(config.duty_factor);
             break;
         case 4:
+            controller_->setGaitType(config.gaits);
+            break;
+        case 5:
             controller_->setSwingFrequency(config.swing_frequency);
             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set swing frequency to "<< config.swing_frequency);
             break;
-        case 5:
+        case 6:
             controller_->getFootholdsPlanner()->setLinearVelocityCmd(config.base_linear_vel);
             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< config.base_linear_vel);
             break;
-        case 6:
+        case 7:
             controller_->getFootholdsPlanner()->setAngularVelocityCmd(config.base_angular_vel);
             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< config.base_angular_vel);
             break;
-        case 7:
+        case 8:
             controller_->getFootholdsPlanner()->setStepHeight(config.step_height);
              ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set step height to "<< config.step_height);
             break;
-        case 8:
+        case 9:
             controller_->getStateEstimator()->setContactThreshold(config.contact_force_th);
             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
             break;
-        case 9:
+        case 10:
             controller_->getLegsKinematics()->setClikGain(config.clik_gain);
             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.clik_gain);
             break;
-        case 10:
+        case 11:
             controller_->selectStack(config.stacks);
             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected stack "<< config.stacks);
             break;

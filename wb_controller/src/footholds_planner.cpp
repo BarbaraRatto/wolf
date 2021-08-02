@@ -390,6 +390,11 @@ void FootholdsPlanner::setInitialOffsets()
   }
 }
 
+void FootholdsPlanner::togglePushRecovery()
+{
+  push_recovery_->togglePushRecovery();
+}
+
 // Sets
 void FootholdsPlanner::setCmd(const unsigned int cmd)
 {
@@ -791,6 +796,15 @@ void PushRecovery::setGains(const double &k_x, const double &k_y, const double &
   k_y_ = k_y;
   assert(k_yaw>0.0);
   k_yaw_ = k_yaw;
+}
+
+void PushRecovery::togglePushRecovery()
+{
+  compute_deltas_=!compute_deltas_;
+  if(compute_deltas_)
+    ROS_INFO_NAMED(CLASS_NAME,"Push recovery activated!");
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"Push recovery de-activated!");
 }
 
 

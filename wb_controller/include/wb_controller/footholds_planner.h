@@ -61,10 +61,12 @@ public:
    */
   void setGains(const double& k_x, const double& k_y, const double& k_yaw);
 
+  void togglePushRecovery();
+
 private:
 
   FootholdsPlanner* footholds_planner_ptr_;
-  bool compute_deltas_;
+  std::atomic<bool> compute_deltas_;
   double base_mass_;
   double base_length_;
   double base_width_;
@@ -180,6 +182,8 @@ public:
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
 
     void setInitialOffsets();
+
+    void togglePushRecovery();
 
 private:
 
