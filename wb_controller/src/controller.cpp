@@ -188,7 +188,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Check if the values are positive
     if(Kp_swing_leg_(i,i)<0.0 || Kd_swing_leg_(i,i)<0.0 || Kp_stance_leg_(i,i)<0.0 || Kd_stance_leg_(i,i)<0.0)
     {
-      ROS_ERROR("Kp and Kd gains must be positive!");
+      ROS_ERROR_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
       return false;
     }
   }
