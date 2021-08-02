@@ -16,7 +16,7 @@
 using namespace XBot;
 using namespace Cartesian;
 using namespace rt_logger;
-using namespace rt_gui;
+//using namespace rt_gui;
 
 namespace wb_controller {
 
@@ -649,7 +649,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
   ros_wrapper_->publish(time);
 
   RtLogger::getLogger().publish(time);
-  RtGuiClient::getIstance().sync();
+  //RtGuiClient::getIstance().sync();
 }
 
 void Controller::odomPublisher()

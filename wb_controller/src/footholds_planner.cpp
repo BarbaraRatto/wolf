@@ -1,7 +1,7 @@
 #include <wb_controller/footholds_planner.h>
 
 using namespace rt_logger;
-using namespace rt_gui;
+//using namespace rt_gui;
 
 namespace wb_controller {
 

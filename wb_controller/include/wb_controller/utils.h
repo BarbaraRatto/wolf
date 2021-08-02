@@ -5,7 +5,7 @@
 #include <vector>
 #include <assert.h>
 #include <rt_logger/rt_logger.h>
-#include <rt_gui/rt_gui_client.h>
+//#include <rt_gui/rt_gui_client.h>
 #include <XBotInterface/TypedefAndEnums.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
