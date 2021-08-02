@@ -10,6 +10,12 @@ wb_controller:
   max_step_length: 0.5
   estimation_position_type: ground_truth
   estimation_orientation_type: ground_truth
+
+  push_recovery:
+      k: {x: 1.0, y: 1.0, r: 0.1}
+      dynamic_th: {x: 0.5, y: 0.5, r: 0.5}
+      static_th: {x: 0.05, y: 0.05, r: 0.05}
+
   gains:
 
       clik_gain: 1.0
