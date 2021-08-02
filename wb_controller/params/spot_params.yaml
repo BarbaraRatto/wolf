@@ -1,15 +1,21 @@
 wb_controller:
   type: wb_controller/Controller
   default_duty_factor: 0.3
-  default_swing_frequency: 4.2
+  default_swing_frequency: 4.5
   default_contact_threshold: 4.0
-  default_base_linear_velocity: 0.25
+  default_base_linear_velocity: 0.5
   default_base_angular_velocity: 0.2
-  default_step_height: 0.065
+  default_step_height: 0.08
   max_step_height: 0.15
   max_step_length: 0.5
   estimation_position_type: estimated_z
   estimation_orientation_type: ground_truth
+
+  push_recovery:
+      k: {x: 1.0, y: 1.0, r: 0.1}
+      dynamic_th: {x: 0.5, y: 0.5, r: 0.5}
+      static_th: {x: 0.05, y: 0.05, r: 0.05}
+
   gains:
 
       clik_gain: 1.0
