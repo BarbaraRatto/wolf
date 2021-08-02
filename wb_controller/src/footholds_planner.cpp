@@ -60,6 +60,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   push_recovery_ = std::make_shared<PushRecovery>(this);
   push_detected_ = false;
+  push_recovery_active_ = false;
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/desired_height",base_position_(2));
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_com",delta_com_);
@@ -152,7 +153,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
     break;
   };
 
-  if(push_recovery_->update(period))
+  if(push_recovery_active_ && push_recovery_->update(period))
   {
     push_detected_ = true;
     ROS_DEBUG_NAMED(CLASS_NAME,"Push detected!");
@@ -226,7 +227,8 @@ void FootholdsPlanner::calculateFootSteps()
       hf_delta_foot_.head(2) =  hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
 
       //6) Sum delta com and the delta for the push recovery
-      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + delta_com_;
+      //hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + delta_com_;
+      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
       // 6) Sum everything to obtain the new foothold displacement w.r.t world
@@ -378,8 +380,8 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getXBotModel()->getPose(gait_generator_->getFootNames()[i],"base_link",base_T_foot_);
-      robot_model_->getXBotModel()->getPose(hips_names[i],"base_link",base_T_hip_);
+      robot_model_->getXBotModel()->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
+      robot_model_->getXBotModel()->getPose(hips_names[i],BASE_LINK_FRAME_NAME,base_T_hip_);
       // initial feet offsets in the horizontal frame
       hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
       // initial hip positions, we assume the base starts horizontal (TODO)
@@ -392,7 +394,11 @@ void FootholdsPlanner::setInitialOffsets()
 
 void FootholdsPlanner::togglePushRecovery()
 {
-  push_recovery_->togglePushRecovery();
+  push_recovery_active_ = !push_recovery_active_;
+  if(push_recovery_active_)
+    push_recovery_->activateComputeDeltas();
+  else
+    push_recovery_->deactivateComputeDeltas();
 }
 
 // Sets
@@ -732,40 +738,37 @@ bool PushRecovery::update(const double& period)
     push_detected = false;
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-  if(compute_deltas_)
+
+  for(unsigned int i=0;i<foot_names.size();i++)
+    deltas_[foot_names[i]].setZero();
+
+
+  if (compute_deltas_ && push_detected)
   {
-    if (push_detected)
-    {
-      Sr_ = std::sin(std::atan(base_width_/base_length_));
-      Cr_ = std::cos(std::atan(base_width_/base_length_));
-      C2_pr_ = Sr_*Sr_*base_inertia_z_/base_width_/base_mass_; //C2_pr is a positive coefficient
-      C3_pr_ = Cr_*Cr_*base_inertia_z_/base_length_/base_mass_; //C3_pr is a positive coefficient
+    Sr_ = std::sin(std::atan(base_width_/base_length_));
+    Cr_ = std::cos(std::atan(base_width_/base_length_));
+    C2_pr_ = Sr_*Sr_*base_inertia_z_/base_width_/base_mass_; //C2_pr is a positive coefficient
+    C3_pr_ = Cr_*Cr_*base_inertia_z_/base_length_/base_mass_; //C3_pr is a positive coefficient
 
-      for(unsigned int i=0;i<foot_names.size();i++)
-      {
-        Z0h_  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
-        st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
-        C1_pr_ = Z0h_/GRAVITY/st_p_; //C1_pr should be positive
-
-        deltas_[foot_names[i]].x() = C1_pr_*(k_x_*(error_(0))+ signs_[foot_names[i]].first  * k_yaw_*C2_pr_*(error_(2)));
-        deltas_[foot_names[i]].y() = C1_pr_*(k_y_*(error_(1))+ signs_[foot_names[i]].second * k_yaw_*C3_pr_*(error_(2)));
-
-        if(deltas_[foot_names[i]].x() > max_delta_)
-          deltas_[foot_names[i]].x() = max_delta_;
-        if(deltas_[foot_names[i]].x() < -max_delta_)
-          deltas_[foot_names[i]].x() = -max_delta_;
-
-        if(deltas_[foot_names[i]].y() > max_delta_)
-          deltas_[foot_names[i]].y() = max_delta_;
-        if(deltas_[foot_names[i]].y() < -max_delta_)
-          deltas_[foot_names[i]].y() = -max_delta_;
-      }
-    }
-  }
-  else
-  {
     for(unsigned int i=0;i<foot_names.size();i++)
-      deltas_[foot_names[i]].setZero();
+    {
+      Z0h_  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
+      st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
+      C1_pr_ = Z0h_/GRAVITY/st_p_; //C1_pr should be positive
+
+      deltas_[foot_names[i]].x() = C1_pr_*(k_x_*(error_(0))+ signs_[foot_names[i]].first  * k_yaw_*C2_pr_*(error_(2)));
+      deltas_[foot_names[i]].y() = C1_pr_*(k_y_*(error_(1))+ signs_[foot_names[i]].second * k_yaw_*C3_pr_*(error_(2)));
+
+      if(deltas_[foot_names[i]].x() > max_delta_)
+        deltas_[foot_names[i]].x() = max_delta_;
+      if(deltas_[foot_names[i]].x() < -max_delta_)
+        deltas_[foot_names[i]].x() = -max_delta_;
+
+      if(deltas_[foot_names[i]].y() > max_delta_)
+        deltas_[foot_names[i]].y() = max_delta_;
+      if(deltas_[foot_names[i]].y() < -max_delta_)
+        deltas_[foot_names[i]].y() = -max_delta_;
+    }
   }
 
   return push_detected;
@@ -798,14 +801,16 @@ void PushRecovery::setGains(const double &k_x, const double &k_y, const double &
   k_yaw_ = k_yaw;
 }
 
-void PushRecovery::togglePushRecovery()
+void PushRecovery::activateComputeDeltas()
 {
-  compute_deltas_=!compute_deltas_;
-  if(compute_deltas_)
-    ROS_INFO_NAMED(CLASS_NAME,"Push recovery activated!");
-  else
-    ROS_INFO_NAMED(CLASS_NAME,"Push recovery de-activated!");
+  compute_deltas_ = true;
+  ROS_INFO_NAMED(CLASS_NAME,"Push recovery activated!");
 }
 
+void PushRecovery::deactivateComputeDeltas()
+{
+  compute_deltas_ = false;
+  ROS_INFO_NAMED(CLASS_NAME,"Push recovery de-activated!");
+}
 
 }; // namespace
