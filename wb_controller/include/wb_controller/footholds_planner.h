@@ -154,6 +154,8 @@ public:
     void setComCorrection(const Eigen::Vector2d& delta_com);
     void setComVelocityRef(const Eigen::Vector3d& com_vel_ref);
     void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
+    void setPushRecoveryThresholds(const Eigen::Vector3d& static_th, const Eigen::Vector3d& dynamic_th);
+    void setPushRecoveryGains(const double& k_x, const double& k_y, const double& k_r);
 
     // Gets
     unsigned int getCmd();

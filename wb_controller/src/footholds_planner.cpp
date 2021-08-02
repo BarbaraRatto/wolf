@@ -472,6 +472,16 @@ void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrai
   world_T_terrain_ = world_T_terrain;
 }
 
+void FootholdsPlanner::setPushRecoveryThresholds(const Eigen::Vector3d &static_th, const Eigen::Vector3d &dynamic_th)
+{
+  push_recovery_->setVelocityThresholds(static_th,dynamic_th);
+}
+
+void FootholdsPlanner::setPushRecoveryGains(const double &k_x, const double &k_y, const double &k_r)
+{
+  push_recovery_->setGains(k_x,k_y,k_r);
+}
+
 void FootholdsPlanner::setLinearVelocityCmd(const double linear)
 {
   base_linear_velocity_cmd_ = linear;
@@ -653,19 +663,19 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
   max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
-  static_th_dot_(0) = 0.05; // x [m/s]
-  static_th_dot_(1) = 0.05; // y [m/s]
-  static_th_dot_(2) = 0.05; // yaw [rad/s]
+  static_th_dot_(0) = 0.0; // x [m/s]
+  static_th_dot_(1) = 0.0; // y [m/s]
+  static_th_dot_(2) = 0.0; // yaw [rad/s]
 
-  dynamic_th_dot_(0) = 0.5; // x [m/s]
-  dynamic_th_dot_(1) = 0.5; // y [m/s]
-  dynamic_th_dot_(2) = 0.5; // yaw [rad/s]
+  dynamic_th_dot_(0) = 0.0; // x [m/s]
+  dynamic_th_dot_(1) = 0.0; // y [m/s]
+  dynamic_th_dot_(2) = 0.0; // yaw [rad/s]
 
   current_th_dot_ = static_th_dot_;
 
-  k_x_    = 0.1;
-  k_y_    = 0.1;
-  k_yaw_  = 0.01;
+  k_x_    = 0.0;
+  k_y_    = 0.0;
+  k_yaw_  = 0.0;
 
   compute_deltas_ = true;
 

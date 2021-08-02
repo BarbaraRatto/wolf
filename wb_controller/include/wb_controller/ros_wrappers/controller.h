@@ -30,6 +30,8 @@ class ControllerRosWrapper : public RosWrapperInterface
 
 public:
 
+    const std::string CLASS_NAME = "ControllerRosWrapper";
+
     typedef std::shared_ptr<ControllerRosWrapper> Ptr;
 
     ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh, wb_controller::Controller* controller_ptr)
@@ -40,52 +42,79 @@ public:
         double default_duty_factor = 0.3;
         if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
         {
-            ROS_WARN("No default duty factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+            ROS_WARN_NAMED(CLASS_NAME,"No default duty factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
         }
         double default_swing_frequency = 3.0; // [Hz]
         if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
         {
-            ROS_WARN("No default swing frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
+            ROS_WARN_NAMED(CLASS_NAME,"No default swing frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
         }
         double default_contact_threshold = 50.0; // [N]
         if (!controller_nh.getParam("default_contact_threshold", default_contact_threshold))
         {
-            ROS_WARN("No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
+            ROS_WARN_NAMED(CLASS_NAME,"No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
         }
         double default_step_height = 0.05; // [m]
         if (!controller_nh.getParam("default_step_height", default_step_height))
         {
-            ROS_WARN("No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
+            ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
         }
         double max_step_height = 0.15; // [m]
         if (!controller_nh.getParam("max_step_height", max_step_height))
         {
-            ROS_WARN("No max step height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
+            ROS_WARN_NAMED(CLASS_NAME,"No max step height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
         }
         double max_step_length = 0.5; // [m]
         if (!controller_nh.getParam("max_step_length", max_step_length))
         {
-            ROS_WARN("No max step length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
+            ROS_WARN_NAMED(CLASS_NAME,"No max step length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
         }
         double default_base_linear_velocity = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
         {
-            ROS_WARN("No default base linear velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+            ROS_WARN_NAMED(CLASS_NAME,"No default base linear velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
         }
         double default_base_angular_velocity = 0.5; // [rad/s]
         if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
         {
-            ROS_WARN("No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+            ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
         }
+
+        Eigen::Vector3d k, dynamic_th, static_th;
+        if (!controller_nh.getParam("push_recovery/k/x", k(0)) || // gains
+            !controller_nh.getParam("push_recovery/k/y", k(1)) || // gains
+            !controller_nh.getParam("push_recovery/k/r", k(2))  ) // gains
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/k given, proceeding without...");
+            k = Eigen::Vector3d::Zero();
+        }
+        if (!controller_nh.getParam("push_recovery/dynamic_th/x", dynamic_th(0)) || // [m/s]
+            !controller_nh.getParam("push_recovery/dynamic_th/y", dynamic_th(1)) || // [m/s]
+            !controller_nh.getParam("push_recovery/dynamic_th/r", dynamic_th(2))  ) // [rad/s]
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/dynamic_th given, proceeding without...");
+            dynamic_th = Eigen::Vector3d::Ones() * 1000.0;// dummy
+        }
+        if (!controller_nh.getParam("push_recovery/static_th/x", static_th(0)) || // [m/s]
+            !controller_nh.getParam("push_recovery/static_th/y", static_th(1)) || // [m/s]
+            !controller_nh.getParam("push_recovery/static_th/r", static_th(2))  ) // [rad/s]
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/dynamic_th given, proceeding without...");
+            static_th = Eigen::Vector3d::Ones() * 1000.0; // dummy
+        }
+
+        controller_->getFootholdsPlanner()->setPushRecoveryGains(k(0),k(1),k(2));
+        controller_->getFootholdsPlanner()->setPushRecoveryThresholds(static_th,dynamic_th);
+
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
-            ROS_WARN("No default estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No default estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
         else
             controller_->getStateEstimator()->setPositionEstimationType(estimation_position_type);
 
         std::string estimation_orientation_type;
         if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
-            ROS_WARN("No default estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No default estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
         else
             controller_->getStateEstimator()->setOrientationEstimationType(estimation_orientation_type);
 
@@ -149,31 +178,31 @@ public:
             break;
         case 4:
             controller_->setSwingFrequency(config.swing_frequency);
-            ROS_INFO_STREAM("Set swing frequency to "<< config.swing_frequency);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set swing frequency to "<< config.swing_frequency);
             break;
         case 5:
             controller_->getFootholdsPlanner()->setLinearVelocityCmd(config.base_linear_vel);
-            ROS_INFO_STREAM("Set base linear velocity to "<< config.base_linear_vel);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< config.base_linear_vel);
             break;
         case 6:
             controller_->getFootholdsPlanner()->setAngularVelocityCmd(config.base_angular_vel);
-            ROS_INFO_STREAM("Set base angular velocity to "<< config.base_angular_vel);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< config.base_angular_vel);
             break;
         case 7:
             controller_->getFootholdsPlanner()->setStepHeight(config.step_height);
-             ROS_INFO_STREAM("Set step height to "<< config.step_height);
+             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set step height to "<< config.step_height);
             break;
         case 8:
             controller_->getStateEstimator()->setContactThreshold(config.contact_force_th);
-            ROS_INFO_STREAM("Set contact force threshold to "<< config.contact_force_th);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
             break;
         case 9:
             controller_->getLegsKinematics()->setClikGain(config.clik_gain);
-            ROS_INFO_STREAM("Set x err gain at "<< config.clik_gain);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.clik_gain);
             break;
         case 10:
             controller_->selectStack(config.stacks);
-            ROS_INFO_STREAM("Selected stack "<< config.stacks);
+            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected stack "<< config.stacks);
             break;
         default:
             break;
