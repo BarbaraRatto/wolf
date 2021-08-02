@@ -212,10 +212,16 @@ class Ellipse : public TrajectoryInterface
 
 public:
 
+  const std::string CLASS_NAME = "Ellipse";
+
   Ellipse()
   {
     xyz_ = xyz_rotated_ = xyz_dot_ = Eigen::Vector3d::Zero();
     world_R_swing_ = swing_R_world_ = S_ = Ear_ = Eigen::Matrix3d::Zero();
+
+    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/xyz",xyz_);
+    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/xyz_rotated",xyz_rotated_);
+    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/rpy",rpy_);
   }
 
 protected:
