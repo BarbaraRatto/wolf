@@ -24,7 +24,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = 0.0;
 
-    robot_model_->getXBotModel()->getPose(foot_names[i],"base_link",base_T_foot_);
+    robot_model_->getXBotModel()->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_);
     desired_foothold_[foot_names[i]]    = base_T_foot_.translation();
     virtual_foothold_[foot_names[i]]    = base_T_foot_.translation();
     current_foothold_hf_[foot_names[i]] = hf_R_base_ * base_T_foot_.translation();
@@ -96,7 +96,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
   ROS_DEBUG_NAMED(CLASS_NAME,"update");
 
-  robot_model_->getXBotModel()->getPose("base_link",world_T_base_);
+  robot_model_->getXBotModel()->getPose(BASE_LINK_FRAME_NAME,world_T_base_);
 
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.translation()" << world_T_base_.translation());
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.linear()" << world_T_base_.linear());
