@@ -1,17 +1,22 @@
 # TODO list
 
+- Export to params the push recovery
+- Move terrain estimator inside state estimator as a subclass
+- Remove dynamic reconfigure
+- Clean wb_robot_hw, parse hardcoded info from urdf/srdf
+- Move odom thread to state_estimator
+- Postural gains still in the controller... fix!
+- add trajectory for arm
+- Web app
+- Clean solo, test it without inertia comp.
+- Convex hull in acceleration
+- State estimation
 - Experiments on the real robot
-- Fix device interface
+- Fix device interface Add XBOX
 - IK with joint limits
-- Arm task
-- change names dls -> wb ( can not because of the compatibility with the real hardware )
-- push recovery
-- terrain estimator
 - step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)
-- clean the descriptions, load the homing from the srdf
 - remove sensors and clean up the urdfs! In progress...
-- add com/icp to stabilize the robot at low freq swings ML thesis
 - rviz config inside single robots

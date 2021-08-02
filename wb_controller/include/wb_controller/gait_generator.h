@@ -1,5 +1,5 @@
-#ifndef LOCOMOTION_H
-#define LOCOMOTION_H
+#ifndef GAIT_GENERATOR_H
+#define GAIT_GENERATOR_H
 
 #include <ros/ros.h>
 #include <Eigen/Core>
@@ -18,53 +18,75 @@ class Gait
 {
 
 public:
-  Gait(const std::vector<std::string>& feet_names, const std::string& gait_type)
+
+  const std::string CLASS_NAME = "Gait";
+
+  enum gait_t {CRAWL=0,TROT,ONE_FOOT_LF,ONE_FOOT_RH,ONE_FOOT_RF,ONE_FOOT_LH};
+
+  static inline std::string enum_to_string(const Gait::gait_t& gait_type)
   {
-    ROS_INFO_STREAM("Selected " << gait_type << " gait");
-
-    assert(feet_names.size() == N_LEGS);
-
-    auto ordered_feet_names = sortByLegName(feet_names);
-
-    if(std::strcmp(gait_type.c_str(),"trot")==0)
+    switch(gait_type)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],0));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],1));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],1));
+       case Gait::gait_t::CRAWL:
+          return "CRAWL";
+       case Gait::gait_t::TROT:
+          return "TROT";
+    };
+  }
+
+  static inline Gait::gait_t string_to_enum(const std::string& gait_type)
+  {
+    if (gait_type == "CRAWL")
+      return Gait::gait_t::CRAWL;
+    else if (gait_type == "TROT")
+      return Gait::gait_t::TROT;
+  }
+
+  Gait(const std::vector<std::string>& foot_names, const gait_t& gait_type)
+  {
+    assert(foot_names.size() == N_LEGS);
+
+    auto ordered_foot_names = sortByLegPrefix(foot_names);
+
+    if(gait_type == TROT)
+    {
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RF],1));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LH],1));
       next_feet_to_move_.resize(2);
       max_priority_ = 1;
     }
-    else if(std::strcmp(gait_type.c_str(),"crawl")==0)
+    else if(gait_type == CRAWL)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],1));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],2));
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],3));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],1));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RF],2));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LH],3));
       next_feet_to_move_.resize(1);
       max_priority_ = 3;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_lf")==0)
+    else if(gait_type == ONE_FOOT_LF)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LF],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_rh")==0)
+    else if(gait_type == ONE_FOOT_RH)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RH],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RH],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_rf")==0)
+    else if(gait_type == ONE_FOOT_RF)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::RF],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::RF],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
-    else if(std::strcmp(gait_type.c_str(),"one_foot_lh")==0)
+    else if(gait_type == ONE_FOOT_LH)
     {
-      schedule_.push_back(foot_priority_t(ordered_feet_names[_leg_id::LH],0));
+      schedule_.push_back(foot_priority_t(ordered_foot_names[_leg_id::LH],0));
       next_feet_to_move_.resize(1);
       max_priority_ = 0;
     }
@@ -101,11 +123,14 @@ private:
 
   std::vector<std::string> next_feet_to_move_;
 
+
 };
 
 class GaitGenerator
 {
 public:
+
+  const std::string CLASS_NAME = "GaitGenerator";
 
   /**
      * @brief Shared pointer to GaitGenerator
@@ -117,19 +142,17 @@ public:
      */
   typedef std::shared_ptr<const GaitGenerator> ConstPtr;
 
-  GaitGenerator(const std::vector<std::string>& feet_names, const std::vector<std::string>& hips_names, const std::string& gait_type, const std::string& trajectory_type)
+  GaitGenerator(const std::vector<std::string>& foot_names, const Gait::gait_t& gait_type, const std::string& trajectory_type)
   {
-    assert(feet_names.size()==N_LEGS);// We assume we are working with a dog
-    assert(hips_names.size()==N_LEGS);
-    feet_names_ = feet_names;
-    hips_names_ = hips_names;
-    for(unsigned int i = 0; i<feet_names.size(); i++)
+    assert(foot_names.size()==N_LEGS);// We assume we are working with a dog
+    foot_names_ = foot_names;
+    for(unsigned int i = 0; i<foot_names.size(); i++)
     {
-      feet_[feet_names[i]].state_machine.reset(new FootStateMachine());
-      feet_[feet_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
-      feet_[feet_names[i]].contact_state = false;
-      feet_[feet_names[i]].trigger_stance = false;
-      feet_[feet_names[i]].initial_pose = Eigen::Affine3d::Identity();
+      feet_[foot_names[i]].state_machine.reset(new FootStateMachine());
+      feet_[foot_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
+      feet_[foot_names[i]].contact_state = false;
+      feet_[foot_names[i]].trigger_stance = false;
+      feet_[foot_names[i]].initial_pose = Eigen::Affine3d::Identity();
     }
 
     setSwingFrequency(0.0);
@@ -137,7 +160,7 @@ public:
     gait_buffer_.resize(2);
 
     for(unsigned int i=0; i<gait_buffer_.size(); i++)
-      gait_buffer_[i].reset(new Gait(feet_names,gait_type));
+      gait_buffer_[i].reset(new Gait(foot_names,gait_type));
 
     current_gait_idx_ = 0;
     next_gait_idx_ = 1;
@@ -149,19 +172,29 @@ public:
     gait_type_ = gait_type;
   }
 
-  void switchGait()
+  const std::vector<std::string>& getFootNames()
   {
-    if(gait_type_ == "trot")
-      setGaitType("crawl");
-    else
-      setGaitType("trot");
+    return foot_names_;
   }
 
-  void setGaitType(const std::string& gait_type)
+  void switchGait()
   {
-    gait_buffer_[next_gait_idx_].reset(new Gait(feet_names_,gait_type));
+    if(gait_type_ == Gait::gait_t::TROT)
+      setGaitType(Gait::gait_t::CRAWL);
+    else
+      setGaitType(Gait::gait_t::TROT);
+  }
+
+  void setGaitType(const Gait::gait_t& gait_type)
+  {
+    gait_buffer_[next_gait_idx_].reset(new Gait(foot_names_,gait_type));
     change_gait_ = true;
     gait_type_ = gait_type;
+  }
+
+  void setGaitTypeName(const std::string& gait_type_name)
+  {
+    setGaitType(Gait::string_to_enum(gait_type_name));
   }
 
   const Eigen::Affine3d& getReference(const std::string& foot_name)
@@ -212,11 +245,35 @@ public:
     return result;
   }
 
+  bool isAnyFootInSwing()
+  {
+    bool result = false;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      result = result || it->second.state_machine->isSwing();
+    return result;
+  }
+
   bool isAnyFootInTouchDown()
   {
     bool result = false;
     for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
       result = result || it->second.state_machine->isTouchDown();
+    return result;
+  }
+
+  bool isAnyFootInStance()
+  {
+    bool result = false;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      result = result || it->second.state_machine->isStance();
+    return result;
+  }
+
+  bool isAllFeetInStance()
+  {
+    bool result = true;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      result = result && it->second.state_machine->isStance();
     return result;
   }
 
@@ -271,19 +328,42 @@ public:
     return feet_[foot_name].trajectory->getSwingFrequency();
   }
 
-  const std::vector<std::string>& getFeetNames()
+  double getAvgSwingFrequency()
   {
-    return feet_names_;
+    double avg = 0.0;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      avg = avg + it->second.trajectory->getSwingFrequency();
+    avg = avg / feet_.size();
+    return avg;
   }
 
-  const std::vector<std::string>& getHipsNames()
+  double getAvgDutyFactor()
   {
-    return hips_names_;
+    double avg = 0.0;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      avg = avg + it->second.state_machine->getDutyFactor();
+    avg = avg / feet_.size();
+    return avg;
   }
 
-  const std::string& getGaitType()
+  double getStancePeriod(const std::string& foot_name)
+  {
+    return feet_[foot_name].state_machine->getStancePeriod();
+  }
+
+  double getSwingPeriod(const std::string& foot_name)
+  {
+    return feet_[foot_name].state_machine->getSwingPeriod();
+  }
+
+  const Gait::gait_t& getGaitType()
   {
     return gait_type_;
+  }
+
+  std::string getGaitTypeName()
+  {
+    return Gait::enum_to_string(gait_type_);
   }
 
   void setStepLength(const double& length)
@@ -292,10 +372,50 @@ public:
       it->second.trajectory->setStepLength(length);
   }
 
-  void setStepHeading(const double& heading)
+  void setStepRoll(const double& roll)
   {
     for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-      it->second.trajectory->setStepHeading(heading);
+      it->second.trajectory->setStepRoll(roll);
+  }
+
+  void setStepPitch(const double& pitch)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepPitch(pitch);
+  }
+
+  void setStepYaw(const double& yaw)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepYaw(yaw);
+  }
+
+  void setStepYaw(const std::string& foot_name, const double& yaw)
+  {
+    feet_[foot_name].trajectory->setStepYaw(yaw);
+  }
+
+  void setStepRollRate(const double& roll_rate)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepRollRate(roll_rate);
+  }
+
+  void setStepPitchRate(const double& pitch_rate)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepPitchRate(pitch_rate);
+  }
+
+  void setStepYawRate(const double& yaw_rate)
+  {
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+      it->second.trajectory->setStepYawRate(yaw_rate);
+  }
+
+  void setStepYawRate(const std::string& foot_name, const double& yaw_rate)
+  {
+    feet_[foot_name].trajectory->setStepYawRate(yaw_rate);
   }
 
   void setStepHeight(const double& height)
@@ -304,30 +424,14 @@ public:
       it->second.trajectory->setStepHeight(height);
   }
 
-  void setStepHeadingRate(const double& heading_rate)
-  {
-    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
-      it->second.trajectory->setStepHeadingRate(heading_rate);
-  }
-
   void setStepLength(const std::string& foot_name, const double& length)
   {
     feet_[foot_name].trajectory->setStepLength(length);
   }
 
-  void setStepHeading(const std::string& foot_name, const double& heading)
-  {
-    feet_[foot_name].trajectory->setStepHeading(heading);
-  }
-
   void setStepHeight(const std::string& foot_name, const double& height)
   {
     feet_[foot_name].trajectory->setStepHeight(height);
-  }
-
-  void setStepHeadingRate(const std::string& foot_name, const double& heading_rate)
-  {
-    feet_[foot_name].trajectory->setStepHeadingRate(heading_rate);
   }
 
   void activateSwing()
@@ -377,7 +481,7 @@ public:
         }
         it->second.trajectory->update(period);
 
-        ROS_DEBUG_STREAM("Update trajectory for foot "<< it->first);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Update trajectory for foot "<< it->first);
       }
       else
       {
@@ -387,7 +491,7 @@ public:
         }
         it->second.trajectory->standBy();
 
-        ROS_DEBUG_STREAM("StandBy trajectory for foot "<< it->first);
+        ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"StandBy trajectory for foot "<< it->first);
       }
     }
 
@@ -427,7 +531,7 @@ private:
 
   TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
   {
-    ROS_INFO_STREAM("Selected " << trajectory_type << " trajectory");
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected " << trajectory_type << " trajectory");
     if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
     {
       return new Ellipse();
@@ -436,13 +540,14 @@ private:
     {
       throw std::runtime_error("Wrong trajectory type!");
     }
-    return NULL;
+    return nullptr;
   }
 
   typedef std::map<std::string,feet_status_t> feet_t;
   typedef std::shared_ptr<Gait> gait_ptr_t;
 
   std::vector<std::string> scheduled_feet_;
+  std::vector<std::string> foot_names_;
 
   feet_t feet_;
   std::vector<gait_ptr_t > gait_buffer_;
@@ -451,10 +556,7 @@ private:
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
 
-  std::vector<std::string> feet_names_;
-  std::vector<std::string> hips_names_;
-
-  std::string gait_type_;
+  Gait::gait_t gait_type_;
 
 };
 

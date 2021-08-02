@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include <wb_controller/geometry.h>
 #include <wb_controller/gait_generator.h>
-#include <XBotInterface/ModelInterface.h>
+#include <wb_controller/quadruped_robot.h>
 
 namespace wb_controller
 {
@@ -14,6 +14,8 @@ class LegsKinematics
 {
 
 public:
+
+  const std::string CLASS_NAME = "LegsKinematics";
 
   /**
    * @brief Shared pointer to LegsKinematics
@@ -25,7 +27,7 @@ public:
    */
   typedef std::shared_ptr<const LegsKinematics> ConstPtr;
 
-  LegsKinematics(GaitGenerator::Ptr gait_generator, XBot::ModelInterface::Ptr xbot_model);
+  LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
 
   /**
        * @brief Compute the desired joint positions and velocities
@@ -36,6 +38,8 @@ public:
   bool update(const double& period, const Eigen::VectorXd& current_joint_positions);
 
   void setDesiredBaseHeight(const double& des_base_height);
+
+  void setDesiredBaseAdjustmentDot(const Eigen::Vector3d& xdot);
 
   bool setJointHomePositions(Eigen::VectorXd& qhome);
 
@@ -72,7 +76,7 @@ public:
 
 private:
 
-  XBot::ModelInterface::Ptr xbot_model_;
+  QuadrupedRobot::Ptr robot_model_;
 
   GaitGenerator::Ptr gait_generator_;
 
@@ -82,6 +86,7 @@ private:
   std::atomic<double> clik_gain_;
 
   std::atomic<double> des_base_height_;
+
   double base_height_;
 
   /** @brief Stance joints position */
@@ -100,6 +105,8 @@ private:
   Eigen::VectorXd qmax_;
   /** @brief Feet pose w.r.t world */
   Eigen::Affine3d world_T_foot_;
+  /** @brief Feed forward term in the clik control loop */
+  Eigen::Vector3d xdot_ff_;
 
   Eigen::MatrixXd J_;
   Eigen::MatrixXd J_foot_;

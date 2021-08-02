@@ -12,6 +12,8 @@ class TrajectoryInterface
 
 public:
 
+  const std::string CLASS_NAME = "TrajectoryInterface";
+
   TrajectoryInterface()
   {
     pose_reference_ = initial_pose_ = pose_ = Eigen::Affine3d::Identity();
@@ -20,8 +22,10 @@ public:
     swing_frequency_ = 0.0;
     time_ = 0.0;
     length_ = 0.0;
-    heading_ = 0.0;
-    heading_rate_ = 0.0;
+    roll_ = 0.0;
+    pitch_ = 0.0;
+    yaw_ = 0.0;
+    yaw_rate_ = 0.0;
     height_ = 0.0;
 
     trajectory_finished_ = true;
@@ -76,9 +80,19 @@ public:
     twist_reference_.setZero();
   }
 
-  void setStepHeadingRate(const double& heading_rate)
+  void setStepYawRate(const double& yaw_rate)
   {
-    heading_rate_ = heading_rate;
+    yaw_rate_ = yaw_rate;
+  }
+
+  void setStepRollRate(const double& roll_rate)
+  {
+    roll_rate_ = roll_rate;
+  }
+
+  void setStepPitchRate(const double& pitch_rate)
+  {
+    pitch_rate_ = pitch_rate;
   }
 
   void setStepLength(const double& length)
@@ -86,9 +100,19 @@ public:
     length_ = length;
   }
 
-  void setStepHeading(const double& heading)
+  void setStepRoll(const double& roll)
   {
-    heading_ = heading;
+    roll_ = roll;
+  }
+
+  void setStepPitch(const double& pitch)
+  {
+    pitch_ = pitch;
+  }
+
+  void setStepYaw(const double& yaw)
+  {
+    yaw_ = yaw;
   }
 
   void setStepHeight(const double& height)
@@ -101,14 +125,24 @@ public:
     return length_;
   }
 
-  double getStepHeading()
+  double getStepRoll()
   {
-    return heading_;
+    return roll_;
   }
 
-  double getStepHeadingRate()
+  double getStepPitch()
   {
-    return heading_rate_;
+    return pitch_;
+  }
+
+  double getStepYaw()
+  {
+    return yaw_;
+  }
+
+  double getStepYawRate()
+  {
+    return yaw_rate_;
   }
 
   double getStepHeight()
@@ -121,7 +155,7 @@ public:
     if(swing_frequency >= 0.0)
       swing_frequency_ = swing_frequency;
     else
-      ROS_WARN("Swing frequency has to be positive definite!");
+      ROS_WARN_NAMED(CLASS_NAME,"Swing frequency has to be positive definite!");
   }
 
   double getSwingFrequency()
@@ -155,8 +189,17 @@ protected:
   double time_;
   std::atomic<double> swing_frequency_;
   std::atomic<double> length_;
-  std::atomic<double> heading_; // This includes the heading w.r.t the horizontal frame and world
-  std::atomic<double> heading_rate_;
+
+  /** @brief This is the roll w.r.t the world frame estimated through the terrain estimator */
+  std::atomic<double> roll_;
+  /** @brief This is the pitch w.r.t the world frame estimated through the terrain estimator */
+  std::atomic<double> pitch_;
+  /** @brief This is the yaw w.r.t the horizontal frame and world */
+  std::atomic<double> yaw_;
+
+  std::atomic<double> roll_rate_;
+  std::atomic<double> pitch_rate_;
+  std::atomic<double> yaw_rate_;
   std::atomic<double> height_;
   bool trajectory_finished_;
 
@@ -171,77 +214,83 @@ public:
 
   Ellipse()
   {
-    xyz = xyz_rotated = xyz_dot = Eigen::Vector3d::Zero();
-    world_Rz_swing = Sz = Ear = Eigen::Matrix3d::Zero();
+    xyz_ = xyz_rotated_ = xyz_dot_ = Eigen::Vector3d::Zero();
+    world_R_swing_ = swing_R_world_ = S_ = Ear_ = Eigen::Matrix3d::Zero();
   }
 
 protected:
 
   const Eigen::Affine3d& trajectoryFunction(const double& time)
   {
-    const double& yaw = heading_;
+    rpy_(0) = roll_;
+    rpy_(1) = pitch_;
+    rpy_(2) = yaw_;
 
-    xyz(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
-    xyz(1) = 0.0;
-    xyz(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
+    xyz_(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
+    xyz_(1) = 0.0;
+    xyz_(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 
-    double c = std::cos(yaw);
-    double s = std::sin(yaw);
+    rpyToRot(rpy_,swing_R_world_);
 
-    world_Rz_swing(0,0) = c;
-    world_Rz_swing(0,1) = -s;
-    world_Rz_swing(1,0) = s;
-    world_Rz_swing(1,1) = c;
-    world_Rz_swing(2,2) = 1;
+    world_R_swing_.noalias() = swing_R_world_.transpose();
 
-    xyz_rotated = world_Rz_swing * xyz;
+    xyz_rotated_.noalias() = world_R_swing_ * xyz_;
 
-    pose_.translation() = initial_pose_.translation() + xyz_rotated;
+    pose_.translation() = initial_pose_.translation() + xyz_rotated_;
 
     return pose_;
   }
 
   const Eigen::Vector6d& trajectoryFunctionDot(const double& time)
   {
-    const double& yaw_rate = heading_rate_;
-    const double& yaw = heading_;
+    rpy_rates_.setZero();
+    omegas_.setZero();
+    rpy_.setZero();
 
-    rpy_rates.setZero();
-    omegas.setZero();
-    rpy.setZero();
+    rpy_rates_(0) = roll_rate_;
+    rpy_rates_(1) = pitch_rate_;
+    rpy_rates_(2) = yaw_rate_;
 
-    rpy_rates(2) = yaw_rate;
-    rpy(2) = yaw;
+    rpy_(0) = roll_;
+    rpy_(1) = pitch_;
+    rpy_(2) = yaw_;
 
-    rpyToEar(rpy,Ear);
+    rpyToEarWorld(rpy_,Ear_); // Are we sure?
 
-    omegas = Ear * rpy_rates;
+    omegas_ = Ear_ * rpy_rates_;
 
-    Sz(0,1) = -omegas(2);
-    Sz(1,0) = -omegas(2);
+    S_(0,1) = -omegas_(2);
+    S_(1,0) =  omegas_(2);
 
-    xyz_dot(0) = M_PI * swing_frequency_ * length_/2 * std::sin(M_PI * (swing_frequency_ * time));
-    xyz_dot(1) = 0.0;
-    xyz_dot(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
+    S_(0,2) =  omegas_(1);
+    S_(2,0) = -omegas_(1);
+
+    S_(1,2) = -omegas_(0);
+    S_(2,1) =  omegas_(0);
+
+    xyz_dot_(0) = M_PI * swing_frequency_ * length_/2 * std::sin(M_PI * (swing_frequency_ * time));
+    xyz_dot_(1) = 0.0;
+    xyz_dot_(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
 
     twist_.setZero(); // No angular velocities
-    twist_.head(3) = Sz * xyz_rotated + world_Rz_swing * xyz_dot;
+    twist_.head(3) = S_ * xyz_rotated_ + world_R_swing_ * xyz_dot_;
 
     return twist_;
   }
 
 private:
 
-  Eigen::Vector3d xyz;
-  Eigen::Vector3d xyz_dot;
-  Eigen::Vector3d xyz_rotated;
-  Eigen::Matrix3d world_Rz_swing;
-  Eigen::Matrix3d Sz;
-  Eigen::Matrix3d Ear;
+  Eigen::Vector3d xyz_;
+  Eigen::Vector3d xyz_dot_;
+  Eigen::Vector3d xyz_rotated_;
+  Eigen::Matrix3d world_R_swing_;
+  Eigen::Matrix3d swing_R_world_;
+  Eigen::Matrix3d S_;
+  Eigen::Matrix3d Ear_;
 
-  Eigen::Vector3d rpy;
-  Eigen::Vector3d rpy_rates;
-  Eigen::Vector3d omegas;
+  Eigen::Vector3d rpy_;
+  Eigen::Vector3d rpy_rates_;
+  Eigen::Vector3d omegas_;
 };
 
 } // namespace

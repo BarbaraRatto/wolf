@@ -10,42 +10,46 @@
     <arg name="gazebo_gui" default="true" />
     <arg name="full_gui" default="false" />
     <arg name="gazebo" default="true" />
-    <arg name="arm" default="false" />
+    <arg name="arm_enabled" default="false" />
+    <arg name="arm_name" default="teleop" />
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
+    <param name="internal_wrench" value="$(arg internal_wrench)"/>
     <param name="robot_name" type="str"  value="$(arg robot_name)" />
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">
-	    <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
-		<arg name="sensors" value="$(arg sensors)" />
-		<arg name="internal_wrench" value="$(arg internal_wrench)" />
-		<arg name="world_name" value="$(arg world_name)" />
-		<arg name="task_period" value="$(arg task_period)" />
-		<arg name="gui" value="$(arg gazebo_gui)"/>
-		<arg name="arm" value="$(arg arm)"/>
+            <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
+                <arg name="sensors" value="$(arg sensors)" />
+                <arg name="internal_wrench" value="$(arg internal_wrench)" />
+                <arg name="world_name" value="$(arg world_name)" />
+                <arg name="task_period" value="$(arg task_period)" />
+                <arg name="gui" value="$(arg gazebo_gui)"/>
+                <arg name="arm_enabled" value="$(arg arm_enabled)"/>
+                <arg name="arm_name" value="$(arg arm_name)"/>
                 <arg name="debug" value="$(arg gazebo_debug)"/>
-	    </include>
+            </include>
     </group>
 
     <group unless="$(arg gazebo)">
-	<include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
-        	<arg name="sensors" value="$(arg sensors)" />
-                <arg name="arm" value="$(arg arm)"/>
+        <include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
+                <arg name="sensors" value="$(arg sensors)" />
+                <arg name="arm_enabled" value="$(arg arm_enabled)"/>
+                <arg name="arm_name" value="$(arg arm_name)"/>
                 <arg name="task_period" value="$(arg task_period)" />
-	</include>
+        </include>
     </group>
 
     <!-- Loading joint states publisher configurations from YAML file to parameter server -->
-    <rosparam file="$(find wb_controller)/config/joint_state_publisher.yaml" ns="/$(arg robot_name)" command="load"/>
+    <rosparam file="$(find wb_controller)/params/joint_state_publisher.yaml" ns="/$(arg robot_name)" command="load"/>
 
     <!-- Load controller config -->
-    <group if="$(arg arm)">
-        <rosparam command="load" file="$(find wb_controller)/config/$(arg robot_name)_arm_params.yaml" ns="$(arg robot_name)"/>
+    <group if="$(arg arm_enabled)">
+          <rosparam command="load" file="$(find wb_controller)/params/$(arg robot_name)_$(arg arm_name)_params.yaml" ns="$(arg robot_name)"/>
     </group>
-    <group unless="$(arg arm)">
-        <rosparam command="load" file="$(find wb_controller)/config/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
+    <group unless="$(arg arm_enabled)">
+          <rosparam command="load" file="$(find wb_controller)/params/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
     </group>
 
     <!-- Spawn our controller and its friends -->
@@ -76,22 +80,27 @@
 
 
     <group if="$(arg full_gui)">
+
+
+            <!-- rt_gui node launch -->
+            <include  file="$(find rt_gui)/launch/server_node.launch"/>
+
 	    <!-- plot node launch -->
 	    <include  file="$(find wb_controller)/launch/plot_node.launch">
 		<arg name="robot_name" value="$(arg robot_name)" />
 	    </include>
 
-	    <!-- plotJuggler -->
+            <!-- plotJuggler -->
             <node pkg="plotjuggler" type="plotjuggler" name="plotjuggler" ns="/$(arg robot_name)/wb_controller"
-		args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
-	    </node>
+                args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
+            </node>
 
-	    <!-- Rviz -->
-	    <node
-          	type="rviz"
-          	name="rviz"
-          	pkg="rviz"
-          	args="-d $(find wb_controller)/rviz_files/wbc.rviz" />
+            <!-- Rviz -->
+            <node
+                type="rviz"
+                name="rviz"
+                pkg="rviz"
+                args="-d $(find wb_controller)/rviz_files/$(arg robot_name)_wbc.rviz" />
    </group>
 
 </launch>

@@ -19,8 +19,8 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface control_toolbox dls_hardware_interface
-    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger)
+find_package(catkin REQUIRED tf controller_interface control_toolbox wb_hardware_interface
+    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger rt_gui)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
@@ -28,7 +28,6 @@ find_package(XBotInterface REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
-  cfg/problem.cfg
   cfg/taskCartesian.cfg
   cfg/taskGeneric.cfg
   cfg/taskPostural.cfg
@@ -37,7 +36,10 @@ generate_dynamic_reconfigure_options(
 add_message_files(FILES
                  CartesianTask.msg
                  JointsTask.msg
-                 ContactForces.msg)
+                 ContactForces.msg
+                 FootHolds.msg
+                 TerrainEstimation.msg
+                 FrictionCones.msg)
 
 generate_messages(
     DEPENDENCIES
@@ -49,12 +51,6 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
 include_directories(
     include
     ${catkin_INCLUDE_DIRS}
@@ -63,7 +59,8 @@ include_directories(
     ${cartesian_interface_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/legs_kinematics.cpp)
+add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp
+    src/legs_kinematics.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
 
@@ -103,13 +100,13 @@ catkin_install_python(PROGRAMS scripts/keyboard_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if (CATKIN_ENABLE_TESTING)
-  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface dls_hardware_interface std_msgs)
+  find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface wb_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
   find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
   add_executable(test_state_estimation test/test_state_estimation.cpp)
-  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
   add_executable(test_id_problem test/test_id_problem.cpp)
   target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)

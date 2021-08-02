@@ -4,8 +4,8 @@
 // OpenSoT
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
+#include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
-#include <OpenSoT/tasks/MinimizeVariable.h>
 #include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/utils/AutoStack.h>
@@ -17,18 +17,19 @@
 
 // ROS
 #include <ros/ros.h>
-#include <dynamic_reconfigure/server.h>
-#include <wb_controller/problemConfig.h>
 
 // WB
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
-#include <wb_controller/task_ros_wrapper.h>
+#include <wb_controller/ros_wrappers/tasks.h>
+#include <wb_controller/quadruped_robot.h>
 
 // STD
 #include <atomic>
+#include <mutex>
+#include <memory>
 
-namespace OpenSoT{
+namespace wb_controller{
 
 /**
  * @brief The IDProblem class wraps the tasks, constraints and the solver used to solve the ID
@@ -38,7 +39,11 @@ class IDProblem
 
 public:
 
+    const std::string CLASS_NAME = "IDProblem";
+
     typedef std::shared_ptr<IDProblem> Ptr;
+
+    enum stacks_t {NONE=0,WALKING,MANIPULATION};
 
     /**
      * @brief IDProblem constructor
@@ -46,7 +51,7 @@ public:
      * @param model pointer to external model
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, XBot::ModelInterface::Ptr model, std::vector<std::string> feet_names, std::string arm_tip_name = std::string());
+    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model);
     ~IDProblem();
 
     /**
@@ -57,33 +62,24 @@ public:
     bool solve(Eigen::VectorXd& x);
 
     /**
-     * @brief get the ground reaction forces call this after solve()
-     * @param grfs from the solver
+     * @brief get the contact wrenches, to call after solve()
      */
-    void getGroundReactionForces(Eigen::VectorXd& grfs);
+    const std::vector<Eigen::Vector6d>& getContactWrenches() const;
 
     /**
-     * @brief update call after the model.update() to update the autostack
-     * @param x input state q
+     * @brief get the joint accelerations, to call after solve()
      */
-    void update();
+    const Eigen::VectorXd& getJointAccelerations() const;
 
     /**
-     * @brief reset the tasks
+     * @brief swing with a specific foot i.e. release the contact
      */
-    void reset();
+    void swingWithFoot(const std::string& foot_name);
 
     /**
-     * @brief update the tasks with the new external references (i.e. the references coming from the interactive markers)
-     * @param task name to update
+     * @brief stance with a specific foot i.e. activate the contact
      */
-    void updateReference(const std::string& task_name);
-
-    /**
-     * @brief log to log solver and autostaack status
-     * @param logger a pointer to a MatLogger
-     */
-    void log(XBot::MatLogger::Ptr& logger);
+    void stanceWithFoot(const std::string& foot_name);
 
     /**
      * @brief publish the ros topics related to the tasks
@@ -96,6 +92,12 @@ public:
      * @param mu value
      */
     void setFrictionConesMu(const double& mu);
+
+    /**
+     * @brief set the rotation matrix for the friction cones
+     * @param R 3d matrix
+     */
+    void setFrictionConesR(const Eigen::Matrix3d& R);
 
     /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
@@ -122,132 +124,142 @@ public:
     void setLowerForceBoundZ(const double& force);
 
     /**
-     * @brief set the weight for the forces minimization task
-     * @param weight
+     * @brief set the angular reference and height for the waist (aka base)
+     * @param Rot rotation matrix
+     * @param z height
      */
-    void setMinFsWeight(const double& weight);
+    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z);
 
     /**
-     * @brief set the weight for the waist task
-     * @param weight
+     * @brief set the position and velocity reference for the CoM
+     * @param position
+     * @param velocity
      */
-    void setWaistRPYWeight(const double& weight);
+    void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
 
     /**
-     * @brief set the weight for the postural task
-     * @param weight
-     */
-    void setPosturalWeight(const double& weight);
-
-    /**
-     * @brief set the weight for the contacts tasks
-     * @param weight
-     */
-    void setFeetWeight(const double& weight);
-
-    /**
-         * @brief Ros dynamic reconfigure callback
+         * @brief Select the stack type to use
          */
-    void dynamicReconfigureCallback(wb_controller::problemConfig &config, uint32_t level);
+    void selectStack(const stacks_t &stack);
+
+    /**
+         * @brief Get the current stack type
+         */
+    unsigned int getCurrentStack();
+
+    /**
+         * @brief Switch between WALKING and MANIPULATION stack
+         */
+    void switchStack();
 
     /**
      * @brief Cartesian tasks
      */
-    std::map<std::string,tasks::acceleration::Cartesian::Ptr> _feet;
-    tasks::acceleration::Cartesian::Ptr _arm;
-    tasks::acceleration::Cartesian::Ptr _waistRPY;
-    tasks::acceleration::Cartesian::Ptr _waistZ;
-    tasks::acceleration::CoM::Ptr _com;
-
-    /**
-     * @brief Forces minimization tasks
-     */
-    std::vector<tasks::MinimizeVariable::Ptr> _minfs;
+    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> feet_;
+    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> arms_;
+    OpenSoT::tasks::acceleration::Cartesian::Ptr waistRPY_;
+    OpenSoT::tasks::acceleration::Cartesian::Ptr waistZ_;
+    OpenSoT::tasks::acceleration::CoM::Ptr com_;
+    OpenSoT::tasks::acceleration::AngularMomentum::Ptr angular_momentum_;
 
     /**
      * @brief Expose the tasks to ROS
      */
-    std::map<std::string,TaskRosWrapperInterface::Ptr> _tasks_ros;
+    std::map<std::string,TaskRosWrapperInterface::Ptr> tasks_ros_;
 
     /**
-     * @brief _posture a postural task
+     * @brief postural_ a postural task
      */
-    tasks::acceleration::Postural::Ptr _postural;
+    OpenSoT::tasks::acceleration::Postural::Ptr postural_;
 
     /**
-     * @brief _x_lims some bounds
+     * @brief qddot_lims_ some bounds
      */
-    constraints::GenericConstraint::Ptr _qddot_lims;
+    OpenSoT::constraints::GenericConstraint::Ptr qddot_lims_;
 
     /**
-     * @brief wrench bounds
+     * @brief wrenches_lims_ bounds
      */
-    constraints::force::WrenchesLimits::Ptr _wrenches_lims;
+    OpenSoT::constraints::force::WrenchesLimits::Ptr wrenches_lims_;
 
     /**
      * @brief _model
      */
-    XBot::ModelInterface::Ptr _model;
+    QuadrupedRobot::Ptr model_;
 
 private:
 
     /**
-         * @brief Update the dynamic reconfigure interface
-         */
-    void dynamicReconfigureUpdate();
+     * @brief update call after the model.update() to update the autostack
+     */
+    void update();
 
     /**
-     * @brief _dynamics_con constraint relates the floating base with the contact forces
+     * @brief dynamics_con_ constraint relates the floating base with the contact forces
      */
-    constraints::TaskToConstraint::Ptr _dynamics_con;
+    OpenSoT::constraints::TaskToConstraint::Ptr dynamics_con_;
 
     /**
-     * @brief _dynamics_task constraint relates the floating base with the contact forces
+     * @brief dynamics_task_ constraint relates the floating base with the contact forces
      */
-    tasks::acceleration::DynamicFeasibility::Ptr _dynamics_task;
+    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr dynamics_task_;
 
     /**
-     * @brief _friction_cones constraints
+     * @brief friction_cones_ constraints
      */
-    constraints::force::FrictionCones::Ptr _friction_cones;
+    OpenSoT::constraints::force::FrictionCones::Ptr friction_cones_;
 
     /**
-     * @brief the final ID stack
+     * @brief map of stacks
      */
-    AutoStack::Ptr _stack;
+    std::map<unsigned int,OpenSoT::AutoStack::Ptr> stacks_;
 
     /**
-     * @brief _solver iHQP solver
+     * @brief solver_ iHQP solver
      */
-    solvers::iHQP::Ptr _solver;
+    std::unique_ptr<OpenSoT::solvers::iHQP> solver_;
 
     /**
-     * @brief _id inverse dynamics computation & variable helper
+     * @brief id_ inverse dynamics computation & variable helper
      */
-    OpenSoT::utils::InverseDynamics::Ptr _id;
+    OpenSoT::utils::InverseDynamics::Ptr id_;
 
     /**
-     * @brief _x decision variables
+     * @brief x_ full solver solution
      */
-    Eigen::VectorXd _x;
+    Eigen::VectorXd x_;
 
-    Eigen::VectorXd _qddot;
-    std::vector<Eigen::Vector6d> _contact_wrenches;
+    /**
+     * @brief qddot_ joint accelerations solution
+     */
+    Eigen::VectorXd qddot_;
 
-    Eigen::Vector6d _wrench_upper_lims;
-    Eigen::Vector6d _wrench_lower_lims;
+    /**
+     * @brief contact_wrenches_ contacts solution
+     */
+    std::vector<Eigen::Vector6d> contact_wrenches_;
 
-    /** @brief ROS dynamic reconfigure */
-    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::problemConfig>> server_;
-    /** @brief ROS dynamic reconfigure config struct */
-    wb_controller::problemConfig default_config_;
+    /**
+     * @brief wrench limitis
+     */
+    Eigen::Vector6d wrench_upper_lims_;
+    Eigen::Vector6d wrench_lower_lims_;
 
-    std::atomic<double> _mu;
-    std::atomic<double> _x_force_lower_lim;
-    std::atomic<double> _y_force_lower_lim;
-    std::atomic<double> _z_force_lower_lim;
+    double x_force_lower_lim_;
+    double y_force_lower_lim_;
+    double z_force_lower_lim_;
 
-    unsigned int idx_grfs_start_;
+    OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
+
+    std::atomic<unsigned int> current_stack_;
+
+    std::mutex solver_lock_;
+
+    std::vector<std::string> foot_names_;
+    std::vector<std::string> arm_names_;
+    std::vector<std::string> contact_names_;
+
+    Eigen::Affine3d tmp_affine3d_;
 
 };
 
