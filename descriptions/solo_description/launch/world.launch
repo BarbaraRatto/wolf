@@ -36,7 +36,7 @@
 
 	<!-- Start gazebo server-->
 	<node name="gazebo" pkg="gazebo_ros" type="$(arg script_type)" respawn="false" output="screen"
-		args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name)" />
+                args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name) -e bullet --verbose" />
 	
 	<!-- Start gazebo client -->
 	<group if="$(arg gui)">
