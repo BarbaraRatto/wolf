@@ -337,7 +337,7 @@ void StateEstimator::update(const double& period)
     robot_model_->getXBotModel()->getPose(foot_names[i],world_T_foot_[foot_names[i]]);
     world_X_foot_[foot_names[i]] = world_T_foot_[foot_names[i]].translation();
     // Feet position in base/trunk
-    robot_model_->getXBotModel()->getPose(foot_names[i],"base_link",base_T_foot_[foot_names[i]]);
+    robot_model_->getXBotModel()->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_[foot_names[i]]);
     base_X_foot_[foot_names[i]] = base_T_foot_[foot_names[i]].translation();
 
     world_X_contact_[foot_names[i]] = world_X_foot_[foot_names[i]];
@@ -349,7 +349,7 @@ void StateEstimator::update(const double& period)
     robot_model_->getXBotModel()->getPose(arm_names[i],world_T_arm_[arm_names[i]]);
     world_X_arm_[arm_names[i]] = world_T_arm_[arm_names[i]].translation();
     // Arms position in base/trunk
-    robot_model_->getXBotModel()->getPose(arm_names[i],"base_link",base_T_arm_[arm_names[i]]);
+    robot_model_->getXBotModel()->getPose(arm_names[i],BASE_LINK_FRAME_NAME,base_T_arm_[arm_names[i]]);
     base_X_arm_[arm_names[i]] = base_T_arm_[arm_names[i]].translation();
 
     world_X_contact_[arm_names[i]] = world_X_arm_[arm_names[i]];

@@ -39,6 +39,8 @@ public:
   const double& getBaseLength() const;
   const double& getBaseWidth() const;
 
+  const std::string& getBaseLinkName() const;
+
   const double& getRobotMass() const;
   const Eigen::Matrix3d& getFloatingBaseInertia() const;
 
@@ -54,6 +56,7 @@ private:
   std::vector<std::string> arm_names_; // arm tip names
   std::vector<std::string> contact_names_; // foot + arm names
   std::vector<std::string> limb_names_; // chain names
+  std::vector<std::string> base_names_;
 
   unsigned int n_legs_;
   unsigned int n_arms_;

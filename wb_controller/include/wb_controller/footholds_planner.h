@@ -61,7 +61,15 @@ public:
    */
   void setGains(const double& k_x, const double& k_y, const double& k_yaw);
 
-  void togglePushRecovery();
+  /**
+   * @brief activate the computation of the deltas for the push recovery
+   */
+  void activateComputeDeltas();
+
+  /**
+   * @brief de-activate the computation of the deltas for the push recovery
+   */
+  void deactivateComputeDeltas();
 
 private:
 
@@ -221,6 +229,7 @@ private:
     std::atomic<double>  step_length_max_;
     std::atomic<double>  step_height_;
     std::atomic<bool>    push_detected_;
+    std::atomic<bool>    push_recovery_active_;
 
     /** @brief Base linear velocity w.r.t horizontal frame
      * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
