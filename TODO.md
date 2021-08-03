@@ -1,6 +1,8 @@
 # TODO list
 
-- Export to params the push recovery
+- Terrain estimator problem when going on rough terrain
+- Weight control when going up ramps
+- Foot Trajectories, am I doing it correctly? Clean it up!
 - Move terrain estimator inside state estimator as a subclass
 - Remove dynamic reconfigure
 - Clean wb_robot_hw, parse hardcoded info from urdf/srdf
