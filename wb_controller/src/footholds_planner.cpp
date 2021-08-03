@@ -662,13 +662,13 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
   max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
-  static_th_dot_(0) = 0.0; // x [m/s]
-  static_th_dot_(1) = 0.0; // y [m/s]
-  static_th_dot_(2) = 0.0; // yaw [rad/s]
+  static_th_dot_(0) = 1000.0; // x [m/s]
+  static_th_dot_(1) = 1000.0; // y [m/s]
+  static_th_dot_(2) = 1000.0; // yaw [rad/s]
 
-  dynamic_th_dot_(0) = 0.0; // x [m/s]
-  dynamic_th_dot_(1) = 0.0; // y [m/s]
-  dynamic_th_dot_(2) = 0.0; // yaw [rad/s]
+  dynamic_th_dot_(0) = 1000.0; // x [m/s]
+  dynamic_th_dot_(1) = 1000.0; // y [m/s]
+  dynamic_th_dot_(2) = 1000.0; // yaw [rad/s]
 
   current_th_dot_ = static_th_dot_;
 
@@ -747,8 +747,8 @@ bool PushRecovery::update(const double& period)
         st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
         C1_pr_ = Z0h_/GRAVITY/st_p_; //C1_pr should be positive
 
-        deltas_[foot_names[i]].x() = C1_pr_*(k_x_*(error_(0))+ signs_[foot_names[i]].first  * k_yaw_*C2_pr_*(error_(2)));
-        deltas_[foot_names[i]].y() = C1_pr_*(k_y_*(error_(1))+ signs_[foot_names[i]].second * k_yaw_*C3_pr_*(error_(2)));
+        deltas_[foot_names[i]].x() = C1_pr_*(k_x_*(error_(0)) + signs_[foot_names[i]].first  * k_yaw_*C2_pr_*(error_(2)));
+        deltas_[foot_names[i]].y() = C1_pr_*(k_y_*(error_(1)) + signs_[foot_names[i]].second * k_yaw_*C3_pr_*(error_(2)));
 
         if(deltas_[foot_names[i]].x() > max_delta_)
           deltas_[foot_names[i]].x() = max_delta_;
