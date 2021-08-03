@@ -29,6 +29,10 @@ public:
     height_ = 0.0;
 
     trajectory_finished_ = true;
+
+     _id++;
+
+    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"_"+std::to_string(_id)+"/position_reference",position_reference_);
   }
 
   const Eigen::Affine3d& getReference()
@@ -170,6 +174,8 @@ public:
     pose_reference_  = trajectoryFunction(time_);
     twist_reference_ = trajectoryFunctionDot(time_);
 
+    position_reference_ = pose_reference_.translation();
+
     if(swing_frequency_*time_>=1.0)
       trajectory_finished_ = true;
   }
@@ -203,6 +209,10 @@ protected:
   std::atomic<double> height_;
   bool trajectory_finished_;
 
+  Eigen::Vector3d position_reference_;
+
+  inline static int _id = 0;
+
   virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
   virtual const Eigen::Vector6d& trajectoryFunctionDot(const double& time) = 0;
 };
@@ -218,10 +228,6 @@ public:
   {
     xyz_ = xyz_rotated_ = xyz_dot_ = Eigen::Vector3d::Zero();
     world_R_swing_ = swing_R_world_ = S_ = Ear_ = Eigen::Matrix3d::Zero();
-
-    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/xyz",xyz_);
-    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/xyz_rotated",xyz_rotated_);
-    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/rpy",rpy_);
   }
 
 protected:
@@ -229,7 +235,7 @@ protected:
   const Eigen::Affine3d& trajectoryFunction(const double& time)
   {
     rpy_(0) = roll_;
-    rpy_(1) = pitch_;
+    rpy_(1) = sgn(std::sin(yaw_))*pitch_;
     rpy_(2) = yaw_;
 
     xyz_(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
@@ -258,7 +264,7 @@ protected:
     rpy_rates_(2) = yaw_rate_;
 
     rpy_(0) = roll_;
-    rpy_(1) = pitch_;
+    rpy_(1) = sgn(std::sin(yaw_))*pitch_;
     rpy_(2) = yaw_;
 
     rpyToEarWorld(rpy_,Ear_); // Are we sure?

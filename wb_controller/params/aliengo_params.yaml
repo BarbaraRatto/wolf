@@ -8,8 +8,8 @@ wb_controller:
   default_step_height: 0.065
   max_step_height: 0.15
   max_step_length: 0.5
-  estimation_position_type: estimated_z
-  estimation_orientation_type: imu_magnetometer
+  estimation_position_type: ground_truth
+  estimation_orientation_type: ground_truth
 
   push_recovery:
       k: {x: 1.0, y: 1.0, r: 0.1}
