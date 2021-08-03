@@ -15,6 +15,7 @@ public:
   const std::string CLASS_NAME = "TrajectoryInterface";
 
   TrajectoryInterface()
+    :trajectory_id(_id++)
   {
     pose_reference_ = initial_pose_ = pose_ = Eigen::Affine3d::Identity();
     twist_reference_.setZero();
@@ -30,9 +31,8 @@ public:
 
     trajectory_finished_ = true;
 
-     _id++;
-
-    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"_"+std::to_string(_id)+"/position_reference",position_reference_);
+    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/position_reference_"+_legs_prefix[trajectory_id],position_reference_);
+    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/velocity_reference_"+_legs_prefix[trajectory_id],velocity_reference_);
   }
 
   const Eigen::Affine3d& getReference()
@@ -175,12 +175,16 @@ public:
     twist_reference_ = trajectoryFunctionDot(time_);
 
     position_reference_ = pose_reference_.translation();
+    velocity_reference_ = twist_reference_.head(3);
 
     if(swing_frequency_*time_>=1.0)
       trajectory_finished_ = true;
   }
 
 protected:
+
+  inline static int _id = 0;
+  int trajectory_id;
 
   /** @brief Pose reference */
   Eigen::Affine3d pose_reference_;
@@ -210,8 +214,7 @@ protected:
   bool trajectory_finished_;
 
   Eigen::Vector3d position_reference_;
-
-  inline static int _id = 0;
+  Eigen::Vector3d velocity_reference_;
 
   virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
   virtual const Eigen::Vector6d& trajectoryFunctionDot(const double& time) = 0;
@@ -227,26 +230,33 @@ public:
   Ellipse()
   {
     xyz_ = xyz_rotated_ = xyz_dot_ = Eigen::Vector3d::Zero();
-    world_R_swing_ = swing_R_world_ = S_ = Ear_ = Eigen::Matrix3d::Zero();
+    terrain_R_swing_ = world_R_terrain_ = terrain_R_world_ = world_Rz_swing_ = Sz_ = Ear_ = Eigen::Matrix3d::Zero();
   }
 
 protected:
 
   const Eigen::Affine3d& trajectoryFunction(const double& time)
   {
-    rpy_(0) = roll_;
-    rpy_(1) = sgn(std::sin(yaw_))*pitch_;
-    rpy_(2) = yaw_;
-
     xyz_(0) = length_/2 * (1 - std::cos(M_PI * (swing_frequency_ * time)));
     xyz_(1) = 0.0;
     xyz_(2) = height_ * std::sin(M_PI * (swing_frequency_ * time));
 
-    rpyToRot(rpy_,swing_R_world_);
+    double c = std::cos(yaw_);
+    double s = std::sin(yaw_);
 
-    world_R_swing_.noalias() = swing_R_world_.transpose();
+    world_Rz_swing_(0,0) = c;
+    world_Rz_swing_(0,1) = -s;
+    world_Rz_swing_(1,0) = s;
+    world_Rz_swing_(1,1) = c;
+    world_Rz_swing_(2,2) = 1;
 
-    xyz_rotated_.noalias() = world_R_swing_ * xyz_;
+    rpyToRot(roll_,pitch_,0.0,world_R_terrain_);
+
+    terrain_R_world_.noalias() = world_R_terrain_.transpose();
+
+    terrain_R_swing_ = terrain_R_world_ * world_Rz_swing_;
+
+    xyz_rotated_.noalias() = terrain_R_swing_ * xyz_;
 
     pose_.translation() = initial_pose_.translation() + xyz_rotated_;
 
@@ -255,37 +265,28 @@ protected:
 
   const Eigen::Vector6d& trajectoryFunctionDot(const double& time)
   {
-    rpy_rates_.setZero();
-    omegas_.setZero();
-    rpy_.setZero();
-
-    rpy_rates_(0) = roll_rate_;
-    rpy_rates_(1) = pitch_rate_;
-    rpy_rates_(2) = yaw_rate_;
-
-    rpy_(0) = roll_;
-    rpy_(1) = sgn(std::sin(yaw_))*pitch_;
-    rpy_(2) = yaw_;
-
-    rpyToEarWorld(rpy_,Ear_); // Are we sure?
-
-    omegas_ = Ear_ * rpy_rates_;
-
-    S_(0,1) = -omegas_(2);
-    S_(1,0) =  omegas_(2);
-
-    S_(0,2) =  omegas_(1);
-    S_(2,0) = -omegas_(1);
-
-    S_(1,2) = -omegas_(0);
-    S_(2,1) =  omegas_(0);
 
     xyz_dot_(0) = M_PI * swing_frequency_ * length_/2 * std::sin(M_PI * (swing_frequency_ * time));
     xyz_dot_(1) = 0.0;
     xyz_dot_(2) = M_PI * swing_frequency_ * height_ * std::cos(M_PI * (swing_frequency_ * time));
 
+    rpy_rates_.setZero();
+    omegas_.setZero();
+    rpy_.setZero();
+
+    rpy_(2) = yaw_;
+    rpy_rates_(2) = yaw_rate_;
+
+    rpyToEarWorld(rpy_,Ear_);
+
+    omegas_ = Ear_ * rpy_rates_;
+
+    Sz_(0,1) = -omegas_(2);
+    Sz_(1,0) = -omegas_(2);
+
     twist_.setZero(); // No angular velocities
-    twist_.head(3) = S_ * xyz_rotated_ + world_R_swing_ * xyz_dot_;
+    // We are assuming that the terrain frame does not change so fast i.e. it does not contribute to the velocities, it just rotates them
+    twist_.head(3) = terrain_R_world_ * (Sz_ * world_Rz_swing_ * xyz_ + world_Rz_swing_ * xyz_dot_);
 
     return twist_;
   }
@@ -295,14 +296,18 @@ private:
   Eigen::Vector3d xyz_;
   Eigen::Vector3d xyz_dot_;
   Eigen::Vector3d xyz_rotated_;
-  Eigen::Matrix3d world_R_swing_;
-  Eigen::Matrix3d swing_R_world_;
-  Eigen::Matrix3d S_;
+
+  Eigen::Matrix3d Sz_;
   Eigen::Matrix3d Ear_;
 
   Eigen::Vector3d rpy_;
   Eigen::Vector3d rpy_rates_;
   Eigen::Vector3d omegas_;
+
+  Eigen::Matrix3d world_Rz_swing_;
+  Eigen::Matrix3d terrain_R_world_;
+  Eigen::Matrix3d world_R_terrain_;
+  Eigen::Matrix3d terrain_R_swing_;
 };
 
 } // namespace

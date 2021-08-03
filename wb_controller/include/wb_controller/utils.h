@@ -87,6 +87,7 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
 extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
 extern std::vector<std::string> _joints_prefix;
+extern std::vector<std::string> _legs_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
 inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {

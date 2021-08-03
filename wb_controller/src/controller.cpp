@@ -23,6 +23,7 @@ namespace wb_controller {
 std::vector<std::string> _dof_names = {}; // To be loaded from the robot model
 std::vector<std::string> _cartesian_names = {"x","y","z","roll","pitch","yaw"}; // This is our standard cartesian dofs order
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
+std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 
 Controller::Controller()
   :solver_created_(false)
