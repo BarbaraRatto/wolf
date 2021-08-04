@@ -171,9 +171,10 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
       initializeFootPosition(foot_names[i]);
 
     gait_generator_->setStepLength(foot_names[i], steps_length_[foot_names[i]]);
-    gait_generator_->setStepYaw(foot_names[i], steps_heading_[foot_names[i]]);
+    gait_generator_->setStepHeading(foot_names[i], steps_heading_[foot_names[i]]);
     gait_generator_->setStepHeight(foot_names[i], steps_height_[foot_names[i]]);
-    gait_generator_->setStepYawRate(foot_names[i], steps_heading_rate_[foot_names[i]]);
+    gait_generator_->setStepHeadingRate(foot_names[i], steps_heading_rate_[foot_names[i]]);
+    gait_generator_->setTerrainRotation(world_T_terrain_.linear());
   }
 
   if(cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_)
@@ -622,6 +623,21 @@ double FootholdsPlanner::getStepLength() const
 const Gait::gait_t &FootholdsPlanner::getGaitType() const
 {
   return gait_generator_->getGaitType();
+}
+
+bool FootholdsPlanner::isAnyFootInTouchDown()
+{
+  return gait_generator_->isAnyFootInTouchDown();
+}
+
+bool FootholdsPlanner::areAllFeetInStance()
+{
+  return gait_generator_->areAllFeetInStance();
+}
+
+const std::vector<std::string>& FootholdsPlanner::getFootNames() const
+{
+  return gait_generator_->getFootNames();
 }
 
 Eigen::Vector3d &FootholdsPlanner::getCurrentFoothold(const std::string &foot_name)

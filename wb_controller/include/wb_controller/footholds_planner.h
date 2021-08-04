@@ -188,12 +188,14 @@ public:
     Eigen::Vector3d& getCurrentFootholdHF(const std::string& foot_name) ;
     Eigen::Vector3d& getVirtualFoothold(const std::string& foot_name) ;
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
-
-    void setInitialOffsets();
-
     void togglePushRecovery();
+    bool isAnyFootInTouchDown();
+    bool areAllFeetInStance();
+    const std::vector<std::string> &getFootNames() const;
 
 private:
+
+    void setInitialOffsets();
 
     void calculateFootSteps();
 

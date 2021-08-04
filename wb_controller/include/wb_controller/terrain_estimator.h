@@ -31,8 +31,7 @@ public:
 
     enum estimation_t {NONE=0,FLAT_TERRAIN,ROUGH_TERRAIN};
 
-    TerrainEstimator(GaitGenerator::Ptr gait_generator,
-                     StateEstimator::Ptr state_estimator,
+    TerrainEstimator(StateEstimator::Ptr state_estimator,
                      LegsKinematics::Ptr kin,
                      FootholdsPlanner::Ptr foot_holds_planner);
 
@@ -80,7 +79,6 @@ private:
     Eigen::Matrix3d R_;
     Eigen::Affine3d T_;
 
-    GaitGenerator::Ptr gait_generator_;
     StateEstimator::Ptr state_estimator_;
     LegsKinematics::Ptr kin_;
     FootholdsPlanner::Ptr foot_holds_planner_;

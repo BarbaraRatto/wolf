@@ -5,15 +5,10 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-TerrainEstimator::TerrainEstimator(GaitGenerator::Ptr gait_generator,
-                                   StateEstimator::Ptr state_estimator,
+TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
                                    LegsKinematics::Ptr kin,
                                    FootholdsPlanner::Ptr foot_holds_planner)
 {
-
-  assert(gait_generator);
-  gait_generator_ = gait_generator;
-
   assert(state_estimator);
   state_estimator_ = state_estimator;
 
@@ -64,11 +59,11 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   pitch_rate_ = 0.0;
 
   // 0 - Update the terrain estimation everytime there is a touchdown
-  if(gait_generator_->isAnyFootInTouchDown())
+  if(foot_holds_planner_->isAnyFootInTouchDown())
     update_ = true;
 
   // 1 - Check if the feet are all in stance
-  if(gait_generator_->isAllFeetInStance())
+  if(foot_holds_planner_->areAllFeetInStance())
   {
 
     if(update_ == true)
@@ -123,23 +118,17 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
     return false;
   }
 
-  // Update the resulting Transformation
+  // 7 - Update the resulting Transformation
   rpyToRot(roll_out_,pitch_out_,0.0,R_);
   T_.translation() = pos_;
   T_.linear() = R_; // world_T_terrain
 
-  // 8 - Update the swing trajectories
-  gait_generator_->setStepRoll(roll_out_);
-  gait_generator_->setStepPitch(pitch_out_);
-  gait_generator_->setStepRollRate(roll_rate_);
-  gait_generator_->setStepPitchRate(pitch_rate_);
-
-  // 9 - Update the state estimator (to align the contact forces with the
+  // 8 - Update the state estimator (to align the contact forces with the
   // terrain)
   state_estimator_->setTerrainNormal(terrain_normal_);
   state_estimator_->setTerrainCentralPoint(pos_);
 
-  // 10 - Base adjustment, compute the offsets to help adapting the posture based
+  // 9 - Base adjustment, compute the offsets to help adapting the posture based
   // on the terrain, for now, we compute only an adjustment along the x axis.
   double terrain_h_base = state_estimator_->getFloatingBasePosition()(2);
   base_adjustment_ = terrain_h_base * std::tan(pitch_out_);
@@ -148,7 +137,8 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   tmp_vector3d_ << base_adjustment_dot_, 0.0, 0.0;
   kin_->setDesiredBaseAdjustmentDot(tmp_vector3d_);
 
-  // 11 - Adjust the references for the desired base height and orientation (roll and pitch)
+  // 10 - Adjust the references for the desired base height and orientation (roll and pitch)
+  // updates the foot trajectories with the terrain rotation (roll and pitch)
   foot_holds_planner_->setTerrainTransform(T_);
 
   return true;
@@ -167,7 +157,7 @@ double TerrainEstimator::getBaseAdjustmentDot() const
 void TerrainEstimator::update()
 {
 
-  auto foot_names = gait_generator_->getFootNames();
+  auto foot_names = foot_holds_planner_->getFootNames();
   foot_positions_ = state_estimator_->getFeetPositionInWorld();
 
   A_(0,0) = foot_positions_[foot_names[0]](0);
