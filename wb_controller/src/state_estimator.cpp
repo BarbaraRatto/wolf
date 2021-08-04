@@ -164,11 +164,6 @@ void StateEstimator::setTerrainNormal(const Eigen::Vector3d &terrain_normal)
   terrain_normal_ = terrain_normal;
 }
 
-void StateEstimator::setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point)
-{
-  terrain_central_point_ = terrain_central_point;
-}
-
 void StateEstimator::setImuOrientation(const Eigen::Quaterniond& imu_orientation)
 {
   imu_orientation_ = imu_orientation;
