@@ -123,6 +123,8 @@ private:
 
     void updateContactState();
 
+    double estimateZ();
+
     std::map<std::string,unsigned int> estimations_;
 
     /** @brief Joint positions */

@@ -413,6 +413,25 @@ void StateEstimator::updateContactState()
 
 }
 
+double StateEstimator::estimateZ()
+{
+  // Estimate z using the legs position
+  const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
+  double estimated_z = 0.0;
+  int feet_in_stance = 0;
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+  {
+    if(!gait_generator_->isSwinging(foot_names[i]))
+    {
+      feet_in_stance++;
+      tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[foot_names[i]];
+      estimated_z +=  tmp_affine3d_.translation().z();
+    }
+  }
+  estimated_z /= feet_in_stance;
+  return estimated_z;
+}
+
 void StateEstimator::updateFloatingBase(const double& period)
 {
   unsigned int estimation_orientation = estimation_orientation_;
@@ -508,11 +527,6 @@ void StateEstimator::updateFloatingBase(const double& period)
   robot_model_->getXBotModel()->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
   robot_model_->getXBotModel()->update();
 
-  const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
-
-  double estimated_z = 0.0;
-  int feet_in_stance = 0;
-
   switch(estimation_position)
   {
   case estimation_t::NONE:
@@ -521,17 +535,6 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_position_ << 0.0,0.0,0.0;
     break;
   case estimation_t::ESTIMATED_Z:
-    // Estimate z using the legs position
-    for(unsigned int i = 0; i<feet_names.size(); i++)
-    {
-      if(!gait_generator_->isSwinging(feet_names[i]))
-      {
-        feet_in_stance++;
-        tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[feet_names[i]];
-        estimated_z +=  tmp_affine3d_.translation().z();
-      }
-    }
-    estimated_z /= feet_in_stance;
     // Update the qp estimation based on the new virtual model state
     //termporarily commented to save time
     qp_estimation_->update();
@@ -539,12 +542,13 @@ void StateEstimator::updateFloatingBase(const double& period)
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
+    floating_base_position_ << 0.0,0.0, -estimateZ(); // Remove x and y from the state estimation
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
     floating_base_position_.head(2) << gt_position_.head(2);
-    floating_base_position_(2) =  gt_position_(2) - terrain_central_point_(2); // Adjust the height wrt the terrain
+     // Note: this is the z calculated wrt the base not the one wrt world!
+    floating_base_position_(2) = -estimateZ();
     break;
   default:
     // The base does not move
