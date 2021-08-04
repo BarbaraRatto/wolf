@@ -1,5 +1,10 @@
 # TODO list
 
+- Spot contacts, move the, back a bit?
+- Can not go on ramps rotated to align with y
+- Z control for aliengo and spot
+- Quadruped robot as decorator with horizontal frame informations as well?
+
 - Terrain estimator problem when going on rough terrain
 - Weight control when going up ramps
 - Foot Trajectories, am I doing it correctly? Clean it up!
