@@ -168,7 +168,7 @@ Visualization Manager:
       Visual Enabled: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /spot/wb_controller/CoM_visual_marker
+      Marker Topic: /spot/plot_node/CoM_visual_marker
       Name: MarkerArray
       Namespaces:
         Arrow: true
@@ -177,7 +177,15 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /spot/wb_controller/terrain_estimation_visual_marker
+      Marker Topic: /spot/plot_node/contact_forces_visual_marker
+      Name: MarkerArray
+      Namespaces:
+        Arrow: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /spot/plot_node/friction_cones_visual_marker
       Name: MarkerArray
       Namespaces:
         Triangle: true
@@ -185,10 +193,10 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /spot/wb_controller/contact_forces_visual_marker
+      Marker Topic: /spot/plot_node/terrain_estimation_visual_marker
       Name: MarkerArray
       Namespaces:
-        Arrow: true
+        Triangle: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -219,25 +227,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.6280250549316406
+      Distance: 0.20383694767951965
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: 0.34837499260902405
+        Y: -0.3174225986003876
+        Z: 0.7837256789207458
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7653979659080505
+      Pitch: 0.2403983324766159
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.693586349487305
+      Yaw: 3.5535755157470703
     Saved: ~
 Window Geometry:
   Displays:
