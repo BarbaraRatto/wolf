@@ -26,8 +26,8 @@ TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
   Ai_.resize(3,N_LEGS);
   b_.resize(N_LEGS);
 
-  roll_ = roll_filt_ = estimated_roll_ = 0.0;
-  pitch_ = pitch_filt_ = estimated_pitch_ = 0.0;
+  roll_ = roll_filt_ = roll_out_ = estimated_roll_ = 0.0;
+  pitch_ = pitch_filt_ = pitch_out_ = estimated_pitch_ = 0.0;
 
 
   terrain_normal_ << 0.0, 0.0, 1.0;
@@ -42,6 +42,7 @@ TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/pitch",pitch_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_adjustment",base_adjustment_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_adjustment_dot",base_adjustment_dot_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/pos",pos_);
 }
 
 
@@ -123,8 +124,8 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   T_.translation() = pos_;
   T_.linear() = R_; // world_T_terrain
 
-  // 8 - Update the state estimator (to align the contact forces with the
-  // terrain)
+  // 8 - Update the state estimator to align the contact forces with the
+  // terrain and the base height and rotation references
   state_estimator_->setTerrainNormal(terrain_normal_);
 
   // 9 - Base adjustment, compute the offsets to help adapting the posture based
@@ -133,8 +134,9 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   base_adjustment_ = terrain_h_base * std::tan(pitch_out_);
   base_adjustment_dot_ = (base_adjustment_ - base_adjustment_prev_)/dt;
   base_adjustment_prev_ = base_adjustment_;
-  tmp_vector3d_ << base_adjustment_dot_, 0.0, 0.0;
-  kin_->setDesiredBaseAdjustmentDot(tmp_vector3d_);
+  tmp_vector3d_ << base_adjustment_dot_, 0.0, 0.0; // w.r.t base
+  // tmp_vector3d_ = world_R_base * tmp_vector3d_;
+  //kin_->setDesiredBaseAdjustmentDot(tmp_vector3d_); // This is ok but I need to be sure that state_estimator_->getFloatingBasePosition()(2) is adapted wrt terrain
 
   // 10 - Adjust the references for the desired base height and orientation (roll and pitch)
   // updates the foot trajectories with the terrain rotation (roll and pitch)
