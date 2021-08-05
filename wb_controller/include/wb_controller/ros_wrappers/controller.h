@@ -295,9 +295,9 @@ public:
       {
           for(unsigned int i=0; i <foot_names.size(); i++)
           {
-              terrain_estimation_pub_->msg_.central_point.x = controller_->getTerrainEstimator()->getPosition().x();
-              terrain_estimation_pub_->msg_.central_point.y = controller_->getTerrainEstimator()->getPosition().y();
-              terrain_estimation_pub_->msg_.central_point.z = controller_->getTerrainEstimator()->getPosition().z();
+              terrain_estimation_pub_->msg_.central_point.x = controller_->getTerrainEstimator()->getTerrainPositionWorld().x();
+              terrain_estimation_pub_->msg_.central_point.y = controller_->getTerrainEstimator()->getTerrainPositionWorld().y();
+              terrain_estimation_pub_->msg_.central_point.z = controller_->getTerrainEstimator()->getTerrainPositionWorld().z();
 
               terrain_estimation_pub_->msg_.terrain_normal.x = controller_->getTerrainEstimator()->getTerrainNormal().x();
               terrain_estimation_pub_->msg_.terrain_normal.y = controller_->getTerrainEstimator()->getTerrainNormal().y();

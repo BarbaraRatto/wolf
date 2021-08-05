@@ -175,7 +175,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
     gait_generator_->setStepHeight(foot_names[i], steps_height_[foot_names[i]]);
     gait_generator_->setStepHeadingRate(foot_names[i], steps_heading_rate_[foot_names[i]]);
   }
-  gait_generator_->setTerrainRotation(world_T_terrain_.linear());
+  //gait_generator_->setTerrainRotation(world_T_terrain_.linear());
 
   if(cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_)
     gait_generator_->activateSwing();
@@ -347,11 +347,11 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
 
   base_position_ = base_linear_velocity_reference_ * period + base_position_;
 
-  //base_position_reference_ = base_position_;
+  base_position_reference_ = base_position_;
 
   // This is the base height reference computed w.r.t terrain ( reference = reference_world - reference_terrain )
-  base_position_reference_.head(2) = base_position_.head(2);
-  base_position_reference_(2) = base_position_(2) + world_T_terrain_.translation().z();
+  //base_position_reference_.head(2) = base_position_.head(2);
+  //base_position_reference_(2) = base_position_(2) + world_T_terrain_.translation().z();
 }
 
 void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
@@ -369,9 +369,9 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   base_orientation_ = base_angular_velocity_reference_ * period + base_orientation_;
 
-  // This is the base rotation reference computed w.r.t terrain
   rpyToRot(base_orientation_,base_rotation_reference_);
-  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
+  // This is the base rotation reference computed w.r.t terrain
+  //base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
 }
 
 void FootholdsPlanner::setInitialOffsets()
@@ -638,6 +638,16 @@ bool FootholdsPlanner::areAllFeetInStance()
 const std::vector<std::string>& FootholdsPlanner::getFootNames() const
 {
   return gait_generator_->getFootNames();
+}
+
+const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInHf() const
+{
+  return hf_R_base_;
+}
+
+const Eigen::Matrix3d &FootholdsPlanner::getHfRotationInWorld() const
+{
+  return world_R_hf_;
 }
 
 Eigen::Vector3d &FootholdsPlanner::getCurrentFoothold(const std::string &foot_name)

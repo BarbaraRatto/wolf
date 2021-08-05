@@ -41,31 +41,27 @@ public:
 
     void setMinRoll(const double min);
     void setMinPitch(const double min);
-
     void setMaxRoll(const double max);
     void setMaxPitch(const double max);
 
-    double getRoll() const;
-    double getPitch() const;
+    const double& getRollInWorld() const;
+    const double& getPitchInWorld() const;
+    const double& getRollInHf() const;
+    const double& getPitchInHf() const;
 
-    double getRollRate() const;
-    double getPitchRate() const;
-
-    double getBaseAdjustment() const;
-
-    double getBaseAdjustmentDot() const;
+    const Eigen::Vector3d& getPostureAdjustment() const;
+    const Eigen::Vector3d& getPostureAdjustmentDot() const;
 
     const Eigen::Vector3d& getTerrainNormal() const;
 
-    const Eigen::Vector3d& getPosition() const;
+    const Eigen::Vector3d& getTerrainPositionWorld() const;
+    const Eigen::Vector3d& getTerrainPositionHf()  const;
 
-    const Eigen::Matrix3d& getOrientation() const;
+    const Eigen::Matrix3d& getTerrainOrientationWorld() const;
+    const Eigen::Matrix3d& getTerrainOrientationHf()  const;
 
-    const Eigen::Affine3d& getPose() const;
-
-    const std::map<std::string,Eigen::Vector3d>& getFootPositions() const;
-
-    Eigen::Vector3d& getFootPosition(const std::string &foot_name);
+    const Eigen::Affine3d& getTerrainPoseWorld() const;
+    const Eigen::Affine3d& getTerrainPoseHf()  const;
 
 private:
 
@@ -75,9 +71,12 @@ private:
     Eigen::MatrixXd Ai_;
     Eigen::VectorXd b_;
     Eigen::Vector3d terrain_normal_;
-    Eigen::Vector3d pos_;
-    Eigen::Matrix3d R_;
-    Eigen::Affine3d T_;
+    Eigen::Vector3d hf_X_terrain_;
+    Eigen::Matrix3d hf_R_terrain_;
+    Eigen::Affine3d hf_T_terrain_;
+    Eigen::Vector3d world_X_terrain_;
+    Eigen::Matrix3d world_R_terrain_;
+    Eigen::Affine3d world_T_terrain_;
 
     StateEstimator::Ptr state_estimator_;
     LegsKinematics::Ptr kin_;
@@ -92,23 +91,20 @@ private:
     double roll_filt_;
     double pitch_filt_;
 
-    std::atomic<double> max_roll_;
-    std::atomic<double> max_pitch_;
+    double max_roll_;
+    double max_pitch_;
 
-    std::atomic<double> min_roll_;
-    std::atomic<double> min_pitch_;
+    double min_roll_;
+    double min_pitch_;
 
-    std::atomic<double> roll_out_;
-    std::atomic<double> pitch_out_;
+    double roll_out_world_;
+    double pitch_out_world_;
+    double roll_out_hf_;
+    double pitch_out_hf_;
 
-    std::atomic<double> roll_rate_;
-    std::atomic<double> pitch_rate_;
-
-    double base_adjustment_;
-    double base_adjustment_dot_;
-    double base_adjustment_prev_;
-
-    std::map<std::string,Eigen::Vector3d> foot_positions_;
+    Eigen::Vector3d posture_adjustment_;
+    Eigen::Vector3d posture_adjustment_dot_;
+    Eigen::Vector3d posture_adjustment_prev_;
 
     /** @brief Trigger the update of the terrain estimator */
     bool update_;

@@ -545,7 +545,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     com_planner_->update(period.toSec());
     id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
-    id_prob_->setFrictionConesR(terrain_estimator_->getOrientation().transpose());
+    id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
     if(inertia_compensation_active_)
     {
