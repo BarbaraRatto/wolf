@@ -13,10 +13,10 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
-  robot_model_->getXBotModel()->getRobotState("home", qhome_);
-  robot_model_->getXBotModel()->setJointPosition(qhome_);
+  robot_model_->getModelImp()->getRobotState("home", qhome_);
+  robot_model_->getModelImp()->setJointPosition(qhome_);
 
-  robot_model_->getXBotModel()->getJointLimits(qmin_, qmax_);
+  robot_model_->getModelImp()->getJointLimits(qmin_, qmax_);
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
@@ -33,7 +33,7 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
 {
 
-  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getModelImp()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   base_height_ = tmp_affine3d_.translation()(2);
 
   des_joint_positions_ = current_joint_positions;
@@ -44,8 +44,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   for(unsigned int i = 0; i<feet_names.size(); i++)
   {
-    robot_model_->getXBotModel()->getJacobian(feet_names[i],J_);
-    robot_model_->getXBotModel()->getPose(feet_names[i],world_T_foot_);
+    robot_model_->getModelImp()->getJacobian(feet_names[i],J_);
+    robot_model_->getModelImp()->getPose(feet_names[i],world_T_foot_);
 
     J_foot_ = J_.block<3,3>(0,FLOATING_BASE_DOFS+3*i);
 
@@ -135,7 +135,7 @@ void LegsKinematics::reset()
   des_joint_positions_ = qhome_;
   qstance_ = qhome_;
   qswing_ = qhome_;
-  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getModelImp()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
   xdot_ff_.setZero();
 }

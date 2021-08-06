@@ -19,7 +19,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //  This utility internally creates the right variables which later we will use to
   //  create all the tasks and constraints
   //
-  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_->getXBotModel());
+  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_->getModelImp());
 
   //
   // Here we create all the tasks
@@ -28,7 +28,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   for(unsigned int i=0; i<foot_names_.size(); i++)
   {
 
-    feet_[foot_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(foot_names_[i], *model_->getXBotModel(), foot_names_[i],
+    feet_[foot_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(foot_names_[i], *model_->getModelImp(), foot_names_[i],
                                                                                       WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
     feet_[foot_names_[i]]->setLambda(0.,0.);
     feet_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
@@ -37,40 +37,40 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   ROS_INFO_NAMED(CLASS_NAME,"Initialize ARM tasks");
   for(unsigned int i=0; i<arm_names_.size(); i++)
   {
-    arms_[arm_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(arm_names_[i], *model_->getXBotModel(), arm_names_[i],
+    arms_[arm_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(arm_names_[i], *model_->getModelImp(), arm_names_[i],
                                                                                      BASE_LINK_FRAME_NAME, id_->getJointsAccelerationAffine());
     arms_[arm_names_[i]]->setLambda(1.,1.);
     arms_[arm_names_[i]]->setWeightIsDiagonalFlag(true);
   }
   //   --------------------------
-  angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_->getXBotModel(),id_->getJointsAccelerationAffine());
+  angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_->getModelImp(),id_->getJointsAccelerationAffine());
   angular_momentum_->setLambda(0.);
   angular_momentum_->setWeightIsDiagonalFlag(true);
   angular_momentum_->setReference(Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
   angular_momentum_->setMomentumGain(Eigen::Matrix3d::Identity());
   //   --------------------------
-  waistRPY_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *model_->getXBotModel(), BASE_LINK_FRAME_NAME,
+  waistRPY_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *model_->getModelImp(), BASE_LINK_FRAME_NAME,
                                                                         WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waistRPY_->setLambda(1.,1.);
   waistRPY_->setWeightIsDiagonalFlag(true);
   //   --------------------------
-  waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_->getXBotModel(), BASE_LINK_FRAME_NAME,
+  waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_->getModelImp(), BASE_LINK_FRAME_NAME,
                                                                       WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waistZ_->setLambda(1.,1.);
   waistZ_->setWeightIsDiagonalFlag(true);
   //   --------------------------
-  postural_ = std::make_shared<OpenSoT::tasks::acceleration::Postural>(*model_->getXBotModel(), id_->getJointsAccelerationAffine());
+  postural_ = std::make_shared<OpenSoT::tasks::acceleration::Postural>(*model_->getModelImp(), id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
   postural_->setWeightIsDiagonalFlag(true);
   //   --------------------------
-  com_ = std::make_shared<OpenSoT::tasks::acceleration::CoM>(*model_->getXBotModel(), id_->getJointsAccelerationAffine());
+  com_ = std::make_shared<OpenSoT::tasks::acceleration::CoM>(*model_->getModelImp(), id_->getJointsAccelerationAffine());
   com_->setLambda(0.,100.);
   com_->setWeightIsDiagonalFlag(true);
 
   //
   // Here we create the constraints & bounds
   //
-  dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_->getXBotModel(),
+  dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_->getModelImp(),
                                                                                       id_->getJointsAccelerationAffine(), id_->getContactsWrenchAffine(), foot_names_);
 
   dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
@@ -80,9 +80,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   fc_.first.setIdentity();
   for(unsigned int i = 0; i < foot_names_.size(); i++)
     fcs.push_back(fc_);
-  friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_->getXBotModel(),fcs);
+  friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_->getModelImp(),fcs);
 
-  Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(model_->getXBotModel()->getJointNum());
+  Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(model_->getModelImp()->getJointNum());
   Eigen::VectorXd xmin = -xmax;
 
   qddot_lims_ = std::make_shared<OpenSoT::constraints::GenericConstraint>(
@@ -90,9 +90,9 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   x_force_lower_lim_ = -2000;
   y_force_lower_lim_ = -2000;
-  z_force_lower_lim_ = 0.1*GRAVITY*(model_->getXBotModel()->getMass()/N_LEGS);
+  z_force_lower_lim_ = 0.1*GRAVITY*(model_->getModelImp()->getMass()/N_LEGS);
 
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot's weight is: "<<model_->getXBotModel()->getMass());
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot's weight is: "<<model_->getModelImp()->getMass());
 
   wrench_upper_lims_<<2000,2000,2000,Eigen::Vector3d::Zero();
   wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
@@ -148,7 +148,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   x_.setZero(id_->getSerializer()->getSize());
 
-  qddot_.setZero(model_->getXBotModel()->getJointNum());
+  qddot_.setZero(model_->getModelImp()->getJointNum());
   contact_wrenches_.reserve(contact_names_.size());
 
   // Add some ROS magic (TO BE MOVED)

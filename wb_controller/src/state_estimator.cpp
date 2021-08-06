@@ -23,9 +23,9 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   Eigen::Matrix6d contact_matrix;
   contact_matrix.setZero();
   contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-  qp_estimation_ = std::make_shared<OpenSoT::floating_base_estimation::qp_estimation>(robot_model_->getXBotModel(),foot_names,contact_matrix);
+  qp_estimation_ = std::make_shared<OpenSoT::floating_base_estimation::qp_estimation>(robot_model_->getModelImp(),foot_names,contact_matrix);
 
-  int n_dofs = robot_model_->getXBotModel()->getJointNum();
+  int n_dofs = robot_model_->getModelImp()->getJointNum();
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
   joint_velocities_.resize(static_cast<Eigen::Index>(n_dofs));
   joint_efforts_.resize(static_cast<Eigen::Index>(n_dofs));
@@ -85,7 +85,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   use_external_forces_ = false;
 
   // Contact force estimation reset
-  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimation>(robot_model_->getXBotModel());
+  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimation>(robot_model_->getModelImp());
 
   // Contact estimation reset
   std::vector<int> dofs = {0,1,2}; // x y z
@@ -334,10 +334,10 @@ void StateEstimator::update(const double& period)
   for(unsigned int i=0; i<foot_names.size(); i++)
   {
     // Feet position in world
-    robot_model_->getXBotModel()->getPose(foot_names[i],world_T_foot_[foot_names[i]]);
+    robot_model_->getModelImp()->getPose(foot_names[i],world_T_foot_[foot_names[i]]);
     world_X_foot_[foot_names[i]] = world_T_foot_[foot_names[i]].translation();
     // Feet position in base/trunk
-    robot_model_->getXBotModel()->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_[foot_names[i]]);
+    robot_model_->getModelImp()->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_[foot_names[i]]);
     base_X_foot_[foot_names[i]] = base_T_foot_[foot_names[i]].translation();
 
     world_X_contact_[foot_names[i]] = world_X_foot_[foot_names[i]];
@@ -346,10 +346,10 @@ void StateEstimator::update(const double& period)
   for(unsigned int i=0; i<arm_names.size(); i++)
   {
     // Arms position in world
-    robot_model_->getXBotModel()->getPose(arm_names[i],world_T_arm_[arm_names[i]]);
+    robot_model_->getModelImp()->getPose(arm_names[i],world_T_arm_[arm_names[i]]);
     world_X_arm_[arm_names[i]] = world_T_arm_[arm_names[i]].translation();
     // Arms position in base/trunk
-    robot_model_->getXBotModel()->getPose(arm_names[i],BASE_LINK_FRAME_NAME,base_T_arm_[arm_names[i]]);
+    robot_model_->getModelImp()->getPose(arm_names[i],BASE_LINK_FRAME_NAME,base_T_arm_[arm_names[i]]);
     base_X_arm_[arm_names[i]] = base_T_arm_[arm_names[i]].translation();
 
     world_X_contact_[arm_names[i]] = world_X_arm_[arm_names[i]];
@@ -359,7 +359,7 @@ void StateEstimator::update(const double& period)
 
   updateFloatingBase(period);
 
-  robot_model_->getXBotModel()->getCOM(com_);
+  robot_model_->getModelImp()->getCOM(com_);
 }
 
 void StateEstimator::updateContactState()
@@ -419,9 +419,9 @@ void StateEstimator::updateFloatingBase(const double& period)
   unsigned int estimation_position = estimation_position_;
 
   // Update the joints information of the virtual model
-  robot_model_->getXBotModel()->setJointVelocity(joint_velocities_);
-  robot_model_->getXBotModel()->setJointEffort(joint_efforts_);
-  robot_model_->getXBotModel()->setJointPosition(joint_positions_);
+  robot_model_->getModelImp()->setJointVelocity(joint_velocities_);
+  robot_model_->getModelImp()->setJointEffort(joint_efforts_);
+  robot_model_->getModelImp()->setJointPosition(joint_positions_);
 
   // Note: we assume that the IMU is orientated as the base/waist of the robot
   // if this is not the case, it is necessary to add a transfomation from the IMU frame to the
@@ -504,9 +504,9 @@ void StateEstimator::updateFloatingBase(const double& period)
 
   // Update the orientation part of the floating base
   // This is necessary if we are going to use the qp estimator for the floating base linear velocities
-  robot_model_->getXBotModel()->setFloatingBaseOrientation(floating_base_pose_.linear());
-  robot_model_->getXBotModel()->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
-  robot_model_->getXBotModel()->update();
+  robot_model_->getModelImp()->setFloatingBaseOrientation(floating_base_pose_.linear());
+  robot_model_->getModelImp()->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
+  robot_model_->getModelImp()->update();
 
   const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
 
@@ -556,7 +556,7 @@ void StateEstimator::updateFloatingBase(const double& period)
 
   // Finally update the floating base with the full pose and velocities
   floating_base_pose_.translation() = floating_base_position_;
-  robot_model_->getXBotModel()->setFloatingBaseState(floating_base_pose_,floating_base_velocity_); // This should trigger the update of the model
+  robot_model_->getModelImp()->setFloatingBaseState(floating_base_pose_,floating_base_velocity_); // This should trigger the update of the model
 }
 
 }

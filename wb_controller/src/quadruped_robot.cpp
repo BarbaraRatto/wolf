@@ -16,6 +16,7 @@ using namespace XBot;
 namespace wb_controller {
 
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
+
 {
 
   // Create the ModelInterface from XBot
@@ -37,19 +38,19 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   opt.set_parameter("is_model_floating_base", true);
   std::string model_type = "RBDL";
   opt.set_parameter<std::string>("model_type", model_type);
-  xbot_model_ = XBot::ModelInterface::getModel(opt);
+  model_imp_ = XBot::ModelInterface::getModel(opt);
 
-  _dof_names = xbot_model_->getEnabledJointNames();
+  _dof_names = model_imp_->getEnabledJointNames();
 
-  n_arms_ = xbot_model_->arms();
-  n_legs_ = xbot_model_->legs();
-  std::vector<int> actuated_joints = xbot_model_->getEnabledJointId();
+  n_arms_ = model_imp_->arms();
+  n_legs_ = model_imp_->legs();
+  std::vector<int> actuated_joints = model_imp_->getEnabledJointId();
 
   // Load the joint names
   for(unsigned int i=0;i<actuated_joints.size();i++)
   {
       if(actuated_joints[i]>0) // Filter out the floating base joints
-        joint_names_.push_back(xbot_model_->getJointByID(actuated_joints[i])->getJointName());
+        joint_names_.push_back(model_imp_->getJointByID(actuated_joints[i])->getJointName());
   }
 
   if(n_legs_ != N_LEGS)
@@ -61,7 +62,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     throw std::runtime_error("Wrong number of arms, check the SRDF file!");
   } 
 
-  const srdf_advr::Model& srdf_model = xbot_model_->getSrdf();
+  const srdf_advr::Model& srdf_model = model_imp_->getSrdf();
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
@@ -110,7 +111,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   foot_names_ = sortByLegPrefix(foot_names_);
 
   std::vector<std::string> limbs;
-  limbs = xbot_model_->getChainNames();
+  limbs = model_imp_->getChainNames();
 
   for(unsigned int i = 0; i < limbs.size(); i++) // Remove virtual_chain
       if(limbs[i].find("virtual_chain") == std::string::npos)
@@ -122,17 +123,12 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   // Calculate approx base length and width based on the hip positions
   // Hips order: "lf","lh","rf","rh"
   Eigen::Affine3d pose_lf, pose_lh, pose_rf, pose_rh;
-  xbot_model_->getPose(hip_names_[0],BASE_LINK_FRAME_NAME,pose_lf);
-  xbot_model_->getPose(hip_names_[1],BASE_LINK_FRAME_NAME,pose_lh);
-  xbot_model_->getPose(hip_names_[2],BASE_LINK_FRAME_NAME,pose_rf);
-  xbot_model_->getPose(hip_names_[3],BASE_LINK_FRAME_NAME,pose_rh);
+  model_imp_->getPose(hip_names_[0],BASE_LINK_FRAME_NAME,pose_lf);
+  model_imp_->getPose(hip_names_[1],BASE_LINK_FRAME_NAME,pose_lh);
+  model_imp_->getPose(hip_names_[2],BASE_LINK_FRAME_NAME,pose_rf);
+  model_imp_->getPose(hip_names_[3],BASE_LINK_FRAME_NAME,pose_rh);
   base_width_  = std::abs(pose_lf.translation().y() - pose_rf.translation().y());
   base_length_ = std::abs(pose_lf.translation().x() - pose_lh.translation().x());
-
-  mass_ = xbot_model_->getMass();
-
-  xbot_model_->getInertiaMatrix(M_);
-  Ifb_ = M_.block(3,3,3,3);
 }
 
 const std::vector<std::string>& QuadrupedRobot::getFootNames() const
@@ -165,9 +161,9 @@ const std::vector<std::string>& QuadrupedRobot::getLimbNames() const
   return limb_names_;
 }
 
-XBot::ModelInterface::Ptr QuadrupedRobot::getXBotModel()
+XBot::ModelInterface::Ptr QuadrupedRobot::getModelImp()
 {
-  return xbot_model_;
+  return model_imp_;
 }
 
 const unsigned int& QuadrupedRobot::getNumberArms() const
@@ -195,13 +191,10 @@ const std::string &QuadrupedRobot::getBaseLinkName() const
   return base_names_[0];
 }
 
-const double &QuadrupedRobot::getRobotMass() const
+const Eigen::Matrix3d &QuadrupedRobot::getFloatingBaseInertia()
 {
-  return mass_;
-}
-
-const Eigen::Matrix3d &QuadrupedRobot::getFloatingBaseInertia() const
-{
+  model_imp_->getInertiaMatrix(M_);
+  Ifb_ = M_.block(3,3,3,3);
   return Ifb_;
 }
 
@@ -214,6 +207,131 @@ bool QuadrupedRobot::setRobotState(QuadrupedRobot::robot_states_t robot_state)
 {
   robot_state_ = robot_state;
   return true;
+}
+
+bool QuadrupedRobot::getVelocityTwist(const std::string &link_name, KDL::Twist &velocity) const
+{
+  return model_imp_->getVelocityTwist(link_name,velocity);
+}
+
+int QuadrupedRobot::getLinkID(const std::string &link_name) const
+{
+  return model_imp_->getLinkID(link_name);
+}
+
+void QuadrupedRobot::computeInverseDynamics(Eigen::VectorXd &tau) const
+{
+  model_imp_->computeInverseDynamics(tau);
+}
+
+void QuadrupedRobot::computeNonlinearTerm(Eigen::VectorXd &n) const
+{
+  model_imp_->computeNonlinearTerm(n);
+}
+
+void QuadrupedRobot::computeGravityCompensation(Eigen::VectorXd &g) const
+{
+  model_imp_->computeGravityCompensation(g);
+}
+
+void QuadrupedRobot::getInertiaMatrix(Eigen::MatrixXd &M) const
+{
+  model_imp_->getInertiaMatrix(M);
+}
+
+void QuadrupedRobot::setGravity(const KDL::Vector &gravity)
+{
+  model_imp_->setGravity(gravity);
+}
+
+void QuadrupedRobot::getGravity(KDL::Vector &gravity) const
+{
+  model_imp_->getGravity(gravity);
+}
+
+double QuadrupedRobot::getMass() const
+{
+  return model_imp_->getMass();
+}
+
+void QuadrupedRobot::getCentroidalMomentum(Eigen::Vector6d &centroidal_momentum) const
+{
+  model_imp_->getCentroidalMomentum(centroidal_momentum);
+}
+
+void QuadrupedRobot::getCOMAcceleration(KDL::Vector &acceleration) const
+{
+  return model_imp_->getCOMAcceleration(acceleration);
+}
+
+void QuadrupedRobot::getCOMVelocity(KDL::Vector &velocity) const
+{
+  return model_imp_->getCOMVelocity(velocity);
+}
+
+void QuadrupedRobot::getCOM(KDL::Vector &com_position) const
+{
+  return model_imp_->getCOM(com_position);
+}
+
+bool QuadrupedRobot::computeRelativeJdotQdot(const std::string &target_link_name, const std::string &base_link_name, KDL::Twist &jdotqdot) const
+{
+  return model_imp_->computeRelativeJdotQdot(target_link_name,base_link_name,jdotqdot);
+}
+
+bool QuadrupedRobot::getPointAcceleration(const std::string &link_name, const KDL::Vector &point, KDL::Vector &acceleration) const
+{
+  return model_imp_->getPointAcceleration(link_name,point,acceleration);
+}
+
+bool QuadrupedRobot::getRelativeAccelerationTwist(const std::string &link_name, const std::string &base_link_name, KDL::Twist &acceleration) const
+{
+  return model_imp_->getRelativeAccelerationTwist(link_name,base_link_name,acceleration);
+}
+
+bool QuadrupedRobot::getAccelerationTwist(const std::string &link_name, KDL::Twist &acceleration) const
+{
+ return model_imp_->getAccelerationTwist(link_name,acceleration);
+}
+
+bool QuadrupedRobot::getJacobian(const std::string &link_name, const KDL::Vector &reference_point, KDL::Jacobian &J) const
+{
+  return model_imp_->getJacobian(link_name,reference_point,J);
+}
+
+bool QuadrupedRobot::getPose(const std::string &source_frame, KDL::Frame &pose) const
+{
+  return model_imp_->getPose(source_frame,pose);
+}
+
+bool QuadrupedRobot::getFloatingBaseLink(std::string &floating_base_link) const
+{
+  return model_imp_->getFloatingBaseLink(floating_base_link);
+}
+
+bool QuadrupedRobot::setFloatingBaseTwist(const KDL::Twist &floating_base_twist)
+{
+  return model_imp_->setFloatingBaseTwist(floating_base_twist);
+}
+
+bool QuadrupedRobot::setFloatingBasePose(const KDL::Frame &floating_base_pose)
+{
+  return model_imp_->setFloatingBasePose(floating_base_pose);
+}
+
+void QuadrupedRobot::getModelOrderedJoints(std::vector<std::string> &joint_name) const
+{
+  model_imp_->getModelOrderedJoints(joint_name);
+}
+
+bool QuadrupedRobot::update_internal(bool update_position, bool update_velocity, bool update_desired_acceleration)
+{
+  return model_imp_->update_internal(update_position,update_velocity,update_desired_acceleration);
+}
+
+bool QuadrupedRobot::init_model(const ConfigOptions &config)
+{
+  return model_imp_->init_model(config);
 }
 
 
