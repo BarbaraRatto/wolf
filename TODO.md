@@ -1,10 +1,10 @@
 # TODO list
 
 - Spot contacts, move the, back a bit?
-- Can not go on ramps rotated to align with y
 - Move hf and other transforms to quadruped robot
 - Z control for aliengo and spot
 - Quadruped robot as decorator with horizontal frame informations as well?
+- push recovery tests
 
 - Terrain estimator problem when going on rough terrain
 - Weight control when going up ramps
