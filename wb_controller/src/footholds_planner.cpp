@@ -369,8 +369,8 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   base_orientation_ = base_angular_velocity_reference_ * period + base_orientation_;
 
-  // This is the base rotation reference computed w.r.t terrain
   rpyToRot(base_orientation_,base_rotation_reference_);
+  // This is the base rotation reference computed w.r.t terrain
   base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
 }
 
@@ -638,6 +638,16 @@ bool FootholdsPlanner::areAllFeetInStance()
 const std::vector<std::string>& FootholdsPlanner::getFootNames() const
 {
   return gait_generator_->getFootNames();
+}
+
+const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInHf() const
+{
+  return hf_R_base_;
+}
+
+const Eigen::Matrix3d &FootholdsPlanner::getHfRotationInWorld() const
+{
+  return world_R_hf_;
 }
 
 Eigen::Vector3d &FootholdsPlanner::getCurrentFoothold(const std::string &foot_name)

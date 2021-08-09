@@ -192,6 +192,8 @@ public:
     bool isAnyFootInTouchDown();
     bool areAllFeetInStance();
     const std::vector<std::string> &getFootNames() const;
+    const Eigen::Matrix3d& getBaseRotationInHf() const; // FIXME move to robot
+    const Eigen::Matrix3d &getHfRotationInWorld() const; // FIXME move to robot
 
 private:
 

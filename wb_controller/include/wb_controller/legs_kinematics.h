@@ -39,7 +39,9 @@ public:
 
   void setDesiredBaseHeight(const double& des_base_height);
 
-  void setDesiredBaseAdjustmentDot(const Eigen::Vector3d& xdot);
+  void setFeedForwardStanceDot(const Eigen::Vector3d& xdot_stance_ff);
+
+  void setFeedForwardSwingDot(const Eigen::Vector3d& xdot_swing_ff);
 
   bool setJointHomePositions(Eigen::VectorXd& qhome);
 
@@ -105,8 +107,10 @@ private:
   Eigen::VectorXd qmax_;
   /** @brief Feet pose w.r.t world */
   Eigen::Affine3d world_T_foot_;
-  /** @brief Feed forward term in the clik control loop */
-  Eigen::Vector3d xdot_ff_;
+  /** @brief Stance feed forward term in the clik control loop */
+  Eigen::Vector3d xdot_stance_ff_;
+  /** @brief Swing feed forward term in the clik control loop */
+  Eigen::Vector3d xdot_swing_ff_;
 
   Eigen::MatrixXd J_;
   Eigen::MatrixXd J_foot_;

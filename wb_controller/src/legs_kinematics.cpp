@@ -57,7 +57,9 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
       x_err_ = gait_generator_->getReference(feet_names[i]).translation() - world_T_foot_.translation();
 
-      des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (gait_generator_->getReferenceDot(feet_names[i]).segment(0,3) + clik_gain_ * x_err_);
+      xdot_swing_ff_ = gait_generator_->getReferenceDot(feet_names[i]).segment(0,3);
+
+      des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (xdot_swing_ff_ + clik_gain_ * x_err_);
 
       qswing_.segment(FLOATING_BASE_DOFS+3*i,3) = des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3) * period + qswing_.segment(FLOATING_BASE_DOFS+3*i,3);
 
@@ -74,7 +76,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
       else
         x_err_ << 0, 0, 0;
 
-      qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (clik_gain_ * x_err_ + xdot_ff_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
+      qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (xdot_stance_ff_ + clik_gain_ * x_err_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
 
       des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);  // Don't generate velocities for the feet in stance
       des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
@@ -137,7 +139,8 @@ void LegsKinematics::reset()
   qswing_ = qhome_;
   robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
-  xdot_ff_.setZero();
+  xdot_stance_ff_.setZero();
+  xdot_swing_ff_.setZero();
 }
 
 void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
@@ -174,9 +177,14 @@ void LegsKinematics::setDesiredBaseHeight(const double& des_base_height)
   des_base_height_ = des_base_height;
 }
 
-void LegsKinematics::setDesiredBaseAdjustmentDot(const Eigen::Vector3d& xdot)
+void LegsKinematics::setFeedForwardStanceDot(const Eigen::Vector3d& xdot_stance_ff)
 {
-  xdot_ff_ = xdot;
+  xdot_stance_ff_ = xdot_stance_ff;
+}
+
+void LegsKinematics::setFeedForwardSwingDot(const Eigen::Vector3d& xdot_swing_ff)
+{
+  xdot_swing_ff_ = xdot_swing_ff;
 }
 
 void LegsKinematics::activateBaseHeightControl()

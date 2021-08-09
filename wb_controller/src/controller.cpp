@@ -242,7 +242,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   //kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
 
-  terrain_estimator_.reset(new TerrainEstimator(state_estimator_,kin_,foot_holds_planner_));
+  terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_));
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
@@ -545,7 +545,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     com_planner_->update(period.toSec());
     id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
-    id_prob_->setFrictionConesR(terrain_estimator_->getOrientation().transpose());
+    id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
     if(inertia_compensation_active_)
     {
@@ -590,6 +590,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Set the desired base height
     kin_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
+
+    // Set the feed forward stance term with the terrain adjustment
+    kin_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
 
     // Update the desired joint positions from the ik and set that to the postural
     // task
