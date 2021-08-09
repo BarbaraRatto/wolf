@@ -630,6 +630,11 @@ bool FootholdsPlanner::isAnyFootInTouchDown()
   return gait_generator_->isAnyFootInTouchDown();
 }
 
+bool FootholdsPlanner::isAnyFootInSwing()
+{
+  return gait_generator_->isAnyFootInSwing();
+}
+
 bool FootholdsPlanner::areAllFeetInStance()
 {
   return gait_generator_->areAllFeetInStance();
