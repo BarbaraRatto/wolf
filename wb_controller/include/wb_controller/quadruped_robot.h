@@ -4,6 +4,7 @@
 // ADVR
 #include <XBotCoreModel/XBotCoreModel.h>
 #include <XBotInterface/ModelInterface.h>
+#include <ModelInterfaceRBDL/ModelInterfaceRBDL.h>
 // STD
 #include <memory>
 
@@ -41,8 +42,8 @@ public:
 
   const std::string& getBaseLinkName() const;
 
-  robot_states_t getRobotState();
-  bool setRobotState(robot_states_t robot_state);
+  robot_states_t getState();
+  bool setState(robot_states_t robot_state);
 
   const Eigen::Matrix3d& getFloatingBaseInertia();
 
@@ -56,9 +57,22 @@ public:
 
   virtual bool getPose( const std::string& source_frame,
                         KDL::Frame& pose ) const;
+
+  bool getPose(   const std::string& source_frame,
+                  const std::string& target_frame,
+                  Eigen::Affine3d& pose ) const;
+
+  bool getPose( const std::string& source_frame,
+                Eigen::Affine3d& pose ) const;
+
+
   virtual bool getJacobian( const std::string& link_name,
                             const KDL::Vector& reference_point,
                             KDL::Jacobian& J) const;
+
+  bool getJacobian( const std::string& link_name,
+                    Eigen::MatrixXd& J) const;
+
   virtual bool getVelocityTwist( const std::string& link_name,
                                  KDL::Twist& velocity) const;
 

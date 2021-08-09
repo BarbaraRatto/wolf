@@ -200,7 +200,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   }
 
   // Initialize the inertia related matrices // FIXME
-  robot_model_->getModelImp()->getInertiaMatrix(M_);
+  robot_model_->getInertiaMatrix(M_);
   Mi_.setZero(M_.rows(), M_.cols());
   Kp_postural_.setIdentity(M_.rows(), M_.cols());
   Kd_postural_.setIdentity(M_.rows(), M_.cols());

@@ -198,12 +198,12 @@ const Eigen::Matrix3d &QuadrupedRobot::getFloatingBaseInertia()
   return Ifb_;
 }
 
-QuadrupedRobot::robot_states_t QuadrupedRobot::getRobotState()
+QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
 {
   return robot_state_;
 }
 
-bool QuadrupedRobot::setRobotState(QuadrupedRobot::robot_states_t robot_state)
+bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t robot_state)
 {
   robot_state_ = robot_state;
   return true;
@@ -299,7 +299,22 @@ bool QuadrupedRobot::getJacobian(const std::string &link_name, const KDL::Vector
   return model_imp_->getJacobian(link_name,reference_point,J);
 }
 
+bool QuadrupedRobot::getJacobian(const std::string &link_name, Eigen::MatrixXd &J) const
+{
+  return model_imp_->getJacobian(link_name,J);
+}
+
 bool QuadrupedRobot::getPose(const std::string &source_frame, KDL::Frame &pose) const
+{
+  return model_imp_->getPose(source_frame,pose);
+}
+
+bool QuadrupedRobot::getPose(const std::string &source_frame, const std::string &target_frame, Eigen::Affine3d &pose) const
+{
+  return model_imp_->getPose(source_frame,target_frame,pose);
+}
+
+bool QuadrupedRobot::getPose(const std::string &source_frame, Eigen::Affine3d &pose) const
 {
   return model_imp_->getPose(source_frame,pose);
 }

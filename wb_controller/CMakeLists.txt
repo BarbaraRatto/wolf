@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0.0)
 project(wb_controller)
 
 include(CheckCXXCompilerFlag)
@@ -55,8 +55,8 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
-    ${XBotInterface_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
+    ${XBotInterface_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp

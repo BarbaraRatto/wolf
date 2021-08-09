@@ -24,7 +24,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = 0.0;
 
-    robot_model_->getModelImp()->getPose(foot_names[i],"base_link",base_T_foot_);
+    robot_model_->getPose(foot_names[i],"base_link",base_T_foot_);
     desired_foothold_[foot_names[i]]    = base_T_foot_.translation();
     virtual_foothold_[foot_names[i]]    = base_T_foot_.translation();
     current_foothold_hf_[foot_names[i]] = hf_R_base_ * base_T_foot_.translation();
@@ -78,7 +78,7 @@ void FootholdsPlanner::update(const double& period) // OpenLoop
 
 void FootholdsPlanner::initializeFootPosition(const std::string& foot_name)
 {
-  robot_model_->getModelImp()->getPose(foot_name,world_T_foot_);
+  robot_model_->getPose(foot_name,world_T_foot_);
   gait_generator_->setInitialPose(foot_name,world_T_foot_);
 }
 
@@ -96,7 +96,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
   ROS_DEBUG_NAMED(CLASS_NAME,"update");
 
-  robot_model_->getModelImp()->getPose("base_link",world_T_base_);
+  robot_model_->getPose("base_link",world_T_base_);
 
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.translation()" << world_T_base_.translation());
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.linear()" << world_T_base_.linear());
@@ -215,7 +215,7 @@ void FootholdsPlanner::calculateFootSteps()
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
       // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
-      robot_model_->getModelImp()->getPose(foot_names[i],"base_link",base_T_foot_);
+      robot_model_->getPose(foot_names[i],"base_link",base_T_foot_);
       // current foot position in the horizontal frame
       hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
       //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
@@ -380,8 +380,8 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getModelImp()->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
-      robot_model_->getModelImp()->getPose(hips_names[i],BASE_LINK_FRAME_NAME,base_T_hip_);
+      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
+      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,base_T_hip_);
       // initial feet offsets in the horizontal frame
       hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
       // initial hip positions, we assume the base starts horizontal (TODO)
@@ -648,7 +648,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 {
   assert(footholds_planner_ptr);
   footholds_planner_ptr_ = footholds_planner_ptr;
-  base_mass_   = footholds_planner_ptr_->robot_model_->getRobotMass();
+  base_mass_   = footholds_planner_ptr_->robot_model_->getMass();
   base_length_ = footholds_planner_ptr_->robot_model_->getBaseLength();
   base_width_  = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
@@ -710,10 +710,10 @@ bool PushRecovery::update(const double& period)
   cmd_velocity_(1) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);
   cmd_velocity_(2) = footholds_planner_ptr_->getBaseAngularVelocityReferenceHF()(2);
 
-  footholds_planner_ptr_->robot_model_->getModelImp()->getFloatingBaseTwist(base_twist_);
+  footholds_planner_ptr_->robot_model_->getFloatingBaseTwist(base_twist_);
   base_twist_.head(3) = footholds_planner_ptr_->world_R_hf_.transpose() * base_twist_.head(3);
 
-  footholds_planner_ptr_->robot_model_->getModelImp()->getCOMVelocity(com_vel_hf_);
+  footholds_planner_ptr_->robot_model_->getCOMVelocity(com_vel_hf_);
   com_vel_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * com_vel_hf_;
 
   // Note: we could use the com instead of the base because we control the com
