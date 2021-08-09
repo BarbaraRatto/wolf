@@ -99,7 +99,7 @@ public:
             !controller_nh.getParam("push_recovery/static_th/y", static_th(1)) || // [m/s]
             !controller_nh.getParam("push_recovery/static_th/r", static_th(2))  ) // [rad/s]
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/dynamic_th given, proceeding without...");
+            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/static_th given, proceeding without...");
             static_th = Eigen::Vector3d::Ones() * 1000.0; // dummy
         }
 
