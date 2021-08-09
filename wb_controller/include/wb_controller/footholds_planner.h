@@ -102,6 +102,8 @@ private:
   // Support variables
   double Sr_, Cr_, C2_pr_, C3_pr_, Z0h_, st_p_, C1_pr_;
 
+  double cmd_velocity_scale_;
+
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
 
 };
@@ -195,6 +197,7 @@ public:
     const std::vector<std::string> &getFootNames() const;
     const Eigen::Matrix3d& getBaseRotationInHf() const; // FIXME move to robot
     const Eigen::Matrix3d &getHfRotationInWorld() const; // FIXME move to robot
+
 
 private:
 

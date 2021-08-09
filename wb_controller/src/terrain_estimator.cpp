@@ -46,6 +46,9 @@ void TerrainEstimator::setEstimationType() // TODO
 
 bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 {
+
+  posture_adjustment_dot_world_.setZero();
+
   // 0 - Update the terrain estimation everytime there is a touchdown
   if(foot_holds_planner_->isAnyFootInTouchDown())
     update_ = true;

@@ -723,11 +723,11 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lh",deltas_["lh_foot"]);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rh",deltas_["rh_foot"]);
 
-  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","static_th_dot",0.0,1.0,&static_th_dot_);
-  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","dynamic_th_dot",0.0,1.0,&dynamic_th_dot_);
-  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_lx",0.0,100.0,&K_pr_lx_);
-  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_ly",0.0,100.0,&K_pr_ly_);
-  //RtGuiClient::getIstance().addDoubleSlider("PushRecovery","K_pr_r",0.0,100.0,&K_pr_r_);
+  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"static_th_dot",0.0,1.0,&static_th_dot_);
+  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"dynamic_th_dot",0.0,1.0,&dynamic_th_dot_);
+  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"k_x",0.0,10.0,&k_x_);
+  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"k_y",0.0,10.0,&k_y_);
+  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"k_yaw",0.0,10.0,&k_yaw_);
   //RtGuiClient::getIstance().addBool("PushRecovery","push_recovery_on",&push_recovery_on_);
 }
 
@@ -737,8 +737,15 @@ bool PushRecovery::update(const double& period)
 
   velocity_filter_.setTimeStep(period);
 
-  cmd_velocity_(0) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(0);
-  cmd_velocity_(1) = footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);
+  if(footholds_planner_ptr_->getGaitType() == Gait::TROT)
+    cmd_velocity_scale_ = 0.5;
+  else if (footholds_planner_ptr_->getGaitType() == Gait::CRAWL)
+    cmd_velocity_scale_ = 0.25;
+  else
+    cmd_velocity_scale_ = 1.0;
+
+  cmd_velocity_(0) = cmd_velocity_scale_*footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(0);
+  cmd_velocity_(1) = cmd_velocity_scale_*footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);
   cmd_velocity_(2) = footholds_planner_ptr_->getBaseAngularVelocityReferenceHF()(2);
 
   footholds_planner_ptr_->robot_model_->getXBotModel()->getFloatingBaseTwist(base_twist_);
@@ -758,9 +765,9 @@ bool PushRecovery::update(const double& period)
   // Filter the base velocity
   base_velocity_filt_ = velocity_filter_.process(base_velocity_);
 
-  error_ = base_velocity_filt_ - cmd_velocity_;
+  error_ = cmd_velocity_ - base_velocity_filt_;
 
-  if(cmd_velocity_.norm() > 0.0) // Check if we are giving commands to the robot i.e. the robot is moving
+  if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->isAnyFootInSwing()) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
   else
     current_th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
