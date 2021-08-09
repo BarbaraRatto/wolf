@@ -6,14 +6,10 @@ using namespace rt_logger;
 namespace wb_controller {
 
 TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
-                                   LegsKinematics::Ptr kin,
                                    FootholdsPlanner::Ptr foot_holds_planner)
 {
   assert(state_estimator);
   state_estimator_ = state_estimator;
-
-  assert(kin);
-  kin_ = kin;
 
   assert(foot_holds_planner);
   foot_holds_planner_ = foot_holds_planner;
@@ -27,13 +23,13 @@ TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
   roll_ = roll_filt_ = roll_out_world_ = roll_out_hf_ = estimated_roll_ = 0.0;
   pitch_ = pitch_filt_ = pitch_out_world_ = pitch_out_hf_ = estimated_pitch_ = 0.0;
 
-
   terrain_normal_ << 0.0, 0.0, 1.0;
   world_X_terrain_ = hf_X_terrain_ = Eigen::Vector3d::Zero();
   world_T_terrain_ = hf_T_terrain_ = Eigen::Affine3d::Identity();
   world_R_terrain_ = hf_R_terrain_ = Eigen::Matrix3d::Identity();
 
-  posture_adjustment_ = posture_adjustment_prev_ = posture_adjustment_dot_ = Eigen::Vector3d::Zero();
+  posture_adjustment_ = posture_adjustment_prev_ = posture_adjustment_dot_ = 0.0;
+  posture_adjustment_dot_world_ = Eigen::Vector3d::Zero();
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/terrain_normal",terrain_normal_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/roll_world",roll_out_world_);
@@ -125,31 +121,21 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   // terrain and the base height and rotation references
   state_estimator_->setTerrainNormal(terrain_normal_);
 
-  // 9 - Hf adjustment, compute the offsets to help adapting the posture Hfd
-  // on the terrain, for now, we compute only an adjustment along the x axis.
-  //double terrain_h_Hf = state_estimator_->getFloatingHfPosition()(2);
-  //Hf_adjustment_ = terrain_h_Hf * std::tan(pitch_out_);
-  //Hf_adjustment_dot_ = (Hf_adjustment_ - Hf_adjustment_prev_)/dt;
-  //Hf_adjustment_prev_ = Hf_adjustment_;
-  //tmp_vector3d_ << Hf_adjustment_dot_, 0.0, 0.0; // w.r.t Hf
-  // tmp_vector3d_ = world_R_Hf * tmp_vector3d_;
-  //kin_->setDesiredHfAdjustmentDot(tmp_vector3d_); // This is ok but I need to be sure that state_estimator_->getFloatingHfPosition()(2) is adapted wrt terrain
+  // 9 - Posture adjustment, compute the offsets to help adapting the posture w.r.t
+  // terrain, we compute only an adjustment along the x axis of the HF
+  double terrain_h_base = state_estimator_->getFloatingBasePosition()(2);
+  posture_adjustment_ = terrain_h_base * std::tan(pitch_out_hf_);
+  posture_adjustment_dot_ = (posture_adjustment_ - posture_adjustment_prev_)/dt;
+  posture_adjustment_prev_ = posture_adjustment_;
+  posture_adjustment_dot_world_ << posture_adjustment_dot_, 0.0, 0.0; // w.r.t HF
+  posture_adjustment_dot_world_ = foot_holds_planner_->getHfRotationInWorld() * posture_adjustment_dot_world_;  // w.r.t world
+  //kin_->setDesiredPostureAdjustmentDot(tmp_vector3d_); // This is ok but I need to be sure that state_estimator_->getFloatingHfPosition()(2) is adapted wrt terrain
 
   // 10 - Adjust the references for the desired Hf height and orientation (roll and pitch)
   // and updates the foot trajectories with the terrain rotation
   foot_holds_planner_->setTerrainTransform(world_T_terrain_);
 
   return true;
-}
-
-const Eigen::Vector3d& TerrainEstimator::getPostureAdjustment() const
-{
-  return posture_adjustment_;
-}
-
-const Eigen::Vector3d& TerrainEstimator::getPostureAdjustmentDot() const
-{
-  return posture_adjustment_dot_;
 }
 
 void TerrainEstimator::update()
@@ -233,6 +219,11 @@ const double& TerrainEstimator::getRollInHf() const
 const double& TerrainEstimator::getPitchInHf() const
 {
   return pitch_out_hf_;
+}
+
+const Eigen::Vector3d &TerrainEstimator::getPostureAdjustmentDot() const
+{
+  return posture_adjustment_dot_world_;
 }
 
 const Eigen::Vector3d& TerrainEstimator::getTerrainNormal() const

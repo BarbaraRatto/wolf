@@ -32,7 +32,6 @@ public:
     enum estimation_t {NONE=0,FLAT_TERRAIN,ROUGH_TERRAIN};
 
     TerrainEstimator(StateEstimator::Ptr state_estimator,
-                     LegsKinematics::Ptr kin,
                      FootholdsPlanner::Ptr foot_holds_planner);
 
     void setEstimationType();
@@ -49,7 +48,6 @@ public:
     const double& getRollInHf() const;
     const double& getPitchInHf() const;
 
-    const Eigen::Vector3d& getPostureAdjustment() const;
     const Eigen::Vector3d& getPostureAdjustmentDot() const;
 
     const Eigen::Vector3d& getTerrainNormal() const;
@@ -79,7 +77,6 @@ private:
     Eigen::Affine3d world_T_terrain_;
 
     StateEstimator::Ptr state_estimator_;
-    LegsKinematics::Ptr kin_;
     FootholdsPlanner::Ptr foot_holds_planner_;
 
     double roll_;
@@ -102,9 +99,10 @@ private:
     double roll_out_hf_;
     double pitch_out_hf_;
 
-    Eigen::Vector3d posture_adjustment_;
-    Eigen::Vector3d posture_adjustment_dot_;
-    Eigen::Vector3d posture_adjustment_prev_;
+    double posture_adjustment_;
+    double posture_adjustment_dot_;
+    double posture_adjustment_prev_;
+    Eigen::Vector3d posture_adjustment_dot_world_;
 
     /** @brief Trigger the update of the terrain estimator */
     bool update_;
