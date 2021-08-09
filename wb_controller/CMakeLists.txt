@@ -25,6 +25,7 @@ find_package(catkin REQUIRED tf controller_interface control_toolbox wb_hardware
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(XBotInterface REQUIRED)
+find_package(ModelInterfaceRBDL REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
@@ -57,12 +58,13 @@ include_directories(
     ${OpenSoT_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
     ${XBotInterface_INCLUDE_DIRS}
+    ${ModelInterfaceRBDL_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp
     src/legs_kinematics.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 add_dependencies(plot_node ${wb_controller_EXPORTED_TARGETS})
