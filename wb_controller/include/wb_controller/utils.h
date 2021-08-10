@@ -10,6 +10,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
 #include <wb_controller/quadruped_robot.h>
+#include <wb_controller/filters.h>
 
 namespace wb_controller
 {
@@ -73,14 +74,6 @@ inline void vector3dToVector3(const Eigen::Vector3d& vector3d, geometry_msgs::Ve
     vector3.x = vector3d.x();
     vector3.y = vector3d.y();
     vector3.z = vector3d.z();
-}
-
-template <typename T>
-inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)
-{ 
-    varOutputFirstFilter = (1- gain) * varOutputFirstFilter + gain * varNew;
-    varOutputSecondFilter = (1 - gain) * varOutputSecondFilter + gain * varOutputFirstFilter;
-    return varOutputSecondFilter;
 }
 
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
@@ -176,92 +169,6 @@ private:
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
-
-class AvgFilter
-{
-public:
-    typedef std::shared_ptr<AvgFilter> Ptr;
-
-
-    AvgFilter(unsigned int n=10)
-    {
-       n_ = n;
-       avg_ = 0.0;
-    }
-
-    double update(double value)
-    {
-        avg_ = (avg_ * (n_-1) + value) / n_;
-        return avg_;
-    }
-
-    void setN(const unsigned int& n)
-    {
-      assert(n>0);
-      n_ = n;
-    }
-
-    void reset()
-    {
-      avg_ = 0.0;
-    }
-
-
-private:
-
-    unsigned int n_;
-    double avg_;
-
-};
-
-class MovingAvgFilter
-{
-
-public:
-  typedef std::shared_ptr<MovingAvgFilter> Ptr;
-
-  MovingAvgFilter(unsigned int n)
-  {
-    window_.resize(n);
-    for(unsigned int i=0; i<n; i++)
-      window_[i] = 0.0;
-    window_idx_ = 0;
-    sum_ = 0.0;
-    filter_complete_ = false;
-  }
-
-  double update(double value)
-  {
-      unsigned int n = window_.size();
-      double res = 0.0;
-
-      sum_ -= window_[window_idx_];
-      sum_ += value;
-      window_[window_idx_] = value;
-
-      if (!filter_complete_ && window_idx_ == n - 1) {
-          filter_complete_ = true;
-        }
-        if (filter_complete_) {
-          res = sum_ / n;
-        } else {
-          res = sum_ / (window_idx_+1);
-        }
-
-      window_idx_ = (window_idx_+1) % n;
-
-      return res;
-  }
-
-private:
-
-  double sum_;
-  std::vector<double> window_;
-  unsigned int window_idx_;
-  bool filter_complete_;
-
-
-};
 
 
 } // namespace

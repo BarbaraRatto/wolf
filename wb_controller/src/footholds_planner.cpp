@@ -655,6 +655,11 @@ const Eigen::Matrix3d &FootholdsPlanner::getHfRotationInWorld() const
   return world_R_hf_;
 }
 
+double FootholdsPlanner::getSwingFrequency()
+{
+  return gait_generator_->getAvgSwingFrequency();
+}
+
 Eigen::Vector3d &FootholdsPlanner::getCurrentFoothold(const std::string &foot_name)
 {
   return current_foothold_[foot_name];
@@ -693,12 +698,17 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   deltas_["lh_foot"].setZero();
   deltas_["rh_foot"].setZero();
 
-  cutoff_freq_ = 10.;
-  velocity_filter_.setOmega(2.0*M_PI*cutoff_freq_);
-  velocity_filter_.setDamping(1.0);
-
   th_filter_.setOmega(2.0*M_PI*cutoff_freq_);
   th_filter_.setDamping(1.0);
+
+  double bw = 10.0;
+  double period = 0.001;
+  double freq = 1.0/period;
+  double cf = 4.5;
+  notch_filters_.resize(3);
+  notch_filters_[0] = filter::band<double, filter::bandRejectParams>(filter::bandRejectParams(bw,cf,freq));
+  notch_filters_[1] = filter::band<double, filter::bandRejectParams>(filter::bandRejectParams(bw,cf,freq));
+  notch_filters_[2] = filter::band<double, filter::bandRejectParams>(filter::bandRejectParams(bw,cf,freq));
 
   max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
@@ -721,6 +731,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/current_th_dot_filt",current_th_dot_filt_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/cmd_velocity",cmd_velocity_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity",base_velocity_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity_filt",base_velocity_filt_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/error",error_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lf",deltas_["lf_foot"]);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rf",deltas_["rf_foot"]);
@@ -768,9 +779,11 @@ bool PushRecovery::update(const double& period)
   base_inertia_z_ = I_hf_(2,2);
 
   // Filter the base velocity
-  base_velocity_filt_ = velocity_filter_.process(base_velocity_);
+  //base_velocity_filt_ = velocity_filter_.process(base_velocity_);
+  for(unsigned int i=0;i<notch_filters_.size();i++)
+    notch_filters_[i].onlineUpdate(base_velocity_(i),base_velocity_filt_(i));
 
-  error_ = cmd_velocity_ - base_velocity_filt_;
+  error_ = cmd_velocity_ - base_velocity_;
 
   if(cmd_velocity_.norm() > 0.0) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds

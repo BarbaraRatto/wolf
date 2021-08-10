@@ -108,6 +108,8 @@ private:
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> th_filter_;
 
+  std::vector<filter::band<double, filter::bandRejectParams> > notch_filters_;
+
 };
 
 /**
@@ -196,9 +198,10 @@ public:
     bool isAnyFootInTouchDown();
     bool areAllFeetInStance();
     bool isAnyFootInSwing();
-    const std::vector<std::string> &getFootNames() const;
+    const std::vector<std::string>& getFootNames() const;
     const Eigen::Matrix3d& getBaseRotationInHf() const; // FIXME move to robot
-    const Eigen::Matrix3d &getHfRotationInWorld() const; // FIXME move to robot
+    const Eigen::Matrix3d& getHfRotationInWorld() const; // FIXME move to robot
+    double getSwingFrequency();
 
 
 private:
