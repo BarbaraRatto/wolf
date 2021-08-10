@@ -699,13 +699,13 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
   max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
-  static_th_dot_(0) = 0.0; // x [m/s]
-  static_th_dot_(1) = 0.0; // y [m/s]
-  static_th_dot_(2) = 0.0; // yaw [rad/s]
+  static_th_dot_(0) = 1000.0; // x [m/s]
+  static_th_dot_(1) = 1000.0; // y [m/s]
+  static_th_dot_(2) = 1000.0; // yaw [rad/s]
 
-  dynamic_th_dot_(0) = 0.0; // x [m/s]
-  dynamic_th_dot_(1) = 0.0; // y [m/s]
-  dynamic_th_dot_(2) = 0.0; // yaw [rad/s]
+  dynamic_th_dot_(0) = 1000.0; // x [m/s]
+  dynamic_th_dot_(1) = 1000.0; // y [m/s]
+  dynamic_th_dot_(2) = 1000.0; // yaw [rad/s]
 
   current_th_dot_ = static_th_dot_;
 
@@ -776,10 +776,8 @@ bool PushRecovery::update(const double& period)
     push_detected = false;
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-
   for(unsigned int i=0;i<foot_names.size();i++)
     deltas_[foot_names[i]].setZero();
-
 
   if (compute_deltas_ && push_detected)
   {
