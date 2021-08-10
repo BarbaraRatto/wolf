@@ -8,13 +8,13 @@ wb_controller:
   default_step_height: 0.08
   max_step_height: 0.15
   max_step_length: 0.5
-  estimation_position_type: estimated_z
+  estimation_position_type: ground_truth
   estimation_orientation_type: ground_truth
 
   push_recovery:
-      k: {x: 1.0, y: 1.0, r: 0.1}
+      k: {x: 1.0, y: 1.0, r: 1.0}
       dynamic_th: {x: 0.5, y: 0.5, r: 0.5}
-      static_th: {x: 0.05, y: 0.05, r: 0.05}
+      static_th: {x: 0.06, y: 0.06, r: 0.06}
 
   gains:
 

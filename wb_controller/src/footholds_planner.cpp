@@ -697,6 +697,9 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   velocity_filter_.setOmega(2.0*M_PI*cutoff_freq_);
   velocity_filter_.setDamping(1.0);
 
+  th_filter_.setOmega(2.0*M_PI*cutoff_freq_);
+  th_filter_.setDamping(1.0);
+
   max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
   static_th_dot_(0) = 0.0; // x [m/s]
@@ -707,7 +710,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   dynamic_th_dot_(1) = 0.0; // y [m/s]
   dynamic_th_dot_(2) = 0.0; // yaw [rad/s]
 
-  current_th_dot_ = static_th_dot_;
+  current_th_dot_filt_ = current_th_dot_ = static_th_dot_;
 
   k_x_    = 0.0;
   k_y_    = 0.0;
@@ -715,6 +718,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
   compute_deltas_ = true;
 
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/current_th_dot_filt",current_th_dot_filt_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/cmd_velocity",cmd_velocity_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity",base_velocity_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/error",error_);
@@ -736,6 +740,7 @@ bool PushRecovery::update(const double& period)
   bool push_detected = true;
 
   velocity_filter_.setTimeStep(period);
+  th_filter_.setTimeStep(period);
 
   if(footholds_planner_ptr_->getGaitType() == Gait::TROT)
     cmd_velocity_scale_ = 0.5;
@@ -767,19 +772,20 @@ bool PushRecovery::update(const double& period)
 
   error_ = cmd_velocity_ - base_velocity_filt_;
 
-  if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->isAnyFootInSwing()) // Check if the robot is moving
+  if(cmd_velocity_.norm() > 0.0) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
   else
     current_th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
 
-  if(std::abs(error_(0)) < current_th_dot_(0) && std::abs(error_(1)) < current_th_dot_(1) && std::abs(error_(2)) < current_th_dot_(2))
+  current_th_dot_filt_ = th_filter_.process(current_th_dot_);
+
+  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
     push_detected = false;
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
 
   for(unsigned int i=0;i<foot_names.size();i++)
     deltas_[foot_names[i]].setZero();
-
 
   if (compute_deltas_ && push_detected)
   {

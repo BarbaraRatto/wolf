@@ -1,13 +1,13 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <root version="2.3.8">
  <tabbed_widget name="Main Window" parent="main_window">
-  <Tab tab_name="feet" containers="1">
+  <Tab containers="1" tab_name="feet">
    <Container>
-    <DockSplitter sizes="0.35;0.35;0.3" orientation="-" count="3">
-     <DockSplitter sizes="0.25;0.25;0.25;0.25" orientation="|" count="4">
+    <DockSplitter orientation="-" count="3" sizes="0.35;0.35;0.3">
+     <DockSplitter orientation="|" count="4" sizes="0.25;0.25;0.25;0.25">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="7.062635" bottom="7.060397" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="1.445603" right="7.203000" top="1.514630"/>
         <limitY/>
         <curve name="/spot/wb_controller/lf_foot/pose_actual/position/x" color="#1f77b4"/>
         <curve name="/spot/wb_controller/lf_foot/pose_reference/position/x" color="#d62728"/>
@@ -15,7 +15,7 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="6.477388" bottom="6.476158" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="0.865784" right="7.203000" top="0.926799"/>
         <limitY/>
         <curve name="/spot/wb_controller/lh_foot/pose_actual/position/x" color="#17becf"/>
         <curve name="/spot/wb_controller/lh_foot/pose_reference/position/x" color="#d62728"/>
@@ -23,7 +23,7 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="7.070217" bottom="7.069120" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="1.449089" right="7.203000" top="1.511271"/>
         <limitY/>
         <curve name="/spot/wb_controller/rf_foot/pose_actual/position/x" color="#f14cc1"/>
         <curve name="/spot/wb_controller/rf_foot/pose_reference/position/x" color="#bcbd22"/>
@@ -31,17 +31,17 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="6.484836" bottom="6.480256" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="0.861954" right="7.203000" top="0.928964"/>
         <limitY/>
         <curve name="/spot/wb_controller/rh_foot/pose_actual/position/x" color="#1ac938"/>
         <curve name="/spot/wb_controller/rh_foot/pose_reference/position/x" color="#9467bd"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.25;0.25;0.25;0.25" orientation="|" count="4">
+     <DockSplitter orientation="|" count="4" sizes="0.25;0.25;0.25;0.25">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.285176" bottom="0.283948" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="0.276836" right="7.203000" top="0.281892"/>
         <limitY/>
         <curve name="/spot/wb_controller/lf_foot/pose_actual/position/y" color="#1ac938"/>
         <curve name="/spot/wb_controller/lf_foot/pose_reference/position/y" color="#ff7f0e"/>
@@ -49,7 +49,7 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.280253" bottom="0.279763" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="0.279436" right="7.203000" top="0.283768"/>
         <limitY/>
         <curve name="/spot/wb_controller/lh_foot/pose_actual/position/y" color="#bcbd22"/>
         <curve name="/spot/wb_controller/lh_foot/pose_reference/position/y" color="#1ac938"/>
@@ -57,7 +57,7 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.251875" bottom="-0.254362" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.259897" right="7.203000" top="-0.254911"/>
         <limitY/>
         <curve name="/spot/wb_controller/rf_foot/pose_actual/position/y" color="#9467bd"/>
         <curve name="/spot/wb_controller/rf_foot/pose_reference/position/y" color="#1f77b4"/>
@@ -65,17 +65,17 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.261267" bottom="-0.261918" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.262099" right="7.203000" top="-0.257408"/>
         <limitY/>
         <curve name="/spot/wb_controller/rh_foot/pose_actual/position/y" color="#ff7f0e"/>
         <curve name="/spot/wb_controller/rh_foot/pose_reference/position/y" color="#17becf"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.25;0.25;0.25;0.25" orientation="|" count="4">
+     <DockSplitter orientation="|" count="4" sizes="0.25;0.25;0.25;0.25">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.000009" bottom="-0.001068" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.003215" right="7.203000" top="0.086834"/>
         <limitY/>
         <curve name="/spot/wb_controller/lf_foot/pose_actual/position/z" color="#f14cc1"/>
         <curve name="/spot/wb_controller/lf_foot/pose_reference/position/z" color="#9467bd"/>
@@ -83,7 +83,7 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.000133" bottom="-0.000569" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.002608" right="7.203000" top="0.086645"/>
         <limitY/>
         <curve name="/spot/wb_controller/lh_foot/pose_actual/position/z" color="#1f77b4"/>
         <curve name="/spot/wb_controller/lh_foot/pose_reference/position/z" color="#ff7f0e"/>
@@ -91,7 +91,7 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.000013" bottom="-0.000892" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.003000" right="7.203000" top="0.086516"/>
         <limitY/>
         <curve name="/spot/wb_controller/rf_foot/pose_actual/position/z" color="#17becf"/>
         <curve name="/spot/wb_controller/rf_foot/pose_reference/position/z" color="#d62728"/>
@@ -99,7 +99,7 @@
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.000024" bottom="-0.001041" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.003144" right="7.203000" top="0.086844"/>
         <limitY/>
         <curve name="/spot/wb_controller/rh_foot/pose_actual/position/z" color="#f14cc1"/>
         <curve name="/spot/wb_controller/rh_foot/pose_reference/position/z" color="#bcbd22"/>
@@ -109,129 +109,132 @@
     </DockSplitter>
    </Container>
   </Tab>
-  <Tab tab_name="floating_base_vel" containers="1">
+  <Tab containers="1" tab_name="floating_base_vel">
    <Container>
-    <DockSplitter sizes="0.332961;0.334078;0.332961" orientation="-" count="3">
+    <DockSplitter orientation="-" count="3" sizes="0.333832;0.332335;0.333832">
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
-       <range top="-0.000001" bottom="-0.000001" left="0.000000" right="5.000000"/>
+       <range left="7.147000" bottom="-0.046202" right="12.148000" top="0.046473"/>
        <limitY/>
        <curve name="/rt_logger/PushRecovery/base_velocity/array.0/array/data.0" color="#1f77b4"/>
        <curve name="/rt_logger/PushRecovery/cmd_velocity/array.0/array/data.0" color="#ff7f0e"/>
        <curve name="/rt_logger/PushRecovery/error/array.0/array/data.0" color="#17becf"/>
+       <curve name="/rt_logger/PushRecovery/current_th_dot_filt/array.0/array/data.0" color="#1f77b4"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
-       <range top="0.000002" bottom="0.000002" left="0.000000" right="5.000000"/>
+       <range left="7.147000" bottom="-0.050746" right="12.148000" top="0.047329"/>
        <limitY/>
        <curve name="/rt_logger/PushRecovery/base_velocity/array.0/array/data.1" color="#d62728"/>
        <curve name="/rt_logger/PushRecovery/cmd_velocity/array.0/array/data.1" color="#f14cc1"/>
        <curve name="/rt_logger/PushRecovery/error/array.0/array/data.1" color="#bcbd22"/>
+       <curve name="/rt_logger/PushRecovery/current_th_dot_filt/array.0/array/data.1" color="#d62728"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
-       <range top="0.000000" bottom="0.000000" left="0.000000" right="5.000000"/>
+       <range left="7.147000" bottom="-0.004120" right="12.148000" top="0.004657"/>
        <limitY/>
        <curve name="/rt_logger/PushRecovery/base_velocity/array.0/array/data.2" color="#1ac938"/>
        <curve name="/rt_logger/PushRecovery/cmd_velocity/array.0/array/data.2" color="#9467bd"/>
        <curve name="/rt_logger/PushRecovery/error/array.0/array/data.2" color="#1f77b4"/>
+       <curve name="/rt_logger/PushRecovery/current_th_dot_filt/array.0/array/data.2" color="#1ac938"/>
       </plot>
      </DockArea>
     </DockSplitter>
    </Container>
   </Tab>
-  <Tab tab_name="Postural" containers="1">
+  <Tab containers="1" tab_name="Postural">
    <Container>
-    <DockSplitter sizes="0.25;0.25;0.25;0.25" orientation="-" count="4">
-     <DockSplitter sizes="0.336957;0.336957;0.326087" orientation="|" count="3">
+    <DockSplitter orientation="-" count="4" sizes="0.25;0.25;0.25;0.25">
+     <DockSplitter orientation="|" count="3" sizes="0.336957;0.336957;0.326087">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.011080" bottom="0.011071" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.003015" right="7.203000" top="0.016527"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.6" color="#1f77b4"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.000249" bottom="0.000235" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.040499" right="7.203000" top="0.046276"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.7" color="#d62728"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.005217" bottom="0.005202" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.049870" right="7.203000" top="0.022042"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.8" color="#1ac938"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.336957;0.336957;0.326087" orientation="|" count="3">
+     <DockSplitter orientation="|" count="3" sizes="0.336957;0.336957;0.326087">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.007240" bottom="0.007198" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.004306" right="7.203000" top="0.008254"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.9" color="#ff7f0e"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.021113" bottom="0.021092" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.035642" right="7.203000" top="0.044537"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.10" color="#f14cc1"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.001409" bottom="-0.001430" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.045843" right="7.203000" top="0.021263"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.11" color="#9467bd"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.336957;0.336957;0.326087" orientation="|" count="3">
+     <DockSplitter orientation="|" count="3" sizes="0.336957;0.336957;0.326087">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.001096" bottom="0.001061" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.007662" right="7.203000" top="0.004953"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.12" color="#17becf"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.002051" bottom="-0.002055" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.035630" right="7.203000" top="0.044176"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.13" color="#bcbd22"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.016729" bottom="0.016714" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.047006" right="7.203000" top="0.021383"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.14" color="#1f77b4"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.336957;0.336957;0.326087" orientation="|" count="3">
+     <DockSplitter orientation="|" count="3" sizes="0.336957;0.336957;0.326087">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.006525" bottom="0.006506" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.002680" right="7.203000" top="0.011633"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.15" color="#d62728"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.029275" bottom="0.029261" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.037313" right="7.203000" top="0.047157"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.16" color="#1ac938"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="-0.006418" bottom="-0.006425" left="0.000000" right="5.000000"/>
+        <range left="2.202000" bottom="-0.047523" right="7.203000" top="0.019182"/>
         <limitY/>
         <curve name="/spot/wb_controller/Postural/position_error.17" color="#ff7f0e"/>
        </plot>
@@ -240,45 +243,45 @@
     </DockSplitter>
    </Container>
   </Tab>
-  <Tab tab_name="arm" containers="1">
+  <Tab containers="1" tab_name="arm">
    <Container>
-    <DockSplitter sizes="0.5;0.5" orientation="-" count="2">
-     <DockSplitter sizes="0.336957;0.336957;0.326087" orientation="|" count="3">
+    <DockSplitter orientation="-" count="2" sizes="0.5;0.5">
+     <DockSplitter orientation="|" count="3" sizes="0.336957;0.336957;0.326087">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="1.000000" bottom="0.000000" left="0.000000" right="1.000000"/>
+        <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
         <limitY/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="1.000000" bottom="0.000000" left="0.000000" right="1.000000"/>
+        <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
         <limitY/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="1.000000" bottom="0.000000" left="0.000000" right="1.000000"/>
+        <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
         <limitY/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.336957;0.336957;0.326087" orientation="|" count="3">
+     <DockSplitter orientation="|" count="3" sizes="0.336957;0.336957;0.326087">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="1.000000" bottom="0.000000" left="0.000000" right="1.000000"/>
+        <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
         <limitY/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="1.000000" bottom="0.000000" left="0.000000" right="1.000000"/>
+        <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
         <limitY/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="1.000000" bottom="0.000000" left="0.000000" right="1.000000"/>
+        <range left="0.000000" bottom="0.000000" right="1.000000" top="1.000000"/>
         <limitY/>
        </plot>
       </DockArea>
@@ -286,12 +289,12 @@
     </DockSplitter>
    </Container>
   </Tab>
-  <Tab tab_name="waistZ" containers="1">
+  <Tab containers="1" tab_name="waistZ">
    <Container>
-    <DockSplitter sizes="1" orientation="-" count="1">
+    <DockSplitter orientation="-" count="1" sizes="1">
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
-       <range top="0.506832" bottom="0.499987" left="0.000000" right="5.000000"/>
+       <range left="2.202000" bottom="0.495762" right="7.203000" top="0.505403"/>
        <limitY/>
        <curve name="/spot/wb_controller/waistZ/pose_actual/position/z" color="#1f77b4"/>
        <curve name="/spot/wb_controller/waistZ/pose_reference/position/z" color="#d62728"/>
@@ -300,68 +303,68 @@
     </DockSplitter>
    </Container>
   </Tab>
-  <Tab tab_name="delta_push_recovery" containers="1">
+  <Tab containers="1" tab_name="delta_push_recovery">
    <Container>
-    <DockSplitter sizes="0.250375;0.250375;0.248876;0.250375" orientation="-" count="4">
-     <DockSplitter sizes="0.5;0.5" orientation="|" count="2">
+    <DockSplitter orientation="-" count="4" sizes="0.250375;0.250375;0.248876;0.250375">
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.553000" right="12.552000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_lf/array.0/array/data.0" color="#1f77b4"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.553000" right="12.552000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_lf/array.0/array/data.1" color="#f14cc1"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.5;0.5" orientation="|" count="2">
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.552000" right="12.552000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_lh/array.0/array/data.0" color="#d62728"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.552000" right="12.552000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_lh/array.0/array/data.1" color="#9467bd"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.5;0.5" orientation="|" count="2">
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.554000" right="12.554000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_rf/array.0/array/data.0" color="#1ac938"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.554000" right="12.554000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_rf/array.0/array/data.1" color="#17becf"/>
        </plot>
       </DockArea>
      </DockSplitter>
-     <DockSplitter sizes="0.5;0.5" orientation="|" count="2">
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.552000" right="12.552000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_rh/array.0/array/data.0" color="#ff7f0e"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries">
-        <range top="0.100000" bottom="-0.100000" left="7.552000" right="12.552000"/>
+        <range left="2.202000" bottom="-0.100000" right="7.203000" top="0.100000"/>
         <limitY/>
         <curve name="/rt_logger/PushRecovery/delta_rh/array.0/array/data.1" color="#bcbd22"/>
        </plot>
@@ -370,7 +373,7 @@
     </DockSplitter>
    </Container>
   </Tab>
-  <currentTabIndex index="5"/>
+  <currentTabIndex index="1"/>
  </tabbed_widget>
  <use_relative_time_offset enabled="1"/>
  <!-- - - - - - - - - - - - - - - -->
@@ -395,9 +398,9 @@
   <plugin ID="UDP Server"/>
   <plugin ID="WebSocket Server"/>
   <plugin ID="ZMQ Subscriber"/>
-  <plugin ID="CSV Exporter" status="idle"/>
-  <plugin ID="ROS /rosout Visualization" status="idle"/>
-  <plugin ID="ROS Topic Re-Publisher" status="idle"/>
+  <plugin status="idle" ID="CSV Exporter"/>
+  <plugin status="idle" ID="ROS /rosout Visualization"/>
+  <plugin status="idle" ID="ROS Topic Re-Publisher"/>
  </Plugins>
  <!-- - - - - - - - - - - - - - - -->
  <previouslyLoaded_Datafiles/>

@@ -93,6 +93,7 @@ private:
   Eigen::Vector3d dynamic_th_dot_;
   Eigen::Vector3d static_th_dot_;
   Eigen::Vector3d current_th_dot_;
+  Eigen::Vector3d current_th_dot_filt_;
   // Filter cut off frequency
   double cutoff_freq_;
   // Gains
@@ -105,6 +106,7 @@ private:
   double cmd_velocity_scale_;
 
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
+  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> th_filter_;
 
 };
 
