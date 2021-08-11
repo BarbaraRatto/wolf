@@ -783,7 +783,7 @@ bool PushRecovery::update(const double& period)
   for(unsigned int i=0;i<notch_filters_.size();i++)
     notch_filters_[i].onlineUpdate(base_velocity_(i),base_velocity_filt_(i));
 
-  error_ = cmd_velocity_ - base_velocity_;
+  error_ = base_velocity_ - cmd_velocity_;
 
   if(cmd_velocity_.norm() > 0.0) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
@@ -801,19 +801,23 @@ bool PushRecovery::update(const double& period)
 
   if (compute_deltas_ && push_detected)
   {
-    Sr_ = std::sin(std::atan(base_width_/base_length_));
-    Cr_ = std::cos(std::atan(base_width_/base_length_));
-    C2_pr_ = Sr_*Sr_*base_inertia_z_/base_width_/base_mass_; //C2_pr is a positive coefficient
-    C3_pr_ = Cr_*Cr_*base_inertia_z_/base_length_/base_mass_; //C3_pr is a positive coefficient
+     double r = std::sqrt(base_length_*base_length_ + base_width_*base_length_)/2.0;
+     double rx = base_length_/2;
+     double ry = base_width_/2;
 
     for(unsigned int i=0;i<foot_names.size();i++)
     {
       Z0h_  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
       st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
-      C1_pr_ = Z0h_/GRAVITY/st_p_; //C1_pr should be positive
+      double tau_t = std::sqrt(Z0h_/GRAVITY);
+      double tau_r = std::sqrt(Z0h_*base_inertia_z_/base_mass_/GRAVITY/(r*r));
 
-      deltas_[foot_names[i]].x() = C1_pr_*(k_x_*(error_(0))+ signs_[foot_names[i]].first  * k_yaw_*C2_pr_*(error_(2)));
-      deltas_[foot_names[i]].y() = C1_pr_*(k_y_*(error_(1))+ signs_[foot_names[i]].second * k_yaw_*C3_pr_*(error_(2)));
+      double Cx_pr =  tau_t * ( std::cosh(st_p_/tau_t) / std::sinh(st_p_/tau_t) - (1 - k_x_) / std::sinh(st_p_/tau_t) );
+      double Cy_pr =  tau_t * ( std::cosh(st_p_/tau_t) / std::sinh(st_p_/tau_t) - (1 - k_y_) / std::sinh(st_p_/tau_t) );
+      double Cr_pr =  tau_r * ( std::cosh(st_p_/tau_r) / std::sinh(st_p_/tau_r) - (1 - k_yaw_)  / std::sinh(st_p_/tau_r) );
+
+      deltas_[foot_names[i]].x() = Cx_pr * error_(0) + signs_[foot_names[i]].first  * Cr_pr * ry * error_(2);
+      deltas_[foot_names[i]].y() = Cy_pr * error_(1) + signs_[foot_names[i]].second * Cr_pr * rx * error_(2);
 
       if(deltas_[foot_names[i]].x() > max_delta_)
         deltas_[foot_names[i]].x() = max_delta_;
