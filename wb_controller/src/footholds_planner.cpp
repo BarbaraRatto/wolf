@@ -691,7 +691,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   signs_["lf_foot"] = std::make_pair<int,int>(-1,1);
   signs_["rf_foot"] = std::make_pair<int,int>(1,1);
   signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
-  signs_["rh_foot"] = std::make_pair<int,int>(1,1);
+  signs_["rh_foot"] = std::make_pair<int,int>(1,-1);
 
   deltas_["lf_foot"].setZero();
   deltas_["rf_foot"].setZero();
