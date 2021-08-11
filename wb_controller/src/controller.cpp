@@ -239,7 +239,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
   kin_->setClikGain(default_clik_gain);
-  //kin_->activateBaseHeightControl();
+  kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
 
   terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_));

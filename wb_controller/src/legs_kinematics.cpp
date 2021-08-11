@@ -76,7 +76,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
       else
         x_err_ << 0, 0, 0;
 
-      qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (xdot_stance_ff_ + clik_gain_ * x_err_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
+      qstance_.segment(FLOATING_BASE_DOFS+3*i,3) = J_foot_.inverse() * (xdot_stance_ff_ + x_err_) * period + qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
 
       des_joint_velocities_.segment(FLOATING_BASE_DOFS+3*i,3).fill(0.0);  // Don't generate velocities for the feet in stance
       des_joint_positions_.segment(FLOATING_BASE_DOFS+3*i,3) = qstance_.segment(FLOATING_BASE_DOFS+3*i,3);
