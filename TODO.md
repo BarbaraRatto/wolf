@@ -1,14 +1,11 @@
 # TODO list
 
-- Spot contacts, move the, back a bit?
+- Why control height is coupled with the rotation now?
 - Move hf and other transforms to quadruped robot
-- Z control for aliengo and spot
 - Quadruped robot as decorator with horizontal frame informations as well?
 - push recovery tests
 
 - Terrain estimator problem when going on rough terrain
-- Weight control when going up ramps
-- Foot Trajectories, am I doing it correctly? Clean it up!
 - Move terrain estimator inside state estimator as a subclass
 - Remove dynamic reconfigure
 - Clean wb_robot_hw, parse hardcoded info from urdf/srdf
