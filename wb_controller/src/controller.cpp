@@ -239,7 +239,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
   kin_->setClikGain(default_clik_gain);
-  //kin_->activateBaseHeightControl();
+  kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
 
   terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_));
@@ -504,8 +504,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
   state_estimator_->update(period.toSec());
 
-  terrain_estimator_->computeTerrainEstimation(period.toSec());
-
   if(solver_started_) // Use the ID solver to calculate the torques
   {
     if(!init_done_) // FIXME Prepare a proper start up and rest procedure
@@ -536,6 +534,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     foot_holds_planner_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
+
+    terrain_estimator_->computeTerrainEstimation(period.toSec());
 
     rotTorpy(foot_holds_planner_->getBaseRotationReference().transpose(),des_base_rpy_);
     // Set the pose reference for the waist
