@@ -89,7 +89,7 @@ inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& 
     assert(order.size() == N_LEGS);
     std::vector<std::string> ordered_names(N_LEGS);
     for(unsigned int i=0;i<names.size();i++)
-        for(unsigned int j=0;j<names.size();j++)
+        for(unsigned int j=0;j<order.size();j++)
             if(names[i].find(order[j]) != std::string::npos)
                 ordered_names[j] = names[i];
 
