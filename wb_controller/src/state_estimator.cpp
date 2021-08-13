@@ -16,7 +16,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   const std::vector<std::string>& contact_names = robot_model_->getContactNames();
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  const std::vector<std::string>& arm_names = robot_model_->getArmNames();
+  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
   const std::vector<std::string>& limb_names = robot_model_->getLimbNames();
 
   // Floating Base state estimation reset
@@ -324,7 +324,7 @@ void StateEstimator::stopContactsEstimation()
 void StateEstimator::update(const double& period)
 {
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  const std::vector<std::string>& arm_names = robot_model_->getArmNames();
+  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
 
   for(unsigned int i=0; i<foot_names.size(); i++)
   {
@@ -390,7 +390,7 @@ void StateEstimator::updateContactState()
   }
 
   // Update contact state for the arms
-  const std::vector<std::string>& arm_names = robot_model_->getArmNames();
+  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
   for(unsigned int i=0; i<arm_names.size(); i++)
   {
 

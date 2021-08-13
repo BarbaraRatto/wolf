@@ -12,7 +12,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 {
 
   foot_names_    = model_->getFootNames();
-  arm_names_     = model_->getArmNames();
+  arm_names_     = model_->getArmEndEffectorNames();
   contact_names_ = model_->getContactNames();
 
   //

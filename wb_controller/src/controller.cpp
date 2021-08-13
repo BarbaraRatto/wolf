@@ -492,6 +492,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
   }
 
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+  const std::vector<std::string>& leg_names  = robot_model_->getLegNames();
 
   if(use_contact_sensors_)
     for(unsigned int i = 0; i<foot_names.size(); i++)
@@ -555,6 +556,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     for(unsigned int i = 0; i<foot_names.size(); i++)
     {
+
+      int idx = robot_model_->getLegJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
+
       // Update the reference for the feet tasks, this is only used for visualization pourposes
       id_prob_->feet_[foot_names[i]]->setReference(gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i])); //FIXME
 
@@ -567,19 +571,19 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(inertia_compensation_active_)
         {
-          Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kp_swing_leg_;
-          Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kd_swing_leg_;
+          Kp_postural_.block<3,3>(idx,idx) = Mi_.block<3,3>(idx,idx) * Kp_swing_leg_;
+          Kd_postural_.block<3,3>(idx,idx) = Mi_.block<3,3>(idx,idx) * Kd_swing_leg_;
         }
         else
         {
-          Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kp_swing_leg_;
-          Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_swing_leg_;
+          Kp_postural_.block<3,3>(idx,idx) = Kp_swing_leg_;
+          Kd_postural_.block<3,3>(idx,idx) = Kd_swing_leg_;
         }
       }
       else
       {
-        Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kp_stance_leg_;
-        Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_stance_leg_;
+        Kp_postural_.block<3,3>(idx,idx) = Kp_stance_leg_;
+        Kd_postural_.block<3,3>(idx,idx) = Kd_stance_leg_;
 
         id_prob_->stanceWithFoot(foot_names[i]);
         ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);

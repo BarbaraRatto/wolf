@@ -20,7 +20,7 @@ namespace wb_controller
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4 // Fixed number of legs supported
 #define N_ARMS 1 // Fixed number of arms supported
-#define N_BASES 1 // Fixed number of bases supported
+#define N_BASES 2 // Fixed number of bases supported trunk + arm
 #define THREADS_SLEEP_TIME_ms 4
 #define BASE_LINK_FRAME_NAME "base_link"
 
