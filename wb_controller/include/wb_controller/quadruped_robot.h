@@ -21,8 +21,9 @@ public:
 
   typedef std::shared_ptr<const QuadrupedRobot> ConstPtr;
 
-  typedef std::map<std::string,std::vector<std::string> > joint_names_map_t;
-  typedef std::map<std::string,std::vector<int> >         joint_idxs_map_t;
+  typedef std::map<std::string,std::vector<std::string> > limb_joint_names_map_t;
+  typedef std::map<std::string,std::vector<int> >         limb_joint_idxs_map_t;
+  typedef std::map<std::string,int >                      joint_idxs_map_t;
 
   enum robot_states_t {INIT,WALKING,MANIPULATION};
 
@@ -67,11 +68,13 @@ private:
   std::vector<std::string> limb_names_; // chain names
   std::vector<std::string> base_names_; // quadruped trunk + any arm base
 
-  joint_idxs_map_t joint_legs_idx_;
-  joint_idxs_map_t joint_arms_idx_;
+  limb_joint_idxs_map_t joint_legs_idx_;
+  limb_joint_idxs_map_t joint_arms_idx_;
 
-  joint_names_map_t joint_legs_;
-  joint_names_map_t joint_arms_;
+  joint_idxs_map_t joint_idx_;
+
+  limb_joint_names_map_t joint_legs_;
+  limb_joint_names_map_t joint_arms_;
 
   unsigned int n_legs_;
   unsigned int n_arms_;

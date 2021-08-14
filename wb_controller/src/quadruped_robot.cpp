@@ -41,9 +41,15 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   _dof_names = xbot_model_->getEnabledJointNames();
 
+  for(unsigned int i=0;i<_dof_names.size();i++)
+  {
+    joint_idx_[_dof_names[i]] = i;
+    if(i>5) // Remove the floating base
+      joint_names_.push_back(_dof_names[i]);  // Load the joint names for ROS-Control
+  }
+
   n_arms_ = xbot_model_->arms();
   n_legs_ = xbot_model_->legs();
-  std::vector<int> actuated_joints = xbot_model_->getEnabledJointId();
 
   if(n_legs_ != N_LEGS)
   {
@@ -106,23 +112,14 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     throw std::runtime_error("Wrong number of bases, check the SRDF file!");
   }
 
-  // Load the joint names for ROS-Control
-  for(unsigned int i=0;i<actuated_joints.size();i++)
-  {
-      if(actuated_joints[i]>0) // Filter out the floating base joints
-      {
-        std::string current_joint = xbot_model_->getJointByID(actuated_joints[i])->getJointName();
-        joint_names_.push_back(current_joint);
-      }
-  }
-
   for(unsigned int i=0;i<leg_names_.size();i++)
   {
     for(unsigned int j=0;j<joint_legs_[leg_names_[i]].size();j++)
     {
-      int idx = FLOATING_BASE_DOFS + xbot_model_->getJointByName(joint_legs_[leg_names_[i]][j])->getJointId() - 1;
+      std::string current_joint_name = joint_legs_[leg_names_[i]].at(j);
+      int idx = joint_idx_[current_joint_name];
       joint_legs_idx_[leg_names_[i]].push_back(idx);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
 
     }
   }
@@ -131,9 +128,10 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   {
     for(unsigned int j=0;j<joint_arms_[arm_names_[i]].size();j++)
     {
-      int idx = FLOATING_BASE_DOFS + xbot_model_->getJointByName(joint_arms_[arm_names_[i]][j])->getJointId() - 1;
+      std::string current_joint_name = joint_arms_[arm_names_[i]].at(j);
+      int idx = joint_idx_[current_joint_name];
       joint_arms_idx_[arm_names_[i]].push_back(idx);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
     }
   }
 
