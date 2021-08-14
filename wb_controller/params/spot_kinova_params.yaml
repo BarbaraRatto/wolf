@@ -48,9 +48,8 @@ wb_controller:
       kd_stance: {haa: 5.0, hfe: 5.0, kfe: 5.0}
 
       kinova_end_effector:
-          Kp: {x: 100.0, y: 100.0, z: 100.0, roll: 50.0, pitch: 50.0, yaw: 50.0}
-          Kd: {x: 30.0, y: 30.0, z: 30.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
-
+          Kp: {x: 300.0, y: 300.0, z: 300.0, roll: 100.0, pitch: 100.0, yaw: 100.0}
+          Kd: {x: 50.0, y: 50.0, z: 50.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
 
       waistRPY:
           Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
