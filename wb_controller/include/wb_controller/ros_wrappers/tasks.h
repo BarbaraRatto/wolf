@@ -16,6 +16,7 @@
 // WB
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/geometry.h>
+#include <wb_controller/utils.h>
 
 template <typename task_ptr_t, typename msg_t, typename config_t>
 class TaskRosWrapperBase : public TaskRosWrapperInterface
@@ -155,6 +156,9 @@ public:
 
         rt_Kp_.initRT(Kp);
         rt_Kd_.initRT(Kd);
+
+        position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff
+        position_reference_filter_.setTimeStep(wb_controller::_period);
     }
 
     virtual void publish(const ros::Time& time) override
@@ -200,7 +204,10 @@ public:
 
     virtual void setExternalReference() override
     {
-        task_->setReference(*rt_pose_reference_.readFromRT());
+        tmp_affine3d_ = *rt_pose_reference_.readFromRT();
+        // Filter
+        tmp_affine3d_.translation() = position_reference_filter_.process(tmp_affine3d_.translation());
+        task_->setReference(tmp_affine3d_);
     }
 
     void getExternalGains(Eigen::MatrixBase<Eigen::Matrix6d>& Kp, Eigen::MatrixBase<Eigen::Matrix6d>& Kd)
@@ -384,6 +391,8 @@ private:
 
     std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_server_;
     visualization_msgs::InteractiveMarker marker_;
+
+    XBot::Utils::SecondOrderFilter<Eigen::Vector3d> position_reference_filter_;
 };
 
 // COM - GENERIC
