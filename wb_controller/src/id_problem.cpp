@@ -138,7 +138,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
         arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
     }
 
-    stacks_[MANIPULATION]->getStack()[2] = 10.0* arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
+    stacks_[MANIPULATION]->getStack()[2] = 20.0* arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
     auto it = stacks_[WALKING]->getStack().begin() + stack_pos_offset;
     stacks_[WALKING]->getStack().insert(it, arm_aggregated);
   }
