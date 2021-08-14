@@ -23,6 +23,7 @@ namespace wb_controller
 #define N_BASES 2 // Fixed number of bases supported trunk + arm
 #define THREADS_SLEEP_TIME_ms 4
 #define BASE_LINK_FRAME_NAME "base_link"
+extern double _period;
 
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
 // stays in the same position because the feet don't move relatively to the base anymore. There is no reset!

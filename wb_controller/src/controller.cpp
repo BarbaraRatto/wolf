@@ -24,6 +24,7 @@ std::vector<std::string> _dof_names = {}; // To be loaded from the robot model
 std::vector<std::string> _cartesian_names = {"x","y","z","roll","pitch","yaw"}; // This is our standard cartesian dofs order
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
+double _period = 0.001;
 
 Controller::Controller()
   :solver_created_(false)
@@ -261,6 +262,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
     return false;
   }
+  _period = period_;
 
   if(!root_nh.getParam("/internal_wrench",use_contact_sensors_)) // Use the contact sensors
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
