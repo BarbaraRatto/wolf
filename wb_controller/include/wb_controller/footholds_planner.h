@@ -101,15 +101,12 @@ private:
   double k_y_;
   double k_yaw_;
   // Support variables
-  double Sr_, Cr_, C2_pr_, C3_pr_, Z0h_, st_p_, C1_pr_;
+  double tau_t_, tau_r_, Cx_pr_, Cy_pr_, Cr_pr_, st_p_, Z0h_, r_, rx_, ry_;
 
   double cmd_velocity_scale_;
 
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> th_filter_;
-
-  std::vector<filter::band<double, filter::bandRejectParams> > notch_filters_;
-
 };
 
 /**

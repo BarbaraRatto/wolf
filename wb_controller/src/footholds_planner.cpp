@@ -693,6 +693,11 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   base_length_ = footholds_planner_ptr_->robot_model_->getBaseLength();
   base_width_  = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
+  r_ = std::sqrt(base_length_*base_length_ + base_width_*base_length_)/2.0;
+  rx_ = base_length_/2.0;
+  ry_ = base_width_/2.0;
+
+  // FIXME hardcoded foot names
   signs_["lf_foot"] = std::make_pair<int,int>(-1,1);
   signs_["rf_foot"] = std::make_pair<int,int>(1,1);
   signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
@@ -703,17 +708,12 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   deltas_["lh_foot"].setZero();
   deltas_["rh_foot"].setZero();
 
+  cutoff_freq_ = 20.0;
   th_filter_.setOmega(2.0*M_PI*cutoff_freq_);
   th_filter_.setDamping(1.0);
 
-  double bw = 10.0;
-  double period = 0.001;
-  double freq = 1.0/period;
-  double cf = 4.5;
-  notch_filters_.resize(3);
-  notch_filters_[0] = filter::band<double, filter::bandRejectParams>(filter::bandRejectParams(bw,cf,freq));
-  notch_filters_[1] = filter::band<double, filter::bandRejectParams>(filter::bandRejectParams(bw,cf,freq));
-  notch_filters_[2] = filter::band<double, filter::bandRejectParams>(filter::bandRejectParams(bw,cf,freq));
+  //velocity_filter_.setOmega(2.0*M_PI*cutoff_freq_);
+  //velocity_filter_.setDamping(1.0);
 
   max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
 
@@ -742,22 +742,18 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rf",deltas_["rf_foot"]);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lh",deltas_["lh_foot"]);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rh",deltas_["rh_foot"]);
-
-  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"static_th_dot",0.0,1.0,&static_th_dot_);
-  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"dynamic_th_dot",0.0,1.0,&dynamic_th_dot_);
-  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"k_x",0.0,10.0,&k_x_);
-  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"k_y",0.0,10.0,&k_y_);
-  //RtGuiClient::getIstance().addDoubleSlider(CLASS_NAME,"k_yaw",0.0,10.0,&k_yaw_);
-  //RtGuiClient::getIstance().addBool("PushRecovery","push_recovery_on",&push_recovery_on_);
 }
 
 bool PushRecovery::update(const double& period)
 {
   bool push_detected = true;
 
-  velocity_filter_.setTimeStep(period);
+  //velocity_filter_.setTimeStep(period);
   th_filter_.setTimeStep(period);
 
+  // Heuristic: scale the command velocity based on the gait type, that's because
+  // the base velocity gets translated into foot step lengths so the real base velocity
+  // is a reduced version of the command one.
   if(footholds_planner_ptr_->getGaitType() == Gait::TROT)
     cmd_velocity_scale_ = 0.5;
   else if (footholds_planner_ptr_->getGaitType() == Gait::CRAWL)
@@ -785,8 +781,6 @@ bool PushRecovery::update(const double& period)
 
   // Filter the base velocity
   //base_velocity_filt_ = velocity_filter_.process(base_velocity_);
-  for(unsigned int i=0;i<notch_filters_.size();i++)
-    notch_filters_[i].onlineUpdate(base_velocity_(i),base_velocity_filt_(i));
 
   error_ = base_velocity_ - cmd_velocity_;
 
@@ -801,28 +795,24 @@ bool PushRecovery::update(const double& period)
     push_detected = false;
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-  for(unsigned int i=0;i<foot_names.size();i++)
+  for(unsigned int i=0;i<foot_names.size();i++) // Reset
     deltas_[foot_names[i]].setZero();
 
   if (compute_deltas_ && push_detected)
   {
-     double r = std::sqrt(base_length_*base_length_ + base_width_*base_length_)/2.0;
-     double rx = base_length_/2;
-     double ry = base_width_/2;
-
     for(unsigned int i=0;i<foot_names.size();i++)
     {
       Z0h_  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
       st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
-      double tau_t = std::sqrt(Z0h_/GRAVITY);
-      double tau_r = std::sqrt(Z0h_*base_inertia_z_/base_mass_/GRAVITY/(r*r));
+      tau_t_ = std::sqrt(Z0h_/GRAVITY);
+      tau_r_ = std::sqrt(Z0h_*base_inertia_z_/base_mass_/GRAVITY/(r_*r_));
 
-      double Cx_pr =  tau_t * ( std::cosh(st_p_/tau_t) / std::sinh(st_p_/tau_t) - (1 - k_x_) / std::sinh(st_p_/tau_t) );
-      double Cy_pr =  tau_t * ( std::cosh(st_p_/tau_t) / std::sinh(st_p_/tau_t) - (1 - k_y_) / std::sinh(st_p_/tau_t) );
-      double Cr_pr =  tau_r * ( std::cosh(st_p_/tau_r) / std::sinh(st_p_/tau_r) - (1 - k_yaw_)  / std::sinh(st_p_/tau_r) );
+      Cx_pr_ =  tau_t_ * ( std::cosh(st_p_/tau_t_) / std::sinh(st_p_/tau_t_) - (1 - k_x_) / std::sinh(st_p_/tau_t_) );
+      Cy_pr_ =  tau_t_ * ( std::cosh(st_p_/tau_t_) / std::sinh(st_p_/tau_t_) - (1 - k_y_) / std::sinh(st_p_/tau_t_) );
+      Cr_pr_ =  tau_r_ * ( std::cosh(st_p_/tau_r_) / std::sinh(st_p_/tau_r_) - (1 - k_yaw_)  / std::sinh(st_p_/tau_r_) );
 
-      deltas_[foot_names[i]].x() = Cx_pr * error_(0) + signs_[foot_names[i]].first  * Cr_pr * ry * error_(2);
-      deltas_[foot_names[i]].y() = Cy_pr * error_(1) + signs_[foot_names[i]].second * Cr_pr * rx * error_(2);
+      deltas_[foot_names[i]].x() = Cx_pr_ * error_(0) + signs_[foot_names[i]].first  * Cr_pr_ * ry_ * error_(2);
+      deltas_[foot_names[i]].y() = Cy_pr_ * error_(1) + signs_[foot_names[i]].second * Cr_pr_ * rx_ * error_(2);
 
       if(deltas_[foot_names[i]].x() > max_delta_)
         deltas_[foot_names[i]].x() = max_delta_;
