@@ -199,7 +199,7 @@ protected:
     {
         visual_tools_->deleteAllMarkers();
         createPlane(msg.terrain_normal,msg.central_point);
-        createArrow(msg.terrain_normal,msg.central_point,rviz_visual_tools::CYAN,1.0);
+        createArrow(msg.terrain_normal,msg.central_point,rviz_visual_tools::CYAN,10.0);
         _mtx.unlock();
     }
   }
