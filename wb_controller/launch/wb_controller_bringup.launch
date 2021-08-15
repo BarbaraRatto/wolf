@@ -83,7 +83,7 @@
 
 
             <!-- rt_gui node launch -->
-            <include  file="$(find rt_gui)/launch/server_node.launch"/>
+            <!-- <include  file="$(find rt_gui)/launch/server_node.launch"/> -->
 
 	    <!-- plot node launch -->
 	    <include  file="$(find wb_controller)/launch/plot_node.launch">
