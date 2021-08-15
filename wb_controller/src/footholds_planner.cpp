@@ -852,11 +852,11 @@ void PushRecovery::setVelocityThresholds(const Eigen::Vector3d &static_th, const
 
 void PushRecovery::setGains(const double &k_x, const double &k_y, const double &k_yaw)
 {
-  assert(k_x>0.0);
+  assert(k_x>0.0 && k_x<=1.0);
   k_x_ = k_x;
-  assert(k_y>0.0);
+  assert(k_y>0.0  && k_y<=1.0);
   k_y_ = k_y;
-  assert(k_yaw>0.0);
+  assert(k_yaw>0.0 && k_yaw<=1.0);
   k_yaw_ = k_yaw;
 }
 
