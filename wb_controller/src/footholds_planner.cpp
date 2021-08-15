@@ -176,10 +176,16 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
   }
   gait_generator_->setTerrainRotation(world_T_terrain_.linear());
 
-  if(cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_)
-    gait_generator_->activateSwing();
-  else
-    gait_generator_->deactivateSwing();
+    if(robot_model_->getRobotState() == QuadrupedRobot::robot_states_t::WALKING &&
+       (cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_))
+    {
+      gait_generator_->activateSwing();
+      //gait_generator_->setGaitType(Gait::gait_t::TROT);
+    }
+    else
+    {
+      gait_generator_->deactivateSwing();
+    }
 
   // Update the gait_generator
   gait_generator_->update(period);

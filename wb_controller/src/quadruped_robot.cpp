@@ -16,6 +16,7 @@ using namespace XBot;
 namespace wb_controller {
 
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
+  :robot_state_(robot_states_t::INIT)
 {
 
   // Create the ModelInterface from XBot

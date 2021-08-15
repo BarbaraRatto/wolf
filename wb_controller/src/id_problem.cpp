@@ -285,6 +285,14 @@ void IDProblem::update()
   for (auto& tmp_map : tasks_ros_)
     tmp_map.second->update();
 
+  // Update robot state
+  if(current_stack_ == stacks_t::WALKING)
+    model_->setRobotState(QuadrupedRobot::robot_states_t::WALKING);
+  else if (current_stack_ == stacks_t::MANIPULATION)
+    model_->setRobotState(QuadrupedRobot::robot_states_t::MANIPULATION);
+  else
+    model_->setRobotState(QuadrupedRobot::robot_states_t::INIT);
+
   // Update the problem
   stacks_[current_stack_]->update(Eigen::VectorXd(1));
 }
