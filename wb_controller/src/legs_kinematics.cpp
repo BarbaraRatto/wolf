@@ -35,10 +35,14 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   base_height_ = tmp_affine3d_.translation()(2);
+  robot_model_->getXBotModel()->getFloatingBaseTwist(tmp_vector6d_);
+  base_height_dot_ = tmp_vector6d_(2);
+
 
   des_joint_positions_ = current_joint_positions;
 
   double delta_z = des_base_height_ - base_height_;
+  double delta_z_dot = - base_height_dot_;
 
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   const std::vector<std::string>& leg_names = robot_model_->getLegNames();
@@ -75,11 +79,17 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
       //   des_joint_positions_.segment(idx,3) = qhome_.segment(idx,3);
 
       if(base_height_control_active_)
+      {
         x_err_ << 0, 0, -delta_z;
+        x_err_dot_ << 0, 0, -delta_z_dot;
+      }
       else
+      {
         x_err_ << 0, 0, 0;
+        x_err_dot_ << 0, 0, 0;
+      }
 
-      qstance_.segment(idx,3) = J_foot_.inverse() * (xdot_stance_ff_ + x_err_) * period + qstance_.segment(idx,3);
+      qstance_.segment(idx,3) = J_foot_.inverse() * (xdot_stance_ff_ +  clik_gain_ * x_err_ + 2*std::sqrt(clik_gain_) * x_err_dot_) * period + qstance_.segment(idx,3);
 
       des_joint_velocities_.segment(idx,3).fill(0.0);  // Don't generate velocities for the feet in stance
       des_joint_positions_.segment(idx,3) = qstance_.segment(idx,3);
@@ -144,6 +154,7 @@ void LegsKinematics::reset()
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
   xdot_stance_ff_.setZero();
   xdot_swing_ff_.setZero();
+  x_err_ = x_err_dot_ = Eigen::Vector3d::Zero();
 }
 
 void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
