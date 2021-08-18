@@ -157,6 +157,9 @@ public:
         rt_Kp_.initRT(Kp);
         rt_Kd_.initRT(Kd);
 
+        task_->setKp(Kp);
+        task_->setKd(Kd);
+
         position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff
         position_reference_filter_.setTimeStep(wb_controller::_period);
     }
