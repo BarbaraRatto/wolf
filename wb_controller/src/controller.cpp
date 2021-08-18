@@ -329,7 +329,11 @@ bool Controller::selectStack(const std::string& stack)
 void Controller::switchStack()
 {
   if(id_prob_)
+  {
     id_prob_->switchStack();
+    kin_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
+    foot_holds_planner_->reset();
+  }
   else
     ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
 }
