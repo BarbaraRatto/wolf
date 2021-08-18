@@ -16,12 +16,46 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
   assert(step_height_max>=0.0);
   step_height_max_ = step_height_max;
 
+
+  hf_X_initial_footholds_.resize(4);
+  hf_X_initial_hips_.resize(4); // \f$X_hip(i)\f$ with i corresponding to the leg number
+  for(unsigned int i=0; i<4; i++)
+  {
+    hf_X_initial_hips_[i].setZero();
+    hf_X_initial_footholds_[i].setZero();
+  }
+
+  offsets_applied_ = false;
+
+  //delta_com_.fill(0.0);
+
+  world_T_terrain_ = Eigen::Affine3d::Identity();
+
+  push_recovery_ = std::make_shared<PushRecovery>(this);
+  push_detected_ = false;
+  push_recovery_active_ = false;
+
+  step_height_ = 0.0; // [m]
+  step_length_ = 0.0; // [m]
+
+  base_linear_velocity_cmd_ = 0.0; // [m/s]
+  base_angular_velocity_cmd_ = 0.0; // [rad/s]
+
+  reset();
+
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/desired_height",base_position_(2));
+  //RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_com",delta_com_);
+}
+
+void FootholdsPlanner::reset()
+{
+
   const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
   for(unsigned int i=0;i<foot_names.size();i++)
   {
-    steps_length_[foot_names[i]] = 0.0;
+    steps_length_[foot_names[i]] = step_length_;
     steps_heading_[foot_names[i]] = 0.0;
-    steps_height_[foot_names[i]] = 0.0;
+    steps_height_[foot_names[i]] = step_height_;
 
     robot_model_->getXBotModel()->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_);
     desired_foothold_[foot_names[i]]    = base_T_foot_.translation();
@@ -32,37 +66,13 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   resetVelocyScales();
 
-  base_linear_velocity_cmd_ = 0.0; // [m/s]
-  base_angular_velocity_cmd_ = 0.0; // [rad/s]
-
-  base_rotation_reference_ = Eigen::Matrix3d::Identity();
-  base_position_ = base_orientation_ = Eigen::Vector3d::Zero();
+  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_);
+  base_rotation_reference_ = tmp_affine3d_.linear().transpose();
+  rotTorpy(base_rotation_reference_,base_orientation_);
+  base_position_ = tmp_affine3d_.translation();
 
   cmd_ = cmd_t::HOLD;
 
-  hf_X_initial_footholds_.resize(4);
-  hf_X_initial_hips_.resize(4); // \f$X_hip(i)\f$ with i corresponding to the leg number
-  for(unsigned int i=0; i<4; i++)
-  {
-    hf_X_initial_hips_[i].setZero();
-    hf_X_initial_footholds_[i].setZero();
-  }
-
-  step_length_ = 0.0;
-  step_height_ = 0.0;
-
-  offsets_applied_ = false;
-
-  delta_com_.fill(0.0);
-
-  world_T_terrain_ = Eigen::Affine3d::Identity();
-
-  push_recovery_ = std::make_shared<PushRecovery>(this);
-  push_detected_ = false;
-  push_recovery_active_ = false;
-
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/desired_height",base_position_(2));
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_com",delta_com_);
 }
 
 void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_position) // OpenLoop Orientation
@@ -376,7 +386,7 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   rpyToRot(base_orientation_,base_rotation_reference_);
   // This is the base rotation reference computed w.r.t terrain
-  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
+  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose(); // FIXME invert the order
 }
 
 void FootholdsPlanner::setInitialOffsets()

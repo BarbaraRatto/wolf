@@ -143,6 +143,8 @@ public:
 
     void initializeFootPosition(const std::string& foot_name);
 
+    void reset();
+
     // Sets
     void setCmd(const unsigned int cmd);
     void setBasePosition(const Eigen::Vector3d& position);
@@ -306,6 +308,8 @@ private:
 
     friend class PushRecovery;
     PushRecovery::Ptr push_recovery_;
+
+    Eigen::Affine3d tmp_affine3d_;
 };
 
 } // namespace
