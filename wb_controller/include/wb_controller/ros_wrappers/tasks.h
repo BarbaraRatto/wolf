@@ -330,13 +330,14 @@ private:
       int_marker.header.frame_id = frame;
       int_marker.name = task_id_;
       int_marker.description = task_id_;
+      int_marker.scale = 0.25;
 
       wb_controller::affine3dToPose(initial_pose,int_marker.pose);
 
       // create a grey box marker
       visualization_msgs::Marker box_marker;
       box_marker.type = visualization_msgs::Marker::SPHERE;
-      box_marker.scale.x = box_marker.scale.y = box_marker.scale.z = 0.2;
+      box_marker.scale.x = box_marker.scale.y = box_marker.scale.z = 0.05;
       box_marker.color.r = box_marker.color.g = box_marker.color.b = box_marker.color.a = 0.5 ;
 
       // create a non-interactive control which contains the box
