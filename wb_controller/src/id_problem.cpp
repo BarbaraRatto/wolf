@@ -242,10 +242,12 @@ void IDProblem::selectStack(const stacks_t& stack)
         tmp_map.second->setBaseLink(frame);
         tmp_map.second->update(Eigen::VectorXd(1));
       }
-
-      for (unsigned int i=0;i<arm_names_.size();i++)
-        tasks_ros_[arm_names_[i]]->reset();
+      //for (unsigned int i=0;i<arm_names_.size();i++)
+      //  tasks_ros_[arm_names_[i]]->reset();
     }
+
+    for (auto& tmp_map : tasks_ros_)
+      tmp_map.second->reset();
 
     if(solver_.get()!=nullptr)
       solver_.release();
