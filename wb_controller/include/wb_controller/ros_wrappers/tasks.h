@@ -82,6 +82,11 @@ public:
           task_->setWeight(rt_weight_diag_);
     }
 
+    virtual void reset() override
+    {
+      task_->reset();
+    }
+
 protected:
 
     std::shared_ptr<dynamic_reconfigure::Server<config_t>> server_;
@@ -288,6 +293,8 @@ public:
 
     virtual void reset() override
     {
+        TaskRosWrapperBase::reset();
+
         Eigen::Affine3d pose;
         task_->getActualPose(pose);
         rt_pose_reference_.writeFromNonRT(pose);
