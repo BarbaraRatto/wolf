@@ -25,9 +25,7 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   reset();
   //des_joint_positions_.fill(0.0);
   //des_joint_velocities_.fill(0.0);
-  //qstance_ = qhome_;
-  //qswing_ = qhome_;
-
+  //qstance_ = qswing_ = qhome_;
 }
 
 bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
@@ -147,14 +145,14 @@ const Eigen::VectorXd& LegsKinematics::getJointHomePositions()
 void LegsKinematics::reset()
 {
   des_joint_velocities_.setZero();
-  des_joint_positions_ = qhome_;
-  qstance_ = qhome_;
-  qswing_ = qhome_;
+  x_err_dot_.setZero();
+  robot_model_->getXBotModel()->getJointPosition(des_joint_positions_);
+  qstance_ = des_joint_positions_;
+  qswing_ = des_joint_positions_;
   robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
   xdot_stance_ff_.setZero();
   xdot_swing_ff_.setZero();
-  x_err_ = x_err_dot_ = Eigen::Vector3d::Zero();
 }
 
 void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
