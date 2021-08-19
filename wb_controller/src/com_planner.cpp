@@ -86,10 +86,12 @@ void ComPlanner::update(double /*dt*/)
   // Filter c
   c_ = secondOrderFilter(c_,c_filt_,c_ref_,0.5);
 
-  //com_velocity_ref_.setZero();
+
   //com_velocity_ref_.head(2) = c_ * base_velocity_xy_;
 
+  com_velocity_ref_.setZero();
   com_velocity_ref_ = terrain_estimator_->getTerrainOrientationWorld().transpose() * c_ * base_velocity_; // getPose(): world_T_terrain
+  //com_velocity_ref_.z() = 0.0; // No height reference, only damping
 
   if(foothold_planner_->getGaitType() == Gait::CRAWL) // With the crawl the robot moves approx half the speed
     com_velocity_ref_ = 0.5 * com_velocity_ref_;
