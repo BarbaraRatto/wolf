@@ -106,16 +106,16 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
   std::list<unsigned int> id_legs  = {6,7,8,9,10,11,12,13,14,15,16,17};
 
-  OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;
+  OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;//, arm_aggregated_weighted;
   feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_XYZ,feet_[foot_names_[0]]->getXSize());
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_XYZ;
 
   stacks_[MANIPULATION] = ( (feet_aggregated)
-                            / (com_)
-                            / (waistRPY_%id_RPY + waistZ_%id_Z)
-                            / (postural_)
-                            )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+                          / (com_)
+                          / (waistRPY_%id_RPY)// + arm_aggregated
+                          / (postural_)
+                          )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   // Original stack, it doesn't work with aliengo e anymal
   //int stack_pos_offset = 2;
@@ -126,19 +126,23 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   int stack_pos_offset = 1;
   stacks_[WALKING] = ( (feet_aggregated)
+                     // arm_aggregated
                      / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
                      )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   if(arm_names_.size() > 0)
   {
     arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
+    //arm_aggregated_weighted = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
     if(arm_names_.size() > 1)
     {
       for(unsigned int i=1;i<arm_names_.size();i++)
         arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
+
+      //arm_aggregated_weighted = 50.0 * arm_aggregated%idx_XYZ + arm_aggregated%id_RPY;
     }
 
-    stacks_[MANIPULATION]->getStack()[2] = 20.0* arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
+    stacks_[MANIPULATION]->getStack()[2] = arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
     auto it = stacks_[WALKING]->getStack().begin() + stack_pos_offset;
     stacks_[WALKING]->getStack().insert(it, arm_aggregated);
   }
@@ -157,6 +161,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   tasks_ros_["postural"] = std::make_shared<PosturalWrapper>(nh,postural_); // POSTURAL
   tasks_ros_["postural"]->OPTIONS.set_ext_gains = false;
   tasks_ros_["com"] = std::make_shared<ComWrapper>(nh,com_); // CoM
+
   for(unsigned int i=0; i<foot_names_.size(); i++)
     tasks_ros_[foot_names_[i]] = std::make_shared<CartesianWrapper>(nh,feet_[foot_names_[i]]); // FEET
   for(unsigned int i=0; i<arm_names_.size(); i++)
