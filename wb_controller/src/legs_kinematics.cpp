@@ -56,7 +56,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
     if(gait_generator_->isSwinging(foot_names[i]))
     {
-      // At the first cycle of swing, set the des joints position at the current measured joints position
+      // At the first cycle of swing, set the joints position at the current measured joints position
       if(gait_generator_->isLiftOff(foot_names[i]))
         qswing_.segment(idx,3) = current_joint_positions.segment(idx,3);
 
@@ -72,9 +72,9 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     }
     else
     {
-      // At the first cycle of stance, set the des joints position at the current homing position
-      //if(gait_generator_->isTouchDown(foot_names_[i]))
-      //   des_joint_positions_.segment(idx,3) = qhome_.segment(idx,3);
+      // At the first cycle of stance, set the joints position at the current homing position
+      if(gait_generator_->isTouchDown(foot_names[i]))
+         qstance_.segment(idx,3) = qhome_.segment(idx,3);
 
       if(base_height_control_active_)
       {
