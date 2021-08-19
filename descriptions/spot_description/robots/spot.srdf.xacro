@@ -8,15 +8,27 @@
     </group>
     <group name="lf_leg">
       <chain base_link="base_link" tip_link="lf_foot"/>
+      <joint name="lf_haa_joint"/>
+      <joint name="lf_hfe_joint"/>
+      <joint name="lf_kfe_joint"/>
     </group>
     <group name="rf_leg">
       <chain base_link="base_link" tip_link="rf_foot"/>
+      <joint name="rf_haa_joint"/>
+      <joint name="rf_hfe_joint"/>
+      <joint name="rf_kfe_joint"/>
     </group>
     <group name="lh_leg">
       <chain base_link="base_link" tip_link="lh_foot"/>
+      <joint name="lh_haa_joint"/>
+      <joint name="lh_hfe_joint"/>
+      <joint name="lh_kfe_joint"/>
     </group>
     <group name="rh_leg">
       <chain base_link="base_link" tip_link="rh_foot"/>
+      <joint name="rh_haa_joint"/>
+      <joint name="rh_hfe_joint"/>
+      <joint name="rh_kfe_joint"/>
     </group>
     <group name="lf_hip">
       <chain base_link="base_link" tip_link="lf_hip"/>
