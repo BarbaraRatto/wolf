@@ -85,7 +85,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   use_external_forces_ = false;
 
   // Contact force estimation reset
-  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimation>(robot_model_->getXBotModel());
+  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimationMomentumBased>(robot_model_->getXBotModel(),1.0/_period);
 
   // Contact estimation reset
   std::vector<int> dofs = {0,1,2}; // x y z
