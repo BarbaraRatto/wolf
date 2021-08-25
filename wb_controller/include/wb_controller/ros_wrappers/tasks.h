@@ -31,9 +31,33 @@ public:
 
         task_id_ = task->getTaskID();
 
-        rt_lambda1_ = task_->getLambda();
-        rt_lambda2_ = task_->getLambda2();
-        rt_weight_diag_ = task_->getWeight()(0,0);
+        double lambda1, lambda2, weight;
+        if (!nh.getParam("gains/"+task_id_+"/lambda1" , lambda1))
+        {
+            ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",task_id_.c_str(),nh.getNamespace().c_str());
+            lambda1 = task_->getLambda();
+        }
+        if (!nh.getParam("gains/"+task_id_+"/lambda2" , lambda2))
+        {
+            ROS_WARN("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",task_id_.c_str(),nh.getNamespace().c_str());
+            lambda2 = task_->getLambda2();
+        }
+        if (!nh.getParam("gains/"+task_id_+"/weight" , weight))
+        {
+            ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",task_id_.c_str(),nh.getNamespace().c_str());
+            weight = task_->getWeight()(0,0);
+        }
+
+        if(lambda1 < 0 || lambda2 < 0 || weight < 0)
+          throw std::runtime_error("Lambda and weight must be positive!");
+
+
+        rt_lambda1_ = lambda1;
+        rt_lambda2_ = lambda2;
+        rt_weight_diag_ = weight;
+
+        task_->setLambda(lambda1,lambda2);
+        task_->setWeight(weight);
 
         rt_pub_.reset(new realtime_tools::RealtimePublisher<msg_t>(nh,task_id_, 4));
 
