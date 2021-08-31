@@ -233,24 +233,25 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   imu_orientation_.normalize();
   pid_scale_ = 1.0;
 
-  gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),Gait::TROT,"ellipse"));
-  foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
-  state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
+  gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT,"ellipse");
+  foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
+  state_estimator_ = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
-  kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
+  kin_= std::make_shared<LegsKinematics>(gait_generator_,robot_model_);
   kin_->setClikGain(default_clik_gain);
   kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
 
-  terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_));
+  terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_);
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
   terrain_estimator_->setMinPitch(-M_PI);
 
-  com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_,terrain_estimator_));
+  com_planner_ = std::make_shared<ComPlanner>(state_estimator_,foot_holds_planner_,terrain_estimator_);
 
-  device_handler_.reset(new JoyHandler(controller_nh,this));
+  device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
+  std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(true);
 
   // initialize the filters
   cutoff_hz_gyro_ = 300.;
@@ -289,7 +290,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
 
-  ros_wrapper_.reset(new ControllerRosWrapper(root_nh,controller_nh,this));
+  ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
   return true;
 }
@@ -395,7 +396,7 @@ void Controller::toggleSolver()
   if(!solver_created_)
   {
     ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-    id_prob_ = std::make_shared<IDProblem>(nh_,robot_model_);
+    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_);
     solver_created_ = true;
   }
 
