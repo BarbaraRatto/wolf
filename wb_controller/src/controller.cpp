@@ -395,7 +395,7 @@ void Controller::toggleSolver()
   if(!solver_created_)
   {
     ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-    id_prob_.reset(new IDProblem(nh_,robot_model_));
+    id_prob_ = std::make_shared<IDProblem>(nh_,robot_model_);
     solver_created_ = true;
   }
 
