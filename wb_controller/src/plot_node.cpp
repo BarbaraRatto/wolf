@@ -63,7 +63,7 @@ protected:
       pose_.translation().y() = position.y;
       pose_.translation().z() = position.z;
 
-      visual_tools_->publishCone(pose_,M_PI,rviz_visual_tools::colors::TRANSLUCENT_LIGHT,0.1); // FIXME use the relation between mu and angle
+      visual_tools_->publishCone(pose_,M_PI,rviz_visual_tools::colors::TRANSLUCENT,0.1); // FIXME use the relation between mu and angle
       visual_tools_->trigger();
   }
 
@@ -199,6 +199,7 @@ protected:
     {
         visual_tools_->deleteAllMarkers();
         createPlane(msg.terrain_normal,msg.central_point);
+        createArrow(msg.terrain_normal,msg.central_point,rviz_visual_tools::CYAN,10.0);
         _mtx.unlock();
     }
   }

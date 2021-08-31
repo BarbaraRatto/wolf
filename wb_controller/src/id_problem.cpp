@@ -12,7 +12,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 {
 
   foot_names_    = model_->getFootNames();
-  arm_names_     = model_->getArmNames();
+  arm_names_     = model_->getArmEndEffectorNames();
   contact_names_ = model_->getContactNames();
 
   //
@@ -106,16 +106,16 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
   std::list<unsigned int> id_legs  = {6,7,8,9,10,11,12,13,14,15,16,17};
 
-  OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;
+  OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;//, arm_aggregated_weighted;
   feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_XYZ,feet_[foot_names_[0]]->getXSize());
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_XYZ;
 
   stacks_[MANIPULATION] = ( (feet_aggregated)
-                            / (com_)
-                            / (waistRPY_%id_RPY + waistZ_%id_Z)
-                            / (postural_)
-                            )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+                          / (com_)
+                          / (waistRPY_%id_RPY)// + arm_aggregated
+                          / (postural_)
+                          )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   // Original stack, it doesn't work with aliengo e anymal
   //int stack_pos_offset = 2;
@@ -126,19 +126,23 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   int stack_pos_offset = 1;
   stacks_[WALKING] = ( (feet_aggregated)
-                     / (50.0 * waistRPY_%id_RPY + 50.0*waistZ_%id_Z + postural_ + com_ + angular_momentum_)
+                     // arm_aggregated
+                     / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
                      )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   if(arm_names_.size() > 0)
   {
     arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
+    //arm_aggregated_weighted = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
     if(arm_names_.size() > 1)
     {
       for(unsigned int i=1;i<arm_names_.size();i++)
         arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
+
+      //arm_aggregated_weighted = 50.0 * arm_aggregated%idx_XYZ + arm_aggregated%id_RPY;
     }
 
-    stacks_[MANIPULATION]->getStack()[2] = 10.0* arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
+    stacks_[MANIPULATION]->getStack()[2] = arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
     auto it = stacks_[WALKING]->getStack().begin() + stack_pos_offset;
     stacks_[WALKING]->getStack().insert(it, arm_aggregated);
   }
@@ -157,6 +161,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   tasks_ros_["postural"] = std::make_shared<PosturalWrapper>(nh,postural_); // POSTURAL
   tasks_ros_["postural"]->OPTIONS.set_ext_gains = false;
   tasks_ros_["com"] = std::make_shared<ComWrapper>(nh,com_); // CoM
+
   for(unsigned int i=0; i<foot_names_.size(); i++)
     tasks_ros_[foot_names_[i]] = std::make_shared<CartesianWrapper>(nh,feet_[foot_names_[i]]); // FEET
   for(unsigned int i=0; i<arm_names_.size(); i++)
@@ -242,10 +247,12 @@ void IDProblem::selectStack(const stacks_t& stack)
         tmp_map.second->setBaseLink(frame);
         tmp_map.second->update(Eigen::VectorXd(1));
       }
-
-      for (unsigned int i=0;i<arm_names_.size();i++)
-        tasks_ros_[arm_names_[i]]->reset();
+      //for (unsigned int i=0;i<arm_names_.size();i++)
+      //  tasks_ros_[arm_names_[i]]->reset();
     }
+
+    for (auto& tmp_map : tasks_ros_)
+      tmp_map.second->reset();
 
     if(solver_.get()!=nullptr)
       solver_.release();
@@ -284,6 +291,14 @@ void IDProblem::update()
   //Update the external lambda/references etc...
   for (auto& tmp_map : tasks_ros_)
     tmp_map.second->update();
+
+  // Update robot state
+  if(current_stack_ == stacks_t::WALKING)
+    model_->setRobotState(QuadrupedRobot::robot_states_t::WALKING);
+  else if (current_stack_ == stacks_t::MANIPULATION)
+    model_->setRobotState(QuadrupedRobot::robot_states_t::MANIPULATION);
+  else
+    model_->setRobotState(QuadrupedRobot::robot_states_t::INIT);
 
   // Update the problem
   stacks_[current_stack_]->update(Eigen::VectorXd(1));

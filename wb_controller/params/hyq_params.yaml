@@ -1,18 +1,24 @@
 wb_controller:
   type: wb_controller/Controller
-  publish_rate: 250
   default_duty_factor: 0.3
   default_swing_frequency: 5.0
   default_contact_threshold: 50.0
-  default_base_linear_velocity: 0.3
-  default_base_angular_velocity: 0.2
+  default_base_linear_velocity: 0.45
+  default_base_angular_velocity: 0.45
   default_step_height: 0.05
   default_z_lower_force: 20.0
   max_step_height: 0.15
   max_step_length: 0.5
   estimation_position_type: estimated_z
   estimation_orientation_type: ground_truth
+
+  push_recovery:
+      k: {x: 1.0, y: 1.0, r: 1.0}
+      dynamic_th: {x: 0.5, y: 0.5, r: 0.5}
+      static_th: {x: 0.06, y: 0.06, r: 0.06}
+
   gains:
+
       clik_gain: 1.0
 
       lf_haa_joint: {p: 300.0, i: 0.0, d: 15.0}

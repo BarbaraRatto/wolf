@@ -99,7 +99,7 @@ public:
             !controller_nh.getParam("push_recovery/static_th/y", static_th(1)) || // [m/s]
             !controller_nh.getParam("push_recovery/static_th/r", static_th(2))  ) // [rad/s]
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/dynamic_th given, proceeding without...");
+            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/static_th given, proceeding without...");
             static_th = Eigen::Vector3d::Ones() * 1000.0; // dummy
         }
 
@@ -147,7 +147,6 @@ public:
 
         terrain_estimation_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::TerrainEstimation>(controller_nh, "terrain_estimation", 4));
         terrain_estimation_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
-        terrain_estimation_pub_->msg_.foot_positions.resize(n_feet);
 
         friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::FrictionCones>(controller_nh, "friction_cones", 4));
         friction_cones_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
@@ -296,13 +295,9 @@ public:
       {
           for(unsigned int i=0; i <foot_names.size(); i++)
           {
-              terrain_estimation_pub_->msg_.foot_positions[i].x = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).x();
-              terrain_estimation_pub_->msg_.foot_positions[i].y = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).y();
-              terrain_estimation_pub_->msg_.foot_positions[i].z = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).z();
-
-              terrain_estimation_pub_->msg_.central_point.x = controller_->getTerrainEstimator()->getPosition().x();
-              terrain_estimation_pub_->msg_.central_point.y = controller_->getTerrainEstimator()->getPosition().y();
-              terrain_estimation_pub_->msg_.central_point.z = controller_->getTerrainEstimator()->getPosition().z();
+              terrain_estimation_pub_->msg_.central_point.x = controller_->getTerrainEstimator()->getTerrainPositionWorld().x();
+              terrain_estimation_pub_->msg_.central_point.y = controller_->getTerrainEstimator()->getTerrainPositionWorld().y();
+              terrain_estimation_pub_->msg_.central_point.z = controller_->getTerrainEstimator()->getTerrainPositionWorld().z();
 
               terrain_estimation_pub_->msg_.terrain_normal.x = controller_->getTerrainEstimator()->getTerrainNormal().x();
               terrain_estimation_pub_->msg_.terrain_normal.y = controller_->getTerrainEstimator()->getTerrainNormal().y();
@@ -316,9 +311,9 @@ public:
       {
           for(unsigned int i=0; i <foot_names.size(); i++)
           {
-              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).x();
-              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).y();
-              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getTerrainEstimator()->getFootPosition(foot_names[i]).z();
+              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getStateEstimator()->getFeetPositionInWorld().at(foot_names[i]).x();
+              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getStateEstimator()->getFeetPositionInWorld().at(foot_names[i]).y();
+              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getStateEstimator()->getFeetPositionInWorld().at(foot_names[i]).z();
 
               friction_cones_pub_->msg_.cone_axis[i].x = controller_->getTerrainEstimator()->getTerrainNormal().x();
               friction_cones_pub_->msg_.cone_axis[i].y = controller_->getTerrainEstimator()->getTerrainNormal().y();

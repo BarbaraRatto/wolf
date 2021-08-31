@@ -16,6 +16,7 @@
 // WB
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/geometry.h>
+#include <wb_controller/utils.h>
 
 template <typename task_ptr_t, typename msg_t, typename config_t>
 class TaskRosWrapperBase : public TaskRosWrapperInterface
@@ -30,9 +31,33 @@ public:
 
         task_id_ = task->getTaskID();
 
-        rt_lambda1_ = task_->getLambda();
-        rt_lambda2_ = task_->getLambda2();
-        rt_weight_diag_ = task_->getWeight()(0,0);
+        double lambda1, lambda2, weight;
+        if (!nh.getParam("gains/"+task_id_+"/lambda1" , lambda1))
+        {
+            ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",task_id_.c_str(),nh.getNamespace().c_str());
+            lambda1 = task_->getLambda();
+        }
+        if (!nh.getParam("gains/"+task_id_+"/lambda2" , lambda2))
+        {
+            ROS_WARN("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",task_id_.c_str(),nh.getNamespace().c_str());
+            lambda2 = task_->getLambda2();
+        }
+        if (!nh.getParam("gains/"+task_id_+"/weight" , weight))
+        {
+            ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",task_id_.c_str(),nh.getNamespace().c_str());
+            weight = task_->getWeight()(0,0);
+        }
+
+        if(lambda1 < 0 || lambda2 < 0 || weight < 0)
+          throw std::runtime_error("Lambda and weight must be positive!");
+
+
+        rt_lambda1_ = lambda1;
+        rt_lambda2_ = lambda2;
+        rt_weight_diag_ = weight;
+
+        task_->setLambda(lambda1,lambda2);
+        task_->setWeight(weight);
 
         rt_pub_.reset(new realtime_tools::RealtimePublisher<msg_t>(nh,task_id_, 4));
 
@@ -79,6 +104,11 @@ public:
           task_->setLambda(rt_lambda1_,rt_lambda2_);
         if(OPTIONS.set_ext_weight)
           task_->setWeight(rt_weight_diag_);
+    }
+
+    virtual void reset() override
+    {
+      task_->reset();
     }
 
 protected:
@@ -155,6 +185,12 @@ public:
 
         rt_Kp_.initRT(Kp);
         rt_Kd_.initRT(Kd);
+
+        task_->setKp(Kp);
+        task_->setKd(Kd);
+
+        position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff
+        position_reference_filter_.setTimeStep(wb_controller::_period);
     }
 
     virtual void publish(const ros::Time& time) override
@@ -200,7 +236,10 @@ public:
 
     virtual void setExternalReference() override
     {
-        task_->setReference(*rt_pose_reference_.readFromRT());
+        tmp_affine3d_ = *rt_pose_reference_.readFromRT();
+        // Filter
+        tmp_affine3d_.translation() = position_reference_filter_.process(tmp_affine3d_.translation());
+        task_->setReference(tmp_affine3d_);
     }
 
     void getExternalGains(Eigen::MatrixBase<Eigen::Matrix6d>& Kp, Eigen::MatrixBase<Eigen::Matrix6d>& Kd)
@@ -278,6 +317,8 @@ public:
 
     virtual void reset() override
     {
+        TaskRosWrapperBase::reset();
+
         Eigen::Affine3d pose;
         task_->getActualPose(pose);
         rt_pose_reference_.writeFromNonRT(pose);
@@ -320,13 +361,14 @@ private:
       int_marker.header.frame_id = frame;
       int_marker.name = task_id_;
       int_marker.description = task_id_;
+      int_marker.scale = 0.25;
 
       wb_controller::affine3dToPose(initial_pose,int_marker.pose);
 
       // create a grey box marker
       visualization_msgs::Marker box_marker;
       box_marker.type = visualization_msgs::Marker::SPHERE;
-      box_marker.scale.x = box_marker.scale.y = box_marker.scale.z = 0.2;
+      box_marker.scale.x = box_marker.scale.y = box_marker.scale.z = 0.05;
       box_marker.color.r = box_marker.color.g = box_marker.color.b = box_marker.color.a = 0.5 ;
 
       // create a non-interactive control which contains the box
@@ -384,6 +426,8 @@ private:
 
     std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_server_;
     visualization_msgs::InteractiveMarker marker_;
+
+    XBot::Utils::SecondOrderFilter<Eigen::Vector3d> position_reference_filter_;
 };
 
 // COM - GENERIC

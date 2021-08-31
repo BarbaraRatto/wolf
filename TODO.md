@@ -1,6 +1,17 @@
 # TODO list
 
-- Export to params the push recovery
+- desired forces and calculated one are different when using internal_wrench
+- counterbalance the ROLL with the terrain estimator
+- switching to Manipulation remove contacts (moving the arm weight to 1 seems to solve the problem), switching to walking bounce the height
+- Arm control shaking
+- Remove postural for the arm!!!!
+- Manipulation stack not working!
+- Update other robots srdf
+- Move hf and other transforms to quadruped robot
+- Quadruped robot as decorator with horizontal frame informations as well?
+- push recovery tests
+
+- Terrain estimator problem when going on rough terrain
 - Move terrain estimator inside state estimator as a subclass
 - Remove dynamic reconfigure
 - Clean wb_robot_hw, parse hardcoded info from urdf/srdf
@@ -19,4 +30,3 @@
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)
 - remove sensors and clean up the urdfs! In progress...
-- rviz config inside single robots

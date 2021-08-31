@@ -61,7 +61,15 @@ public:
    */
   void setGains(const double& k_x, const double& k_y, const double& k_yaw);
 
-  void togglePushRecovery();
+  /**
+   * @brief activate the computation of the deltas for the push recovery
+   */
+  void activateComputeDeltas();
+
+  /**
+   * @brief de-activate the computation of the deltas for the push recovery
+   */
+  void deactivateComputeDeltas();
 
 private:
 
@@ -85,6 +93,7 @@ private:
   Eigen::Vector3d dynamic_th_dot_;
   Eigen::Vector3d static_th_dot_;
   Eigen::Vector3d current_th_dot_;
+  Eigen::Vector3d current_th_dot_filt_;
   // Filter cut off frequency
   double cutoff_freq_;
   // Gains
@@ -92,10 +101,12 @@ private:
   double k_y_;
   double k_yaw_;
   // Support variables
-  double Sr_, Cr_, C2_pr_, C3_pr_, Z0h_, st_p_, C1_pr_;
+  double tau_t_, tau_r_, Cx_pr_, Cy_pr_, Cr_pr_, st_p_, Z0h_, r_, rx_, ry_;
+
+  double cmd_velocity_scale_;
 
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
-
+  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> th_filter_;
 };
 
 /**
@@ -131,6 +142,8 @@ public:
     void initializeFeetPosition();
 
     void initializeFootPosition(const std::string& foot_name);
+
+    void reset();
 
     // Sets
     void setCmd(const unsigned int cmd);
@@ -180,12 +193,19 @@ public:
     Eigen::Vector3d& getCurrentFootholdHF(const std::string& foot_name) ;
     Eigen::Vector3d& getVirtualFoothold(const std::string& foot_name) ;
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
-
-    void setInitialOffsets();
-
     void togglePushRecovery();
+    bool isAnyFootInTouchDown();
+    bool areAllFeetInStance();
+    bool isAnyFootInSwing();
+    const std::vector<std::string>& getFootNames() const;
+    const Eigen::Matrix3d& getBaseRotationInHf() const; // FIXME move to robot
+    const Eigen::Matrix3d& getHfRotationInWorld() const; // FIXME move to robot
+    double getSwingFrequency();
+
 
 private:
+
+    void setInitialOffsets();
 
     void calculateFootSteps();
 
@@ -221,6 +241,7 @@ private:
     std::atomic<double>  step_length_max_;
     std::atomic<double>  step_height_;
     std::atomic<bool>    push_detected_;
+    std::atomic<bool>    push_recovery_active_;
 
     /** @brief Base linear velocity w.r.t horizontal frame
      * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
@@ -287,6 +308,8 @@ private:
 
     friend class PushRecovery;
     PushRecovery::Ptr push_recovery_;
+
+    Eigen::Affine3d tmp_affine3d_;
 };
 
 } // namespace

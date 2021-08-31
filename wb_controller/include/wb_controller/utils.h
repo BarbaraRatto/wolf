@@ -5,11 +5,11 @@
 #include <vector>
 #include <assert.h>
 #include <rt_logger/rt_logger.h>
-//#include <rt_gui/rt_gui_client.h>
 #include <XBotInterface/TypedefAndEnums.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
 #include <wb_controller/quadruped_robot.h>
+#include <wb_controller/filters.h>
 
 namespace wb_controller
 {
@@ -19,8 +19,10 @@ namespace wb_controller
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4 // Fixed number of legs supported
 #define N_ARMS 1 // Fixed number of arms supported
+#define N_BASES 2 // Fixed number of bases supported trunk + arm
 #define THREADS_SLEEP_TIME_ms 4
 #define BASE_LINK_FRAME_NAME "base_link"
+extern double _period;
 
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
 // stays in the same position because the feet don't move relatively to the base anymore. There is no reset!
@@ -74,18 +76,11 @@ inline void vector3dToVector3(const Eigen::Vector3d& vector3d, geometry_msgs::Ve
     vector3.z = vector3d.z();
 }
 
-template <typename T>
-inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)
-{ 
-    varOutputFirstFilter = (1- gain) * varOutputFirstFilter + gain * varNew;
-    varOutputSecondFilter = (1 - gain) * varOutputSecondFilter + gain * varOutputFirstFilter;
-    return varOutputSecondFilter;
-}
-
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
 extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
 extern std::vector<std::string> _joints_prefix;
+extern std::vector<std::string> _legs_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
 inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
@@ -94,7 +89,7 @@ inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& 
     assert(order.size() == N_LEGS);
     std::vector<std::string> ordered_names(N_LEGS);
     for(unsigned int i=0;i<names.size();i++)
-        for(unsigned int j=0;j<names.size();j++)
+        for(unsigned int j=0;j<order.size();j++)
             if(names[i].find(order[j]) != std::string::npos)
                 ordered_names[j] = names[i];
 
@@ -174,92 +169,6 @@ private:
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
-
-class AvgFilter
-{
-public:
-    typedef std::shared_ptr<AvgFilter> Ptr;
-
-
-    AvgFilter(unsigned int n=10)
-    {
-       n_ = n;
-       avg_ = 0.0;
-    }
-
-    double update(double value)
-    {
-        avg_ = (avg_ * (n_-1) + value) / n_;
-        return avg_;
-    }
-
-    void setN(const unsigned int& n)
-    {
-      assert(n>0);
-      n_ = n;
-    }
-
-    void reset()
-    {
-      avg_ = 0.0;
-    }
-
-
-private:
-
-    unsigned int n_;
-    double avg_;
-
-};
-
-class MovingAvgFilter
-{
-
-public:
-  typedef std::shared_ptr<MovingAvgFilter> Ptr;
-
-  MovingAvgFilter(unsigned int n)
-  {
-    window_.resize(n);
-    for(unsigned int i=0; i<n; i++)
-      window_[i] = 0.0;
-    window_idx_ = 0;
-    sum_ = 0.0;
-    filter_complete_ = false;
-  }
-
-  double update(double value)
-  {
-      unsigned int n = window_.size();
-      double res = 0.0;
-
-      sum_ -= window_[window_idx_];
-      sum_ += value;
-      window_[window_idx_] = value;
-
-      if (!filter_complete_ && window_idx_ == n - 1) {
-          filter_complete_ = true;
-        }
-        if (filter_complete_) {
-          res = sum_ / n;
-        } else {
-          res = sum_ / (window_idx_+1);
-        }
-
-      window_idx_ = (window_idx_+1) % n;
-
-      return res;
-  }
-
-private:
-
-  double sum_;
-  std::vector<double> window_;
-  unsigned int window_idx_;
-  bool filter_complete_;
-
-
-};
 
 
 } // namespace

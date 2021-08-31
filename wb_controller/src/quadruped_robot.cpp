@@ -16,6 +16,7 @@ using namespace XBot;
 namespace wb_controller {
 
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
+  :robot_state_(robot_states_t::INIT)
 {
 
   // Create the ModelInterface from XBot
@@ -41,16 +42,15 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   _dof_names = xbot_model_->getEnabledJointNames();
 
+  for(unsigned int i=0;i<_dof_names.size();i++)
+  {
+    joint_idx_[_dof_names[i]] = i;
+    if(i>5) // Remove the floating base
+      joint_names_.push_back(_dof_names[i]);  // Load the joint names for ROS-Control
+  }
+
   n_arms_ = xbot_model_->arms();
   n_legs_ = xbot_model_->legs();
-  std::vector<int> actuated_joints = xbot_model_->getEnabledJointId();
-
-  // Load the joint names
-  for(unsigned int i=0;i<actuated_joints.size();i++)
-  {
-      if(actuated_joints[i]>0) // Filter out the floating base joints
-        joint_names_.push_back(xbot_model_->getJointByID(actuated_joints[i])->getJointName());
-  }
 
   if(n_legs_ != N_LEGS)
   {
@@ -65,17 +65,25 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
+    const auto& links = srdf_model.getGroups()[i].links_;
+    const auto& joints = srdf_model.getGroups()[i].joints_;
     // Parse the foot tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("leg") != std::string::npos)
     {
+      leg_names_.push_back(srdf_model.getGroups()[i].name_);
       for(unsigned int j=0;j<chains.size();j++)
         foot_names_.push_back(chains[j].second);
+      for(unsigned int j=0;j<joints.size();j++)
+        joint_legs_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
     }
     // Parse the arm tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("arm") != std::string::npos)
     {
+      arm_names_.push_back(srdf_model.getGroups()[i].name_);
       for(unsigned int j=0;j<chains.size();j++)
-        arm_names_.push_back(chains[j].second);
+        ee_names_.push_back(chains[j].second);
+      for(unsigned int j=0;j<joints.size();j++)
+        joint_arms_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
     }
     // Parse the hip tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("hip") != std::string::npos)
@@ -83,9 +91,15 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         hip_names_.push_back(chains[j].second);
     }
+    // Parse the base link from the SRDF file
+    if(srdf_model.getGroups()[i].name_.find("bases") != std::string::npos)
+    {
+      for(unsigned int j=0;j<links.size();j++)
+        base_names_.push_back(links[j]);
+    }
   }
 
-  // Check the number of feet and hips
+  // Check the numbers
   if(foot_names_.size() != N_LEGS)
   {
     throw std::runtime_error("Wrong number of feet, check the SRDF file!");
@@ -94,9 +108,37 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   {
     throw std::runtime_error("Wrong number of hips, check the SRDF file!");
   }
+  if(base_names_.size() > N_BASES)
+  {
+    throw std::runtime_error("Wrong number of bases, check the SRDF file!");
+  }
+
+  for(unsigned int i=0;i<leg_names_.size();i++)
+  {
+    for(unsigned int j=0;j<joint_legs_[leg_names_[i]].size();j++)
+    {
+      std::string current_joint_name = joint_legs_[leg_names_[i]].at(j);
+      int idx = joint_idx_[current_joint_name];
+      joint_legs_idx_[leg_names_[i]].push_back(idx);
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
+
+    }
+  }
+
+  for(unsigned int i=0;i<arm_names_.size();i++)
+  {
+    for(unsigned int j=0;j<joint_arms_[arm_names_[i]].size();j++)
+    {
+      std::string current_joint_name = joint_arms_[arm_names_[i]].at(j);
+      int idx = joint_idx_[current_joint_name];
+      joint_arms_idx_[arm_names_[i]].push_back(idx);
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
+    }
+  }
 
   hip_names_ = sortByLegPrefix(hip_names_);
   foot_names_ = sortByLegPrefix(foot_names_);
+  leg_names_ = sortByLegPrefix(leg_names_);
 
   std::vector<std::string> limbs;
   limbs = xbot_model_->getChainNames();
@@ -106,7 +148,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
           limb_names_.push_back(limbs[i]);
 
   contact_names_ = foot_names_;
-  contact_names_.insert( contact_names_.end(), arm_names_.begin(), arm_names_.end() );
+  contact_names_.insert( contact_names_.end(), ee_names_.begin(), ee_names_.end() );
 
   // Calculate approx base length and width based on the hip positions
   // Hips order: "lf","lh","rf","rh"
@@ -129,6 +171,11 @@ const std::vector<std::string>& QuadrupedRobot::getFootNames() const
   return foot_names_;
 }
 
+const std::vector<std::string> &QuadrupedRobot::getLegNames() const
+{
+  return leg_names_;
+}
+
 const std::vector<std::string>& QuadrupedRobot::getHipNames() const
 {
   return hip_names_;
@@ -139,9 +186,9 @@ const std::vector<std::string>& QuadrupedRobot::getJointNames() const
   return joint_names_;
 }
 
-const std::vector<std::string>& QuadrupedRobot::getArmNames() const
+const std::vector<std::string>& QuadrupedRobot::getArmEndEffectorNames() const
 {
-  return arm_names_;
+  return ee_names_;
 }
 
 const std::vector<std::string>& QuadrupedRobot::getContactNames() const
@@ -152,6 +199,16 @@ const std::vector<std::string>& QuadrupedRobot::getContactNames() const
 const std::vector<std::string>& QuadrupedRobot::getLimbNames() const
 {
   return limb_names_;
+}
+
+const std::vector<int> &QuadrupedRobot::getLegJointsIds(const std::string &leg_name)
+{
+  return joint_legs_idx_[leg_name];
+}
+
+const std::vector<int> &QuadrupedRobot::getArmJointsIds(const std::string &arm_name)
+{
+  return joint_arms_idx_[arm_name];
 }
 
 XBot::ModelInterface::Ptr QuadrupedRobot::getXBotModel()
@@ -179,6 +236,19 @@ const double &QuadrupedRobot::getBaseWidth() const
   return base_width_;
 }
 
+std::string QuadrupedRobot::getTrunkLinkName()
+{
+  return base_names_[0];
+}
+
+std::string QuadrupedRobot::getArmBaseLinkName()
+{
+  if(base_names_.size()>1)
+    return base_names_[1];
+  else
+    return "";
+}
+
 const double &QuadrupedRobot::getRobotMass() const
 {
   return mass_;
@@ -199,7 +269,6 @@ bool QuadrupedRobot::setRobotState(QuadrupedRobot::robot_states_t robot_state)
   robot_state_ = robot_state;
   return true;
 }
-
 
 
 };

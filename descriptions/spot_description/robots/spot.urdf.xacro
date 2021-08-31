@@ -67,7 +67,9 @@
 
     <!-- foot -->
     <xacro:property name="foot_mass" value="0.06"/>
-    <xacro:property name="foot_radius" value="0.034"/>
+    <xacro:property name="foot_radius" value="0.03"/>
+    <xacro:property name="foot_x" value="-0.01"/>
+    <xacro:property name="foot_z" value="-0.35"/>
 
     <!-- Floating-base Joint -->
     <link name="world"/>
@@ -194,7 +196,7 @@
         <limit effort="1000" velocity="1000.00" lower="-2.7929" upper="-0.254801" />
     </joint>
     <joint name="lf_foot_joint" type="fixed">
-        <origin xyz="0 0.0 -0.35" rpy="0 0 0" />
+        <origin xyz="${foot_x} 0.0 ${foot_z}" rpy="0 0 0" />
         <parent link="lf_lowerleg" />
         <child link="lf_foot" />
     </joint>
@@ -303,7 +305,7 @@
         <limit effort="1000" velocity="1000.00" lower="-2.7929" upper="-0.247563" />
     </joint>
     <joint name="rf_foot_joint" type="fixed">
-        <origin xyz="0 0.0 -0.35" rpy="0 0 0" />
+        <origin xyz="${foot_x} 0.0 ${foot_z}" rpy="0 0 0" />
         <parent link="rf_lowerleg" />
         <child link="rf_foot" />
     </joint>
@@ -412,7 +414,7 @@
         <limit effort="1000" velocity="1000.00" lower="-2.7929" upper="-0.267153" />
     </joint>
     <joint name="lh_foot_joint" type="fixed">
-        <origin xyz="0 0.0 -0.35" rpy="0 0 0" />
+        <origin xyz="${foot_x} 0.0 ${foot_z}" rpy="0 0 0" />
         <parent link="lh_lowerleg" />
         <child link="lh_foot" />
     </joint>
@@ -521,7 +523,7 @@
         <limit effort="1000" velocity="1000.00" lower="-2.7929" upper="-0.257725" />
     </joint>
     <joint name="rh_foot_joint" type="fixed">
-        <origin xyz="0 0.0 -0.35" rpy="0 0 0" />
+        <origin xyz="${foot_x} 0.0 ${foot_z}" rpy="0 0 0" />
         <parent link="rh_lowerleg" />
         <child link="rh_foot" />
     </joint>
@@ -564,5 +566,8 @@
     <xacro:leg_transmission name="lh"/>
     <xacro:leg_gazebo name="lh" load_force_sensors="$(arg load_force_sensors)"/>
 
+    <xacro:if value="$(arg arm_enabled)">
+           <xacro:include filename="$(find spot_description)/urdfs/arm/$(arg arm_name)_adapter.urdf.xacro" /> -->
+    </xacro:if>
 
 </robot>
