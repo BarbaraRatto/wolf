@@ -251,7 +251,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   com_planner_ = std::make_shared<ComPlanner>(state_estimator_,foot_holds_planner_,terrain_estimator_);
 
   device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
-  std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(true);
+  std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(nh_.param("use_xbox_controller", false));
 
   // initialize the filters
   cutoff_hz_gyro_ = 300.;
