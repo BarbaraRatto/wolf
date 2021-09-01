@@ -11,6 +11,9 @@
         <!-- send solo urdf to param server -->
         <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find solo_description)/robots/solo.urdf.xacro'
         sensors:=$(arg sensors) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period)"/>
+        
+        <param name="gazebo_robot_description" command="$(find xacro)/xacro --inorder '$(find solo_description)/robots/solo.urdf.xacro'
+        sensors:=$(arg sensors) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period) floating_base_link:=false"/>
 
         <!-- send solo semantic description srdf to param server -->
         <param name="robot_semantic_description" command="$(find xacro)/xacro --inorder '$(find solo_description)/robots/solo.srdf.xacro'" />
