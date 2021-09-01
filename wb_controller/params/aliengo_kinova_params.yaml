@@ -10,13 +10,19 @@ wb_controller:
   max_step_length: 0.5
   estimation_position_type: ground_truth
   estimation_orientation_type: ground_truth
+
+  push_recovery:
+      k: {x: 0.5, y: 0.5, r: 0.5}
+      dynamic_th: {x: 0.5, y: 0.5, r: 0.5}
+      static_th: {x: 0.06, y: 0.06, r: 0.06}
+
   gains:
       clik_gain: 1.0
 
-      kinova_joint_1: {p: 1.0, i: 0.0, d: 0.01}
-      kinova_joint_2: {p: 1.0, i: 0.0, d: 0.01}
-      kinova_joint_3: {p: 1.0, i: 0.0, d: 0.01}
-      kinova_joint_4: {p: 1.0, i: 0.0, d: 0.01}
+      kinova_joint_1: {p: 100.0, i: 0.0, d: 1.0}
+      kinova_joint_2: {p: 100.0, i: 0.0, d: 1.0}
+      kinova_joint_3: {p: 100.0, i: 0.0, d: 1.0}
+      kinova_joint_4: {p: 100.0, i: 0.0, d: 1.0}
 
       lf_haa_joint: {p: 100.0, i: 0.0, d: 5.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 8.0}
@@ -45,8 +51,8 @@ wb_controller:
           Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
 
       kinova_end_effector:
-          Kp: {x: 100.0, y: 100.0, z: 100.0, roll: 50.0, pitch: 50.0, yaw: 50.0}
-          Kd: {x: 30.0, y: 30.0, z: 30.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
+          Kp: {x: 300.0, y: 300.0, z: 300.0, roll: 100.0, pitch: 100.0, yaw: 100.0}
+          Kd: {x: 50.0, y: 50.0, z: 50.0, roll: 10.0, pitch: 10.0, yaw: 10.0}
 
       waistZ:
           Kp: {x: 0.0, y: 0.0, z: 100.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
