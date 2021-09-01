@@ -713,14 +713,15 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
   signs_["rh_foot"] = std::make_pair<int,int>(1,-1);
 
-  deltas_["lf_foot"].setZero();
-  deltas_["rf_foot"].setZero();
-  deltas_["lh_foot"].setZero();
-  deltas_["rh_foot"].setZero();
-
   cutoff_freq_ = 20.0;
   th_filter_.setOmega(2.0*M_PI*cutoff_freq_);
-  th_filter_.setDamping(1.0);
+
+  const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
+  for(unsigned int i=0;i<foot_names.size();i++)
+  {
+    deltas_[foot_names[i]].setZero();
+    deltas_filter_[foot_names[i]].setOmega(2.0*M_PI*cutoff_freq_);
+  }
 
   //velocity_filter_.setOmega(2.0*M_PI*cutoff_freq_);
   //velocity_filter_.setDamping(1.0);
@@ -833,6 +834,8 @@ bool PushRecovery::update(const double& period)
         deltas_[foot_names[i]].y() = max_delta_;
       if(deltas_[foot_names[i]].y() < -max_delta_)
         deltas_[foot_names[i]].y() = -max_delta_;
+
+      deltas_[foot_names[i]] = deltas_filter_[foot_names[i]].process(deltas_[foot_names[i]]);
     }
   }
 

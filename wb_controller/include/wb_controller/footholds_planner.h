@@ -107,6 +107,7 @@ private:
 
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> th_filter_;
+  std::map<std::string,XBot::Utils::SecondOrderFilter<Eigen::Vector2d> > deltas_filter_;
 };
 
 /**
