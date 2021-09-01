@@ -173,6 +173,18 @@ public:
 
                 if(f_select_ && joy_select_button_trigger_.update(static_cast<bool>(msg->buttons[7])))
                     f_select_();
+
+                if(f_one_ && joy_one_button_trigger_.update(static_cast<bool>(msg->buttons[0])))
+                    f_one_();
+
+                if(f_two_ && joy_two_button_trigger_.update(static_cast<bool>(msg->buttons[1])))
+                    f_two_();
+
+                if(f_three_ && joy_three_button_trigger_.update(static_cast<bool>(msg->buttons[2])))
+                    f_three_();
+
+                if(f_four_ && joy_four_button_trigger_.update(static_cast<bool>(msg->buttons[3])))
+                    f_four_();
             }
             else
             {
