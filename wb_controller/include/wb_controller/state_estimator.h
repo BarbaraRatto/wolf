@@ -109,6 +109,8 @@ public:
 
     void resetGyroscopeIntegration();
 
+    double getRobotdMass();
+
 private:
 
     void setEstimationType(unsigned int position_t, unsigned int orientation_t);
