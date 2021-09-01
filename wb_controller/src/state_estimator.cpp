@@ -314,6 +314,11 @@ void StateEstimator::resetGyroscopeIntegration()
   reset_gyro_integration_done_ = false;
 }
 
+double StateEstimator::getRobotdMass()
+{
+  return robot_model_->getRobotMass();
+}
+
 void StateEstimator::stopContactsEstimation()
 {
   contacts_estimation_active_ = false;
