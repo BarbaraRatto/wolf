@@ -1,5 +1,8 @@
 # TODO list
 
+- Make solo work
+- Remove sensors description
+- The posture adjustment calculated in the terrain estimator has to be defined wrt base frame and not the hf frame!
 - Debug c and delta_com... they don't seem to do anything useful
 - Estimated_z does not work with spot when using estimated forces
 - desired forces and calculated one are different when using internal_wrench ( this looks like a problem with the force sensors, RBDL mass is correct )
