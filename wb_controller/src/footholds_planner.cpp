@@ -27,7 +27,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   offsets_applied_ = false;
 
-  //delta_com_.fill(0.0);
+  delta_com_.fill(0.0);
 
   world_T_terrain_ = Eigen::Affine3d::Identity();
 
@@ -244,7 +244,7 @@ void FootholdsPlanner::calculateFootSteps()
 
       //6) Sum delta com and the delta for the push recovery
       //hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + delta_com_;
-      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]);
+      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + hf_R_base_ * delta_com_;
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
       // 6) Sum everything to obtain the new foothold displacement w.r.t world
@@ -386,7 +386,7 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   rpyToRot(base_orientation_,base_rotation_reference_);
   // This is the base rotation reference computed w.r.t terrain
-  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose(); // FIXME invert the order
+  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
 }
 
 void FootholdsPlanner::setInitialOffsets()
@@ -483,7 +483,7 @@ void FootholdsPlanner::decreaseStepHeight()
   setStepHeight(step_height_ - 0.01); // Decrease step height
 }
 
-void FootholdsPlanner::setComCorrection(const Eigen::Vector2d &delta_com)
+void FootholdsPlanner::setComCorrection(const Eigen::Vector3d &delta_com)
 {
   delta_com_ = delta_com;
 }

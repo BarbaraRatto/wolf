@@ -167,7 +167,7 @@ public:
     void decreaseStepHeight();
     void increaseSwingFrequency();
     void decreaseSwingFrequency();
-    void setComCorrection(const Eigen::Vector2d& delta_com);
+    void setComCorrection(const Eigen::Vector3d& delta_com);
     void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
     void setPushRecoveryThresholds(const Eigen::Vector3d& static_th, const Eigen::Vector3d& dynamic_th);
     void setPushRecoveryGains(const double& k_x, const double& k_y, const double& k_r);
@@ -275,7 +275,7 @@ private:
     Eigen::Matrix3d world_R_base_;
     Eigen::Matrix3d hf_R_base_;
 
-    Eigen::Vector2d delta_com_;
+    Eigen::Vector3d delta_com_;
 
     Eigen::Affine3d world_T_terrain_;
 
