@@ -20,7 +20,7 @@
     <xacro:include filename="$(find kinova_description)/urdf/kinova_finger_set.xacro" />
 
     <!-- Import all Gazebo-customization elements -->
-    <xacro:include filename="$(find kinova_description)/urdf/kinova.gazebo" />
+    <!-- <xacro:include filename="$(find kinova_description)/urdf/kinova.gazebo" /> -->
 
     <xacro:property name="link_base_mesh" value="base" />
     <xacro:property name="link_1_mesh" value="shoulder" />
@@ -96,7 +96,7 @@
 
     <xacro:macro name="m1n4s200" params="base_parent prefix:=m1n4s200">
 
-        <xacro:gazebo_config robot_namespace="${prefix}"/>
+        <!-- <xacro:gazebo_config robot_namespace="${prefix}"/> -->
 
         <xacro:kinova_armlink link_name="${prefix}_link_base" link_mesh="${link_base_mesh}" mesh_no="${link_base_mesh_no}"/>
         <xacro:kinova_armjoint joint_name="${prefix}_joint_base" type="${joint_base_type}" parent="${base_parent}" child="${prefix}_link_base" joint_axis_xyz="${joint_base_axis_xyz}" joint_origin_xyz="${joint_base_origin_xyz}" joint_origin_rpy="${joint_base_origin_rpy}" joint_lower_limit="0" joint_upper_limit="0" joint_velocity_limit="0" joint_torque_limit="0" fixed="true"/>

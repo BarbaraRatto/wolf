@@ -1,13 +1,11 @@
 wb_controller:
   type: wb_controller/Controller
-  publish_rate: 250
   default_duty_factor: 0.3
   default_swing_frequency: 5.0
   default_contact_threshold: 50.0
   default_base_linear_velocity: 0.3
   default_base_angular_velocity: 0.2
   default_step_height: 0.05
-  default_z_lower_force: 20.0
   max_step_height: 0.15
   max_step_length: 0.5
   estimation_position_type: ground_truth

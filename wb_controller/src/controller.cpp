@@ -16,13 +16,14 @@
 using namespace XBot;
 using namespace Cartesian;
 using namespace rt_logger;
-using namespace rt_gui;
 
 namespace wb_controller {
 
 std::vector<std::string> _dof_names = {}; // To be loaded from the robot model
 std::vector<std::string> _cartesian_names = {"x","y","z","roll","pitch","yaw"}; // This is our standard cartesian dofs order
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
+std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
+double _period = 0.001;
 
 Controller::Controller()
   :solver_created_(false)
@@ -238,10 +239,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
   kin_->setClikGain(default_clik_gain);
-  //kin_->activateBaseHeightControl();
+  kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
 
-  terrain_estimator_.reset(new TerrainEstimator(gait_generator_,state_estimator_,kin_,foot_holds_planner_));
+  terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_));
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
@@ -260,6 +261,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
     return false;
   }
+  _period = period_;
 
   if(!root_nh.getParam("/internal_wrench",use_contact_sensors_)) // Use the contact sensors
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
@@ -327,7 +329,11 @@ bool Controller::selectStack(const std::string& stack)
 void Controller::switchStack()
 {
   if(id_prob_)
+  {
     id_prob_->switchStack();
+    kin_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
+    foot_holds_planner_->reset();
+  }
   else
     ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
 }
@@ -491,6 +497,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
   }
 
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+  const std::vector<std::string>& leg_names  = robot_model_->getLegNames();
 
   if(use_contact_sensors_)
     for(unsigned int i = 0; i<foot_names.size(); i++)
@@ -502,8 +509,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
   state_estimator_->update(period.toSec());
-
-  terrain_estimator_->computeTerrainEstimation(period.toSec());
 
   if(solver_started_) // Use the ID solver to calculate the torques
   {
@@ -536,6 +541,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     foot_holds_planner_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
 
+    terrain_estimator_->computeTerrainEstimation(period.toSec());
+
     rotTorpy(foot_holds_planner_->getBaseRotationReference().transpose(),des_base_rpy_);
     // Set the pose reference for the waist
     id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
@@ -544,7 +551,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     com_planner_->update(period.toSec());
     id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
-    id_prob_->setFrictionConesR(terrain_estimator_->getOrientation().transpose());
+    id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
     if(inertia_compensation_active_)
     {
@@ -554,6 +561,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     for(unsigned int i = 0; i<foot_names.size(); i++)
     {
+
+      int idx = robot_model_->getLegJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
+
       // Update the reference for the feet tasks, this is only used for visualization pourposes
       id_prob_->feet_[foot_names[i]]->setReference(gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i])); //FIXME
 
@@ -566,19 +576,19 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(inertia_compensation_active_)
         {
-          Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kp_swing_leg_;
-          Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Mi_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) * Kd_swing_leg_;
+          Kp_postural_.block<3,3>(idx,idx) = Mi_.block<3,3>(idx,idx) * Kp_swing_leg_;
+          Kd_postural_.block<3,3>(idx,idx) = Mi_.block<3,3>(idx,idx) * Kd_swing_leg_;
         }
         else
         {
-          Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kp_swing_leg_;
-          Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_swing_leg_;
+          Kp_postural_.block<3,3>(idx,idx) = Kp_swing_leg_;
+          Kd_postural_.block<3,3>(idx,idx) = Kd_swing_leg_;
         }
       }
       else
       {
-        Kp_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kp_stance_leg_;
-        Kd_postural_.block<3,3>(FLOATING_BASE_DOFS+3*i,FLOATING_BASE_DOFS+3*i) = Kd_stance_leg_;
+        Kp_postural_.block<3,3>(idx,idx) = Kp_stance_leg_;
+        Kd_postural_.block<3,3>(idx,idx) = Kd_stance_leg_;
 
         id_prob_->stanceWithFoot(foot_names[i]);
         ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
@@ -589,6 +599,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Set the desired base height
     kin_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
+
+    // Set the feed forward stance term with the terrain adjustment
+    kin_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
 
     // Update the desired joint positions from the ik and set that to the postural
     // task
@@ -649,7 +662,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
   ros_wrapper_->publish(time);
 
   RtLogger::getLogger().publish(time);
-  RtGuiClient::getIstance().sync();
 }
 
 void Controller::odomPublisher()

@@ -16,7 +16,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   const std::vector<std::string>& contact_names = robot_model_->getContactNames();
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  const std::vector<std::string>& arm_names = robot_model_->getArmNames();
+  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
   const std::vector<std::string>& limb_names = robot_model_->getLimbNames();
 
   // Floating Base state estimation reset
@@ -85,7 +85,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   use_external_forces_ = false;
 
   // Contact force estimation reset
-  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimation>(robot_model_);
+  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimationMomentumBased>(robot_model_,1.0/_period);
 
   // Contact estimation reset
   std::vector<int> dofs = {0,1,2}; // x y z
@@ -162,11 +162,6 @@ void StateEstimator::setJointEffort(const Eigen::VectorXd& joint_efforts)
 void StateEstimator::setTerrainNormal(const Eigen::Vector3d &terrain_normal)
 {
   terrain_normal_ = terrain_normal;
-}
-
-void StateEstimator::setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point)
-{
-  terrain_central_point_ = terrain_central_point;
 }
 
 void StateEstimator::setImuOrientation(const Eigen::Quaterniond& imu_orientation)
@@ -319,6 +314,11 @@ void StateEstimator::resetGyroscopeIntegration()
   reset_gyro_integration_done_ = false;
 }
 
+double StateEstimator::getRobotMass()
+{
+  return robot_model_->getMass();
+}
+
 void StateEstimator::stopContactsEstimation()
 {
   contacts_estimation_active_ = false;
@@ -329,7 +329,7 @@ void StateEstimator::stopContactsEstimation()
 void StateEstimator::update(const double& period)
 {
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  const std::vector<std::string>& arm_names = robot_model_->getArmNames();
+  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
 
   for(unsigned int i=0; i<foot_names.size(); i++)
   {
@@ -395,7 +395,7 @@ void StateEstimator::updateContactState()
   }
 
   // Update contact state for the arms
-  const std::vector<std::string>& arm_names = robot_model_->getArmNames();
+  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
   for(unsigned int i=0; i<arm_names.size(); i++)
   {
 
@@ -411,6 +411,25 @@ void StateEstimator::updateContactState()
     contact_forces_[arm_names[i]] = tmp_vector3d_;
   }
 
+}
+
+double StateEstimator::estimateZ()
+{
+  // Estimate z using the legs position
+  const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
+  double estimated_z = 0.0;
+  int feet_in_stance = 0;
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+  {
+    if(!gait_generator_->isSwinging(foot_names[i]))
+    {
+      feet_in_stance++;
+      tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[foot_names[i]];
+      estimated_z +=  tmp_affine3d_.translation().z();
+    }
+  }
+  estimated_z /= feet_in_stance;
+  return estimated_z;
 }
 
 void StateEstimator::updateFloatingBase(const double& period)
@@ -508,11 +527,6 @@ void StateEstimator::updateFloatingBase(const double& period)
   robot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
   robot_model_->update();
 
-  const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
-
-  double estimated_z = 0.0;
-  int feet_in_stance = 0;
-
   switch(estimation_position)
   {
   case estimation_t::NONE:
@@ -521,17 +535,6 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_position_ << 0.0,0.0,0.0;
     break;
   case estimation_t::ESTIMATED_Z:
-    // Estimate z using the legs position
-    for(unsigned int i = 0; i<feet_names.size(); i++)
-    {
-      if(!gait_generator_->isSwinging(feet_names[i]))
-      {
-        feet_in_stance++;
-        tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[feet_names[i]];
-        estimated_z +=  tmp_affine3d_.translation().z();
-      }
-    }
-    estimated_z /= feet_in_stance;
     // Update the qp estimation based on the new virtual model state
     //termporarily commented to save time
     qp_estimation_->update();
@@ -539,12 +542,13 @@ void StateEstimator::updateFloatingBase(const double& period)
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    floating_base_position_ << 0.0,0.0, -estimated_z; // Remove x and y from the state estimation
+    floating_base_position_ << 0.0,0.0, -estimateZ(); // Remove x and y from the state estimation
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
     floating_base_position_.head(2) << gt_position_.head(2);
-    floating_base_position_(2) =  gt_position_(2) - terrain_central_point_(2); // Adjust the height wrt the terrain
+     // Note: this is the z calculated wrt the base not the one wrt world!
+    floating_base_position_(2) = -estimateZ();
     break;
   default:
     // The base does not move

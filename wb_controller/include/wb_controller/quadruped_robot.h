@@ -21,16 +21,24 @@ public:
 
   typedef std::shared_ptr<const QuadrupedRobot> ConstPtr;
 
-  enum states_t {INIT,WALKING,MANIPULATION};
+  typedef std::map<std::string,std::vector<std::string> > limb_joint_names_map_t;
+  typedef std::map<std::string,std::vector<int> >         limb_joint_idxs_map_t;
+  typedef std::map<std::string,int >                      joint_idxs_map_t;
+
+  enum robot_states_t {INIT,WALKING,MANIPULATION};
 
   QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
   const std::vector<std::string>& getFootNames() const;
+  const std::vector<std::string>& getLegNames() const;
   const std::vector<std::string>& getHipNames() const;
   const std::vector<std::string>& getJointNames() const;
-  const std::vector<std::string>& getArmNames() const;
+  const std::vector<std::string>& getArmEndEffectorNames() const;
   const std::vector<std::string>& getContactNames() const;
   const std::vector<std::string>& getLimbNames() const;
+
+  const std::vector<int>& getLegJointsIds(const std::string& leg_name);
+  const std::vector<int>& getArmJointsIds(const std::string& arm_name);
 
   const unsigned int& getNumberArms() const;
   const unsigned int& getNumberLegs() const;
@@ -38,10 +46,11 @@ public:
   const double& getBaseLength() const;
   const double& getBaseWidth() const;
 
-  const std::string& getBaseLinkName() const;
+  std::string getTrunkLinkName();
+  std::string getArmBaseLinkName();
 
-  states_t getState();
-  bool setState(states_t robot_state);
+  robot_states_t getState();
+  bool setState(robot_states_t robot_state);
 
   const Eigen::Matrix3d& getFloatingBaseInertia();
 
@@ -54,11 +63,21 @@ private:
 
   std::vector<std::string> foot_names_; // foot tip names
   std::vector<std::string> hip_names_;
+  std::vector<std::string> leg_names_;
+  std::vector<std::string> arm_names_;
   std::vector<std::string> joint_names_;
-  std::vector<std::string> arm_names_; // arm tip names
+  std::vector<std::string> ee_names_; // end-effector names
   std::vector<std::string> contact_names_; // foot + arm names
   std::vector<std::string> limb_names_; // chain names
-  std::vector<std::string> base_names_;
+  std::vector<std::string> base_names_; // quadruped trunk + any arm base
+
+  limb_joint_idxs_map_t joint_legs_idx_;
+  limb_joint_idxs_map_t joint_arms_idx_;
+
+  joint_idxs_map_t joint_idx_;
+
+  limb_joint_names_map_t joint_legs_;
+  limb_joint_names_map_t joint_arms_;
 
   unsigned int n_legs_;
   unsigned int n_arms_;
@@ -69,7 +88,7 @@ private:
   Eigen::MatrixXd M_;
   Eigen::Matrix3d Ifb_;
 
-  std::atomic<states_t> state_;
+  std::atomic<robot_states_t> robot_state_;
 
 };
 

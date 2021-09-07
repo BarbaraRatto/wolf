@@ -39,7 +39,9 @@ public:
 
   void setDesiredBaseHeight(const double& des_base_height);
 
-  void setDesiredBaseAdjustmentDot(const Eigen::Vector3d& xdot);
+  void setFeedForwardStanceDot(const Eigen::Vector3d& xdot_stance_ff);
+
+  void setFeedForwardSwingDot(const Eigen::Vector3d& xdot_swing_ff);
 
   bool setJointHomePositions(Eigen::VectorXd& qhome);
 
@@ -88,6 +90,7 @@ private:
   std::atomic<double> des_base_height_;
 
   double base_height_;
+  double base_height_dot_;
 
   /** @brief Stance joints position */
   Eigen::VectorXd qstance_;
@@ -105,12 +108,15 @@ private:
   Eigen::VectorXd qmax_;
   /** @brief Feet pose w.r.t world */
   Eigen::Affine3d world_T_foot_;
-  /** @brief Feed forward term in the clik control loop */
-  Eigen::Vector3d xdot_ff_;
+  /** @brief Stance feed forward term in the clik control loop */
+  Eigen::Vector3d xdot_stance_ff_;
+  /** @brief Swing feed forward term in the clik control loop */
+  Eigen::Vector3d xdot_swing_ff_;
 
   Eigen::MatrixXd J_;
   Eigen::MatrixXd J_foot_;
   Eigen::Vector3d x_err_;
+  Eigen::Vector3d x_err_dot_;
 
 
   /** @brief Support temporary Affine3d */
@@ -119,6 +125,8 @@ private:
   Eigen::Vector3d tmp_vector3d_;
   /** @brief Support temporary Matrix3d */
   Eigen::Matrix3d tmp_matrix3d_;
+  /** @brief Support temporary Vector6d */
+  Eigen::Vector6d tmp_vector6d_;
 
 
 };

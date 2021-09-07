@@ -6,10 +6,10 @@
 <joint name="joint_base_robots" type="fixed">
        <parent link="base_link"/>
        <child link="kinova_adapter_link"/>
-       <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+       <origin xyz="0.5 0.0 0.0" rpy="0 1.57 0"/>
 </joint>
 
-<xacro:include filename="$(find kinova_description)/urdf/j2n4s300.xacro"/>
-<xacro:j2n4s300  base_parent="kinova_adapter_link" prefix="kinova"/>
+<xacro:include filename="$(find kinova_description)/urdf/m1n4s200.xacro"/>
+<xacro:m1n4s200  base_parent="kinova_adapter_link" prefix="kinova"/>
 
 </robot>

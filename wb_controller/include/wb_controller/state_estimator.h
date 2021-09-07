@@ -51,8 +51,6 @@ public:
 
     void setTerrainNormal(const Eigen::Vector3d& terrain_normal);
 
-    void setTerrainCentralPoint(const Eigen::Vector3d &terrain_central_point);
-
     void setImuOrientation(const Eigen::Quaterniond& imu_orientation);
 
     void setImuGyroscope(const Eigen::Vector3d& imu_gyroscope);
@@ -111,6 +109,8 @@ public:
 
     void resetGyroscopeIntegration();
 
+    double getRobotMass();
+
 private:
 
     void setEstimationType(unsigned int position_t, unsigned int orientation_t);
@@ -122,6 +122,8 @@ private:
     void updateFloatingBase(const double& period);
 
     void updateContactState();
+
+    double estimateZ();
 
     std::map<std::string,unsigned int> estimations_;
 

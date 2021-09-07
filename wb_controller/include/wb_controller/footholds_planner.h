@@ -93,6 +93,7 @@ private:
   Eigen::Vector3d dynamic_th_dot_;
   Eigen::Vector3d static_th_dot_;
   Eigen::Vector3d current_th_dot_;
+  Eigen::Vector3d current_th_dot_filt_;
   // Filter cut off frequency
   double cutoff_freq_;
   // Gains
@@ -100,10 +101,13 @@ private:
   double k_y_;
   double k_yaw_;
   // Support variables
-  double Sr_, Cr_, C2_pr_, C3_pr_, Z0h_, st_p_, C1_pr_;
+  double tau_t_, tau_r_, Cx_pr_, Cy_pr_, Cr_pr_, st_p_, Z0h_, r_, rx_, ry_;
+
+  double cmd_velocity_scale_;
 
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> velocity_filter_;
-
+  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> th_filter_;
+  std::map<std::string,XBot::Utils::SecondOrderFilter<Eigen::Vector2d> > deltas_filter_;
 };
 
 /**
@@ -140,6 +144,8 @@ public:
 
     void initializeFootPosition(const std::string& foot_name);
 
+    void reset();
+
     // Sets
     void setCmd(const unsigned int cmd);
     void setBasePosition(const Eigen::Vector3d& position);
@@ -161,7 +167,7 @@ public:
     void decreaseStepHeight();
     void increaseSwingFrequency();
     void decreaseSwingFrequency();
-    void setComCorrection(const Eigen::Vector2d& delta_com);
+    void setComCorrection(const Eigen::Vector3d& delta_com);
     void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
     void setPushRecoveryThresholds(const Eigen::Vector3d& static_th, const Eigen::Vector3d& dynamic_th);
     void setPushRecoveryGains(const double& k_x, const double& k_y, const double& k_r);
@@ -188,12 +194,19 @@ public:
     Eigen::Vector3d& getCurrentFootholdHF(const std::string& foot_name) ;
     Eigen::Vector3d& getVirtualFoothold(const std::string& foot_name) ;
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
-
-    void setInitialOffsets();
-
     void togglePushRecovery();
+    bool isAnyFootInTouchDown();
+    bool areAllFeetInStance();
+    bool isAnyFootInSwing();
+    const std::vector<std::string>& getFootNames() const;
+    const Eigen::Matrix3d& getBaseRotationInHf() const; // FIXME move to robot
+    const Eigen::Matrix3d& getHfRotationInWorld() const; // FIXME move to robot
+    double getSwingFrequency();
+
 
 private:
+
+    void setInitialOffsets();
 
     void calculateFootSteps();
 
@@ -262,7 +275,7 @@ private:
     Eigen::Matrix3d world_R_base_;
     Eigen::Matrix3d hf_R_base_;
 
-    Eigen::Vector2d delta_com_;
+    Eigen::Vector3d delta_com_;
 
     Eigen::Affine3d world_T_terrain_;
 
@@ -296,6 +309,8 @@ private:
 
     friend class PushRecovery;
     PushRecovery::Ptr push_recovery_;
+
+    Eigen::Affine3d tmp_affine3d_;
 };
 
 } // namespace

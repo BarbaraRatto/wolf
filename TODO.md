@@ -1,6 +1,19 @@
 # TODO list
 
-- Export to params the push recovery
+- Make solo work
+- Remove sensors description
+- The posture adjustment calculated in the terrain estimator has to be defined wrt base frame and not the hf frame!
+- Debug c and delta_com... they don't seem to do anything useful
+- Estimated_z does not work with spot when using estimated forces
+- desired forces and calculated one are different when using internal_wrench ( this looks like a problem with the force sensors, RBDL mass is correct )
+- counterbalance the ROLL with the terrain estimator
+- switching to Manipulation remove contacts (moving the arm weight to 1 seems to solve the problem), switching to walking bounce the height
+- Arm control shaking
+- Remove postural for the arm!!!!
+- Move hf and other transforms to quadruped robot
+- Quadruped robot as decorator with horizontal frame informations as well?
+- push recovery tests
+
 - Move terrain estimator inside state estimator as a subclass
 - Remove dynamic reconfigure
 - Clean wb_robot_hw, parse hardcoded info from urdf/srdf
@@ -19,4 +32,3 @@
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)
 - remove sensors and clean up the urdfs! In progress...
-- rviz config inside single robots

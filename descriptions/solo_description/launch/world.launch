@@ -36,7 +36,7 @@
 
 	<!-- Start gazebo server-->
 	<node name="gazebo" pkg="gazebo_ros" type="$(arg script_type)" respawn="false" output="screen"
-                args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name) -e bullet --verbose" />
+		args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name)" />
 	
 	<!-- Start gazebo client -->
 	<group if="$(arg gui)">
@@ -49,10 +49,10 @@
 	</include>
 
 	<!-- Spawn a robot into Gazebo -->
-        <node name="spawn_solo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model solo -z 0.3"/>
+        <node name="spawn_solo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model solo -z 0.65"/>
 
 	<!-- Get robot to 0 position -->
-        <node name="goto0" pkg="solo_description" type="go0" args="1.0"  />
+        <node name="goto0" pkg="solo_description" type="go0" args="3.0"  />
 
 
 </launch>
