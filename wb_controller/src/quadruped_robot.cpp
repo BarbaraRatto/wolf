@@ -41,8 +41,9 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   opt.set_parameter<std::string>("model_type", model_type);
   //model_imp_ = XBot::ModelInterface::getModel(opt);
 
+  _is_floating_base = true;
   init(opt);
-  init_model(opt);
+  //init_model(opt);
 
   _dof_names = getEnabledJointNames();
 
