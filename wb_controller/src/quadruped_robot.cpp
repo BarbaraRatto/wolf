@@ -46,7 +46,10 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   {
     joint_idx_[_dof_names[i]] = i;
     if(i>5) // Remove the floating base
+    {
       joint_names_.push_back(_dof_names[i]);  // Load the joint names for ROS-Control
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,"ROS-Control joints order: " << joint_names_[joint_names_.size()-1]);
+    }
   }
 
   n_arms_ = xbot_model_->arms();
