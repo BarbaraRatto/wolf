@@ -153,6 +153,11 @@ public:
     void switchStack();
 
     /**
+     * @brief get the mu parameter for the friction cones
+     */
+    double getFrictionConesMu() const;
+
+    /**
      * @brief Cartesian tasks
      */
     std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> feet_;

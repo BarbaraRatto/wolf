@@ -50,7 +50,7 @@ protected:
   virtual void callback(const msg_t& msg) = 0;
 
   // CONE
-  void createCone(const geometry_msgs::Vector3& normal, const geometry_msgs::Vector3& position)
+  void createCone(const geometry_msgs::Vector3& normal, const geometry_msgs::Vector3& position, const double& angle = M_PI)
   {
       vector_(0) = normal.x;
       vector_(1) = normal.y;
@@ -63,7 +63,8 @@ protected:
       pose_.translation().y() = position.y;
       pose_.translation().z() = position.z;
 
-      visual_tools_->publishCone(pose_,M_PI,rviz_visual_tools::colors::LIME_GREEN,0.1); // FIXME use the relation between mu and angle
+
+      visual_tools_->publishCone(pose_,angle,rviz_visual_tools::colors::LIME_GREEN,0.1); // FIXME use the relation between mu and angle
       visual_tools_->trigger();
   }
 
@@ -172,7 +173,7 @@ protected:
     {
         visual_tools_->deleteAllMarkers();
         for(unsigned int i=0; i<msg.foot_positions.size();i++)
-           createCone(msg.cone_axis[i],msg.foot_positions[i]);
+           createCone(msg.cone_axis[i],msg.foot_positions[i],static_cast<double>(std::atan(msg.mus[i].data)));
         _mtx.unlock();
     }
   }
