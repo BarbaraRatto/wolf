@@ -52,18 +52,6 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     }
   }
 
-  n_arms_ = xbot_model_->arms();
-  n_legs_ = xbot_model_->legs();
-
-  if(n_legs_ != N_LEGS)
-  {
-    throw std::runtime_error("Wrong number of legs, check the SRDF file!");
-  }
-  if(n_arms_ > N_ARMS)
-  {
-    throw std::runtime_error("Wrong number of arms, check the SRDF file!");
-  } 
-
   const srdf_advr::Model& srdf_model = xbot_model_->getSrdf();
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
   {
@@ -102,7 +90,18 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     }
   }
 
+  n_legs_ = leg_names_.size();
+  n_arms_ = arm_names_.size();
+
   // Check the numbers
+  if(n_legs_ != N_LEGS)
+  {
+    throw std::runtime_error("Wrong number of legs, check the SRDF file!");
+  }
+  if(n_arms_ > N_ARMS)
+  {
+    throw std::runtime_error("Wrong number of arms, check the SRDF file!");
+  }
   if(foot_names_.size() != N_LEGS)
   {
     throw std::runtime_error("Wrong number of feet, check the SRDF file!");

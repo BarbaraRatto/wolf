@@ -49,15 +49,6 @@
   <group name="rh_hip">
     <chain base_link="trunk" tip_link="rh_hipassembly"/>
   </group>
-  <group name="legs">
-    <group name="lf_leg"/>
-    <group name="rf_leg"/>
-    <group name="lh_leg"/>
-    <group name="rh_leg"/>
-  </group>
-  <group name="arms">
-    <group name="kinova_arm"/>
-  </group>
   <group name="chains">
     <group name="lf_leg"/>
     <group name="rf_leg"/>
