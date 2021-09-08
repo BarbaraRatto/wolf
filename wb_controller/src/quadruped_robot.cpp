@@ -82,12 +82,6 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         hip_names_.push_back(chains[j].second);
     }
-    // Parse the base link from the SRDF file
-    if(srdf_model.getGroups()[i].name_.find("bases") != std::string::npos)
-    {
-      for(unsigned int j=0;j<links.size();j++)
-        base_names_.push_back(links[j]);
-    }
   }
 
   n_legs_ = leg_names_.size();
@@ -109,10 +103,6 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   if(hip_names_.size() != N_LEGS)
   {
     throw std::runtime_error("Wrong number of hips, check the SRDF file!");
-  }
-  if(base_names_.size() > N_BASES)
-  {
-    throw std::runtime_error("Wrong number of bases, check the SRDF file!");
   }
 
   for(unsigned int i=0;i<leg_names_.size();i++)
@@ -236,19 +226,6 @@ const double &QuadrupedRobot::getBaseLength() const
 const double &QuadrupedRobot::getBaseWidth() const
 {
   return base_width_;
-}
-
-std::string QuadrupedRobot::getTrunkLinkName()
-{
-  return base_names_[0];
-}
-
-std::string QuadrupedRobot::getArmBaseLinkName()
-{
-  if(base_names_.size()>1)
-    return base_names_[1];
-  else
-    return "";
 }
 
 const double &QuadrupedRobot::getRobotMass() const
