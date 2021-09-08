@@ -64,7 +64,7 @@ protected:
       pose_.translation().z() = position.z;
 
 
-      visual_tools_->publishCone(pose_,angle,rviz_visual_tools::colors::LIME_GREEN,0.1); // FIXME use the relation between mu and angle
+      visual_tools_->publishCone(pose_,angle,rviz_visual_tools::colors::LIME_GREEN,0.05); // FIXME use the relation between mu and angle
       visual_tools_->trigger();
   }
 
@@ -173,7 +173,7 @@ protected:
     {
         visual_tools_->deleteAllMarkers();
         for(unsigned int i=0; i<msg.foot_positions.size();i++)
-           createCone(msg.cone_axis[i],msg.foot_positions[i],static_cast<double>(std::atan(msg.mus[i].data)));
+           createCone(msg.cone_axis[i],msg.foot_positions[i],M_PI/2.0 - static_cast<double>(std::atan(msg.mus[i].data)));
         _mtx.unlock();
     }
   }
