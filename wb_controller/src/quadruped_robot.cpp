@@ -56,7 +56,6 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
-    const auto& links = srdf_model.getGroups()[i].links_;
     const auto& joints = srdf_model.getGroups()[i].joints_;
     // Parse the foot tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("leg") != std::string::npos)
