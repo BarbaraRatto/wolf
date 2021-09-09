@@ -616,6 +616,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     if(!id_prob_->solve(des_joint_efforts_solver_))
     {
       ROS_WARN_NAMED(CLASS_NAME,"IDProblem::solve() skipping one step.");
+      des_joint_positions_ = joint_positions_;
       pid_active_ = true;
     }
     else
@@ -628,7 +629,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
   if(pid_active_)
   {
-    des_joint_positions_ = kin_->getJointHomePositions();
+    //des_joint_positions_ = joint_positions_; //kin_->getJointHomePositions();
+    // Keep the old des joint position
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
     pid_scale_ = 1.0;
