@@ -46,9 +46,6 @@ public:
   const double& getBaseLength() const;
   const double& getBaseWidth() const;
 
-  std::string getTrunkLinkName();
-  std::string getArmBaseLinkName();
-
   robot_states_t getState();
   bool setState(robot_states_t robot_state);
 
@@ -69,7 +66,6 @@ private:
   std::vector<std::string> ee_names_; // end-effector names
   std::vector<std::string> contact_names_; // foot + arm names
   std::vector<std::string> limb_names_; // chain names
-  std::vector<std::string> base_names_; // quadruped trunk + any arm base
 
   limb_joint_idxs_map_t joint_legs_idx_;
   limb_joint_idxs_map_t joint_arms_idx_;

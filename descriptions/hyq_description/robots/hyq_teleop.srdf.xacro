@@ -2,10 +2,6 @@
 
 <robot name="hyq" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <group name="bases">
-    <link name="base_link"/>
-    <link name="teleop_link0"/>
-  </group>
   <group name="teleop_arm">
     <chain base_link="teleop_link0" tip_link="TCP"/>
     <joint name="joint1"/>

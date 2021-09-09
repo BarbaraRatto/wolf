@@ -2,9 +2,6 @@
 
 <robot name="hyq" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <group name="base">
-    <link name="base_link"/>
-  </group>
   <group name="lf_leg">
     <chain base_link="trunk" tip_link="lf_foot"/>
     <joint name="lf_haa_joint"/>
