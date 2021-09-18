@@ -125,13 +125,13 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   state_estimator_->setTerrainNormal(terrain_normal_);
 
   // 9 - Posture adjustment, compute the offsets to help adapting the posture w.r.t
-  // terrain, we compute only an adjustment along the x axis of the HF
+  // terrain, we compute only an adjustment along the x axis of the base
   double terrain_h_base = state_estimator_->getFloatingBasePosition()(2);
   posture_adjustment_ = terrain_h_base * std::tan(pitch_out_hf_);
   posture_adjustment_dot_ = (posture_adjustment_ - posture_adjustment_prev_)/dt;
   posture_adjustment_prev_ = posture_adjustment_;
-  posture_adjustment_dot_world_ << posture_adjustment_dot_, 0.0, 0.0; // w.r.t HF
-  posture_adjustment_dot_world_ = foot_holds_planner_->getHfRotationInWorld() * posture_adjustment_dot_world_;  // w.r.t world
+  posture_adjustment_dot_base_ << posture_adjustment_dot_, 0.0, 0.0;
+  posture_adjustment_dot_world_ = foot_holds_planner_->getBaseRotationInWorld() * posture_adjustment_dot_base_;  // w.r.t world
   //kin_->setDesiredPostureAdjustmentDot(tmp_vector3d_); // This is ok but I need to be sure that state_estimator_->getFloatingHfPosition()(2) is adapted wrt terrain
 
   // 10 - Adjust the references for the desired Hf height and orientation (roll and pitch)
