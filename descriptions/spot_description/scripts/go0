@@ -74,7 +74,7 @@ if __name__ == "__main__":
         joint_names.append('kinova_joint_2')
         joint_positions.append(4.0)
         joint_names.append('kinova_joint_3')
-        joint_positions.append(5.6)
+        joint_positions.append(5.6) # -0.6
         joint_names.append('kinova_joint_4')
         joint_positions.append(3.14)
 

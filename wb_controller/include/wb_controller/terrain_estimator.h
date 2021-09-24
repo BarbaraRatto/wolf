@@ -103,6 +103,7 @@ private:
     double posture_adjustment_dot_;
     double posture_adjustment_prev_;
     Eigen::Vector3d posture_adjustment_dot_world_;
+    Eigen::Vector3d posture_adjustment_dot_base_;
 
     /** @brief Trigger the update of the terrain estimator */
     bool update_;

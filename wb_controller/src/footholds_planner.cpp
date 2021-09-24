@@ -659,6 +659,11 @@ const std::vector<std::string>& FootholdsPlanner::getFootNames() const
   return gait_generator_->getFootNames();
 }
 
+const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInWorld() const
+{
+  return world_R_base_;
+}
+
 const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInHf() const
 {
   return hf_R_base_;
