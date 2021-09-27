@@ -26,6 +26,48 @@
  *
  */
 
+// Override
+bool rviz_visual_tools::RvizVisualTools::publishCone(const geometry_msgs::Pose& pose, double angle, colors color, double scale)
+{
+  triangle_marker_.header.stamp = ros::Time::now();
+  triangle_marker_.id++;
+
+  triangle_marker_.color = getColor(color);
+  triangle_marker_.pose = pose;
+
+  geometry_msgs::Point p[3];
+  static const double DELTA_THETA = M_PI / 16.0;
+  double theta = 0;
+
+  triangle_marker_.points.clear();
+  for (std::size_t i = 0; i < 32; i++)
+  {
+    p[0].x = 0;
+    p[0].y = 0;
+    p[0].z = 0;
+
+    p[1].x = scale;
+    p[1].y = scale * cos(theta) / angle;
+    p[1].z = scale * sin(theta) / angle;
+
+    p[2].x = scale;
+    p[2].y = scale * cos(theta + DELTA_THETA) / angle;
+    p[2].z = scale * sin(theta + DELTA_THETA) / angle;
+
+    triangle_marker_.points.push_back(p[0]);
+    triangle_marker_.points.push_back(p[1]);
+    triangle_marker_.points.push_back(p[2]);
+
+    theta += DELTA_THETA;
+  }
+
+  triangle_marker_.scale.x = 1.0;
+  triangle_marker_.scale.y = 1.0;
+  triangle_marker_.scale.z = 1.0;
+
+  return publishMarker(triangle_marker_);
+}
+
 namespace wb_controller
 {
 
@@ -64,7 +106,7 @@ protected:
       pose_.translation().z() = position.z;
 
 
-      visual_tools_->publishCone(pose_,angle,rviz_visual_tools::colors::LIME_GREEN,0.05); // FIXME use the relation between mu and angle
+      visual_tools_->publishCone(pose_,angle,rviz_visual_tools::colors::LIME_GREEN,0.05);
       visual_tools_->trigger();
   }
 
@@ -173,7 +215,7 @@ protected:
     {
         visual_tools_->deleteAllMarkers();
         for(unsigned int i=0; i<msg.foot_positions.size();i++)
-           createCone(msg.cone_axis[i],msg.foot_positions[i],M_PI/2.0 - static_cast<double>(std::atan(msg.mus[i].data)));
+           createCone(msg.cone_axis[i],msg.foot_positions[i],static_cast<double>(std::atan(msg.mus[i].data)));
         _mtx.unlock();
     }
   }
