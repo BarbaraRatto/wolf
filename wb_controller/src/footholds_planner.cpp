@@ -104,23 +104,8 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
   ROS_DEBUG_NAMED(CLASS_NAME,"update");
 
-  robot_model_->getPose(BASE_LINK_FRAME_NAME,world_T_base_);
-
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.translation()" << world_T_base_.translation());
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.linear()" << world_T_base_.linear());
-
-  world_R_hf_ = Eigen::Matrix3d::Identity();
-  yaw_base_ = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
-  world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
-
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base_" << yaw_base_);
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf_" << world_R_hf_);
-
-  world_R_base_ = world_T_base_.linear();
-  hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
-
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base_" << world_R_base_);
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base_" << hf_R_base_);
+  world_R_hf_ = robot_model_->getHfRotationInWorld();
+  hf_R_base_  = robot_model_->getBaseRotationInHf();
 
   setInitialOffsets();
 
@@ -266,7 +251,7 @@ void FootholdsPlanner::calculateFootSteps()
       current_foothold_hf_[foot_names[i]] = hf_X_current_foothold_;
 
       steps_length_[foot_names[i]]         = step_length_;
-      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + yaw_base_;
+      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getHfYawInWorld();
       steps_height_[foot_names[i]]         = step_height_;
       steps_heading_rate_[foot_names[i]]   = hf_base_angular_velocity_(2);
 
@@ -657,21 +642,6 @@ bool FootholdsPlanner::areAllFeetInStance()
 const std::vector<std::string>& FootholdsPlanner::getFootNames() const
 {
   return gait_generator_->getFootNames();
-}
-
-const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInWorld() const
-{
-  return world_R_base_;
-}
-
-const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInHf() const
-{
-  return hf_R_base_;
-}
-
-const Eigen::Matrix3d &FootholdsPlanner::getHfRotationInWorld() const
-{
-  return world_R_hf_;
 }
 
 double FootholdsPlanner::getSwingFrequency()

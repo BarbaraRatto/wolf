@@ -29,6 +29,10 @@ public:
 
   QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
+  bool update( bool update_position = true,
+               bool update_velocity = true,
+               bool update_desired_acceleration = true );
+
   const std::vector<std::string>& getFootNames() const;
   const std::vector<std::string>& getLegNames() const;
   const std::vector<std::string>& getHipNames() const;
@@ -50,6 +54,11 @@ public:
   bool setState(robot_states_t robot_state);
 
   const Eigen::Matrix3d& getFloatingBaseInertia();
+
+  const Eigen::Matrix3d& getBaseRotationInHf() const;
+  const Eigen::Matrix3d& getHfRotationInWorld() const;
+  const Eigen::Matrix3d& getBaseRotationInWorld() const;
+  const double& getHfYawInWorld() const;
 
   using ModelInterface::getPose;
   using ModelInterface::getCOM;
@@ -83,6 +92,14 @@ private:
 
   Eigen::MatrixXd M_;
   Eigen::Matrix3d Ifb_;
+
+  Eigen::Affine3d world_T_base_;
+  Eigen::Matrix3d world_R_hf_;
+  Eigen::Matrix3d world_R_base_;
+  Eigen::Matrix3d hf_R_base_;
+  double yaw_base_;
+
+
 
   std::atomic<robot_states_t> robot_state_;
 

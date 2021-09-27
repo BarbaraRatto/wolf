@@ -155,6 +155,55 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   ModelInterface::getPose(hip_names_[3],BASE_LINK_FRAME_NAME,pose_rh);
   base_width_  = std::abs(pose_lf.translation().y() - pose_rf.translation().y());
   base_length_ = std::abs(pose_lf.translation().x() - pose_lh.translation().x());
+
+  // Initializations
+  world_T_base_ = Eigen::Affine3d::Identity();
+  world_R_hf_ = world_R_base_ = hf_R_base_ = Eigen::Matrix3d::Identity();
+}
+
+bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool update_desired_acceleration)
+{
+  ROS_DEBUG_NAMED(CLASS_NAME,"update");
+  ModelInterface::update(update_position,update_velocity,update_desired_acceleration);
+
+  // Update the transformations between world, base and horizontal frame
+  getPose(BASE_LINK_FRAME_NAME,world_T_base_);
+
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.translation()" << world_T_base_.translation());
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.linear()" << world_T_base_.linear());
+
+  world_R_hf_ = Eigen::Matrix3d::Identity();
+  yaw_base_   = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
+  world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
+
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base" << yaw_base_);
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf" << world_R_hf_);
+
+  world_R_base_ = world_T_base_.linear();
+  hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
+
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base" << world_R_base_);
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base" << hf_R_base_);
+}
+
+const double& QuadrupedRobot::getHfYawInWorld() const
+{
+  return yaw_base_;
+}
+
+const Eigen::Matrix3d& QuadrupedRobot::getBaseRotationInWorld() const
+{
+  return world_R_base_;
+}
+
+const Eigen::Matrix3d& QuadrupedRobot::getBaseRotationInHf() const
+{
+  return hf_R_base_;
+}
+
+const Eigen::Matrix3d& QuadrupedRobot::getHfRotationInWorld() const
+{
+  return world_R_hf_;
 }
 
 const std::vector<std::string>& QuadrupedRobot::getFootNames() const
