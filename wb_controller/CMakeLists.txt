@@ -20,7 +20,7 @@ endif()
 
 # ROS
 find_package(catkin REQUIRED tf controller_interface control_toolbox wb_hardware_interface
-    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger rt_gui)
+    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
