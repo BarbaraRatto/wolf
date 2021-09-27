@@ -294,7 +294,7 @@ private:
     GaitGenerator::Ptr gait_generator_;
     QuadrupedRobot::Ptr robot_model_;
 
-    Eigen::Affine3d world_T_foot_, base_T_hip_, hip_T_foot_, base_T_foot_; // FIXME you can remove some of these
+    Eigen::Affine3d base_T_foot_;
     std::vector<Eigen::Vector3d> hf_X_initial_footholds_;
     std::vector<Eigen::Vector3d> hf_X_initial_hips_;
 

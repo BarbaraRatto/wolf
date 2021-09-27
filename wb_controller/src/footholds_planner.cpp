@@ -86,8 +86,8 @@ void FootholdsPlanner::update(const double& period) // OpenLoop
 
 void FootholdsPlanner::initializeFootPosition(const std::string& foot_name)
 {
-  robot_model_->getPose(foot_name,world_T_foot_);
-  gait_generator_->setInitialPose(foot_name,world_T_foot_);
+  robot_model_->getPose(foot_name,tmp_affine3d_); // world_T_foot
+  gait_generator_->setInitialPose(foot_name,tmp_affine3d_);
 }
 
 void FootholdsPlanner::initializeFeetPosition()
@@ -381,11 +381,11 @@ void FootholdsPlanner::setInitialOffsets()
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
       robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
-      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,base_T_hip_);
+      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_hip
       // initial feet offsets in the horizontal frame
       hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
       // initial hip positions, we assume the base starts horizontal (TODO)
-      hf_X_initial_hips_[i] = base_T_hip_.translation();
+      hf_X_initial_hips_[i] = tmp_affine3d_.translation();
     }
 
     offsets_applied_ = true;
