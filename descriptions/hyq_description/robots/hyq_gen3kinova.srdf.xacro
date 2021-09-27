@@ -2,7 +2,7 @@
 
 <robot name="hyq" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <group name="hyqarm_arm">
+  <group name="gen3kinova_arm">
     <chain base_link="base_arm" tip_link="end_effector_link"/>
     <joint name="z_joint_1"/>
     <joint name="z_joint_2"/>
@@ -52,7 +52,7 @@
     <group name="rf_leg"/>
     <group name="lh_leg"/>
     <group name="rh_leg"/>
-    <group name="hyqarm_arm"/>
+    <group name="gen3kinova_arm"/>
   </group>
   <group_state group="chains" name="home">
     <joint name="lf_haa_joint" value="-0.2"/>

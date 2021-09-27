@@ -9,7 +9,7 @@
  </joint>
 
 
-<xacro:include filename="$(find hyqarm_description)/urdfs/arm.urdf.xacro" />
+<xacro:include filename="$(find gen3kinova_description)/urdfs/arm.urdf.xacro" />
 <xacro:include filename="$(find hyq_description)/urdfs/arm/arm.transmission.xacro"/>
 
 <xacro:arm_transmission name="z_joint_1"/>
