@@ -1,5 +1,7 @@
 # TODO list
 
+- Fix dynamic reconfigure bug
+- Fix spawn with the arm
 - Make solo work
 - Remove sensors description
 - Debug c and delta_com... they don't seem to do anything useful
