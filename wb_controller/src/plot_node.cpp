@@ -25,48 +25,54 @@
  * GREEN: ACTUAL
  *
  */
+namespace rviz_visual_tools {
 
-// Override
-bool rviz_visual_tools::RvizVisualTools::publishCone(const geometry_msgs::Pose& pose, double angle, colors color, double scale)
+class VisualTools : public RvizVisualTools
 {
-  triangle_marker_.header.stamp = ros::Time::now();
-  triangle_marker_.id++;
 
-  triangle_marker_.color = getColor(color);
-  triangle_marker_.pose = pose;
+public:
 
-  geometry_msgs::Point p[3];
-  static const double DELTA_THETA = M_PI / 16.0;
-  double theta = 0;
+  typedef std::shared_ptr<VisualTools> Ptr;
 
-  triangle_marker_.points.clear();
-  for (std::size_t i = 0; i < 32; i++)
+  VisualTools(std::string base_frame, std::string marker_topic = RVIZ_MARKER_TOPIC, ros::NodeHandle nh = ros::NodeHandle("~"))
+    :RvizVisualTools(base_frame,marker_topic,nh) {}
+
+  bool publishFrictionCone(const Eigen::Vector3d& origin, const double& height, const Eigen::Vector3d& normal, const double& friction_coeff, colors color)
   {
-    p[0].x = 0;
-    p[0].y = 0;
-    p[0].z = 0;
+      double radius = friction_coeff * height;
+      Eigen::Vector3d tail_end = origin + normal*height;
 
-    p[1].x = scale;
-    p[1].y = scale * cos(theta) / angle;
-    p[1].z = scale * sin(theta) / angle;
+      // Set the frame ID and timestamp.
+      arrow_marker_.header.stamp = ros::Time::now();
+      arrow_marker_.header.frame_id = base_frame_;
+      arrow_marker_.type = visualization_msgs::Marker::ARROW;
+      arrow_marker_.action = visualization_msgs::Marker::ADD;
+      arrow_marker_.id++;
 
-    p[2].x = scale;
-    p[2].y = scale * cos(theta + DELTA_THETA) / angle;
-    p[2].z = scale * sin(theta + DELTA_THETA) / angle;
+      arrow_marker_.points.clear();
+      geometry_msgs::Point p, start;
+      p.x = tail_end(0);
+      p.y = tail_end(1);
+      p.z =  tail_end(2);
+      start.x = origin(0);
+      start.y = origin(1);
+      start.z = origin(2);
+      arrow_marker_.points.resize(0);
+      arrow_marker_.points.push_back(p);
+      arrow_marker_.points.push_back(start);
+      arrow_marker_.color = getColor(color);
+      arrow_marker_.scale.x = 0.0;
+      arrow_marker_.scale.y = 2 * radius;
+      arrow_marker_.scale.z = height;
 
-    triangle_marker_.points.push_back(p[0]);
-    triangle_marker_.points.push_back(p[1]);
-    triangle_marker_.points.push_back(p[2]);
-
-    theta += DELTA_THETA;
+      // Helper for publishing rviz markers
+      return publishMarker(arrow_marker_);
   }
 
-  triangle_marker_.scale.x = 1.0;
-  triangle_marker_.scale.y = 1.0;
-  triangle_marker_.scale.z = 1.0;
+};
 
-  return publishMarker(triangle_marker_);
 }
+
 
 namespace wb_controller
 {
@@ -84,7 +90,7 @@ public:
     cnt_ = 0;
     decimate_ = 10;
     subscriber_ = nh.subscribe(topic_name, 1, &Visualizer::callback, this);
-    visual_tools_.reset(new rviz_visual_tools::RvizVisualTools("world",topic_name+"_visual_marker"));
+    visual_tools_.reset(new rviz_visual_tools::VisualTools("world",topic_name+"_visual_marker"));
   }
 
 protected:
@@ -107,6 +113,25 @@ protected:
 
 
       visual_tools_->publishCone(pose_,angle,rviz_visual_tools::colors::LIME_GREEN,0.05);
+      visual_tools_->trigger();
+  }
+
+  // FRICTION CONE
+  void createFrictionCone(const geometry_msgs::Vector3& normal, const geometry_msgs::Vector3& position, const double& friction_coeff)
+  {
+      vector_(0) = normal.x;
+      vector_(1) = normal.y;
+      vector_(2) = normal.z;
+      norm_ = vector_.norm()+0.00001;
+
+      R_ = Eigen::Quaterniond().setFromTwoVectors(Eigen::Vector3d::UnitX(),vector_/norm_).toRotationMatrix();
+      pose_.linear() = R_;
+      pose_.translation().x() = position.x;
+      pose_.translation().y() = position.y;
+      pose_.translation().z() = position.z;
+
+
+      visual_tools_->publishFrictionCone(pose_.translation(),0.05,vector_,friction_coeff,rviz_visual_tools::colors::LIME_GREEN);
       visual_tools_->trigger();
   }
 
@@ -189,7 +214,7 @@ protected:
   double norm_;
   Eigen::Matrix3d R_;
   ros::Subscriber subscriber_;
-  rviz_visual_tools::RvizVisualToolsPtr visual_tools_;
+  rviz_visual_tools::VisualTools::Ptr visual_tools_;
 };
 
 
@@ -215,7 +240,8 @@ protected:
     {
         visual_tools_->deleteAllMarkers();
         for(unsigned int i=0; i<msg.foot_positions.size();i++)
-           createCone(msg.cone_axis[i],msg.foot_positions[i],static_cast<double>(std::atan(msg.mus[i].data)));
+           createFrictionCone(msg.cone_axis[i],msg.foot_positions[i],static_cast<double>(msg.mus[i].data));
+           //createCone(msg.cone_axis[i],msg.foot_positions[i],static_cast<double>(std::atan(msg.mus[i].data)));
         _mtx.unlock();
     }
   }
