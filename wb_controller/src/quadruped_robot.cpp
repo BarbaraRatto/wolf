@@ -159,32 +159,155 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   // Initializations
   world_T_base_ = Eigen::Affine3d::Identity();
   world_R_hf_ = world_R_base_ = hf_R_base_ = Eigen::Matrix3d::Identity();
+  for(unsigned int i=0;i<foot_names_.size();i++)
+  {
+    world_X_foot_[foot_names_[i]] = Eigen::Vector3d::Zero();
+    base_X_foot_[foot_names_[i]] = Eigen::Vector3d::Zero();
+    world_T_foot_[foot_names_[i]] = Eigen::Affine3d::Identity();
+    base_T_foot_[foot_names_[i]] = Eigen::Affine3d::Identity();
+  }
+  for(unsigned int i=0;i<arm_names_.size();i++)
+  {
+    world_X_arm_[arm_names_[i]] = Eigen::Vector3d::Zero();
+    base_X_arm_[arm_names_[i]] = Eigen::Vector3d::Zero();
+    world_T_arm_[arm_names_[i]] = Eigen::Affine3d::Identity();
+    base_T_arm_[arm_names_[i]] = Eigen::Affine3d::Identity();
+  }
 }
 
 bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool update_desired_acceleration)
 {
   ROS_DEBUG_NAMED(CLASS_NAME,"update");
-  ModelInterface::update(update_position,update_velocity,update_desired_acceleration);
+
+  // Internal update
+  bool res = ModelInterface::update(update_position,update_velocity,update_desired_acceleration);
 
   // Update the transformations between world, base and horizontal frame
   getPose(BASE_LINK_FRAME_NAME,world_T_base_);
-
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.translation()" << world_T_base_.translation());
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.linear()" << world_T_base_.linear());
-
   world_R_hf_ = Eigen::Matrix3d::Identity();
   yaw_base_   = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
   world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
-
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base" << yaw_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf" << world_R_hf_);
-
   world_R_base_ = world_T_base_.linear();
   hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
-
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base" << world_R_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base" << hf_R_base_);
+
+  // Update the limb transformations
+  for(unsigned int i=0; i<foot_names_.size(); i++)
+  {
+    // Feet position in world
+    getPose(foot_names_[i],world_T_foot_[foot_names_[i]]);
+    world_X_foot_[foot_names_[i]] = world_T_foot_[foot_names_[i]].translation();
+    // Feet position in base/trunk
+    getPose(foot_names_[i],BASE_LINK_FRAME_NAME,base_T_foot_[foot_names_[i]]);
+    base_X_foot_[foot_names_[i]] = base_T_foot_[foot_names_[i]].translation();
+  }
+
+  for(unsigned int i=0; i<arm_names_.size(); i++)
+  {
+    // Arms position in world
+    getPose(arm_names_[i],world_T_arm_[arm_names_[i]]);
+    world_X_arm_[arm_names_[i]] = world_T_arm_[arm_names_[i]].translation();
+    // Arms position in base/trunk
+    getPose(arm_names_[i],BASE_LINK_FRAME_NAME,base_T_arm_[arm_names_[i]]);
+    base_X_arm_[arm_names_[i]] = base_T_arm_[arm_names_[i]].translation();
+  }
+
+  // Update the com position
+  getCOM(com_);
+
+  return res;
 }
+
+const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getArmsPositionInWorld() const
+{
+  return world_X_arm_;
+}
+
+Eigen::Vector3d& QuadrupedRobot::getArmPositionInWorld(const std::string& name)
+{
+  return world_X_arm_[name];
+}
+
+const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getArmsPositionInBase() const
+{
+  return base_X_arm_;
+}
+
+Eigen::Vector3d& QuadrupedRobot::getArmPositionInBase(const std::string& name)
+{
+  return base_X_arm_[name];
+}
+
+const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getArmsPoseInWorld() const
+{
+  return world_T_arm_;
+}
+
+const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getArmsPoseInBase() const
+{
+  return base_T_arm_;
+}
+
+Eigen::Affine3d& QuadrupedRobot::getArmPoseInWorld(const std::string& name)
+{
+  return world_T_arm_[name];
+}
+
+Eigen::Affine3d& QuadrupedRobot::getArmPoseInBase(const std::string& name)
+{
+  return base_T_arm_[name];
+}
+
+const Eigen::Affine3d &QuadrupedRobot::getBasePoseInWorld() const
+{
+  return world_T_base_;
+}
+
+const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getFeetPositionInWorld() const
+{
+  return world_X_foot_;
+}
+
+Eigen::Vector3d& QuadrupedRobot::getFootPositionInWorld(const std::string& name)
+{
+  return world_X_foot_[name];
+}
+
+const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getFeetPositionInBase() const
+{
+  return base_X_foot_;
+}
+
+Eigen::Vector3d& QuadrupedRobot::getFootPositionInBase(const std::string& name)
+{
+  return base_X_foot_[name];
+}
+
+const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getFeetPoseInWorld() const
+{
+  return world_T_foot_;
+}
+
+Eigen::Affine3d& QuadrupedRobot::getFootPoseInWorld(const std::string& name)
+{
+  return world_T_foot_[name];
+}
+
+const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getFeetPoseInBase() const
+{
+  return base_T_foot_;
+}
+
+Eigen::Affine3d& QuadrupedRobot::getFootPoseInBase(const std::string& name)
+{
+  return base_T_foot_[name];
+}
+
 
 const double& QuadrupedRobot::getHfYawInWorld() const
 {
@@ -289,5 +412,9 @@ bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
   return true;
 }
 
+const Eigen::Vector3d& QuadrupedRobot::getComPosition() const
+{
+  return com_;
+}
 
 };

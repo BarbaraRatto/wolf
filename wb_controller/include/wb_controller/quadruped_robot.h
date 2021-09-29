@@ -65,6 +65,29 @@ public:
   using ModelInterface::getCOMVelocity;
   using ModelInterface::getJacobian;
 
+  const std::map<std::string, Eigen::Vector3d> &getFeetPositionInWorld() const;
+  const std::map<std::string, Eigen::Vector3d> &getFeetPositionInBase() const;
+  const std::map<std::string, Eigen::Affine3d> &getFeetPoseInWorld() const;
+  const std::map<std::string, Eigen::Affine3d> &getFeetPoseInBase() const;
+
+  Eigen::Vector3d &getFootPositionInWorld(const std::string &name);
+  Eigen::Vector3d &getFootPositionInBase(const std::string &name);
+  Eigen::Affine3d &getFootPoseInWorld(const std::string &name);
+  Eigen::Affine3d &getFootPoseInBase(const std::string &name);
+
+  const std::map<std::string, Eigen::Vector3d> &getArmsPositionInWorld() const;
+  const std::map<std::string, Eigen::Vector3d> &getArmsPositionInBase() const;
+  const std::map<std::string, Eigen::Affine3d> &getArmsPoseInWorld() const;
+  const std::map<std::string, Eigen::Affine3d> &getArmsPoseInBase() const;
+
+  Eigen::Vector3d &getArmPositionInWorld(const std::string &name);
+  Eigen::Vector3d &getArmPositionInBase(const std::string &name);
+  Eigen::Affine3d &getArmPoseInWorld(const std::string &name);
+  Eigen::Affine3d &getArmPoseInBase(const std::string &name);
+
+  const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
+  const Eigen::Vector3d &getComPosition() const;
+
 private:
 
   std::vector<std::string> foot_names_; // foot tip names
@@ -99,7 +122,24 @@ private:
   Eigen::Matrix3d hf_R_base_;
   double yaw_base_;
 
+  /** @brief Foot positions w.r.t base */
+  std::map<std::string,Eigen::Vector3d> base_X_foot_;
+  /** @brief Foot positions w.r.t world */
+  std::map<std::string,Eigen::Vector3d> world_X_foot_;
+  /** @brief Foot pose w.r.t base */
+  std::map<std::string,Eigen::Affine3d> base_T_foot_;
+  /** @brief Foot pose w.r.t world */
+  std::map<std::string,Eigen::Affine3d> world_T_foot_;
+  /** @brief Arm positions w.r.t base */
+  std::map<std::string,Eigen::Vector3d> base_X_arm_;
+  /** @brief Arm positions w.r.t world */
+  std::map<std::string,Eigen::Vector3d> world_X_arm_;
+  /** @brief Arm pose w.r.t base */
+  std::map<std::string,Eigen::Affine3d> base_T_arm_;
+  /** @brief Arm pose w.r.t world */
+  std::map<std::string,Eigen::Affine3d> world_T_arm_;
 
+  Eigen::Vector3d com_;
 
   std::atomic<robot_states_t> robot_state_;
 

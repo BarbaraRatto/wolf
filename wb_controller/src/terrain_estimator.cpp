@@ -148,7 +148,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 void TerrainEstimator::update()
 {
   auto foot_names = foot_holds_planner_->getFootNames();
-  auto foot_positions = state_estimator_->getFeetPositionInWorld();
+  auto foot_positions = robot_model_->getFeetPositionInWorld();
 
   A_(0,0) = foot_positions[foot_names[0]](0);
   A_(0,1) = foot_positions[foot_names[0]](1);
