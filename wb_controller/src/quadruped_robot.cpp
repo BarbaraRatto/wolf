@@ -207,14 +207,14 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     base_X_foot_[foot_names_[i]] = base_T_foot_[foot_names_[i]].translation();
   }
 
-  for(unsigned int i=0; i<arm_names_.size(); i++)
+  for(unsigned int i=0; i<ee_names_.size(); i++)
   {
     // Arms position in world
-    getPose(arm_names_[i],world_T_arm_[arm_names_[i]]);
-    world_X_arm_[arm_names_[i]] = world_T_arm_[arm_names_[i]].translation();
+    getPose(ee_names_[i],world_T_arm_[ee_names_[i]]);
+    world_X_arm_[ee_names_[i]] = world_T_arm_[ee_names_[i]].translation();
     // Arms position in base/trunk
-    getPose(arm_names_[i],BASE_LINK_FRAME_NAME,base_T_arm_[arm_names_[i]]);
-    base_X_arm_[arm_names_[i]] = base_T_arm_[arm_names_[i]].translation();
+    getPose(ee_names_[i],BASE_LINK_FRAME_NAME,base_T_arm_[ee_names_[i]]);
+    base_X_arm_[ee_names_[i]] = base_T_arm_[ee_names_[i]].translation();
   }
 
   // Update the com position
