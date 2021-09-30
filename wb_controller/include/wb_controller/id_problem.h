@@ -2,6 +2,7 @@
 #define ID_PROBLEM_H
 
 // OpenSoT
+#include <OpenSoT/tasks/GenericTask.h>
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
@@ -161,6 +162,7 @@ public:
     OpenSoT::tasks::acceleration::Cartesian::Ptr waistZ_;
     OpenSoT::tasks::acceleration::CoM::Ptr com_;
     OpenSoT::tasks::acceleration::AngularMomentum::Ptr angular_momentum_;
+    OpenSoT::tasks::GenericTask::Ptr regularization_;
 
     /**
      * @brief Expose the tasks to ROS
