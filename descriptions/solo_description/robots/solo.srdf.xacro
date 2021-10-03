@@ -1,11 +1,6 @@
 <?xml version="1.0" ?>
 <robot name="solo" xmlns:xacro="http://ros.org/wiki/xacro">
 
-<xacro:arg name="arm" default="false"/>
-
-    <group name="bases">
-      <link name="base_link"/>
-    </group>
     <group name="lf_leg">
         <joint name="lf_haa_joint" />
         <joint name="lf_hfe_joint" />
@@ -45,12 +40,6 @@
     <group name="rh_hip">
       <chain base_link="base_link" tip_link="rh_hip_assembly"/>
     </group>
-    <group name="legs">
-      <group name="lf_leg"/>
-      <group name="rf_leg"/>
-      <group name="lh_leg"/>
-      <group name="rh_leg"/>
-    </group>
     <group name="chains">
       <group name="lf_leg"/>
       <group name="rf_leg"/>
@@ -58,18 +47,18 @@
       <group name="rh_leg"/>
     </group>
   <group_state group="chains" name="home">
-    <joint name="lf_haa_joint" value="-0.2"       />
-    <joint name="lf_hfe_joint" value="0.78539816" />
-    <joint name="lf_kfe_joint" value="-1.57079633"/>
-    <joint name="rf_haa_joint" value="-0.2"       />
-    <joint name="rf_hfe_joint" value="0.78539816" />
-    <joint name="rf_kfe_joint" value="-1.57079633"/>
+    <joint name="lf_haa_joint" value="0.2"       />
+    <joint name="lf_hfe_joint" value="0.75" />
+    <joint name="lf_kfe_joint" value="-1.5"/>
+    <joint name="rf_haa_joint" value="0.2"       />
+    <joint name="rf_hfe_joint" value="0.75" />
+    <joint name="rf_kfe_joint" value="-1.5"/>
     <joint name="lh_haa_joint" value="-0.2"       />
-    <joint name="lh_hfe_joint" value="-0.78539816"/>
-    <joint name="lh_kfe_joint" value="1.57079633" />
+    <joint name="lh_hfe_joint" value="-0.75"/>
+    <joint name="lh_kfe_joint" value="1.5" />
     <joint name="rh_haa_joint" value="-0.2"       />
-    <joint name="rh_hfe_joint" value="-0.78539816"/>
-    <joint name="rh_kfe_joint" value="1.57079633" />
+    <joint name="rh_hfe_joint" value="-0.75"/>
+    <joint name="rh_kfe_joint" value="1.5" />
   </group_state>
 
 </robot>

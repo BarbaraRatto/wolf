@@ -13,10 +13,10 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
-  robot_model_->getXBotModel()->getRobotState("home", qhome_);
-  robot_model_->getXBotModel()->setJointPosition(qhome_);
+  robot_model_->getRobotState("home", qhome_);
+  robot_model_->setJointPosition(qhome_);
 
-  robot_model_->getXBotModel()->getJointLimits(qmin_, qmax_);
+  robot_model_->getJointLimits(qmin_, qmax_);
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
@@ -31,9 +31,9 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
 {
 
-  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
   base_height_ = tmp_affine3d_.translation()(2);
-  robot_model_->getXBotModel()->getFloatingBaseTwist(tmp_vector6d_);
+  robot_model_->getFloatingBaseTwist(tmp_vector6d_);
   base_height_dot_ = tmp_vector6d_(2);
 
 
@@ -47,8 +47,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   for(unsigned int i = 0; i<foot_names.size(); i++)
   {
-    robot_model_->getXBotModel()->getJacobian(foot_names[i],J_);
-    robot_model_->getXBotModel()->getPose(foot_names[i],world_T_foot_);
+    robot_model_->getJacobian(foot_names[i],J_);
+    robot_model_->getPose(foot_names[i],world_T_foot_);
 
     int idx = robot_model_->getLegJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
 
@@ -73,6 +73,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     else
     {
       // At the first cycle of stance, set the joints position at the current homing position
+      // Note: this makes the ramp exp not working anymore!
       if(gait_generator_->isTouchDown(foot_names[i]))
          qstance_.segment(idx,3) = qhome_.segment(idx,3);
 
@@ -145,11 +146,13 @@ const Eigen::VectorXd& LegsKinematics::getJointHomePositions()
 void LegsKinematics::reset()
 {
   des_joint_velocities_.setZero();
+
   x_err_dot_.setZero();
-  robot_model_->getXBotModel()->getJointPosition(des_joint_positions_);
+  robot_model_->getJointPosition(des_joint_positions_);
   qstance_ = des_joint_positions_;
   qswing_ = des_joint_positions_;
-  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+  robot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
+
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
   xdot_stance_ff_.setZero();
   xdot_swing_ff_.setZero();

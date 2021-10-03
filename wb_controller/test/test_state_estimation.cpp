@@ -20,8 +20,8 @@ void update(const sensor_msgs::JointState::ConstPtr& msg)
         _joint_velocities(i) = msg->velocity[i];
     }
 
-    _robot->getXBotModel()->setJointVelocity(_joint_velocities);
-    _robot->getXBotModel()->setJointPosition(_joint_positions);
+    _robot->setJointVelocity(_joint_velocities);
+    _robot->setJointPosition(_joint_positions);
     _qp_estimation->update(OpenSoT::FloatingBaseEstimation::Update::All);
 
    _qp_estimation->getFloatingBaseTwist(_qdot);
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
     Eigen::Matrix6d contact_matrix; contact_matrix.setZero();
     contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-    _qp_estimation.reset(new OpenSoT::floating_base_estimation::qp_estimation(_robot->getXBotModel(),_robot->getFootNames(),contact_matrix));
+    _qp_estimation.reset(new OpenSoT::floating_base_estimation::qp_estimation(_robot,_robot->getFootNames(),contact_matrix));
 
     ros::Subscriber sub = root_nh.subscribe("/hyq/joint_states", 1000, update);
 

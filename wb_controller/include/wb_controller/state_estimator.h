@@ -109,7 +109,7 @@ public:
 
     void resetGyroscopeIntegration();
 
-    double getRobotdMass();
+    double getRobotMass();
 
 private:
 

@@ -26,7 +26,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   offsets_applied_ = false;
 
-  //delta_com_.fill(0.0);
+  delta_com_.fill(0.0);
 
   world_T_terrain_ = Eigen::Affine3d::Identity();
 
@@ -56,7 +56,7 @@ void FootholdsPlanner::reset()
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = step_height_;
 
-    robot_model_->getXBotModel()->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_);
+    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_);
     desired_foothold_[foot_names[i]]    = base_T_foot_.translation();
     virtual_foothold_[foot_names[i]]    = base_T_foot_.translation();
     current_foothold_hf_[foot_names[i]] = hf_R_base_ * base_T_foot_.translation();
@@ -65,7 +65,7 @@ void FootholdsPlanner::reset()
 
   resetVelocyScales();
 
-  robot_model_->getXBotModel()->getFloatingBasePose(tmp_affine3d_);
+  robot_model_->getFloatingBasePose(tmp_affine3d_);
   base_rotation_reference_ = tmp_affine3d_.linear().transpose();
   rotTorpy(base_rotation_reference_,base_orientation_);
   base_position_ = tmp_affine3d_.translation();
@@ -86,7 +86,7 @@ void FootholdsPlanner::update(const double& period) // OpenLoop
 
 void FootholdsPlanner::initializeFootPosition(const std::string& foot_name)
 {
-  robot_model_->getXBotModel()->getPose(foot_name,world_T_foot_);
+  robot_model_->getPose(foot_name,world_T_foot_);
   gait_generator_->setInitialPose(foot_name,world_T_foot_);
 }
 
@@ -104,7 +104,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
   ROS_DEBUG_NAMED(CLASS_NAME,"update");
 
-  robot_model_->getXBotModel()->getPose(BASE_LINK_FRAME_NAME,world_T_base_);
+  robot_model_->getPose(BASE_LINK_FRAME_NAME,world_T_base_);
 
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.translation()" << world_T_base_.translation());
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.linear()" << world_T_base_.linear());
@@ -185,7 +185,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
   }
   gait_generator_->setTerrainRotation(world_T_terrain_.linear());
 
-    if(robot_model_->getRobotState() == QuadrupedRobot::robot_states_t::WALKING &&
+    if(robot_model_->getState() == QuadrupedRobot::robot_states_t::WALKING &&
        (cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_))
     {
       gait_generator_->activateSwing();
@@ -230,7 +230,7 @@ void FootholdsPlanner::calculateFootSteps()
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
       // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
-      robot_model_->getXBotModel()->getPose(foot_names[i],"base_link",base_T_foot_);
+      robot_model_->getPose(foot_names[i],"base_link",base_T_foot_);
       // current foot position in the horizontal frame
       hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
       //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
@@ -243,7 +243,7 @@ void FootholdsPlanner::calculateFootSteps()
 
       //6) Sum delta com and the delta for the push recovery
       //hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + delta_com_;
-      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]);
+      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + hf_R_base_ * delta_com_;
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
       // 6) Sum everything to obtain the new foothold displacement w.r.t world
@@ -385,7 +385,7 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   rpyToRot(base_orientation_,base_rotation_reference_);
   // This is the base rotation reference computed w.r.t terrain
-  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose(); // FIXME invert the order
+  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
 }
 
 void FootholdsPlanner::setInitialOffsets()
@@ -395,8 +395,8 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getXBotModel()->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
-      robot_model_->getXBotModel()->getPose(hips_names[i],BASE_LINK_FRAME_NAME,base_T_hip_);
+      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
+      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,base_T_hip_);
       // initial feet offsets in the horizontal frame
       hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
       // initial hip positions, we assume the base starts horizontal (TODO)
@@ -482,7 +482,7 @@ void FootholdsPlanner::decreaseStepHeight()
   setStepHeight(step_height_ - 0.01); // Decrease step height
 }
 
-void FootholdsPlanner::setComCorrection(const Eigen::Vector2d &delta_com)
+void FootholdsPlanner::setComCorrection(const Eigen::Vector3d &delta_com)
 {
   delta_com_ = delta_com;
 }
@@ -659,6 +659,11 @@ const std::vector<std::string>& FootholdsPlanner::getFootNames() const
   return gait_generator_->getFootNames();
 }
 
+const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInWorld() const
+{
+  return world_R_base_;
+}
+
 const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInHf() const
 {
   return hf_R_base_;
@@ -698,7 +703,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 {
   assert(footholds_planner_ptr);
   footholds_planner_ptr_ = footholds_planner_ptr;
-  base_mass_   = footholds_planner_ptr_->robot_model_->getRobotMass();
+  base_mass_   = footholds_planner_ptr_->robot_model_->getMass();
   base_length_ = footholds_planner_ptr_->robot_model_->getBaseLength();
   base_width_  = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
@@ -775,10 +780,10 @@ bool PushRecovery::update(const double& period)
   cmd_velocity_(1) = cmd_velocity_scale_*footholds_planner_ptr_->getBaseLinearVelocityReferenceHF()(1);
   cmd_velocity_(2) = footholds_planner_ptr_->getBaseAngularVelocityReferenceHF()(2);
 
-  footholds_planner_ptr_->robot_model_->getXBotModel()->getFloatingBaseTwist(base_twist_);
+  footholds_planner_ptr_->robot_model_->getFloatingBaseTwist(base_twist_);
   base_twist_.head(3) = footholds_planner_ptr_->world_R_hf_.transpose() * base_twist_.head(3);
 
-  footholds_planner_ptr_->robot_model_->getXBotModel()->getCOMVelocity(com_vel_hf_);
+  footholds_planner_ptr_->robot_model_->getCOMVelocity(com_vel_hf_);
   com_vel_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * com_vel_hf_;
 
   // Note: we could use the com instead of the base because we control the com

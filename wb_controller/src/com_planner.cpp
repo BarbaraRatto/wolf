@@ -19,6 +19,7 @@ ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Pt
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_velocity_ref",com_velocity_ref_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_delta_xy",p0_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/c",c_);
 }
 
 void ComPlanner::update(double /*dt*/)
@@ -40,7 +41,7 @@ void ComPlanner::update(double /*dt*/)
   base_X_com_ = world_T_base.inverse() * state_estimator_->getComPosition();
   p0_ = base_X_com_.head(2); // This should be defined w.r.t base
 
-  foothold_planner_->setComCorrection(p0_);
+  foothold_planner_->setComCorrection(base_X_com_); // This is defined wrt base
 
   base_velocity_ = foothold_planner_->getBaseLinearVelocityReference();
   base_velocity_xy_ = base_velocity_.head(2);

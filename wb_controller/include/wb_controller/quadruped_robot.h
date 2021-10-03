@@ -3,14 +3,14 @@
 
 // ADVR
 #include <XBotCoreModel/XBotCoreModel.h>
-#include <XBotInterface/ModelInterface.h>
+#include <ModelInterfaceRBDL/ModelInterfaceRBDL.h>
 // STD
 #include <memory>
 
 namespace wb_controller
 {
 
-class QuadrupedRobot
+class QuadrupedRobot : public XBot::ModelInterfaceRBDL
 {
 
 public:
@@ -36,9 +36,9 @@ public:
   const std::vector<std::string>& getArmEndEffectorNames() const;
   const std::vector<std::string>& getContactNames() const;
   const std::vector<std::string>& getLimbNames() const;
+
   const std::vector<int>& getLegJointsIds(const std::string& leg_name);
   const std::vector<int>& getArmJointsIds(const std::string& arm_name);
-  XBot::ModelInterface::Ptr getXBotModel();
 
   const unsigned int& getNumberArms() const;
   const unsigned int& getNumberLegs() const;
@@ -46,18 +46,18 @@ public:
   const double& getBaseLength() const;
   const double& getBaseWidth() const;
 
-  std::string getTrunkLinkName();
-  std::string getArmBaseLinkName();
+  robot_states_t getState();
+  bool setState(robot_states_t robot_state);
 
-  const double& getRobotMass() const;
-  const Eigen::Matrix3d& getFloatingBaseInertia() const;
+  const Eigen::Matrix3d& getFloatingBaseInertia();
 
-  robot_states_t getRobotState();
-  bool setRobotState(robot_states_t robot_state);
+  using ModelInterface::getPose;
+  using ModelInterface::getCOM;
+  using ModelInterface::getCOMVelocity;
+  using ModelInterface::getJacobian;
 
 private:
 
-  XBot::ModelInterface::Ptr xbot_model_;
   std::vector<std::string> foot_names_; // foot tip names
   std::vector<std::string> hip_names_;
   std::vector<std::string> leg_names_;
@@ -66,7 +66,6 @@ private:
   std::vector<std::string> ee_names_; // end-effector names
   std::vector<std::string> contact_names_; // foot + arm names
   std::vector<std::string> limb_names_; // chain names
-  std::vector<std::string> base_names_; // quadruped trunk + any arm base
 
   limb_joint_idxs_map_t joint_legs_idx_;
   limb_joint_idxs_map_t joint_arms_idx_;
@@ -81,7 +80,6 @@ private:
 
   double base_length_;
   double base_width_;
-  double mass_;
 
   Eigen::MatrixXd M_;
   Eigen::Matrix3d Ifb_;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0.0)
 project(wb_controller)
 
 include(CheckCXXCompilerFlag)
@@ -20,11 +20,12 @@ endif()
 
 # ROS
 find_package(catkin REQUIRED tf controller_interface control_toolbox wb_hardware_interface
-    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger) # rt_gui)
+    realtime_tools geometry_msgs sensor_msgs nav_msgs dynamic_reconfigure message_generation rviz_visual_tools rt_logger)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(XBotInterface REQUIRED)
+find_package(ModelInterfaceRBDL REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/controller.cfg
@@ -55,14 +56,15 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
-    ${XBotInterface_INCLUDE_DIRS}
     ${cartesian_interface_INCLUDE_DIRS}
+    ${XBotInterface_INCLUDE_DIRS}
+    ${ModelInterfaceRBDL_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp
     src/legs_kinematics.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 add_dependencies(plot_node ${wb_controller_EXPORTED_TARGETS})
@@ -84,9 +86,9 @@ install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
   PATTERN ".svn" EXCLUDE)
 
-#install(DIRECTORY config/
-#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
-#  PATTERN ".svn" EXCLUDE)
+install(DIRECTORY params/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params
+  PATTERN ".svn" EXCLUDE)
 
 install(DIRECTORY plot_juggler_files/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
