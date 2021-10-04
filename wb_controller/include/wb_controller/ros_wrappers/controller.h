@@ -311,9 +311,9 @@ public:
       {
           for(unsigned int i=0; i <foot_names.size(); i++)
           {
-              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getStateEstimator()->getFeetPositionInWorld().at(foot_names[i]).x();
-              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getStateEstimator()->getFeetPositionInWorld().at(foot_names[i]).y();
-              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getStateEstimator()->getFeetPositionInWorld().at(foot_names[i]).z();
+              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).x();
+              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).y();
+              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).z();
 
               friction_cones_pub_->msg_.cone_axis[i].x = controller_->getTerrainEstimator()->getTerrainNormal().x();
               friction_cones_pub_->msg_.cone_axis[i].y = controller_->getTerrainEstimator()->getTerrainNormal().y();

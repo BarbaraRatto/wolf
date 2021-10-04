@@ -242,13 +242,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   kin_->activateBaseHeightControl();
   des_joint_positions_ = kin_->getJointHomePositions();
 
-  terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_));
+  terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_,robot_model_));
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
   terrain_estimator_->setMinPitch(-M_PI);
 
-  com_planner_.reset(new ComPlanner(state_estimator_,foot_holds_planner_,terrain_estimator_));
+  com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
 
   device_handler_.reset(new JoyHandler(controller_nh,this));
 

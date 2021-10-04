@@ -9,7 +9,6 @@
 - switching to Manipulation remove contacts (moving the arm weight to 1 seems to solve the problem), switching to walking bounce the height
 - Arm control shaking
 - Remove postural for the arm!!!!
-- Move hf and other transforms to quadruped robot
 - Quadruped robot as decorator with horizontal frame informations as well?
 - push recovery tests
 - collision avoidance

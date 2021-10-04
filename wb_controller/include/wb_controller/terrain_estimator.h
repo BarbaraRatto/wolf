@@ -32,7 +32,8 @@ public:
     enum estimation_t {NONE=0,FLAT_TERRAIN,ROUGH_TERRAIN};
 
     TerrainEstimator(StateEstimator::Ptr state_estimator,
-                     FootholdsPlanner::Ptr foot_holds_planner);
+                     FootholdsPlanner::Ptr foot_holds_planner,
+                     QuadrupedRobot::Ptr robot_model);
 
     void setEstimationType();
 
@@ -78,6 +79,7 @@ private:
 
     StateEstimator::Ptr state_estimator_;
     FootholdsPlanner::Ptr foot_holds_planner_;
+    QuadrupedRobot::Ptr robot_model_;
 
     double roll_;
     double pitch_;

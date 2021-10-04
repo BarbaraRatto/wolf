@@ -45,23 +45,6 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
     world_X_contact_[contact_names[i]] = Eigen::Vector3d::Zero();
   }
 
-
-  for(unsigned int i=0;i<foot_names.size();i++)
-  {
-    world_X_foot_[foot_names[i]] = Eigen::Vector3d::Zero();
-    base_X_foot_[foot_names[i]] = Eigen::Vector3d::Zero();
-    world_T_foot_[foot_names[i]] = Eigen::Affine3d::Identity();
-    base_T_foot_[foot_names[i]] = Eigen::Affine3d::Identity();
-  }
-
-  for(unsigned int i=0;i<arm_names.size();i++)
-  {
-    world_X_arm_[arm_names[i]] = Eigen::Vector3d::Zero();
-    base_X_arm_[arm_names[i]] = Eigen::Vector3d::Zero();
-    world_T_arm_[arm_names[i]] = Eigen::Affine3d::Identity();
-    base_T_arm_[arm_names[i]] = Eigen::Affine3d::Identity();
-  }
-
   mapRPYderivativesToOmega_ = Eigen::Matrix3d::Identity();
   base_R_world_ = Eigen::Matrix3d::Identity();
   raw_base_R_world_ = Eigen::Matrix3d::Identity();
@@ -103,7 +86,6 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/floating_base_velocity_qp",floating_base_velocity_qp_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_rpy",base_rpy_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/actual_height",floating_base_position_(2));
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/com",com_);
 }
 
 void StateEstimator::setEstimationType(const std::string& position_t, const std::string& orientation_t)
@@ -199,11 +181,6 @@ void StateEstimator::setContactThreshold(const double& th)
   contact_force_th_ = th;
 }
 
-const Eigen::Vector3d &StateEstimator::getComPosition() const
-{
-  return com_;
-}
-
 double StateEstimator::getContactThreshold()
 {
   return contact_force_th_;
@@ -232,7 +209,8 @@ void StateEstimator::setContactForces(const std::string& name, const Eigen::Vect
   {
     contact_forces_[name] = force;
   }
-  else {
+  else
+  {
     ROS_WARN_NAMED(CLASS_NAME,"Wrong contact name!");
   }
 }
@@ -267,26 +245,6 @@ const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionI
   return world_X_contact_;
 }
 
-const std::map<std::string,Eigen::Vector3d>& StateEstimator::getFeetPositionInWorld() const
-{
-  return world_X_foot_;
-}
-
-const std::map<std::string,Eigen::Vector3d>& StateEstimator::getFeetPositionInBase() const
-{
-  return base_X_foot_;
-}
-
-const std::map<std::string,Eigen::Affine3d>& StateEstimator::getFeetPoseInWorld() const
-{
-  return world_T_foot_;
-}
-
-const std::map<std::string,Eigen::Affine3d>& StateEstimator::getFeetPoseInBase() const
-{
-  return base_T_foot_;
-}
-
 void StateEstimator::toggleHapticContactLoop()
 {
   haptic_contact_loop_active_=!haptic_contact_loop_active_;
@@ -314,11 +272,6 @@ void StateEstimator::resetGyroscopeIntegration()
   reset_gyro_integration_done_ = false;
 }
 
-double StateEstimator::getRobotMass()
-{
-  return robot_model_->getMass();
-}
-
 void StateEstimator::stopContactsEstimation()
 {
   contacts_estimation_active_ = false;
@@ -332,34 +285,14 @@ void StateEstimator::update(const double& period)
   const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
 
   for(unsigned int i=0; i<foot_names.size(); i++)
-  {
-    // Feet position in world
-    robot_model_->getPose(foot_names[i],world_T_foot_[foot_names[i]]);
-    world_X_foot_[foot_names[i]] = world_T_foot_[foot_names[i]].translation();
-    // Feet position in base/trunk
-    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_[foot_names[i]]);
-    base_X_foot_[foot_names[i]] = base_T_foot_[foot_names[i]].translation();
-
-    world_X_contact_[foot_names[i]] = world_X_foot_[foot_names[i]];
-  }
+    world_X_contact_[foot_names[i]] = robot_model_->getFootPositionInWorld(foot_names[i]);
 
   for(unsigned int i=0; i<arm_names.size(); i++)
-  {
-    // Arms position in world
-    robot_model_->getPose(arm_names[i],world_T_arm_[arm_names[i]]);
-    world_X_arm_[arm_names[i]] = world_T_arm_[arm_names[i]].translation();
-    // Arms position in base/trunk
-    robot_model_->getPose(arm_names[i],BASE_LINK_FRAME_NAME,base_T_arm_[arm_names[i]]);
-    base_X_arm_[arm_names[i]] = base_T_arm_[arm_names[i]].translation();
-
-    world_X_contact_[arm_names[i]] = world_X_arm_[arm_names[i]];
-  }
+    world_X_contact_[arm_names[i]] = robot_model_->getArmPositionInWorld(arm_names[i]);
 
   updateContactState();
 
   updateFloatingBase(period);
-
-  robot_model_->getCOM(com_);
 }
 
 void StateEstimator::updateContactState()
@@ -373,7 +306,7 @@ void StateEstimator::updateContactState()
     if(!use_external_forces_)
     {
       force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
-      tmp_vector3d_ = world_T_foot_[foot_names[i]] * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
+      tmp_vector3d_ = robot_model_->getFootPoseInWorld(foot_names[i]) * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
       contact_forces_[foot_names[i]] = tmp_vector3d_;
     }
 
@@ -401,7 +334,7 @@ void StateEstimator::updateContactState()
 
     force_torque_sensors_[arm_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_arm
 
-    tmp_vector3d_ = world_T_arm_[arm_names[i]] * tmp_vector3d_; // contact_force_world = world_T_arm * contact_force_arm
+    tmp_vector3d_ = robot_model_->getArmPoseInWorld(arm_names[i]) * tmp_vector3d_; // contact_force_world = world_T_arm * contact_force_arm
 
     if(contacts_estimation_active_)
       contacts_[arm_names[i]] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
@@ -424,7 +357,7 @@ double StateEstimator::estimateZ()
     if(!gait_generator_->isSwinging(foot_names[i]))
     {
       feet_in_stance++;
-      tmp_affine3d_.translation() = floating_base_pose_.linear() *  base_X_foot_[foot_names[i]];
+      tmp_affine3d_.translation() = floating_base_pose_.linear() *  robot_model_->getFootPositionInBase(foot_names[i]);
       estimated_z +=  tmp_affine3d_.translation().z();
     }
   }
@@ -556,7 +489,6 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_position_ << 0.0,0.0,0.0;
     break;
   };
-
 
   // Finally update the floating base with the full pose and velocities
   floating_base_pose_.translation() = floating_base_position_;
