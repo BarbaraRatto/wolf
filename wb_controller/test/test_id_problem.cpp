@@ -3,23 +3,54 @@
 #include "wb_controller/id_problem.h"
 #include "test_common_utils.h"
 
-static QuadrupedRobot::Ptr _robot;
-static OpenSoT::IDProblem::Ptr _id_problem;
+static wb_controller::QuadrupedRobot::Ptr _robot;
+static wb_controller::IDProblem::Ptr _id_problem;
+static std::unique_ptr<ros::NodeHandle> _root_nh_ptr; // FIXME
 
 // TEST CASES
 TEST(IDProblem, Constructor)
 {
-    _id_problem.reset(new OpenSoT::IDProblem(_robot->nh_,_robot->xbot_model_,_robot->feet_names_,""));
+    _id_problem.reset(new wb_controller::IDProblem(*_root_nh_ptr,_robot));
 }
+
+TEST(IDProblem, Solve)
+{
+    Eigen::VectorXd x;
+    ASSERT_TRUE(_id_problem->solve(x));
+}
+
+TEST(IDProblem, SwitchStack)
+{
+    Eigen::VectorXd x;
+    ASSERT_TRUE(_id_problem->solve(x));
+    _id_problem->switchStack();
+    ASSERT_TRUE(_id_problem->solve(x));
+}
+
+TEST(IDProblem, SelectStackWalking)
+{
+    _id_problem->selectStack(wb_controller::IDProblem::stacks_t::WALKING);
+    Eigen::VectorXd x;
+    ASSERT_TRUE(_id_problem->solve(x));
+}
+
+TEST(IDProblem, SelectStackManipulation)
+{
+    _id_problem->selectStack(wb_controller::IDProblem::stacks_t::MANIPULATION);
+    Eigen::VectorXd x;
+    ASSERT_TRUE(_id_problem->solve(x));
+}
+
+
 
 int main(int argc, char** argv)
 {
 
-  ros::init(argc, argv, "test_state_estimation");
+  ros::init(argc, argv, "test_id_problem");
   testing::InitGoogleTest(&argc, argv);
-  ros::NodeHandle root_nh;
 
-  _robot.reset(new QuadrupedRobot(root_nh));
+  _root_nh_ptr = std::make_unique<ros::NodeHandle>();
+  _robot.reset(wb_controller::createRobotModel(*_root_nh_ptr));
 
   ros::AsyncSpinner spinner(1);
   spinner.start();

@@ -8,21 +8,22 @@
 #include <XBotInterface/TypedefAndEnums.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include <wb_controller/quadruped_robot.h>
+#include <wb_controller/filters.h>
 
 namespace wb_controller
 {
-
-//#define STACK_1
-//#define STACK_2
-//#define STACK_3
-//#define STACK_4
-#define STACK_5
 //#define ROBOT_REAL
-#define REACHING_MOTION
-
+#define GRAVITY 9.81
+//#define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6
-#define N_LEGS 4
+#define N_LEGS 4 // Fixed number of legs supported
+#define N_ARMS 1 // Fixed number of arms supported
+#define N_BASES 2 // Fixed number of bases supported trunk + arm
 #define THREADS_SLEEP_TIME_ms 4
+#define BASE_LINK_FRAME_NAME "base_link"
+extern double _period;
+
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
 // stays in the same position because the feet don't move relatively to the base anymore. There is no reset!
 //#define OPEN_LOOP_TRAJECTORY
@@ -68,31 +69,47 @@ inline void vector6dToTwist(const Eigen::Vector6d& vector6d, geometry_msgs::Twis
     twist.angular.z = vector6d(5);
 }
 
-template <typename T>
-inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , T const& varNew , T const& gain)
-{ 
-    varOutputFirstFilter = (1- gain) * varOutputFirstFilter + gain * varNew;
-    varOutputSecondFilter = (1 - gain) * varOutputSecondFilter + gain * varOutputFirstFilter;
-    return varOutputSecondFilter;
+inline void vector3dToVector3(const Eigen::Vector3d& vector3d, geometry_msgs::Vector3& vector3)
+{
+    vector3.x = vector3d.x();
+    vector3.y = vector3d.y();
+    vector3.z = vector3d.z();
 }
 
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
 extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
 extern std::vector<std::string> _joints_prefix;
+extern std::vector<std::string> _legs_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
-inline std::vector<std::string> sortByLegName(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
+inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
 {
     // Sort the names following order
     assert(names.size() == N_LEGS);
     assert(order.size() == N_LEGS);
     std::vector<std::string> ordered_names(N_LEGS);
     for(unsigned int i=0;i<names.size();i++)
-        for(unsigned int j=0;j<names.size();j++)
+        for(unsigned int j=0;j<order.size();j++)
             if(names[i].find(order[j]) != std::string::npos)
                 ordered_names[j] = names[i];
 
     return ordered_names;
+}
+
+inline QuadrupedRobot* createRobotModel(ros::NodeHandle& root_nh)
+{
+  // Create the quadruped robot object, it wraps the xbot model with some meta information
+  std::string urdf, srdf;
+  if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
+  {
+      throw std::runtime_error("No robot_description given in namespace /");
+  }
+  if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
+  {
+      throw std::runtime_error("No robot_semantic_description given in namespace /");
+  }
+
+  return new wb_controller::QuadrupedRobot(urdf,srdf);
 }
 
 class Trigger
@@ -148,6 +165,10 @@ private:
     status_t status_;
 
 };
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
 
 
 } // namespace

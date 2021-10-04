@@ -4,7 +4,7 @@
   <version>0.0.4</version>
   <description>The controller package</description>
 
-  <maintainer email="graiola@todo.todo">graiola</maintainer>
+  <maintainer email="gennaro.raiola@gmail.com">graiola</maintainer>
 
 
   <license>TODO</license>
@@ -13,7 +13,7 @@
   <depend>roscpp</depend>
   <depend>tf</depend>
   <depend>controller_interface</depend>
-  <depend>dls_hardware_interface</depend>
+  <depend>wb_hardware_interface</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
@@ -27,7 +27,7 @@
   <test_depend>controller_manager</test_depend>
   <test_depend>hardware_interface</test_depend>
   <test_depend>rostest</test_depend>
-  <test_depend>dls_hardware_interface</test_depend>
+  <test_depend>wb_hardware_interface</test_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

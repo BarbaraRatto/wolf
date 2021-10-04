@@ -5,6 +5,8 @@
      <!-- This argument allows us to load joint sensors that measure the internal wrenches -->
     <xacro:arg name="load_force_sensors" default="false"/>
     <xacro:arg name="task_period" default="0.004"/>
+    <xacro:arg name="arm_enabled" default="false"/>
+    <xacro:arg name="arm_name" default="kinova"/>
 
     <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
     <xacro:include filename="$(find aliengo_description)/urdfs/materials.xacro"/>
@@ -173,5 +175,8 @@
     <xacro:leg_transmission name="lh"/>
     <xacro:leg_gazebo name="lh" load_force_sensors="$(arg load_force_sensors)"/>
 
+    <xacro:if value="$(arg arm_enabled)">
+           <xacro:include filename="$(find aliengo_description)/urdfs/arm/$(arg arm_name)_adapter.urdf.xacro" /> -->
+    </xacro:if>
 
 </robot>

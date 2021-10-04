@@ -4,7 +4,7 @@
 #include "wb_controller/controller.h"
 
 static wb_controller::Controller _controller;
-static QuadrupedRobot::Ptr _robot;
+static wb_controller::QuadrupedRobot::Ptr _robot;
 
 TEST(ControllerTest, Init)
 {
@@ -14,11 +14,11 @@ TEST(ControllerTest, Init)
 int main(int argc, char** argv)
 {
 
-  ros::init(argc, argv, "controller_test");
+  ros::init(argc, argv, "test_controller");
   testing::InitGoogleTest(&argc, argv);
   ros::NodeHandle root_nh;
 
-  _robot.reset(new QuadrupedRobot(root_nh));
+  _robot.reset(wb_controller::createRobotModel(root_nh));
 
   ros::AsyncSpinner spinner(1);
   spinner.start();

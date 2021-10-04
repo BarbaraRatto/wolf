@@ -3,14 +3,8 @@
 
 // ROS
 #include <ros/ros.h>
-#include <realtime_tools/realtime_publisher.h>
-#include <realtime_tools/realtime_buffer.h>
 #include <tf/transform_broadcaster.h>
-#include <geometry_msgs/WrenchStamped.h>
-#include <sensor_msgs/JointState.h>
-#include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
-#include <dynamic_reconfigure/server.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
 // ROS control
@@ -20,23 +14,25 @@
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
-#include <dls_hardware_interface/ground_truth_interface.h>
-// ADVR
-#include <cartesian_interface/open_sot/OpenSotImpl.h>
-#include <XBotCoreModel/XBotCoreModel.h>
+#include <wb_hardware_interface/ground_truth_interface.h>
+#include <wb_hardware_interface/contact_switch_sensor_interface.h>
 // STD
 #include <atomic>
 #include <thread>
 #include <chrono>
+#include <memory>
 // Controller
+#include <wb_controller/quadruped_robot.h>
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/legs_kinematics.h>
 #include <wb_controller/footholds_planner.h>
+#include <wb_controller/com_planner.h>
 #include <wb_controller/state_estimator.h>
-#include <wb_controller/device_interface.h>
+#include <wb_controller/terrain_estimator.h>
 #include <wb_controller/id_problem.h>
-#include <wb_controller/ContactForces.h>
-#include <wb_controller/controllerConfig.h>
+#include <wb_controller/ros_wrappers/interface.h>
+#include <wb_controller/devices/interface.h>
+
 // Eigen
 #include <Eigen/Geometry>
 
@@ -45,14 +41,22 @@ namespace wb_controller
 
 class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
                                                                          hardware_interface::ImuSensorInterface,
-                                                                         hardware_interface::GroundTruthInterface>
+                                                                         hardware_interface::GroundTruthInterface,
+                                                                         hardware_interface::ContactSwitchSensorInterface>
 {
 public:
+
+     const std::string CLASS_NAME = "Controller";
 
     /**
      * @brief Shared pointer to Controller
      */
     typedef std::shared_ptr<Controller> Ptr;
+
+    /**
+     * @brief Weak pointer to Controller
+     */
+    typedef std::weak_ptr<Controller> WeakPtr;
 
     /**
      * @brief Shared pointer to const Controller
@@ -70,7 +74,7 @@ public:
          * @brief Initializes sample controller
          * @param hardware_interface::RobotHW* robot hardware interface
          * @param ros::NodeHandle& Root node handle
-         * @param ros::NodeHandle& Supervisor node handle
+         * @param ros::NodeHandle& Controller node handle
          */
     bool init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh);
 
@@ -93,11 +97,6 @@ public:
          * @param const ros::time& Time
          */
     void stopping(const ros::Time& time);
-
-    /**
-         * @brief Ros dynamic reconfigure callback
-         */
-    void dynamicReconfigureCallback(wb_controller::controllerConfig &config, uint32_t level);
 
     /**
          * @brief Start/Stop solver integration
@@ -133,6 +132,31 @@ public:
     bool setSwingFrequency(const double& swing_frequency);
 
     /**
+         * @brief Select the stack to use
+         */
+    bool selectStack(const std::string &stack);
+
+    /**
+         * @brief Switch between WALKING and MANIPULATION stack
+         */
+    void switchStack();
+
+    /**
+         * @brief Get desired contact forces
+         */
+    std::vector<Eigen::Vector6d>& getDesiredContactForces();
+
+    /**
+         * @brief Get desired joint efforts
+         */
+    const Eigen::VectorXd& getDesiredJointEfforts() const;
+
+    /**
+         * @brief Get the id problem
+         */
+    IDProblem* getIDProblem() const;
+
+    /**
          * @brief Get the gait generator pointer
          */
     GaitGenerator* getGaitGenerator() const;
@@ -146,6 +170,27 @@ public:
          * @brief Get the state estimator pointer
          */
     StateEstimator* getStateEstimator() const;
+
+    /**
+         * @brief Get the legs kinematics pointer
+         */
+    LegsKinematics* getLegsKinematics() const;
+
+    /**
+         * @brief Get the terrain estimator pointer
+         */
+    TerrainEstimator* getTerrainEstimator() const;
+
+    /**
+         * @brief Get Robot Model
+         */
+    QuadrupedRobot* getRobotModel() const;
+
+
+
+    // FIXME To be moved in a class handling the computation for impedances
+    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
+    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
 
 private:
 
@@ -161,6 +206,8 @@ private:
     hardware_interface::ImuSensorHandle imu_sensor_;
     /** @brief Ground Thruth */
     hardware_interface::GroundTruthHandle ground_truth_;
+    /** @brief Ground Thruth */
+    std::map<std::string,hardware_interface::ContactSwitchSensorHandle> contact_sensors_;
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
     /** @brief Joint velocities */
@@ -171,10 +218,6 @@ private:
     Eigen::VectorXd joint_accellerations_;
     /** @brief Joint efforts */
     Eigen::VectorXd joint_efforts_;
-    /** @brief XBOT joint positions */
-    Eigen::VectorXd joint_positions_xbot_;
-    /** @brief XBOT joint velocities */
-    Eigen::VectorXd joint_velocities_xbot_;
     /** @brief Desired joint positions */
     Eigen::VectorXd des_joint_positions_;
     /** @brief Desired joint velocities */
@@ -185,16 +228,10 @@ private:
     Eigen::VectorXd des_joint_efforts_solver_;
     /** @brief Desired joint efforts computed by the PIDs */
     Eigen::VectorXd des_joint_efforts_pids_;
-    /** @brief Solver's solution (i.e. efforts) */
-    Eigen::VectorXd x_;
     /** @brief Xbot robot model */
-    XBot::ModelInterface::Ptr xbot_model_;
+    QuadrupedRobot::Ptr robot_model_;
     /** @brief Dynamic problem formulation */
-    OpenSoT::IDProblem::Ptr id_prob_;
-    /** @brief Real time publisher - desired joint states */
-    std::shared_ptr<realtime_tools::RealtimePublisher<sensor_msgs::JointState>> ci_joint_states_rt_pub_;
-    /** @brief Real time publisher - contact forces */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
+    IDProblem::Ptr id_prob_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */
@@ -207,12 +244,10 @@ private:
     std::vector<double> joint_i_gain_;
     /** @brief Actual D value for the joints PID controller */
     std::vector<double> joint_d_gain_;
+    /** @brief Desired contact forces */
+    std::vector<Eigen::Vector6d> des_contact_forces_;
     /** @brief Vector containing the pids for the joints */
     std::vector<control_toolbox::Pid> pids_;
-    /** @brief ROS dynamic reconfigure */
-    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::controllerConfig>> server_;
-    /** @brief ROS dynamic reconfigure config struct */
-    controllerConfig default_config_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
@@ -223,32 +258,26 @@ private:
     Eigen::Quaterniond imu_orientation_;
     /** @brief Reference for the waist RPY */
     Eigen::Vector3d des_base_rpy_;
-    /** @brief Ground reaction forces generated by the solver  */
-    Eigen::VectorXd des_contact_forces_;
-    /** @brief Feet names */
-    std::vector<std::string> feet_names_;
-    /** @brief Arm tip name */
-    std::string arm_tip_name_;
-    /** @brief Hips names */
-    std::vector<std::string> hips_names_;
     /** @brief Thread for the odometry publisher */
     std::shared_ptr<std::thread> odom_publisher_thread_;
-    /** @brief Thread for the rviz publisher */
-    std::shared_ptr<std::thread> rviz_publisher_thread_;
     /** @brief Gait generator */
     GaitGenerator::Ptr gait_generator_;
+    /** @brief Terrain Estimator */
+    TerrainEstimator::Ptr terrain_estimator_;
     /** @brief Legs Kinematics */
     LegsKinematics::Ptr kin_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
-    /** @brief Joy handler */
-    JoyHandler::Ptr joy_handler_;
-    /** @brief Keyboard handler */
-    TwistHandler::Ptr keyboard_handler_;
-    /** @brief Command interface */
-    FootholdsPlanner::Ptr cmds_;
+    /** @brief Device handler */
+    DeviceHandlerInterface::Ptr device_handler_;
+    /** @brief Foot holds Planner */
+    FootholdsPlanner::Ptr foot_holds_planner_;
+    /** @brief CoM Planner */
+    ComPlanner::Ptr com_planner_;
     /** @brief State estimator */
     StateEstimator::Ptr state_estimator_;
+    /** @brief Manage the ros interfacing */
+    RosWrapperInterface::Ptr ros_wrapper_;
     /** @brief pid scale, range between 0 and 1. 0 the pid is deactivated, 1 the pid is providing full torque */
     std::atomic<double> pid_scale_;
     /** @brief qdot_filter */
@@ -261,6 +290,9 @@ private:
     std::atomic<double> cutoff_hz_qdot_;
     /** @brief True if the solver istance has been created */
     bool solver_created_;
+    /** @brief True if the controller uses the external contact sensors */
+    bool use_contact_sensors_;
+
     /** @brief True if the solver is started */
     std::atomic<bool> solver_started_;
     /** @brief True if the initialization phase is done */
@@ -272,19 +304,12 @@ private:
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
 
-
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */
     Eigen::Vector3d tmp_vector3d_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
-
-    // FIXME To be moved in a class handling the computation for impedances
-    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
-    Eigen::Matrix6d Kp_waist_, Kd_waist_;
-    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
-
 
     /**
          * @brief thread body for the odometry publisher
@@ -300,21 +325,6 @@ private:
          * @brief update the imu reading from the imu interface
          */
     void readImu();
-
-    /**
-         * @brief init the ROS publishers
-         */
-    void initPublishers(const ros::NodeHandle& root_nh, const ros::NodeHandle& controller_nh);
-
-    /**
-         * @brief publish on ROS
-         */
-    void publish(const ros::Time& time, const ros::Duration& period);
-
-    /**
-         * @brief Update the dynamic reconfigure interface
-         */
-    void dynamicReconfigureUpdate();
 
 };
 
