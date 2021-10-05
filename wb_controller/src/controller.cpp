@@ -27,7 +27,7 @@ double _period = 0.001;
 
 Controller::Controller()
   :solver_created_(false)
-  ,solver_started_(false)
+  ,solver_active_(false)
   ,init_done_(false)
   ,pid_active_(true)
   ,inertia_compensation_active_(true)
@@ -83,10 +83,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   }
   else
   {
-    contact_sensors_["lf_foot"] = cs_hw->getHandle("lf_foot_contact_sensor");
-    contact_sensors_["rf_foot"] = cs_hw->getHandle("rf_foot_contact_sensor");
-    contact_sensors_["lh_foot"] = cs_hw->getHandle("lh_foot_contact_sensor");
-    contact_sensors_["rh_foot"] = cs_hw->getHandle("rh_foot_contact_sensor");
+    contact_sensors_["lf_foot"] = cs_hw->getHandle("lf_foot_contact_sensor"); // FIXME Hardcoded
+    contact_sensors_["rf_foot"] = cs_hw->getHandle("rf_foot_contact_sensor"); // FIXME Hardcoded
+    contact_sensors_["lh_foot"] = cs_hw->getHandle("lh_foot_contact_sensor"); // FIXME Hardcoded
+    contact_sensors_["rh_foot"] = cs_hw->getHandle("rh_foot_contact_sensor"); // FIXME Hardcoded
   }
 
   // Setting up joint handles:
@@ -298,8 +298,11 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
 {
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   if(gait_generator_)
+  {
     for(unsigned int i=0; i < foot_names.size(); i++)
       gait_generator_->setSwingFrequency(foot_names[i],swing_frequency);
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set swing frequency to "<< swing_frequency);
+  }
   else
   {
     ROS_WARN_NAMED(CLASS_NAME,"gait_generator not initialized yet.");
@@ -321,8 +324,8 @@ bool Controller::selectStack(const std::string& stack)
       ROS_ERROR_NAMED(CLASS_NAME,"Wrong stack!");
       return false;
     }
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected stack "<< stack);
   }
-
   return true;
 }
 
@@ -338,24 +341,32 @@ void Controller::switchStack()
     ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
 }
 
-bool Controller::setGaitType(const std::string& gait_type)
+bool Controller::selectGait(const string& gait)
 {
-  try
+  if(gait_generator_)
   {
-    if(gait_generator_)
-      gait_generator_->setGaitTypeName(gait_type);
+    if(gait == "TROT")
+      gait_generator_->setGaitType(Gait::gait_t::TROT);
+    else if(gait == "CRAWL")
+      gait_generator_->setGaitType(Gait::gait_t::CRAWL);
     else
     {
-      ROS_WARN_NAMED(CLASS_NAME,"gait_generator not initialized yet.");
+      ROS_ERROR_NAMED(CLASS_NAME,"Wrong gait!");
       return false;
     }
-  }
-  catch(...)
-  {
-    ROS_ERROR_NAMED(CLASS_NAME,"Wrong gait!");
-    return false;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected gait "<< gait);
   }
   return true;
+}
+
+void Controller::switchGait()
+{
+  if(gait_generator_)
+  {
+    gait_generator_->switchGait();
+  }
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"GaitGenerator not ready yet!");
 }
 
 bool Controller::setDutyFactor(const double& duty_factor)
@@ -390,6 +401,31 @@ void Controller::toggleBaseHeightControl()
   }
 }
 
+void Controller::startSolver(const bool& start)
+{
+  if(!solver_created_)
+  {
+    ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
+    id_prob_.reset(new IDProblem(nh_,robot_model_));
+    solver_created_ = true;
+  }
+
+  // Perform the init procedure
+  init_done_ = false;
+
+  solver_active_=start;
+
+  if(solver_active_)
+    ROS_INFO_NAMED(CLASS_NAME,"Solver integration is ON");
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
+}
+
+bool Controller::isSolverActive() const
+{
+  return solver_active_;
+}
+
 void Controller::toggleSolver()
 {
   if(!solver_created_)
@@ -402,13 +438,27 @@ void Controller::toggleSolver()
   // Perform the init procedure
   init_done_ = false;
 
-  solver_started_=!solver_started_;
+  solver_active_=!solver_active_;
 
-  if(solver_started_)
+  if(solver_active_)
     ROS_INFO_NAMED(CLASS_NAME,"Solver integration is ON");
   else
     ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
+}
 
+void Controller::startInertiaCompensation(const bool& start)
+{
+  inertia_compensation_active_=start;
+
+  if(inertia_compensation_active_)
+    ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is ON");
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is OFF");
+}
+
+bool Controller::isInertiaCompensationActive() const
+{
+  return inertia_compensation_active_;
 }
 
 void Controller::toggleInertiaCompensation()
@@ -510,7 +560,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
   state_estimator_->update(period.toSec());
 
-  if(solver_started_) // Use the ID solver to calculate the torques
+  if(solver_active_) // Use the ID solver to calculate the torques
   {
     if(!init_done_) // FIXME Prepare a proper start up and rest procedure
     {
