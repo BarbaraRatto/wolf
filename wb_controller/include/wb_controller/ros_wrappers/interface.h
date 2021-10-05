@@ -3,7 +3,7 @@
 
 // ROS
 #include <ros/ros.h>
-#include <dynamic_reconfigure/server.h>
+#include <ddynamic_reconfigure/ddynamic_reconfigure.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <realtime_tools/realtime_buffer.h>
@@ -26,11 +26,11 @@ public:
     RosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
     virtual ~RosWrapperInterface(){spinner_->stop();}
     virtual void publish(const ros::Time& /*time*/) = 0;
-    virtual void dynamicReconfigureUpdate() {}
 
 protected:
 
     std::shared_ptr<ros::AsyncSpinner> spinner_;
+    std::shared_ptr<ddynamic_reconfigure::DDynamicReconfigure> server_;
 };
 
 class TaskRosWrapperInterface : public RosWrapperInterface

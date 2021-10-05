@@ -583,9 +583,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
       imu_gyroscope_filter_.setTimeStep(period_);
       qdot_filter_.setTimeStep(period_);
 
-      // FIXME Why is it here?
-      ros_wrapper_->dynamicReconfigureUpdate();
-
       init_done_ = true;
     }
 
