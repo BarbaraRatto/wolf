@@ -29,7 +29,7 @@ find_package(ModelInterfaceRBDL REQUIRED)
 
 add_message_files(FILES
                  CartesianTask.msg
-                 JointsTask.msg
+                 PosturalTask.msg
                  ContactForces.msg
                  FootHolds.msg
                  TerrainEstimation.msg

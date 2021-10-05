@@ -13,7 +13,6 @@
 #include <wb_controller/utils.h>
 
 // ROS
-#include <wb_controller/controllerConfig.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/FootHolds.h>
 #include <wb_controller/TerrainEstimation.h>
@@ -173,6 +172,7 @@ public:
         server_->registerEnumVariable<std::string>("select_stack","WALKING",
                                                    boost::bind(&wb_controller::Controller::selectStack,controller_,_1),
                                                    "select stack", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
+
         server_->publishServicesTopics();
     }
 
@@ -262,7 +262,6 @@ public:
 
 protected:
 
-    wb_controller::controllerConfig default_config_;
     /** @brief Real time publisher - contact forces */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
     /** @brief Real time publisher - foot holds */

@@ -107,11 +107,24 @@ public:
     Eigen::Quaterniond    tmp_quaterniond_;
 
     realtime_tools::RealtimeBuffer<Eigen::Affine3d> rt_pose_reference_;
-    realtime_tools::RealtimeBuffer<Eigen::Matrix6d> rt_Kp_;
-    realtime_tools::RealtimeBuffer<Eigen::Matrix6d> rt_Kd_;
+
     std::atomic<double> rt_lambda1_;
     std::atomic<double> rt_lambda2_;
     std::atomic<double> rt_weight_diag_;
+
+    std::atomic<double> rt_kp_x_;
+    std::atomic<double> rt_kp_y_;
+    std::atomic<double> rt_kp_z_;
+    std::atomic<double> rt_kp_roll_;
+    std::atomic<double> rt_kp_pitch_;
+    std::atomic<double> rt_kp_yaw_;
+
+    std::atomic<double> rt_kd_x_;
+    std::atomic<double> rt_kd_y_;
+    std::atomic<double> rt_kd_z_;
+    std::atomic<double> rt_kd_roll_;
+    std::atomic<double> rt_kd_pitch_;
+    std::atomic<double> rt_kd_yaw_;
 
     std::string task_id_;
 
