@@ -158,6 +158,8 @@ public:
         task_->setKp(Kp_);
         task_->setKd(Kd_);
 
+        fromEigenToScalars();
+
         position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff FIXME hardcoded
         position_reference_filter_.setTimeStep(wb_controller::_period);
 
@@ -191,6 +193,7 @@ public:
     void setKdRoll(double value)  { rt_kd_roll_  = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(3,3): "<<value); }
     void setKdPitch(double value) { rt_kd_pitch_ = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(4,4): "<<value); }
     void setKdYaw(double value)   { rt_kd_yaw_   = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(5,5): "<<value); }
+
 
 
     virtual void publish(const ros::Time& time) override
@@ -260,19 +263,7 @@ public:
 
     virtual void setExternalGains() override
     {
-        Kp_(0,0) = rt_kp_x_;
-        Kp_(1,1) = rt_kp_y_;
-        Kp_(2,2) = rt_kp_z_;
-        Kp_(3,3) = rt_kp_roll_;
-        Kp_(4,4) = rt_kp_pitch_;
-        Kp_(5,5) = rt_kp_yaw_;
-
-        Kd_(0,0) = rt_kd_x_;
-        Kd_(1,1) = rt_kd_y_;
-        Kd_(2,2) = rt_kd_z_;
-        Kd_(3,3) = rt_kd_roll_;
-        Kd_(4,4) = rt_kd_pitch_;
-        Kd_(5,5) = rt_kd_yaw_;
+        fromScalarsToEigen();
 
         task_->setGains(Kp_,Kd_);
     }
@@ -293,6 +284,41 @@ public:
     }
 
 protected:
+
+    void fromScalarsToEigen()
+    {
+      Kp_(0,0) = rt_kp_x_;
+      Kp_(1,1) = rt_kp_y_;
+      Kp_(2,2) = rt_kp_z_;
+      Kp_(3,3) = rt_kp_roll_;
+      Kp_(4,4) = rt_kp_pitch_;
+      Kp_(5,5) = rt_kp_yaw_;
+
+      Kd_(0,0) = rt_kd_x_;
+      Kd_(1,1) = rt_kd_y_;
+      Kd_(2,2) = rt_kd_z_;
+      Kd_(3,3) = rt_kd_roll_;
+      Kd_(4,4) = rt_kd_pitch_;
+      Kd_(5,5) = rt_kd_yaw_;
+
+    }
+
+    void fromEigenToScalars()
+    {
+      rt_kp_x_      = Kp_(0,0);
+      rt_kp_y_      = Kp_(1,1);
+      rt_kp_z_      = Kp_(2,2);
+      rt_kp_roll_   = Kp_(3,3);
+      rt_kp_pitch_  = Kp_(4,4);
+      rt_kp_yaw_    = Kp_(5,5);
+
+      rt_kd_x_      = Kd_(0,0);
+      rt_kd_y_      = Kd_(1,1);
+      rt_kd_z_      = Kd_(2,2);
+      rt_kd_roll_   = Kd_(3,3);
+      rt_kd_pitch_  = Kd_(4,4);
+      rt_kd_yaw_    = Kd_(5,5);
+    }
 
     virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
     {
