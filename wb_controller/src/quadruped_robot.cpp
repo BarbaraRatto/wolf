@@ -166,12 +166,12 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     world_T_foot_[foot_names_[i]] = Eigen::Affine3d::Identity();
     base_T_foot_[foot_names_[i]] = Eigen::Affine3d::Identity();
   }
-  for(unsigned int i=0;i<arm_names_.size();i++)
+  for(unsigned int i=0;i<ee_names_.size();i++)
   {
-    world_X_arm_[arm_names_[i]] = Eigen::Vector3d::Zero();
-    base_X_arm_[arm_names_[i]] = Eigen::Vector3d::Zero();
-    world_T_arm_[arm_names_[i]] = Eigen::Affine3d::Identity();
-    base_T_arm_[arm_names_[i]] = Eigen::Affine3d::Identity();
+    world_X_ee_[ee_names_[i]] = Eigen::Vector3d::Zero();
+    base_X_ee_[ee_names_[i]] = Eigen::Vector3d::Zero();
+    world_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
+    base_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
   }
 }
 
@@ -210,11 +210,11 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
   for(unsigned int i=0; i<ee_names_.size(); i++)
   {
     // Arms position in world
-    getPose(ee_names_[i],world_T_arm_[ee_names_[i]]);
-    world_X_arm_[ee_names_[i]] = world_T_arm_[ee_names_[i]].translation();
+    getPose(ee_names_[i],world_T_ee_[ee_names_[i]]);
+    world_X_ee_[ee_names_[i]] = world_T_ee_[ee_names_[i]].translation();
     // Arms position in base/trunk
-    getPose(ee_names_[i],BASE_LINK_FRAME_NAME,base_T_arm_[ee_names_[i]]);
-    base_X_arm_[ee_names_[i]] = base_T_arm_[ee_names_[i]].translation();
+    getPose(ee_names_[i],BASE_LINK_FRAME_NAME,base_T_ee_[ee_names_[i]]);
+    base_X_ee_[ee_names_[i]] = base_T_ee_[ee_names_[i]].translation();
   }
 
   // Update the com position
@@ -223,44 +223,44 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
   return res;
 }
 
-const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getArmsPositionInWorld() const
+const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getEndEffectorsPositionInWorld() const
 {
-  return world_X_arm_;
+  return world_X_ee_;
 }
 
-Eigen::Vector3d& QuadrupedRobot::getArmPositionInWorld(const std::string& name)
+Eigen::Vector3d& QuadrupedRobot::getEndEffectorPositionInWorld(const std::string& name)
 {
-  return world_X_arm_[name];
+  return world_X_ee_[name];
 }
 
-const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getArmsPositionInBase() const
+const std::map<std::string,Eigen::Vector3d>& QuadrupedRobot::getEndEffectorsPositionInBase() const
 {
-  return base_X_arm_;
+  return base_X_ee_;
 }
 
-Eigen::Vector3d& QuadrupedRobot::getArmPositionInBase(const std::string& name)
+Eigen::Vector3d& QuadrupedRobot::getEndEffectorPositionInBase(const std::string& name)
 {
-  return base_X_arm_[name];
+  return base_X_ee_[name];
 }
 
-const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getArmsPoseInWorld() const
+const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getEndEffectorsPoseInWorld() const
 {
-  return world_T_arm_;
+  return world_T_ee_;
 }
 
-const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getArmsPoseInBase() const
+const std::map<std::string,Eigen::Affine3d>& QuadrupedRobot::getEndEffectorsPoseInBase() const
 {
-  return base_T_arm_;
+  return base_T_ee_;
 }
 
-Eigen::Affine3d& QuadrupedRobot::getArmPoseInWorld(const std::string& name)
+Eigen::Affine3d& QuadrupedRobot::getEndEffectorPoseInWorld(const std::string& name)
 {
-  return world_T_arm_[name];
+  return world_T_ee_[name];
 }
 
-Eigen::Affine3d& QuadrupedRobot::getArmPoseInBase(const std::string& name)
+Eigen::Affine3d& QuadrupedRobot::getEndEffectorPoseInBase(const std::string& name)
 {
-  return base_T_arm_[name];
+  return base_T_ee_[name];
 }
 
 const Eigen::Affine3d &QuadrupedRobot::getBasePoseInWorld() const
@@ -349,7 +349,7 @@ const std::vector<std::string>& QuadrupedRobot::getJointNames() const
   return joint_names_;
 }
 
-const std::vector<std::string>& QuadrupedRobot::getArmEndEffectorNames() const
+const std::vector<std::string>& QuadrupedRobot::getEndEffectorNames() const
 {
   return ee_names_;
 }

@@ -16,7 +16,6 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   const std::vector<std::string>& contact_names = robot_model_->getContactNames();
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
   const std::vector<std::string>& limb_names = robot_model_->getLimbNames();
 
   // Floating Base state estimation reset
@@ -69,6 +68,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   // Contact force estimation reset
   force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimationMomentumBased>(robot_model_,1.0/_period);
+  //force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimation>(robot_model_->getXBotModel());
 
   // Contact estimation reset
   std::vector<int> dofs = {0,1,2}; // x y z
@@ -200,7 +200,7 @@ const std::string& StateEstimator::getOrientationEstimationType()
       return tmp_map.first;
 }
 
-void StateEstimator::setContactForces(const std::string& name, const Eigen::Vector3d force)
+void StateEstimator::setContactForces(const std::string& name, const Eigen::Vector3d& force)
 {
   if(use_external_forces_ == false)
     use_external_forces_ = true;
@@ -282,13 +282,13 @@ void StateEstimator::stopContactsEstimation()
 void StateEstimator::update(const double& period)
 {
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
+  const std::vector<std::string>& ee_names = robot_model_->getEndEffectorNames();
 
   for(unsigned int i=0; i<foot_names.size(); i++)
     world_X_contact_[foot_names[i]] = robot_model_->getFootPositionInWorld(foot_names[i]);
 
-  for(unsigned int i=0; i<arm_names.size(); i++)
-    world_X_contact_[arm_names[i]] = robot_model_->getArmPositionInWorld(arm_names[i]);
+  for(unsigned int i=0; i<ee_names.size(); i++)
+    world_X_contact_[ee_names[i]] = robot_model_->getEndEffectorPositionInWorld(ee_names[i]);
 
   updateContactState();
 
@@ -305,9 +305,9 @@ void StateEstimator::updateContactState()
   {
     if(!use_external_forces_)
     {
+      tmp_vector3d_.setZero();
       force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
-      tmp_vector3d_ = robot_model_->getFootPoseInWorld(foot_names[i]) * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
-      contact_forces_[foot_names[i]] = tmp_vector3d_;
+      contact_forces_[foot_names[i]] = robot_model_->getFootPoseInWorld(foot_names[i]) * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
     }
 
     if(contacts_estimation_active_)
@@ -327,21 +327,22 @@ void StateEstimator::updateContactState()
     }
   }
 
-  // Update contact state for the arms
-  const std::vector<std::string>& arm_names = robot_model_->getArmEndEffectorNames();
-  for(unsigned int i=0; i<arm_names.size(); i++)
+  // Update contact state for the arm end-effectors
+  const std::vector<std::string>& ee_names = robot_model_->getEndEffectorNames();
+  for(unsigned int i=0; i<ee_names.size(); i++)
   {
 
-    force_torque_sensors_[arm_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_arm
+    tmp_vector3d_.setZero();
+    force_torque_sensors_[ee_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_arm
 
-    tmp_vector3d_ = robot_model_->getArmPoseInWorld(arm_names[i]) * tmp_vector3d_; // contact_force_world = world_T_arm * contact_force_arm
+    tmp_vector3d_ = robot_model_->getEndEffectorPoseInWorld(ee_names[i]) * tmp_vector3d_; // contact_force_world = world_T_ee * contact_force_ee
 
     if(contacts_estimation_active_)
-      contacts_[arm_names[i]] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
+      contacts_[ee_names[i]] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
     else
-      contacts_[arm_names[i]] = false;
+      contacts_[ee_names[i]] = false;
 
-    contact_forces_[arm_names[i]] = tmp_vector3d_;
+    contact_forces_[ee_names[i]] = tmp_vector3d_;
   }
 
 }
@@ -352,6 +353,7 @@ double StateEstimator::estimateZ()
   const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
   double estimated_z = 0.0;
   int feet_in_stance = 0;
+  tmp_affine3d_.setIdentity();
   for(unsigned int i = 0; i<foot_names.size(); i++)
   {
     if(!gait_generator_->isSwinging(foot_names[i]))
