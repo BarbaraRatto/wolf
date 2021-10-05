@@ -41,8 +41,7 @@ public:
   const std::vector<std::string>& getContactNames() const;
   const std::vector<std::string>& getLimbNames() const;
 
-  const std::vector<int>& getLegJointsIds(const std::string& leg_name);
-  const std::vector<int>& getArmJointsIds(const std::string& arm_name);
+  const std::vector<int>& getLimbJointsIds(const std::string& limb_name);
 
   const unsigned int& getNumberArms() const;
   const unsigned int& getNumberLegs() const;
@@ -53,7 +52,9 @@ public:
   robot_states_t getState();
   bool setState(robot_states_t robot_state);
 
-  const Eigen::Matrix3d& getFloatingBaseInertia();
+  void getFloatingBasePositionInertia(Eigen::Matrix3d& M);
+  void getLimbInertia(const std::string& limb_name, Eigen::MatrixXd& M);
+  void getLimbInertiaInverse(const std::string& limb_name, Eigen::MatrixXd& Mi);
 
   const Eigen::Matrix3d& getBaseRotationInHf() const;
   const Eigen::Matrix3d& getHfRotationInWorld() const;
@@ -86,7 +87,6 @@ public:
   Eigen::Affine3d &getArmPoseInBase(const std::string &name);
 
   const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
-  const Eigen::Vector3d &getComPosition() const;
 
 private:
 
@@ -99,8 +99,7 @@ private:
   std::vector<std::string> contact_names_; // foot + arm names
   std::vector<std::string> limb_names_; // chain names
 
-  limb_joint_idxs_map_t joint_legs_idx_;
-  limb_joint_idxs_map_t joint_arms_idx_;
+  limb_joint_idxs_map_t joint_limb_idx_;
 
   joint_idxs_map_t joint_idx_;
 
@@ -112,9 +111,6 @@ private:
 
   double base_length_;
   double base_width_;
-
-  Eigen::MatrixXd M_;
-  Eigen::Matrix3d Ifb_;
 
   Eigen::Affine3d world_T_base_;
   Eigen::Matrix3d world_R_hf_;
@@ -139,9 +135,10 @@ private:
   /** @brief Arm pose w.r.t world */
   std::map<std::string,Eigen::Affine3d> world_T_arm_;
 
-  Eigen::Vector3d com_;
-
   std::atomic<robot_states_t> robot_state_;
+
+  Eigen::MatrixXd tmp_Mi_;
+  Eigen::MatrixXd tmp_M_;
 
 };
 

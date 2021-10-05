@@ -89,6 +89,7 @@ private:
   Eigen::Vector6d base_twist_;
   Eigen::Vector3d com_vel_hf_;
   Eigen::Matrix3d I_hf_;
+  Eigen::Matrix3d I_world_;
   // Thresholds
   Eigen::Vector3d dynamic_th_dot_;
   Eigen::Vector3d static_th_dot_;

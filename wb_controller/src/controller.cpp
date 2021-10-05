@@ -202,7 +202,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   // Initialize the inertia related matrices // FIXME
   robot_model_->getInertiaMatrix(M_);
-  Mi_.setZero(M_.rows(), M_.cols());
+  Mi_.setZero(3,3);
   Kp_postural_.setIdentity(M_.rows(), M_.cols());
   Kd_postural_.setIdentity(M_.rows(), M_.cols());
 
@@ -553,16 +553,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
-    if(inertia_compensation_active_)
-    {
-      Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS)
-          = M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,M_.rows()-FLOATING_BASE_DOFS,M_.cols()-FLOATING_BASE_DOFS).inverse();
-    }
-
     for(unsigned int i = 0; i<foot_names.size(); i++)
     {
 
-      int idx = robot_model_->getLegJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
+      int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
 
       // Update the reference for the feet tasks, this is only used for visualization pourposes
       id_prob_->feet_[foot_names[i]]->setReference(gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i])); //FIXME
@@ -576,8 +570,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         if(inertia_compensation_active_)
         {
-          Kp_postural_.block<3,3>(idx,idx) = Mi_.block<3,3>(idx,idx) * Kp_swing_leg_;
-          Kd_postural_.block<3,3>(idx,idx) = Mi_.block<3,3>(idx,idx) * Kd_swing_leg_;
+          robot_model_->getLimbInertiaInverse(leg_names[i],Mi_);
+          Kp_postural_.block<3,3>(idx,idx) = Mi_ * Kp_swing_leg_;
+          Kd_postural_.block<3,3>(idx,idx) = Mi_ * Kd_swing_leg_;
         }
         else
         {

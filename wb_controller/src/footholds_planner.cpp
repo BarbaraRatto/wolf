@@ -761,7 +761,8 @@ bool PushRecovery::update(const double& period)
   base_velocity_(1) = base_twist_(1);//com_vel_hf_(1);
   base_velocity_(2) = base_twist_(5);
 
-  I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * footholds_planner_ptr_->robot_model_->getFloatingBaseInertia();
+  footholds_planner_ptr_->robot_model_->getFloatingBasePositionInertia(I_world_);
+  I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * I_world_;
   base_inertia_z_ = I_hf_(2,2);
 
   // Filter the base velocity

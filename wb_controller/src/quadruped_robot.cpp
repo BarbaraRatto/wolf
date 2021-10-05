@@ -115,9 +115,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     {
       std::string current_joint_name = joint_legs_[leg_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
-      joint_legs_idx_[leg_names_[i]].push_back(idx);
+      joint_limb_idx_[leg_names_[i]].push_back(idx);
       ROS_INFO_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
-
     }
   }
 
@@ -127,7 +126,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     {
       std::string current_joint_name = joint_arms_[arm_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
-      joint_arms_idx_[arm_names_[i]].push_back(idx);
+      joint_limb_idx_[arm_names_[i]].push_back(idx);
       ROS_INFO_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
     }
   }
@@ -173,6 +172,9 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     world_T_arm_[arm_names_[i]] = Eigen::Affine3d::Identity();
     base_T_arm_[arm_names_[i]] = Eigen::Affine3d::Identity();
   }
+
+  getInertiaMatrix(tmp_M_);
+  getInertiaInverse(tmp_Mi_);
 }
 
 bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool update_desired_acceleration)
@@ -216,9 +218,6 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     getPose(ee_names_[i],BASE_LINK_FRAME_NAME,base_T_arm_[ee_names_[i]]);
     base_X_arm_[ee_names_[i]] = base_T_arm_[ee_names_[i]].translation();
   }
-
-  // Update the com position
-  getCOM(com_);
 
   return res;
 }
@@ -308,7 +307,6 @@ Eigen::Affine3d& QuadrupedRobot::getFootPoseInBase(const std::string& name)
   return base_T_foot_[name];
 }
 
-
 const double& QuadrupedRobot::getHfYawInWorld() const
 {
   return yaw_base_;
@@ -364,14 +362,9 @@ const std::vector<std::string>& QuadrupedRobot::getLimbNames() const
   return limb_names_;
 }
 
-const std::vector<int> &QuadrupedRobot::getLegJointsIds(const std::string &leg_name)
+const std::vector<int>& QuadrupedRobot::getLimbJointsIds(const std::string& limb_name)
 {
-  return joint_legs_idx_[leg_name];
-}
-
-const std::vector<int> &QuadrupedRobot::getArmJointsIds(const std::string &arm_name)
-{
-  return joint_arms_idx_[arm_name];
+  return joint_limb_idx_[limb_name];
 }
 
 const unsigned int& QuadrupedRobot::getNumberArms() const
@@ -394,11 +387,29 @@ const double &QuadrupedRobot::getBaseWidth() const
   return base_width_;
 }
 
-const Eigen::Matrix3d &QuadrupedRobot::getFloatingBaseInertia()
+void QuadrupedRobot::getFloatingBasePositionInertia(Eigen::Matrix3d& M)
 {
-  getInertiaMatrix(M_);
-  Ifb_ = M_.block(3,3,3,3);
-  return Ifb_;
+  getInertiaMatrix(tmp_M_);
+  M = tmp_M_.block(3,3,3,3);
+}
+
+void QuadrupedRobot::getLimbInertia(const std::string& limb_name, Eigen::MatrixXd& M)
+{
+  getInertiaMatrix(tmp_M_);
+  int n = static_cast<int>(joint_limb_idx_[limb_name].size());
+  int idx = joint_limb_idx_[limb_name][0];
+  M = tmp_M_.block(idx,idx,n,n);
+}
+
+void QuadrupedRobot::getLimbInertiaInverse(const std::string& limb_name, Eigen::MatrixXd& Mi)
+{
+  getInertiaMatrix(tmp_M_);
+  tmp_Mi_.setZero();
+  tmp_Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,tmp_M_.rows()-FLOATING_BASE_DOFS,tmp_M_.cols()-FLOATING_BASE_DOFS)
+      = tmp_M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,tmp_M_.rows()-FLOATING_BASE_DOFS,tmp_M_.cols()-FLOATING_BASE_DOFS).inverse();
+  int n = static_cast<int>(joint_limb_idx_[limb_name].size());
+  int idx = joint_limb_idx_[limb_name].at(0);
+  Mi = tmp_Mi_.block(idx,idx,n,n);
 }
 
 QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
@@ -410,11 +421,6 @@ bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
 {
   robot_state_ = state;
   return true;
-}
-
-const Eigen::Vector3d& QuadrupedRobot::getComPosition() const
-{
-  return com_;
 }
 
 };

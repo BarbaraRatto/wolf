@@ -50,7 +50,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     robot_model_->getJacobian(foot_names[i],J_);
     robot_model_->getPose(foot_names[i],world_T_foot_);
 
-    int idx = robot_model_->getLegJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
+    int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
 
     J_foot_ = J_.block<3,3>(0,idx);
 
