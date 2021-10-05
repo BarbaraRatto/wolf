@@ -147,8 +147,25 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     stacks_[WALKING]->getStack().insert(it, arm_aggregated);
   }
 
+  // Regularization and first update FIXME CLEANUP!
+  Eigen::Index n = id_->getSerializer()->getSize();
+  Eigen::VectorXd b_reg;
+  Eigen::MatrixXd A_reg;
+  Eigen::MatrixXd W_reg;
+  A_reg = Eigen::MatrixXd::Identity(n,n);
+  b_reg = Eigen::VectorXd::Zero(n);
+  W_reg = Eigen::MatrixXd::Identity(n,n);
+  unsigned int n_limbs = model_->getNumberArms() + model_->getNumberLegs();
+  unsigned int n_forces = 6 * n_limbs;
+  regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
+  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-6;
+  regularization_->setWeight(W_reg);
+
   for (auto& tmp_map : stacks_)
+  {
+    tmp_map.second->setRegularisationTask(regularization_);
     tmp_map.second->update(Eigen::VectorXd(1));
+  }
 
   x_.setZero(id_->getSerializer()->getSize());
 
@@ -256,9 +273,9 @@ void IDProblem::selectStack(const stacks_t& stack)
 
     if(solver_.get()!=nullptr)
       solver_.release();
-    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[current_stack_]->getStack(), stacks_[current_stack_]->getBounds(),1e3); //, 1e6);
-    // , OpenSoT::solvers::solver_back_ends::OSQP);
-    // , OpenSoT::solvers::solver_back_ends::eiQuadProg);
+    solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stacks_[current_stack_]->getStack(), stacks_[current_stack_]->getBounds(),1.0);
+    // ,OpenSoT::solvers::solver_back_ends::OSQP);
+    // ,OpenSoT::solvers::solver_back_ends::eiQuadProg);
     solver_lock_.unlock();
   }
 }
