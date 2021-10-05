@@ -9,16 +9,13 @@
 // ROS
 #include <wb_controller/CartesianTask.h>
 #include <wb_controller/JointsTask.h>
-#include <wb_controller/taskGenericConfig.h>
-#include <wb_controller/taskPosturalConfig.h>
-#include <wb_controller/taskCartesianConfig.h>
 
 // WB
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
 
-template <typename task_ptr_t, typename msg_t, typename config_t>
+template <typename task_ptr_t, typename msg_t>
 class TaskRosWrapperBase : public TaskRosWrapperInterface
 {
 
@@ -63,37 +60,10 @@ public:
 
         //ros::NodeHandle task_nh(nh.getNamespace()+"/"+task->getTaskID());
         ros::NodeHandle task_nh(task_id_);
-        server_.reset(new dynamic_reconfigure::Server<config_t>(task_nh));
-        server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
-    }
-
-    virtual void dynamicReconfigureCallback(config_t &config, uint32_t level)
-    {
-        switch(level)
-        {
-        case 0:
-            rt_lambda1_ = config.lambda1;
-            rt_lambda2_ = config.lambda2;
-            ROS_INFO_STREAM("Set lambda1 and lambda2 for task "<<task_id_<<" to "<<rt_lambda1_ << " and "<<rt_lambda2_);
-            break;
-        case 1:
-            if(config.weight_diag>=0)
-            {
-                rt_weight_diag_ = config.weight_diag;
-                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_id_<<" to "<<rt_weight_diag_);
-            }
-            else
-                ROS_WARN("Weight diagonal value has to be positive definite!");
-            break;
-        }
-    }
-
-    virtual void dynamicReconfigureUpdate()
-    {
-        default_config_.lambda1 = task_->getLambda();
-        default_config_.lambda2 = task_->getLambda2();
-        default_config_.weight_diag = task_->getWeight()(0,0); // Note: we take the first value of the diagonal.
-        if(server_) server_->updateConfig(default_config_);
+        server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(task_nh));
+        server_->registerVariable<double>("set_lambda_1",   *rt_lambda1_,    "set lambda 1"   ,0.0,1000.0);
+        server_->registerVariable<double>("set_lambda_2",   *rt_lambda2_,    "set lambda 2"   ,0.0,1000.0);
+        server_->registerVariable<double>("set_weight_diag",*rt_weight_diag_,"set weight diag",0.0,1000.0);
     }
 
     virtual void publish(const ros::Time& /*time*/) = 0;
@@ -113,19 +83,17 @@ public:
 
 protected:
 
-    std::shared_ptr<dynamic_reconfigure::Server<config_t>> server_;
-    config_t default_config_;
     std::shared_ptr<realtime_tools::RealtimePublisher<msg_t>> rt_pub_;
     task_ptr_t task_;
 };
 
-template <typename task_ptr_t, typename msg_t, typename config_t>
-class TaskRosWrapper : public TaskRosWrapperBase<task_ptr_t,msg_t,config_t>
+template <typename task_ptr_t, typename msg_t>
+class TaskRosWrapper : public TaskRosWrapperBase<task_ptr_t,msg_t>
 {
 public:
     TaskRosWrapper(ros::NodeHandle& nh, task_ptr_t task)
     {
-        TaskRosWrapperBase<task_ptr_t,msg_t,config_t>(nh,task);
+        TaskRosWrapperBase<task_ptr_t,msg_t>(nh,task);
     }
 };
 
@@ -133,14 +101,14 @@ public:
 
 // CARTESIAN - CARTESIAN
 template <>
-class TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>
-        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>
+class TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>
+        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>
 {
 
 public:
 
     TaskRosWrapper(ros::NodeHandle& nh, OpenSoT::tasks::acceleration::Cartesian::Ptr task):
-        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>(nh,task)
+        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>(nh,task)
     {
 
         Eigen::Affine3d actual_pose;
@@ -189,9 +157,30 @@ public:
         task_->setKp(Kp);
         task_->setKd(Kd);
 
-        position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff
+        position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff FIXME hardcoded
         position_reference_filter_.setTimeStep(wb_controller::_period);
+
+        //Kp(0,0) = config.kp_x;
+        //Kp(1,1) = config.kp_y;
+        //Kp(2,2) = config.kp_z;
+        //Kp(3,3) = config.kp_roll;
+        //Kp(4,4) = config.kp_pitch;
+        //Kp(5,5) = config.kp_yaw;
+        //
+        //Kd(0,0) = config.kd_x;
+        //Kd(1,1) = config.kd_y;
+        //Kd(2,2) = config.kd_z;
+        //Kd(3,3) = config.kd_roll;
+        //Kd(4,4) = config.kd_pitch;
+        //Kd(5,5) = config.kd_yaw;
+
+        server_->registerVariable<double>("kp_x", Kp(0,0), boost::bind(&TaskRosWrapper::setKpx,this,_1)  ,"Kp(0,0)", 0.0, 1000.0);
+
+
     }
+
+    void setKpx(double value) { *rt_Kp_.readFromNonRT()() = value };
+
 
     virtual void publish(const ros::Time& time) override
     {

@@ -169,8 +169,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     tasks_ros_[arm_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[arm_names_[i]]); // ARMS
     tasks_ros_[arm_names_[i]]->OPTIONS.set_ext_reference = true;
   }
-  for (auto& tmp_map : tasks_ros_)
-    tmp_map.second->dynamicReconfigureUpdate();
+  //for (auto& tmp_map : tasks_ros_)
+  //  tmp_map.second->dynamicReconfigureUpdate();
 
   selectStack(stacks_t::WALKING);
 }
