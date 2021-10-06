@@ -12,7 +12,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 {
 
   foot_names_    = model_->getFootNames();
-  arm_names_     = model_->getArmEndEffectorNames();
+  ee_names_      = model_->getEndEffectorNames();
   contact_names_ = model_->getContactNames();
 
   //
@@ -35,12 +35,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   }
   //   --------------------------
   ROS_INFO_NAMED(CLASS_NAME,"Initialize ARM tasks");
-  for(unsigned int i=0; i<arm_names_.size(); i++)
+  for(unsigned int i=0; i<ee_names_.size(); i++)
   {
-    arms_[arm_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(arm_names_[i], *model_, arm_names_[i],
+    arms_[ee_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(ee_names_[i], *model_, ee_names_[i],
                                                                                      BASE_LINK_FRAME_NAME, id_->getJointsAccelerationAffine());
-    arms_[arm_names_[i]]->setLambda(1.,1.);
-    arms_[arm_names_[i]]->setWeightIsDiagonalFlag(true);
+    arms_[ee_names_[i]]->setLambda(1.,1.);
+    arms_[ee_names_[i]]->setWeightIsDiagonalFlag(true);
   }
   //   --------------------------
   angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_,id_->getJointsAccelerationAffine());
@@ -130,14 +130,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                      / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
                      )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
-  if(arm_names_.size() > 0)
+  if(ee_names_.size() > 0)
   {
-    arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
-    //arm_aggregated_weighted = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
-    if(arm_names_.size() > 1)
+    arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[ee_names_[0]],arms_[ee_names_[0]]->getXSize());
+    //arm_aggregated_weighted = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[ee_names_[0]],arms_[ee_names_[0]]->getXSize());
+    if(ee_names_.size() > 1)
     {
-      for(unsigned int i=1;i<arm_names_.size();i++)
-        arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
+      for(unsigned int i=1;i<ee_names_.size();i++)
+        arm_aggregated = arm_aggregated + arms_[ee_names_[i]];
 
       //arm_aggregated_weighted = 50.0 * arm_aggregated%idx_XYZ + arm_aggregated%id_RPY;
     }
@@ -181,10 +181,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   for(unsigned int i=0; i<foot_names_.size(); i++)
     tasks_ros_[foot_names_[i]] = std::make_shared<CartesianWrapper>(nh,feet_[foot_names_[i]]); // FEET
-  for(unsigned int i=0; i<arm_names_.size(); i++)
+  for(unsigned int i=0; i<ee_names_.size(); i++)
   {
-    tasks_ros_[arm_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[arm_names_[i]]); // ARMS
-    tasks_ros_[arm_names_[i]]->OPTIONS.set_ext_reference = true;
+    tasks_ros_[ee_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[ee_names_[i]]); // ARMS
+    tasks_ros_[ee_names_[i]]->OPTIONS.set_ext_reference = true;
   }
   for (auto& tmp_map : tasks_ros_)
     tmp_map.second->dynamicReconfigureUpdate();
@@ -249,7 +249,7 @@ void IDProblem::selectStack(const stacks_t& stack)
 
     current_stack_ = stack;
 
-    if(arm_names_.size()>0)
+    if(ee_names_.size()>0)
     {
       std::string frame;
       if(stack == stacks_t::WALKING)
@@ -264,8 +264,8 @@ void IDProblem::selectStack(const stacks_t& stack)
         tmp_map.second->setBaseLink(frame);
         tmp_map.second->update(Eigen::VectorXd(1));
       }
-      //for (unsigned int i=0;i<arm_names_.size();i++)
-      //  tasks_ros_[arm_names_[i]]->reset();
+      //for (unsigned int i=0;i<ee_names_.size();i++)
+      //  tasks_ros_[ee_names_[i]]->reset();
     }
 
     for (auto& tmp_map : tasks_ros_)

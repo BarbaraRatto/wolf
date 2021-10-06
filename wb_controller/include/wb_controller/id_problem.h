@@ -258,7 +258,7 @@ private:
     std::mutex solver_lock_;
 
     std::vector<std::string> foot_names_;
-    std::vector<std::string> arm_names_;
+    std::vector<std::string> ee_names_;
     std::vector<std::string> contact_names_;
 
     Eigen::Affine3d tmp_affine3d_;
