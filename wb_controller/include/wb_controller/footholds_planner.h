@@ -309,6 +309,8 @@ private:
     PushRecovery::Ptr push_recovery_;
 
     Eigen::Affine3d tmp_affine3d_;
+    Eigen::Affine3d tmp_affine3d_1_;
+    Eigen::Affine3d tmp_matrix3d_;
 };
 
 } // namespace

@@ -56,11 +56,12 @@ void FootholdsPlanner::reset()
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = step_height_;
 
-    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_);
-    desired_foothold_[foot_names[i]]    = base_T_foot_.translation();
-    virtual_foothold_[foot_names[i]]    = base_T_foot_.translation();
-    current_foothold_hf_[foot_names[i]] = hf_R_base_ * base_T_foot_.translation();
-    current_foothold_[foot_names[i]]    = base_T_foot_.translation();
+    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_foot
+    tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base
+    desired_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
+    virtual_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
+    current_foothold_hf_[foot_names[i]] = tmp_matrix3d_ * tmp_affine3d_.translation();
+    current_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
   }
 
   resetVelocyScales();
@@ -380,10 +381,11 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
+      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,tmp_affine3d_1_); // base_T_foot_
       robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_hip
+      tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base_
       // initial feet offsets in the horizontal frame
-      hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
+      hf_X_initial_footholds_[i] = tmp_matrix3d_ * tmp_affine3d_1_.translation();
       // initial hip positions, we assume the base starts horizontal (TODO)
       hf_X_initial_hips_[i] = tmp_affine3d_.translation();
     }
