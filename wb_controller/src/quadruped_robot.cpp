@@ -308,7 +308,6 @@ Eigen::Affine3d& QuadrupedRobot::getFootPoseInBase(const std::string& name)
   return base_T_foot_[name];
 }
 
-
 const double& QuadrupedRobot::getHfYawInWorld() const
 {
   return yaw_base_;
