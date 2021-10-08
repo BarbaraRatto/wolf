@@ -6,6 +6,8 @@
 #include <ModelInterfaceRBDL/ModelInterfaceRBDL.h>
 // STD
 #include <memory>
+#include <atomic>
+
 
 namespace wb_controller
 {
