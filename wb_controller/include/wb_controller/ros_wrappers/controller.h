@@ -3,7 +3,6 @@
 
 // ROS
 #include <ros/ros.h>
-#include <dynamic_reconfigure/server.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <realtime_tools/realtime_buffer.h>
@@ -14,7 +13,6 @@
 #include <wb_controller/utils.h>
 
 // ROS
-#include <wb_controller/controllerConfig.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/FootHolds.h>
 #include <wb_controller/TerrainEstimation.h>
@@ -154,90 +152,28 @@ public:
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
 
-        // Set the callback for the dynamic reconfigure server
-        server_.reset(new dynamic_reconfigure::Server<wb_controller::controllerConfig>(controller_nh));
-        server_->setCallback(boost::bind(&ControllerRosWrapper::dynamicReconfigureCallback, this, _1, _2));
-    }
+        server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
+        server_->registerVariable<bool>("activate_solver",controller_->isSolverActive(),boost::bind(&wb_controller::Controller::startSolver,controller_,_1),"activate solver");
+        server_->registerVariable<bool>("activate_inertia_compensation",controller_->isInertiaCompensationActive(),boost::bind(&wb_controller::Controller::startInertiaCompensation,controller_,_1),"activate inertia compensation");
+        server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wb_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
 
-    void dynamicReconfigureCallback(wb_controller::controllerConfig &config, uint32_t level)
-    {
-        switch(level)
-        {
-        case 0:
-            controller_->toggleSolver();
-            break;
-        case 1:
-            controller_->toggleInertiaCompensation();
-            break;
-        case 2:
-            controller_->getFootholdsPlanner()->togglePushRecovery();
-            break;
-        case 3:
-            controller_->setDutyFactor(config.duty_factor);
-            break;
-        case 4:
-            controller_->setGaitType(config.gaits);
-            break;
-        case 5:
-            controller_->setSwingFrequency(config.swing_frequency);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set swing frequency to "<< config.swing_frequency);
-            break;
-        case 6:
-            controller_->getFootholdsPlanner()->setLinearVelocityCmd(config.base_linear_vel);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< config.base_linear_vel);
-            break;
-        case 7:
-            controller_->getFootholdsPlanner()->setAngularVelocityCmd(config.base_angular_vel);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< config.base_angular_vel);
-            break;
-        case 8:
-            controller_->getFootholdsPlanner()->setStepHeight(config.step_height);
-             ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set step height to "<< config.step_height);
-            break;
-        case 9:
-            controller_->getStateEstimator()->setContactThreshold(config.contact_force_th);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set contact force threshold to "<< config.contact_force_th);
-            break;
-        case 10:
-            controller_->getLegsKinematics()->setClikGain(config.clik_gain);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set x err gain at "<< config.clik_gain);
-            break;
-        case 11:
-            controller_->selectStack(config.stacks);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected stack "<< config.stacks);
-            break;
-        default:
-            break;
-        }
-    }
+        server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wb_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
+        server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wb_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);
+        server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wb_controller::FootholdsPlanner::setLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wb_controller::FootholdsPlanner::setAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
+        server_->registerVariable<double>("set_step_height",default_step_height,boost::bind(&wb_controller::FootholdsPlanner::setStepHeight,controller_->getFootholdsPlanner(),_1),"set step height",0.0,max_step_height);
+        server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wb_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,100.0);
+        server_->registerVariable<double>("set_click_gain",controller_->getLegsKinematics()->getClikGain(),boost::bind(&wb_controller::LegsKinematics::setClikGain,controller_->getLegsKinematics(),_1),"set CLIK gain",0.0,1000.0);
 
-    void dynamicReconfigureUpdate()
-    {
+        server_->registerEnumVariable<std::string>("select_gait","TROT",
+                                                   boost::bind(&wb_controller::Controller::selectGait,controller_,_1),
+                                                   "select gait", {{"TROT","TROT"},{"CRAWL","CRAWL"}});
 
-        default_config_.stacks = "WALKING";
+        server_->registerEnumVariable<std::string>("select_stack","WALKING",
+                                                   boost::bind(&wb_controller::Controller::selectStack,controller_,_1),
+                                                   "select stack", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
 
-        if(controller_->getGaitGenerator())
-        {
-            default_config_.gaits = controller_->getGaitGenerator()->getGaitTypeName();
-            default_config_.swing_frequency = controller_->getGaitGenerator()->getAvgSwingFrequency();
-            default_config_.duty_factor = controller_->getGaitGenerator()->getAvgDutyFactor();
-        }
-        if(controller_->getFootholdsPlanner())
-        {
-            default_config_.base_linear_vel = controller_->getFootholdsPlanner()->getLinearVelocityCmd();
-            default_config_.base_angular_vel = controller_->getFootholdsPlanner()->getAngularVelocityCmd();
-            default_config_.step_height = controller_->getFootholdsPlanner()->getStepHeight();
-        }
-        if(controller_->getStateEstimator())
-            default_config_.contact_force_th = controller_->getStateEstimator()->getContactThreshold();
-
-        if(controller_->getLegsKinematics())
-        {
-            default_config_.clik_gain = controller_->getLegsKinematics()->getClikGain();
-        }
-
-        if(server_)
-            server_->updateConfig(default_config_);
+        server_->publishServicesTopics();
     }
 
     virtual void publish(const ros::Time& time)
@@ -322,14 +258,10 @@ public:
           friction_cones_pub_->msg_.header.stamp = time;
           friction_cones_pub_->unlockAndPublish();
       }
-
-
     };
 
 protected:
 
-    std::shared_ptr<dynamic_reconfigure::Server<wb_controller::controllerConfig>> server_;
-    wb_controller::controllerConfig default_config_;
     /** @brief Real time publisher - contact forces */
     std::shared_ptr<realtime_tools::RealtimePublisher<wb_controller::ContactForces>> contact_forces_pub_;
     /** @brief Real time publisher - foot holds */

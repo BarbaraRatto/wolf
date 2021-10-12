@@ -105,6 +105,16 @@ public:
     void toggleSolver();
 
     /**
+         * @brief Start/Stop solver integration
+         */
+    void startSolver(const bool& start);
+
+    /**
+         * @brief get the flag value for the solver
+         */
+    bool isSolverActive() const;
+
+    /**
          * @brief Start/Stop the base height control
          */
     void toggleBaseHeightControl();
@@ -115,16 +125,20 @@ public:
     void toggleInertiaCompensation();
 
     /**
+         * @brief Start/Stop the inertia compensation at the leg level, useful if the robot has very low inertia at the knee joints
+         */
+    void startInertiaCompensation(const bool& start);
+
+    /**
+         * @brief get the flag value for the inertia compensation
+         */
+    bool isInertiaCompensationActive() const;
+
+    /**
          * @brief Set the duty factor for the feet
          * @param const double duty_factor
          */
     bool setDutyFactor(const double& duty_factor);
-
-    /**
-         * @brief Set the gait type
-         * @param const std::string& gait_type
-         */
-    bool setGaitType(const std::string& gait_type);
 
     /**
          * @brief Set the swing frequency
@@ -135,12 +149,22 @@ public:
     /**
          * @brief Select the stack to use
          */
-    bool selectStack(const std::string &stack);
+    bool selectStack(const std::string& stack);
 
     /**
          * @brief Switch between WALKING and MANIPULATION stack
          */
     void switchStack();
+
+    /**
+         * @brief Select the gait to use
+         */
+    bool selectGait(const std::string& gait);
+
+    /**
+         * @brief Switch between TROT and CRAWL gait
+         */
+    void switchGait();
 
     /**
          * @brief Get desired contact forces
@@ -296,7 +320,7 @@ private:
     bool use_contact_sensors_;
 
     /** @brief True if the solver is started */
-    std::atomic<bool> solver_started_;
+    std::atomic<bool> solver_active_;
     /** @brief True if the initialization phase is done */
     std::atomic<bool> init_done_;
     /** @brief True if the pid control is active */

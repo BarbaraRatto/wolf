@@ -104,9 +104,12 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 void LegsKinematics::setClikGain(const double& clik_gain)
 {
   if(clik_gain < 0.0) // Check if it is ok
-      ROS_WARN_NAMED(CLASS_NAME,"Clik gain has to be positive!");
+      ROS_WARN_NAMED(CLASS_NAME,"CLIK gain has to be positive!");
   else
+  {
      clik_gain_ = clik_gain;
+     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set CLIK gain at "<< clik_gain);
+  }
 }
 
 double LegsKinematics::getClikGain()
