@@ -202,6 +202,11 @@ public:
     LegsKinematics* getLegsKinematics() const;
 
     /**
+         * @brief Get the legs impedance pointer
+         */
+    LegsImpedance* getLegsImpedance() const;
+
+    /**
          * @brief Get the terrain estimator pointer
          */
     TerrainEstimator* getTerrainEstimator() const;
@@ -210,11 +215,6 @@ public:
          * @brief Get Robot Model
          */
     QuadrupedRobot* getRobotModel() const;
-
-
-
-    // FIXME To be moved in a class handling the computation for impedances
-    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
 
 private:
 

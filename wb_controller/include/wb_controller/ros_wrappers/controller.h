@@ -22,6 +22,7 @@
 #include <wb_controller/controller.h>
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/geometry.h>
+#include <wb_controller/utils.h>
 
 class ControllerRosWrapper : public RosWrapperInterface
 {
@@ -127,6 +128,43 @@ public:
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
 
+        // Getting Kp and Kd gains
+        Eigen::Vector3d Kp_swing_leg, Kd_swing_leg, Kp_stance_leg, Kd_stance_leg;
+        Kp_swing_leg = Kd_swing_leg = Kp_stance_leg = Kd_stance_leg = Eigen::Vector3d::Identity();
+        for(unsigned int i=0; i<wb_controller::_joints_prefix.size(); i++)
+        {
+          if (!controller_nh.getParam("gains/kp_swing/" + wb_controller::_joints_prefix[i] , Kp_swing_leg(i)))
+          {
+            ROS_WARN_NAMED(CLASS_NAME,"No default kp_swing_%s gain given in the namespace: %s using 1.0 gain.",wb_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+          }
+          if (!controller_nh.getParam("gains/kd_swing/" + wb_controller::_joints_prefix[i] , Kd_swing_leg(i)))
+          {
+            ROS_WARN_NAMED(CLASS_NAME,"No default kd_swing_%s gain given in the namespace: %s using 1.0 gain. ",wb_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+          }
+          if (!controller_nh.getParam("gains/kp_stance/" + wb_controller::_joints_prefix[i] , Kp_stance_leg(i)))
+          {
+            ROS_WARN_NAMED(CLASS_NAME,"No default kp_stance_%s gain given in the namespace: %s using 1.0 gain. ",wb_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+          }
+          if (!controller_nh.getParam("gains/kd_stance/" + wb_controller::_joints_prefix[i] , Kd_stance_leg(i)))
+          {
+            ROS_WARN_NAMED(CLASS_NAME,"No default kd_stance_%s gain given in the namespace: %s using 1.0 gain. ",wb_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+          }
+          // Check if the values are positive
+          if(Kp_swing_leg(i)<0.0 || Kd_swing_leg(i)<0.0 || Kp_stance_leg(i)<0.0 || Kd_stance_leg(i)<0.0)
+          {
+            ROS_WARN_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
+            Kp_swing_leg(i) = Kd_swing_leg(i) = Kp_stance_leg(i) = Kd_stance_leg(i) = 1.0;
+          }
+        }
+        controller_ptr->getLegsImpedance()->setSwingStanceGains(Kp_swing_leg,Kd_swing_leg,Kp_stance_leg,Kd_stance_leg);
+
+        double default_clik_gain = 0.0; // Default value
+        if (!controller_nh.getParam("gains/clik_gain", default_clik_gain))
+        {
+          ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
+        }
+        controller_ptr->getLegsKinematics()->setClikGain(default_clik_gain);
+
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
@@ -172,6 +210,20 @@ public:
         server_->registerEnumVariable<std::string>("select_stack","WALKING",
                                                    boost::bind(&wb_controller::Controller::selectStack,controller_,_1),
                                                    "select stack", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
+
+        server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kp_swing_kfe",Kp_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kp swing KFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kd_swing_haa",Kd_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kd swing HAA gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kd_swing_hfe",Kd_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kd swing HFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kd_swing_kfe",Kd_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kd swing KFE gain",0.0,1000.0,"LegsImpedance");
+
+        server_->registerVariable<double>("set_kp_stance_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kp stance HAA gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kp_stance_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kp stance HFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kp_stance_kfe",Kp_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kp stance KFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kd_stance_haa",Kd_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kd stance HAA gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kd_stance_hfe",Kd_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kd_stance_kfe",Kd_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,"LegsImpedance");
 
         server_->publishServicesTopics();
     }

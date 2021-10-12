@@ -158,48 +158,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     //pids_[i].initDynamicReconfig(controller_nh); // FIXME change namespace for the pids
   }
 
-  Kd_swing_leg_.setZero();
-  Kp_swing_leg_.setZero();
-  Kd_stance_leg_.setZero();
-  Kp_stance_leg_.setZero();
-
-  // Getting Kp and Kd gains
-  for(unsigned int i=0; i<_joints_prefix.size(); i++)
-  {
-    if (!controller_nh.getParam("gains/kp_swing/" + _joints_prefix[i] , Kp_swing_leg_(i,i)))
-    {
-      ROS_ERROR_NAMED(CLASS_NAME,"No kp_swing_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-      return false;
-    }
-    if (!controller_nh.getParam("gains/kd_swing/" + _joints_prefix[i] , Kd_swing_leg_(i,i)))
-    {
-      ROS_ERROR_NAMED(CLASS_NAME,"No kd_swing_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-      return false;
-    }
-    if (!controller_nh.getParam("gains/kp_stance/" + _joints_prefix[i] , Kp_stance_leg_(i,i)))
-    {
-      ROS_ERROR_NAMED(CLASS_NAME,"No kp_stance_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-      return false;
-    }
-    if (!controller_nh.getParam("gains/kd_stance/" + _joints_prefix[i] , Kd_stance_leg_(i,i)))
-    {
-      ROS_ERROR_NAMED(CLASS_NAME,"No kd_stance_%s gain given in the namespace: %s. ",_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-      return false;
-    }
-    // Check if the values are positive
-    if(Kp_swing_leg_(i,i)<0.0 || Kd_swing_leg_(i,i)<0.0 || Kp_stance_leg_(i,i)<0.0 || Kd_stance_leg_(i,i)<0.0)
-    {
-      ROS_ERROR_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
-      return false;
-    }
-  }
-
-  double default_clik_gain = 0.0; // Default value
-  if (!controller_nh.getParam("gains/clik_gain", default_clik_gain))
-  {
-    ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
-  }
-
   // Resize the variables
   joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
   joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -230,7 +188,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
 
   legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_));
-  legs_kinematics_->setClikGain(default_clik_gain);
   legs_kinematics_->activateBaseHeightControl();
   des_joint_positions_ = legs_kinematics_->getJointHomePositions();
 
@@ -541,7 +498,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
   }
 
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  const std::vector<std::string>& leg_names  = robot_model_->getLegNames();
 
   if(use_contact_sensors_)
     for(unsigned int i = 0; i<foot_names.size(); i++)
@@ -595,7 +551,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
     legs_impedance_->startInertiaCompensation(inertia_compensation_active_);
-    legs_impedance_->update(Kp_swing_leg_,Kp_stance_leg_,Kd_swing_leg_,Kd_stance_leg_);
+    legs_impedance_->update();
 
     for(unsigned int i = 0; i<foot_names.size(); i++)
     {
@@ -774,6 +730,11 @@ TerrainEstimator* Controller::getTerrainEstimator() const
 LegsKinematics* Controller::getLegsKinematics() const
 {
   return legs_kinematics_.get();
+}
+
+LegsImpedance* Controller::getLegsImpedance() const
+{
+  return legs_impedance_.get();
 }
 
 QuadrupedRobot* Controller::getRobotModel() const
