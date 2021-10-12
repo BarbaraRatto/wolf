@@ -81,22 +81,13 @@ public:
 
     const std::string& getOrientationEstimationType();
 
-    void setContactForces(const std::string &name, const Eigen::Vector3d force);
+    void setContactForces(const std::string &name, const Eigen::Vector3d &force);
 
     const std::map<std::string,Eigen::Vector3d>& getContactForces() const;
 
     const std::map<std::string,bool>& getContacts() const;
 
-    const std::map<std::string,Eigen::Vector3d>& getFeetPositionInWorld() const;
-
-    const std::map<std::string,Eigen::Vector3d>& getFeetPositionInBase() const;
-
-    const std::map<std::string,Eigen::Affine3d>& getFeetPoseInWorld() const;
-
-    const std::map<std::string,Eigen::Affine3d>& getFeetPoseInBase() const;
-
     const std::map<std::string, Eigen::Vector3d>& getContactPositionInWorld() const;
-
     void startContactsEstimation();
 
     void stopContactsEstimation();
@@ -108,8 +99,6 @@ public:
     void stopHapticContactLoop();
 
     void resetGyroscopeIntegration();
-
-    double getRobotMass();
 
 private:
 
@@ -160,22 +149,6 @@ private:
     XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
     /** @brief Contact estimation */
     std::map<std::string,XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
-    /** @brief Foot positions w.r.t base */
-    std::map<std::string,Eigen::Vector3d> base_X_foot_;
-    /** @brief Foot positions w.r.t world */
-    std::map<std::string,Eigen::Vector3d> world_X_foot_;
-    /** @brief Foot pose w.r.t base */
-    std::map<std::string,Eigen::Affine3d> base_T_foot_;
-    /** @brief Foot pose w.r.t world */
-    std::map<std::string,Eigen::Affine3d> world_T_foot_;
-    /** @brief Arm positions w.r.t base */
-    std::map<std::string,Eigen::Vector3d> base_X_arm_;
-    /** @brief Arm positions w.r.t world */
-    std::map<std::string,Eigen::Vector3d> world_X_arm_;
-    /** @brief Arm pose w.r.t base */
-    std::map<std::string,Eigen::Affine3d> base_T_arm_;
-    /** @brief Arm pose w.r.t world */
-    std::map<std::string,Eigen::Affine3d> world_T_arm_; 
     /** @brief Contact positions w.r.t world */
     std::map<std::string,Eigen::Vector3d> world_X_contact_;
     /** @brief GRF contacts */
@@ -204,8 +177,6 @@ private:
 
     /** @brief Reset the gyroscope integration */
     bool reset_gyro_integration_done_;
-
-    Eigen::Vector3d com_;
 
     Eigen::Matrix3d tmp_matrix3d_;
 

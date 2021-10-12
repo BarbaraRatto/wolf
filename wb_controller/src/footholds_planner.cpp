@@ -56,11 +56,12 @@ void FootholdsPlanner::reset()
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = step_height_;
 
-    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,base_T_foot_);
-    desired_foothold_[foot_names[i]]    = base_T_foot_.translation();
-    virtual_foothold_[foot_names[i]]    = base_T_foot_.translation();
-    current_foothold_hf_[foot_names[i]] = hf_R_base_ * base_T_foot_.translation();
-    current_foothold_[foot_names[i]]    = base_T_foot_.translation();
+    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_foot
+    tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base
+    desired_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
+    virtual_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
+    current_foothold_hf_[foot_names[i]] = tmp_matrix3d_ * tmp_affine3d_.translation();
+    current_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
   }
 
   resetVelocyScales();
@@ -86,8 +87,8 @@ void FootholdsPlanner::update(const double& period) // OpenLoop
 
 void FootholdsPlanner::initializeFootPosition(const std::string& foot_name)
 {
-  robot_model_->getPose(foot_name,world_T_foot_);
-  gait_generator_->setInitialPose(foot_name,world_T_foot_);
+  robot_model_->getPose(foot_name,tmp_affine3d_); // world_T_foot
+  gait_generator_->setInitialPose(foot_name,tmp_affine3d_);
 }
 
 void FootholdsPlanner::initializeFeetPosition()
@@ -104,23 +105,8 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
   ROS_DEBUG_NAMED(CLASS_NAME,"update");
 
-  robot_model_->getPose(BASE_LINK_FRAME_NAME,world_T_base_);
-
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.translation()" << world_T_base_.translation());
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base_.linear()" << world_T_base_.linear());
-
-  world_R_hf_ = Eigen::Matrix3d::Identity();
-  yaw_base_ = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
-  world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
-
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base_" << yaw_base_);
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf_" << world_R_hf_);
-
-  world_R_base_ = world_T_base_.linear();
-  hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
-
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base_" << world_R_base_);
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base_" << hf_R_base_);
+  world_R_hf_ = robot_model_->getHfRotationInWorld();
+  hf_R_base_  = robot_model_->getBaseRotationInHf();
 
   setInitialOffsets();
 
@@ -266,7 +252,7 @@ void FootholdsPlanner::calculateFootSteps()
       current_foothold_hf_[foot_names[i]] = hf_X_current_foothold_;
 
       steps_length_[foot_names[i]]         = step_length_;
-      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + yaw_base_;
+      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getHfYawInWorld();
       steps_height_[foot_names[i]]         = step_height_;
       steps_heading_rate_[foot_names[i]]   = hf_base_angular_velocity_(2);
 
@@ -395,12 +381,13 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,base_T_foot_);
-      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,base_T_hip_);
+      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,tmp_affine3d_1_); // base_T_foot_
+      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_hip
+      tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base_
       // initial feet offsets in the horizontal frame
-      hf_X_initial_footholds_[i] = hf_R_base_ * base_T_foot_.translation();
+      hf_X_initial_footholds_[i] = tmp_matrix3d_ * tmp_affine3d_1_.translation();
       // initial hip positions, we assume the base starts horizontal (TODO)
-      hf_X_initial_hips_[i] = base_T_hip_.translation();
+      hf_X_initial_hips_[i] = tmp_affine3d_.translation();
     }
 
     offsets_applied_ = true;
@@ -657,21 +644,6 @@ bool FootholdsPlanner::areAllFeetInStance()
 const std::vector<std::string>& FootholdsPlanner::getFootNames() const
 {
   return gait_generator_->getFootNames();
-}
-
-const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInWorld() const
-{
-  return world_R_base_;
-}
-
-const Eigen::Matrix3d &FootholdsPlanner::getBaseRotationInHf() const
-{
-  return hf_R_base_;
-}
-
-const Eigen::Matrix3d &FootholdsPlanner::getHfRotationInWorld() const
-{
-  return world_R_hf_;
 }
 
 double FootholdsPlanner::getSwingFrequency()
