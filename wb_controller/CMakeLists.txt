@@ -62,7 +62,7 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp
-    src/legs_kinematics.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp)
+    src/legs_kinematics.cpp src/legs_impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp)
 add_dependencies(${PROJECT_NAME} ${wb_controller_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
 

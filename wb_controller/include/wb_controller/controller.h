@@ -25,6 +25,7 @@
 #include <wb_controller/quadruped_robot.h>
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/legs_kinematics.h>
+#include <wb_controller/legs_impedance.h>
 #include <wb_controller/footholds_planner.h>
 #include <wb_controller/com_planner.h>
 #include <wb_controller/state_estimator.h>
@@ -190,7 +191,6 @@ public:
 
     // FIXME To be moved in a class handling the computation for impedances
     Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
-    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
 
 private:
 
@@ -265,7 +265,9 @@ private:
     /** @brief Terrain Estimator */
     TerrainEstimator::Ptr terrain_estimator_;
     /** @brief Legs Kinematics */
-    LegsKinematics::Ptr kin_;
+    LegsKinematics::Ptr legs_kinematics_;
+    /** @brief LegsImpedance */
+    LegsImpedance::Ptr legs_impedance_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
     /** @brief Device handler */

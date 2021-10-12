@@ -200,14 +200,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
   }
 
-  // Initialize the inertia related matrices // FIXME
-  robot_model_->getInertiaMatrix(M_);
-  Mi_.setZero(3,3);
-  Kp_postural_.setIdentity(M_.rows(), M_.cols());
-  Kd_postural_.setIdentity(M_.rows(), M_.cols());
-
-  //Kp_postural_ = 30.0 * Kp_postural_;
-
   // Resize the variables
   joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
   joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -237,10 +229,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
 
-  kin_.reset(new LegsKinematics(gait_generator_,robot_model_));
-  kin_->setClikGain(default_clik_gain);
-  kin_->activateBaseHeightControl();
-  des_joint_positions_ = kin_->getJointHomePositions();
+  legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_));
+  legs_kinematics_->setClikGain(default_clik_gain);
+  legs_kinematics_->activateBaseHeightControl();
+  des_joint_positions_ = legs_kinematics_->getJointHomePositions();
+
+  legs_impedance_.reset(new LegsImpedance(gait_generator_,robot_model_));
 
   terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_,robot_model_));
   terrain_estimator_->setMaxRoll(M_PI);
@@ -331,7 +325,7 @@ void Controller::switchStack()
   if(id_prob_)
   {
     id_prob_->switchStack();
-    kin_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
+    legs_kinematics_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
     foot_holds_planner_->reset();
   }
   else
@@ -377,15 +371,15 @@ void Controller::toggleBaseHeightControl()
 {
   if(state_estimator_->getPositionEstimationType() == "estimated_z" || state_estimator_->getPositionEstimationType() == "ground_truth")
   {
-    kin_->toggleBaseHeightControl();
-    if(kin_->isBaseHeightControlActive())
+    legs_kinematics_->toggleBaseHeightControl();
+    if(legs_kinematics_->isBaseHeightControlActive())
       ROS_INFO_NAMED(CLASS_NAME,"Base height control is ON");
     else
       ROS_INFO_NAMED(CLASS_NAME,"Base height control is OFF");
   }
   else
   {
-    kin_->deactivateBaseHeightControl();
+    legs_kinematics_->deactivateBaseHeightControl();
     ROS_WARN_NAMED(CLASS_NAME,"Can not activate the base height control, the state estimator (%s) is not configured to do so!",state_estimator_->getPositionEstimationType().c_str());
   }
 }
@@ -525,9 +519,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
       foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
       foot_holds_planner_->initializeFeetPosition();
 
-      kin_->reset();
+      legs_kinematics_->reset();
 
-      des_joint_positions_ = kin_->getJointHomePositions();
+      des_joint_positions_ = legs_kinematics_->getJointHomePositions();
       des_joint_velocities_.fill(0.0);
 
       imu_gyroscope_filter_.setTimeStep(period_);
@@ -553,10 +547,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
+    legs_impedance_->startInertiaCompensation(inertia_compensation_active_);
+    legs_impedance_->update(Kp_swing_leg_,Kp_stance_leg_,Kd_swing_leg_,Kd_stance_leg_);
+
     for(unsigned int i = 0; i<foot_names.size(); i++)
     {
-
-      int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
 
       // Update the reference for the feet tasks, this is only used for visualization pourposes
       id_prob_->feet_[foot_names[i]]->setReference(gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i])); //FIXME
@@ -567,43 +562,28 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
       {
         id_prob_->swingWithFoot(foot_names[i]);
         ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
-
-        if(inertia_compensation_active_)
-        {
-          robot_model_->getLimbInertiaInverse(leg_names[i],Mi_);
-          Kp_postural_.block<3,3>(idx,idx) = Mi_ * Kp_swing_leg_;
-          Kd_postural_.block<3,3>(idx,idx) = Mi_ * Kd_swing_leg_;
-        }
-        else
-        {
-          Kp_postural_.block<3,3>(idx,idx) = Kp_swing_leg_;
-          Kd_postural_.block<3,3>(idx,idx) = Kd_swing_leg_;
-        }
       }
       else
       {
-        Kp_postural_.block<3,3>(idx,idx) = Kp_stance_leg_;
-        Kd_postural_.block<3,3>(idx,idx) = Kd_stance_leg_;
-
         id_prob_->stanceWithFoot(foot_names[i]);
         ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
       }
     }
 
-    id_prob_->postural_->setGains(Kp_postural_,Kd_postural_); // FIXME
+    id_prob_->postural_->setGains(legs_impedance_->getKp(),legs_impedance_->getKd());
 
     // Set the desired base height
-    kin_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
+    legs_kinematics_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
 
     // Set the feed forward stance term with the terrain adjustment
-    kin_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
+    legs_kinematics_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
 
     // Update the desired joint positions from the ik and set that to the postural
     // task
-    kin_->update(period.toSec(),joint_positions_);
+    legs_kinematics_->update(period.toSec(),joint_positions_);
 
-    des_joint_positions_ = kin_->getDesiredJointPositions();
-    des_joint_velocities_ = kin_->getDesiredJointVelocities();
+    des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
+    des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();
 
     id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
@@ -624,7 +604,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
   if(pid_active_)
   {
-    //des_joint_positions_ = joint_positions_; //kin_->getJointHomePositions();
+    //des_joint_positions_ = joint_positions_; //legs_kinematics_->getJointHomePositions();
     // Keep the old des joint position
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
@@ -746,7 +726,7 @@ TerrainEstimator* Controller::getTerrainEstimator() const
 
 LegsKinematics* Controller::getLegsKinematics() const
 {
-  return kin_.get();
+  return legs_kinematics_.get();
 }
 
 QuadrupedRobot* Controller::getRobotModel() const
