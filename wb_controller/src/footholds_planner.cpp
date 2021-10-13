@@ -394,6 +394,15 @@ void FootholdsPlanner::setInitialOffsets()
   }
 }
 
+void FootholdsPlanner::startPushRecovery(bool start)
+{
+  push_recovery_active_ = start;
+  if(push_recovery_active_)
+    push_recovery_->activateComputeDeltas();
+  else
+    push_recovery_->deactivateComputeDeltas();
+}
+
 void FootholdsPlanner::togglePushRecovery()
 {
   push_recovery_active_ = !push_recovery_active_;
@@ -401,6 +410,11 @@ void FootholdsPlanner::togglePushRecovery()
     push_recovery_->activateComputeDeltas();
   else
     push_recovery_->deactivateComputeDeltas();
+}
+
+bool FootholdsPlanner::isPushRecoveryActive() const
+{
+  return push_recovery_active_;
 }
 
 // Sets
@@ -429,32 +443,32 @@ void FootholdsPlanner::setDefaultBasePosition(const Eigen::Vector3d& position)
   default_base_position_ = position;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleX(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleX(const double& scale)
 {
   base_linear_velocity_scale_x_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleY(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleY(const double& scale)
 {
   base_linear_velocity_scale_y_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleZ(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleZ(const double& scale)
 {
   base_linear_velocity_scale_z_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleRoll(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleRoll(const double& scale)
 {
   base_angular_velocity_scale_roll_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScalePitch(const double scale)
+void FootholdsPlanner::setBaseVelocityScalePitch(const double& scale)
 {
   base_angular_velocity_scale_pitch_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleYaw(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleYaw(const double& scale)
 {
   base_angular_velocity_scale_yaw_ = scale;
 }
@@ -489,17 +503,19 @@ void FootholdsPlanner::setPushRecoveryGains(const double &k_x, const double &k_y
   push_recovery_->setGains(k_x,k_y,k_r);
 }
 
-void FootholdsPlanner::setLinearVelocityCmd(const double linear)
+void FootholdsPlanner::setLinearVelocityCmd(const double& linear)
 {
   base_linear_velocity_cmd_ = linear;
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< linear);
 }
 
-void FootholdsPlanner::setAngularVelocityCmd(const double angular)
+void FootholdsPlanner::setAngularVelocityCmd(const double& angular)
 {
   base_angular_velocity_cmd_ = angular;
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< angular);
 }
 
-void FootholdsPlanner::setStepHeight(const double height)
+void FootholdsPlanner::setStepHeight(const double& height)
 {
   if(height > step_height_max_) // Check if it is ok
   {
@@ -519,7 +535,7 @@ void FootholdsPlanner::setStepHeight(const double height)
   }
 }
 
-void FootholdsPlanner::setMaxStepHeight(const double max)
+void FootholdsPlanner::setMaxStepHeight(const double& max)
 {
   if(max >= 0.0) // Check if it is ok
   {
@@ -529,7 +545,7 @@ void FootholdsPlanner::setMaxStepHeight(const double max)
     ROS_WARN_NAMED(CLASS_NAME,"Max step height is less equal than: 0.0");
 }
 
-void FootholdsPlanner::setMaxStepLength(const double max)
+void FootholdsPlanner::setMaxStepLength(const double& max)
 {
   if(max >= 0.0) // Check if it is ok
   {
@@ -621,7 +637,7 @@ double FootholdsPlanner::getStepLength() const
   return step_length_;
 }
 
-const Gait::gait_t &FootholdsPlanner::getGaitType() const
+Gait::gait_t FootholdsPlanner::getGaitType() const
 {
   return gait_generator_->getGaitType();
 }
@@ -763,7 +779,8 @@ bool PushRecovery::update(const double& period)
   base_velocity_(1) = base_twist_(1);//com_vel_hf_(1);
   base_velocity_(2) = base_twist_(5);
 
-  I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * footholds_planner_ptr_->robot_model_->getFloatingBaseInertia();
+  footholds_planner_ptr_->robot_model_->getFloatingBasePositionInertia(I_world_);
+  I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * I_world_;
   base_inertia_z_ = I_hf_(2,2);
 
   // Filter the base velocity

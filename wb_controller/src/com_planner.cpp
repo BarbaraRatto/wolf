@@ -38,7 +38,8 @@ void ComPlanner::update(double /*dt*/)
 
   auto world_T_base = robot_model_->getBasePoseInWorld();
 
-  base_X_com_ = world_T_base.inverse() * robot_model_->getComPosition();
+  robot_model_->getCOM(com_);
+  base_X_com_ = world_T_base.inverse() * com_;
   p0_ = base_X_com_.head(2); // This should be defined w.r.t base
 
   foothold_planner_->setComCorrection(base_X_com_); // This is defined wrt base

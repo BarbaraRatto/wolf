@@ -50,7 +50,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     robot_model_->getJacobian(foot_names[i],J_);
     robot_model_->getPose(foot_names[i],world_T_foot_);
 
-    int idx = robot_model_->getLegJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
+    int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
 
     J_foot_ = J_.block<3,3>(0,idx);
 
@@ -104,9 +104,12 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 void LegsKinematics::setClikGain(const double& clik_gain)
 {
   if(clik_gain < 0.0) // Check if it is ok
-      ROS_WARN_NAMED(CLASS_NAME,"Clik gain has to be positive!");
+      ROS_WARN_NAMED(CLASS_NAME,"CLIK gain has to be positive!");
   else
+  {
      clik_gain_ = clik_gain;
+     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set CLIK gain at "<< clik_gain);
+  }
 }
 
 double LegsKinematics::getClikGain()
