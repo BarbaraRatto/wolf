@@ -81,7 +81,7 @@ public:
 
     const std::string& getOrientationEstimationType();
 
-    void setContactForces(const std::string &name, const Eigen::Vector3d force);
+    void setContactForces(const std::string &name, const Eigen::Vector3d &force);
 
     const std::map<std::string,Eigen::Vector3d>& getContactForces() const;
 

@@ -200,6 +200,18 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
   }
 
+  if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
+  {
+    ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
+    return false;
+  }
+  _period = period_;
+
+  if(!root_nh.getParam("/internal_wrench",use_contact_sensors_)) // Use the contact sensors
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
+  else
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
+
   // Initialize the inertia related matrices // FIXME
   robot_model_->getInertiaMatrix(M_);
   Mi_.setZero(M_.rows(), M_.cols());
@@ -253,20 +265,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   device_handler_.reset(new JoyHandler(controller_nh,this));
 
   // initialize the filters
-  cutoff_hz_gyro_ = 300.;
+  cutoff_hz_gyro_ = 300.; // FIXME Export
   cutoff_hz_qdot_ = 300.;
-
-  if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
-  {
-    ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
-    return false;
-  }
-  _period = period_;
-
-  if(!root_nh.getParam("/internal_wrench",use_contact_sensors_)) // Use the contact sensors
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
-  else
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
 
   qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
   qdot_filter_.setDamping(1.0);

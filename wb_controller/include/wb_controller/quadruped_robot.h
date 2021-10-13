@@ -6,6 +6,8 @@
 #include <ModelInterfaceRBDL/ModelInterfaceRBDL.h>
 // STD
 #include <memory>
+#include <atomic>
+
 
 namespace wb_controller
 {
@@ -37,7 +39,7 @@ public:
   const std::vector<std::string>& getLegNames() const;
   const std::vector<std::string>& getHipNames() const;
   const std::vector<std::string>& getJointNames() const;
-  const std::vector<std::string>& getArmEndEffectorNames() const;
+  const std::vector<std::string>& getEndEffectorNames() const;
   const std::vector<std::string>& getContactNames() const;
   const std::vector<std::string>& getLimbNames() const;
 
@@ -75,15 +77,15 @@ public:
   Eigen::Affine3d &getFootPoseInWorld(const std::string &name);
   Eigen::Affine3d &getFootPoseInBase(const std::string &name);
 
-  const std::map<std::string, Eigen::Vector3d> &getArmsPositionInWorld() const;
-  const std::map<std::string, Eigen::Vector3d> &getArmsPositionInBase() const;
-  const std::map<std::string, Eigen::Affine3d> &getArmsPoseInWorld() const;
-  const std::map<std::string, Eigen::Affine3d> &getArmsPoseInBase() const;
+  const std::map<std::string, Eigen::Vector3d> &getEndEffectorsPositionInWorld() const;
+  const std::map<std::string, Eigen::Vector3d> &getEndEffectorsPositionInBase() const;
+  const std::map<std::string, Eigen::Affine3d> &getEndEffectorsPoseInWorld() const;
+  const std::map<std::string, Eigen::Affine3d> &getEndEffectorsPoseInBase() const;
 
-  Eigen::Vector3d &getArmPositionInWorld(const std::string &name);
-  Eigen::Vector3d &getArmPositionInBase(const std::string &name);
-  Eigen::Affine3d &getArmPoseInWorld(const std::string &name);
-  Eigen::Affine3d &getArmPoseInBase(const std::string &name);
+  Eigen::Vector3d &getEndEffectorPositionInWorld(const std::string &name);
+  Eigen::Vector3d &getEndEffectorPositionInBase(const std::string &name);
+  Eigen::Affine3d &getEndEffectorPoseInWorld(const std::string &name);
+  Eigen::Affine3d &getEndEffectorPoseInBase(const std::string &name);
 
   const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
   const Eigen::Vector3d &getComPosition() const;
@@ -130,14 +132,14 @@ private:
   std::map<std::string,Eigen::Affine3d> base_T_foot_;
   /** @brief Foot pose w.r.t world */
   std::map<std::string,Eigen::Affine3d> world_T_foot_;
-  /** @brief Arm positions w.r.t base */
-  std::map<std::string,Eigen::Vector3d> base_X_arm_;
-  /** @brief Arm positions w.r.t world */
-  std::map<std::string,Eigen::Vector3d> world_X_arm_;
-  /** @brief Arm pose w.r.t base */
-  std::map<std::string,Eigen::Affine3d> base_T_arm_;
-  /** @brief Arm pose w.r.t world */
-  std::map<std::string,Eigen::Affine3d> world_T_arm_;
+  /** @brief Arm end-effector positions w.r.t base */
+  std::map<std::string,Eigen::Vector3d> base_X_ee_;
+  /** @brief Arm end-effector positions w.r.t world */
+  std::map<std::string,Eigen::Vector3d> world_X_ee_;
+  /** @brief Arm end-effector pose w.r.t base */
+  std::map<std::string,Eigen::Affine3d> base_T_ee_;
+  /** @brief Arm end-effector pose w.r.t world */
+  std::map<std::string,Eigen::Affine3d> world_T_ee_;
 
   Eigen::Vector3d com_;
 

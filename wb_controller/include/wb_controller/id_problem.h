@@ -2,6 +2,7 @@
 #define ID_PROBLEM_H
 
 // OpenSoT
+#include <OpenSoT/tasks/GenericTask.h>
 #include <OpenSoT/tasks/acceleration/Postural.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
@@ -161,6 +162,7 @@ public:
     OpenSoT::tasks::acceleration::Cartesian::Ptr waistZ_;
     OpenSoT::tasks::acceleration::CoM::Ptr com_;
     OpenSoT::tasks::acceleration::AngularMomentum::Ptr angular_momentum_;
+    OpenSoT::tasks::GenericTask::Ptr regularization_;
 
     /**
      * @brief Expose the tasks to ROS
@@ -256,7 +258,7 @@ private:
     std::mutex solver_lock_;
 
     std::vector<std::string> foot_names_;
-    std::vector<std::string> arm_names_;
+    std::vector<std::string> ee_names_;
     std::vector<std::string> contact_names_;
 
     Eigen::Affine3d tmp_affine3d_;
