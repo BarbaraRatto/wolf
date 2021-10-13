@@ -325,8 +325,6 @@ protected:
 
     wb_controller::Controller* controller_;
 
-private:
-
 };
 
 #endif // ROS_WRAPPERS_CONTROLLER_H

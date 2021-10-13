@@ -2,6 +2,7 @@
 #define LEGS_IMPEDANCE_H
 
 #include <memory>
+#include <atomic>
 #include <Eigen/Core>
 #include <wb_controller/gait_generator.h>
 
