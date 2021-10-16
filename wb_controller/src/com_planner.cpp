@@ -42,7 +42,7 @@ void ComPlanner::update(double /*dt*/)
   base_X_com_ = world_T_base.inverse() * com_;
   p0_ = base_X_com_.head(2); // This should be defined w.r.t base
 
-  foothold_planner_->setComCorrection(base_X_com_); // This is defined wrt base
+  //foothold_planner_->setComCorrection(base_X_com_); // This is defined wrt base
 
   base_velocity_ = foothold_planner_->getBaseLinearVelocityReference();
   base_velocity_xy_ = base_velocity_.head(2);
