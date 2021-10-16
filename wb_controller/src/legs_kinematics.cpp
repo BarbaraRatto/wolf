@@ -21,6 +21,10 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
 
+  I_ = Eigen::Matrix3d::Identity();
+  damp_max_ = 0.001;
+  determinant_max_ = 0.1;
+
   // Initializations
   reset();
   //des_joint_positions_.fill(0.0);
@@ -35,7 +39,6 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
   base_height_ = tmp_affine3d_.translation()(2);
   robot_model_->getFloatingBaseTwist(tmp_vector6d_);
   base_height_dot_ = tmp_vector6d_(2);
-
 
   des_joint_positions_ = current_joint_positions;
 
@@ -53,6 +56,9 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
 
     J_foot_ = J_.block<3,3>(0,idx);
+    J_foot_transp_ = J_foot_.transpose();
+    double damp = std::exp(-4.0/determinant_max_*std::abs(J_foot_.determinant()))*damp_max_;
+    J_foot_inv_ = J_foot_transp_ * (J_foot_ * J_foot_transp_ + damp*damp * I_).inverse();
 
     if(gait_generator_->isSwinging(foot_names[i]))
     {
@@ -64,7 +70,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
       xdot_swing_ff_ = gait_generator_->getReferenceDot(foot_names[i]).segment(0,3);
 
-      des_joint_velocities_.segment(idx,3) = J_foot_.inverse() * (xdot_swing_ff_ + clik_gain_ * x_err_);
+      des_joint_velocities_.segment(idx,3) = J_foot_inv_ * (xdot_swing_ff_ + clik_gain_ * x_err_);
 
       qswing_.segment(idx,3) = des_joint_velocities_.segment(idx,3) * period + qswing_.segment(idx,3);
 
@@ -88,7 +94,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
         x_err_dot_ << 0, 0, 0;
       }
 
-      qstance_.segment(idx,3) = J_foot_.inverse() * (xdot_stance_ff_ +  clik_gain_ * x_err_ + 2*std::sqrt(clik_gain_) * x_err_dot_) * period + qstance_.segment(idx,3);
+      qstance_.segment(idx,3) = J_foot_inv_ * (xdot_stance_ff_ +  clik_gain_ * x_err_ + 2*std::sqrt(clik_gain_) * x_err_dot_) * period + qstance_.segment(idx,3);
 
       des_joint_velocities_.segment(idx,3).fill(0.0);  // Don't generate velocities for the feet in stance
       des_joint_positions_.segment(idx,3) = qstance_.segment(idx,3);
