@@ -2,7 +2,7 @@ wb_controller:
   type: wb_controller/Controller
   default_duty_factor: 0.3
   default_swing_frequency: 4.5
-  default_contact_threshold: 40.0
+  default_contact_threshold: 30.0
   default_base_linear_velocity: 0.5
   default_base_angular_velocity: 0.5
   default_step_height: 0.08
@@ -18,7 +18,7 @@ wb_controller:
 
   gains:
 
-      clik_gain: 30.0
+      clik_gain: 5.0
 
       lf_haa_joint: {p: 100.0, i: 0.0, d: 5.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 8.0}
