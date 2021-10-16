@@ -80,8 +80,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     {
       // At the first cycle of stance, set the joints position at the current homing position
       // Note: this makes the ramp exp not working anymore!
-      if(gait_generator_->isTouchDown(foot_names[i]))
-         qstance_.segment(idx,3) = qhome_.segment(idx,3);
+      //if(gait_generator_->isTouchDown(foot_names[i]))
+      //   qstance_.segment(idx,3) = qhome_.segment(idx,3);
 
       if(base_height_control_active_)
       {
