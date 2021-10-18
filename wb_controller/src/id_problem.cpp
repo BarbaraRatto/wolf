@@ -205,6 +205,11 @@ void IDProblem::setFrictionConesMu(const double& mu)
     ROS_WARN_NAMED(CLASS_NAME,"Mu has to be between 0 and 1!");
 }
 
+double IDProblem::getFrictionConesMu() const
+{
+   return fc_.second;
+}
+
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
 {
    fc_.first = R;
