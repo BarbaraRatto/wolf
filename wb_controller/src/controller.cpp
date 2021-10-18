@@ -675,7 +675,7 @@ void Controller::odomPublisher()
     q.setZ(quaternion.z());
     q.setW(quaternion.w());
     transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link" , "/world" ));
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/" BASE_LINK_FRAME_NAME , "/world" ));
 
     // Create the tf transform between /ci/base_link and /base_link
     transform.setOrigin(tf::Vector3(0,0,0));
@@ -684,7 +684,7 @@ void Controller::odomPublisher()
     q.setZ(0);
     q.setW(1);
     transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/base_link", "/base_link"));
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/" BASE_LINK_FRAME_NAME, "/" BASE_LINK_FRAME_NAME));
 
     std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
 
