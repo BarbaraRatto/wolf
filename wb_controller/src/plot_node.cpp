@@ -323,6 +323,9 @@ protected:
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
         visual_tools_->deleteAllMarkers();
+        wb_controller::CartesianTask com_projection = msg;
+        com_projection.pose_actual.position.z = 0.0;
+        createSphere(com_projection.pose_actual.position,rviz_visual_tools::RED);
         createSphere(msg.pose_actual.position,rviz_visual_tools::GREEN);
         createArrow(msg.twist_reference.linear,msg.pose_actual.position,rviz_visual_tools::BLUE,1.0);
         _mtx.unlock();
