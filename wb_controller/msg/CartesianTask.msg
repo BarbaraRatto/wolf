@@ -5,3 +5,4 @@ geometry_msgs/Twist twist_actual
 geometry_msgs/Twist twist_reference
 geometry_msgs/Vector3 rpy_actual
 geometry_msgs/Vector3 rpy_reference
+float64 cost

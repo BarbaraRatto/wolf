@@ -98,6 +98,8 @@ public:
 
     virtual void reset() {};
 
+    virtual void computeCost(Eigen::VectorXd& x) {};
+
  protected:
 
     Eigen::VectorXd       tmp_vectorxd_;
@@ -125,6 +127,8 @@ public:
     std::atomic<double> rt_kd_roll_;
     std::atomic<double> rt_kd_pitch_;
     std::atomic<double> rt_kd_yaw_;
+
+    double cost_;
 
     std::string task_id_;
 

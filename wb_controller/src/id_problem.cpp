@@ -329,6 +329,7 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 {
   bool res_solv = false;
   bool res_id = false;
+
   if (solver_lock_.try_lock())
   {
     update();
@@ -337,6 +338,11 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
       res_id = id_->computedTorque(x_, tau, qddot_, contact_wrenches_);
     solver_lock_.unlock();
   }
+
+  // Update the costs
+  for (auto& tmp_map : tasks_ros_)
+    tmp_map.second->computeCost(x_);
+
   return (res_solv && res_id);
 }
 
