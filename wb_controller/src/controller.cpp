@@ -245,6 +245,54 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   return true;
 }
 
+bool Controller::setJointAccelerationLimit(const double& lim)
+{
+
+  if(id_prob_)
+  {
+    if(lim>=0.0)
+    {
+      id_prob_->setJointAccelerationAbsLim(lim);
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set joint acceleration limit to "<< lim);
+    }
+    else
+    {
+       ROS_WARN_NAMED(CLASS_NAME,"Lim has to be major than 0!");
+       return false;
+    }
+  }
+  else
+  {
+    ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
+    return false;
+  }
+  return true;
+}
+
+bool Controller::setFrictionConesMu(const double& mu)
+{
+
+  if(id_prob_)
+  {
+    if(mu>=0.0 && mu<=1.0)
+    {
+      id_prob_->setFrictionConesMu(mu);
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set mu to: "<<mu);
+    }
+    else
+    {
+       ROS_WARN_NAMED(CLASS_NAME,"Mu has to be between 0 and 1!");
+       return false;
+    }
+  }
+  else
+  {
+    ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
+    return false;
+  }
+  return true;
+}
+
 bool Controller::setSwingFrequency(const double& swing_frequency)
 {
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
@@ -591,9 +639,22 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
     // Get the solver solution
-    if(!id_prob_->solve(des_joint_efforts_solver_))
+    unsigned int error = id_prob_->solve(des_joint_efforts_solver_);
+    if(error)
     {
       ROS_WARN_NAMED(CLASS_NAME,"IDProblem::solve() skipping one step.");
+      switch(error)
+      {
+        case IDProblem::error_t::ID:
+          ROS_WARN_NAMED(CLASS_NAME,"Base wrench is not 0!");
+        break;
+        case IDProblem::error_t::LOCK:
+          ROS_WARN_NAMED(CLASS_NAME,"Try lock failure!");
+        break;
+        case IDProblem::error_t::SOLVER:
+          ROS_WARN_NAMED(CLASS_NAME,"Solver failure!");
+        break;
+      };
       des_joint_positions_ = joint_positions_;
       pid_active_ = true;
     }

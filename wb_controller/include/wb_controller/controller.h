@@ -141,6 +141,18 @@ public:
     bool setDutyFactor(const double& duty_factor);
 
     /**
+         * @brief Set absoulte value of the joint acceleration limits
+         * @param lim
+         */
+    bool setJointAccelerationLimit(const double &lim);
+
+    /**
+         * @brief Set the mu value for the friction cones
+         * @param mu [0,1]
+         */
+    bool setFrictionConesMu(const double &mu);
+
+    /**
          * @brief Set the swing frequency
          * @param const double& swing_frequency
          */
@@ -215,6 +227,7 @@ public:
          * @brief Get Robot Model
          */
     QuadrupedRobot* getRobotModel() const;
+
 
 private:
 

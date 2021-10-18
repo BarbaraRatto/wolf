@@ -225,6 +225,10 @@ public:
         server_->registerVariable<double>("set_kd_stance_hfe",Kd_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,"LegsImpedance");
         server_->registerVariable<double>("set_kd_stance_kfe",Kd_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,"LegsImpedance");
 
+        // FIXME!
+        server_->registerVariable<double>("set_joint_acc_lim",450.0,boost::bind(&wb_controller::Controller::setJointAccelerationLimit,controller_,_1),"set the joint acceleration limit",0.0,1000.0,"IDProblem");
+        server_->registerVariable<double>("set_mu",0.7,boost::bind(&wb_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,"IDProblem");
+
         server_->publishServicesTopics();
     }
 

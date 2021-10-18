@@ -101,6 +101,12 @@ public:
     void setFrictionConesR(const Eigen::Matrix3d& R);
 
     /**
+     * @brief set the absolute value for joint acceleration limits
+     * @param limit -> max = limit, min = -1.0 * lim
+     */
+    void setJointAccelerationAbsLim(const double &lim);
+
+    /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
      * @param lower bound values
      */
@@ -252,9 +258,15 @@ private:
     Eigen::Vector6d wrench_upper_lims_;
     Eigen::Vector6d wrench_lower_lims_;
 
+    /**
+     * @brief joint acceleration limits
+     */
+    Eigen::VectorXd joint_acceleration_abs_lims_;
+
     double x_force_lower_lim_;
     double y_force_lower_lim_;
     double z_force_lower_lim_;
+
 
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
