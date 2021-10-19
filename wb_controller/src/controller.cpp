@@ -213,6 +213,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
 
+  id_prob_.reset(new IDProblem(nh_,robot_model_));
+
   device_handler_.reset(new JoyHandler(controller_nh,this));
 
   // initialize the filters
@@ -405,7 +407,7 @@ void Controller::startSolver(const bool& start)
   if(!solver_created_)
   {
     ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-    id_prob_.reset(new IDProblem(nh_,robot_model_));
+    id_prob_->selectStack(IDProblem::stacks_t::WALKING);
     solver_created_ = true;
   }
 
@@ -430,7 +432,7 @@ void Controller::toggleSolver()
   if(!solver_created_)
   {
     ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-    id_prob_.reset(new IDProblem(nh_,robot_model_));
+    id_prob_->selectStack(IDProblem::stacks_t::WALKING);
     solver_created_ = true;
   }
 
@@ -639,22 +641,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
     // Get the solver solution
-    unsigned int error = id_prob_->solve(des_joint_efforts_solver_);
-    if(error)
+    if(!id_prob_->solve(des_joint_efforts_solver_))
     {
-      ROS_WARN_NAMED(CLASS_NAME,"IDProblem::solve() skipping one step.");
-      switch(error)
-      {
-        case IDProblem::error_t::ID:
-          ROS_WARN_NAMED(CLASS_NAME,"Base wrench is not 0!");
-        break;
-        case IDProblem::error_t::LOCK:
-          ROS_WARN_NAMED(CLASS_NAME,"Try lock failure!");
-        break;
-        case IDProblem::error_t::SOLVER:
-          ROS_WARN_NAMED(CLASS_NAME,"Solver failure!");
-        break;
-      };
       des_joint_positions_ = joint_positions_;
       pid_active_ = true;
     }

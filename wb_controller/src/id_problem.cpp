@@ -187,7 +187,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     tasks_ros_[ee_names_[i]]->OPTIONS.set_ext_reference = true;
   }
 
-  selectStack(stacks_t::WALKING);
+  //selectStack(stacks_t::WALKING);
 }
 
 IDProblem::~IDProblem()
@@ -338,7 +338,7 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 {
   bool res_solv = false;
   bool res_id = false;
-  if (solver_lock_.try_lock())
+  if (solver_ && solver_lock_.try_lock())
   {
     update();
     res_solv = solver_->solve(x_);
