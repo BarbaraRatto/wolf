@@ -186,8 +186,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     tasks_ros_[ee_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[ee_names_[i]]); // ARMS
     tasks_ros_[ee_names_[i]]->OPTIONS.set_ext_reference = true;
   }
-  for (auto& tmp_map : tasks_ros_)
-    tmp_map.second->dynamicReconfigureUpdate();
 
   selectStack(stacks_t::WALKING);
 }
@@ -205,6 +203,11 @@ void IDProblem::setFrictionConesMu(const double& mu)
   }
   else
     ROS_WARN_NAMED(CLASS_NAME,"Mu has to be between 0 and 1!");
+}
+
+double IDProblem::getFrictionConesMu() const
+{
+   return fc_.second;
 }
 
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
