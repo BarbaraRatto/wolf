@@ -77,6 +77,16 @@ public:
         if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+        } 
+        double default_joint_acceleration_lim = 450.0; // [rad/s^2]
+        if (!controller_nh.getParam("default_joint_acceleration_lim", default_joint_acceleration_lim))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default base joint acceleration limit given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_joint_acceleration_lim);
+        }
+        double default_friction_cones_mu = 0.7;
+        if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default friction cones mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
         }
 
         Eigen::Vector3d k, dynamic_th, static_th;
@@ -127,6 +137,9 @@ public:
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
+
+        controller_->getIDProblem()->setJointAccelerationAbsLim(default_joint_acceleration_lim);
+        controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 
         // Getting Kp and Kd gains
         Eigen::Vector3d Kp_swing_leg, Kd_swing_leg, Kp_stance_leg, Kd_stance_leg;
@@ -211,23 +224,22 @@ public:
                                                    boost::bind(&wb_controller::Controller::selectStack,controller_,_1),
                                                    "select stack", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
 
-        server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kp_swing_kfe",Kp_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kp swing KFE gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kd_swing_haa",Kd_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kd swing HAA gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kd_swing_hfe",Kd_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kd swing HFE gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kd_swing_kfe",Kd_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kd swing KFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kp_swing_kfe",Kp_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kp swing KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kd_swing_haa",Kd_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kd swing HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kd_swing_hfe",Kd_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kd swing HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kd_swing_kfe",Kd_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kd swing KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
 
-        server_->registerVariable<double>("set_kp_stance_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kp stance HAA gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kp_stance_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kp stance HFE gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kp_stance_kfe",Kp_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kp stance KFE gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kd_stance_haa",Kd_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kd stance HAA gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kd_stance_hfe",Kd_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,"LegsImpedance");
-        server_->registerVariable<double>("set_kd_stance_kfe",Kd_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,"LegsImpedance");
+        server_->registerVariable<double>("set_kp_stance_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kp stance HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kp_stance_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kp stance HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kp_stance_kfe",Kp_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKpStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kp stance KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kd_stance_haa",Kd_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kd stance HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kd_stance_hfe",Kd_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        server_->registerVariable<double>("set_kd_stance_kfe",Kd_swing_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
 
-        // FIXME!
-        server_->registerVariable<double>("set_joint_acc_lim",450.0,boost::bind(&wb_controller::Controller::setJointAccelerationLimit,controller_,_1),"set the joint acceleration limit",0.0,1000.0,"IDProblem");
-        server_->registerVariable<double>("set_mu",0.7,boost::bind(&wb_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,"IDProblem");
+        server_->registerVariable<double>("set_joint_acc_lim",controller_->getIDProblem()->getJointAccelerationAbsLim(),boost::bind(&wb_controller::Controller::setJointAccelerationLimit,controller_,_1),"set the joint acceleration limit",0.0,1000.0,controller_->getIDProblem()->CLASS_NAME);
+        server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wb_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
 
         server_->publishServicesTopics();
     }

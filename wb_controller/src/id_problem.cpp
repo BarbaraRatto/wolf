@@ -76,17 +76,17 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
 
   OpenSoT::constraints::force::FrictionCones::friction_cones fcs;
-  fc_.second = 0.7; // mu
+  fc_.second = 1.0; // mu
   fc_.first.setIdentity();
   for(unsigned int i = 0; i < foot_names_.size(); i++)
     fcs.push_back(fc_);
   friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_,fcs);
 
-  double default_acc_lim = 450.;
-  joint_acceleration_abs_lims_ = default_acc_lim*Eigen::VectorXd::Ones(model_->getJointNum());
+  joint_acceleration_lim_ = 1000.;
+  ones_ = Eigen::VectorXd::Ones(model_->getJointNum());
 
   qddot_lims_ = std::make_shared<OpenSoT::constraints::GenericConstraint>(
-        "acc_lims", id_->getJointsAccelerationAffine(), joint_acceleration_abs_lims_, -1.0 * joint_acceleration_abs_lims_, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
+        "acc_lims", id_->getJointsAccelerationAffine(), joint_acceleration_lim_ * ones_, -1.0 * joint_acceleration_lim_ * ones_, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
 
   x_force_lower_lim_ = -2000;
   y_force_lower_lim_ = -2000;
@@ -213,7 +213,12 @@ void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
 void IDProblem::setJointAccelerationAbsLim(const double& lim)
 {
    assert(lim>=0.0);
-   joint_acceleration_abs_lims_ = lim * joint_acceleration_abs_lims_.setOnes();
+   joint_acceleration_lim_ = lim;
+}
+
+double IDProblem::getJointAccelerationAbsLim()
+{
+   return joint_acceleration_lim_;
 }
 
 void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,const double& z_force)
@@ -310,7 +315,7 @@ void IDProblem::update()
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
 
-  qddot_lims_->setBounds(joint_acceleration_abs_lims_,-1.0*joint_acceleration_abs_lims_);
+  qddot_lims_->setBounds(joint_acceleration_lim_ * ones_,-1.0*joint_acceleration_lim_ * ones_);
 
   //Update the external lambda/references etc...
   for (auto& tmp_map : tasks_ros_)

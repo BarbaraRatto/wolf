@@ -107,6 +107,11 @@ public:
     void setJointAccelerationAbsLim(const double &lim);
 
     /**
+     * @brief get the absolute value for joint acceleration limits
+     */
+    double getJointAccelerationAbsLim();
+
+    /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
      * @param lower bound values
      */
@@ -261,7 +266,9 @@ private:
     /**
      * @brief joint acceleration limits
      */
-    Eigen::VectorXd joint_acceleration_abs_lims_;
+    Eigen::VectorXd ones_;
+    std::atomic<double> joint_acceleration_lim_;
+
 
     double x_force_lower_lim_;
     double y_force_lower_lim_;
