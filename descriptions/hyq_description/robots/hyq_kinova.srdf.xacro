@@ -2,6 +2,9 @@
 
 <robot name="hyq" xmlns:xacro="http://ros.org/wiki/xacro">
 
+ <group name="base">
+   <link name="base_link"/>
+ </group>
   <group name="kinova_arm">
     <chain base_link="kinova_link_base" tip_link="kinova_end_effector"/>
     <joint name="kinova_joint_1"/>
