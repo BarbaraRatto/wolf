@@ -1,6 +1,8 @@
 # TODO list
 
+- solver getting crazy and losing contacts?
 - push recovery tests
+- IK with joint limits
 - Remove sensors description
 - Debug c and delta_com... they don't seem to do anything useful
 - counterbalance the ROLL with the terrain estimator
@@ -15,7 +17,6 @@
 - State estimation
 - Experiments on the real robot
 - Merge 20.04
-- IK with joint limits
 - step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
