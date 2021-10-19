@@ -20,8 +20,8 @@
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">
-            <include file="$(eval find(arg('robot_name') + '_description') +'/launch/world.launch')">
-                <arg name="sensors" value="$(arg sensors)" />
+            <include file="$(find wb_controller)/launch/world.launch">
+                <arg name="robot_name" value="$(arg robot_name)" />
                 <arg name="internal_wrench" value="$(arg internal_wrench)" />
                 <arg name="world_name" value="$(arg world_name)" />
                 <arg name="task_period" value="$(arg task_period)" />
@@ -33,11 +33,11 @@
     </group>
 
     <group unless="$(arg gazebo)">
-        <include file="$(eval find(arg('robot_name') + '_description') +'/launch/upload.launch')">
-                <arg name="sensors" value="$(arg sensors)" />
-                <arg name="arm_enabled" value="$(arg arm_enabled)"/>
-                <arg name="arm_name" value="$(arg arm_name)"/>
-                <arg name="task_period" value="$(arg task_period)" />
+        <include file="$(find wb_controller)/launch/upload.launch">
+           <arg name="robot_name" value="$(arg robot_name)" />
+           <arg name="arm_enabled" value="$(arg arm_enabled)"/>
+           <arg name="arm_name" value="$(arg arm_name)"/>
+           <arg name="task_period" value="$(arg task_period)" />
         </include>
     </group>
 
