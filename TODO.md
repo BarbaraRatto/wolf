@@ -1,14 +1,14 @@
 # TODO list
 
+
 - solver getting crazy and losing contacts?
-- push recovery tests
-- IK with joint limits
-- Remove sensors description
+- Robustness tests when walking on rough terrain with push recovery
+- IK with joint limits / qhome
+- Export filters
 - Debug c and delta_com... they don't seem to do anything useful
 - counterbalance the ROLL with the terrain estimator
 - Remove postural for the arm!!!!
 - collision avoidance
-- Move terrain estimator inside state estimator as a subclass
 - Clean wb_robot_hw, parse hardcoded info from urdf/srdf
 - Move odom thread to state_estimator
 - add trajectory for arm
