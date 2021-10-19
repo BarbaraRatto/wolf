@@ -42,6 +42,7 @@ public:
   const std::vector<std::string>& getEndEffectorNames() const;
   const std::vector<std::string>& getContactNames() const;
   const std::vector<std::string>& getLimbNames() const;
+  const std::string& getBaseLinkName() const;
 
   const std::vector<int>& getLimbJointsIds(const std::string& limb_name);
 
@@ -100,6 +101,7 @@ private:
   std::vector<std::string> ee_names_; // end-effector names
   std::vector<std::string> contact_names_; // foot + arm names
   std::vector<std::string> limb_names_; // chain names
+  std::string base_name_;
 
   limb_joint_idxs_map_t joint_limb_idx_;
 
