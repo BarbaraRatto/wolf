@@ -176,7 +176,7 @@ public:
 
         unsigned int n_feet = controller_->getRobotModel()->getNumberLegs();
         foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::FootHolds>(controller_nh, "foot_holds", 4));
-        foot_holds_pub_->msg_.header.frame_id = BASE_LINK_FRAME_NAME;
+        foot_holds_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         foot_holds_pub_->msg_.name.resize(n_feet);
         foot_holds_pub_->msg_.desired_foothold.resize(n_feet);
         foot_holds_pub_->msg_.virtual_foothold.resize(n_feet);

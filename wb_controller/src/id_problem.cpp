@@ -38,7 +38,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   for(unsigned int i=0; i<ee_names_.size(); i++)
   {
     arms_[ee_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(ee_names_[i], *model_, ee_names_[i],
-                                                                                     BASE_LINK_FRAME_NAME, id_->getJointsAccelerationAffine());
+                                                                                    model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
     arms_[ee_names_[i]]->setLambda(1.,1.);
     arms_[ee_names_[i]]->setWeightIsDiagonalFlag(true);
   }
@@ -49,12 +49,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   angular_momentum_->setReference(Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
   angular_momentum_->setMomentumGain(Eigen::Matrix3d::Identity());
   //   --------------------------
-  waistRPY_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *model_, BASE_LINK_FRAME_NAME,
+  waistRPY_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *model_, model_->getBaseLinkName(),
                                                                         WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waistRPY_->setLambda(1.,1.);
   waistRPY_->setWeightIsDiagonalFlag(true);
   //   --------------------------
-  waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_, BASE_LINK_FRAME_NAME,
+  waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_, model_->getBaseLinkName(),
                                                                       WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waistZ_->setLambda(1.,1.);
   waistZ_->setWeightIsDiagonalFlag(true);
@@ -256,7 +256,7 @@ void IDProblem::selectStack(const stacks_t& stack)
     {
       std::string frame;
       if(stack == stacks_t::WALKING)
-        frame = BASE_LINK_FRAME_NAME;
+        frame = model_->getBaseLinkName();
       else if (stack == stacks_t::MANIPULATION)
         frame = WORLD_FRAME_NAME;
       else
