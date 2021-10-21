@@ -1,5 +1,6 @@
 # TODO list
 
+- Fix spawn
 - push recovery tests
 - Remove sensors description
 - Debug c and delta_com... they don't seem to do anything useful
