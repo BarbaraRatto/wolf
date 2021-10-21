@@ -40,6 +40,7 @@ if __name__ == "__main__":
         # Setting the parameters
         model_name = 'solo'
         param_name = 'robot_description'
+        # LF foot
         joint_names.append('lf_haa_joint')
         joint_positions.append(0.2)
         joint_names.append('lf_hfe_joint')
