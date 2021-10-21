@@ -2,7 +2,7 @@ wb_controller:
   type: wb_controller/Controller
   default_duty_factor: 0.3
   default_swing_frequency: 4.2
-  default_contact_threshold: 4.0
+  default_contact_threshold: 15.0
   default_base_linear_velocity: 0.25
   default_base_angular_velocity: 0.25
   default_step_height: 0.04
@@ -14,21 +14,21 @@ wb_controller:
 
       clik_gain: 5.0
 
-      lf_haa_joint: {p: 10.0, i: 0.0, d: 1.0}
-      lf_hfe_joint: {p: 10.0, i: 0.0, d: 1.0}
-      lf_kfe_joint: {p: 10.0, i: 0.0, d: 1.0}
-      rf_haa_joint: {p: 10.0, i: 0.0, d: 1.0}
-      rf_hfe_joint: {p: 10.0, i: 0.0, d: 1.0}
-      rf_kfe_joint: {p: 10.0, i: 0.0, d: 1.0}
-      lh_haa_joint: {p: 10.0, i: 0.0, d: 1.0}
-      lh_hfe_joint: {p: 10.0, i: 0.0, d: 1.0}
-      lh_kfe_joint: {p: 10.0, i: 0.0, d: 1.0}
-      rh_haa_joint: {p: 10.0, i: 0.0, d: 1.0}
-      rh_hfe_joint: {p: 10.0, i: 0.0, d: 1.0}
-      rh_kfe_joint: {p: 10.0, i: 0.0, d: 1.0}
+      lf_haa_joint: {p: 30.0, i: 0.0, d: 1.0}
+      lf_hfe_joint: {p: 30.0, i: 0.0, d: 1.0}
+      lf_kfe_joint: {p: 30.0, i: 0.0, d: 1.0}
+      rf_haa_joint: {p: 30.0, i: 0.0, d: 1.0}
+      rf_hfe_joint: {p: 30.0, i: 0.0, d: 1.0}
+      rf_kfe_joint: {p: 30.0, i: 0.0, d: 1.0}
+      lh_haa_joint: {p: 30.0, i: 0.0, d: 1.0}
+      lh_hfe_joint: {p: 30.0, i: 0.0, d: 1.0}
+      lh_kfe_joint: {p: 30.0, i: 0.0, d: 1.0}
+      rh_haa_joint: {p: 30.0, i: 0.0, d: 1.0}
+      rh_hfe_joint: {p: 30.0, i: 0.0, d: 1.0}
+      rh_kfe_joint: {p: 30.0, i: 0.0, d: 1.0}
 
-      kp_swing: {haa: 10.0, hfe: 2.0, kfe: 0.25}
-      kd_swing: {haa: 1.0, hfe: 0.5, kfe: 0.1}
+      kp_swing: {haa: 100.0, hfe: 50.0, kfe: 10.0}
+      kd_swing: {haa: 10.0, hfe: 5.0, kfe: 1.0}
 
       kp_stance: {haa: 200.0, hfe: 200.0, kfe: 200.0}
       kd_stance: {haa: 20.0, hfe: 20.0, kfe: 20.0}
