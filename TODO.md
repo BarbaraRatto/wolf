@@ -5,6 +5,9 @@
 - Robustness tests when walking on rough terrain with push recovery
 - IK with joint limits / qhome
 - Export filters
+- Fix spawn
+- push recovery tests
+- Remove sensors description
 - Debug c and delta_com... they don't seem to do anything useful
 - counterbalance the ROLL with the terrain estimator
 - Remove postural for the arm!!!!
