@@ -166,9 +166,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   _period = period_;
 
   if(!root_nh.getParam("/internal_wrench",use_contact_sensors_)) // Use the contact sensors
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
+  {
+    ROS_WARN_STREAM_NAMED(CLASS_NAME,"No internal_wrench given in namespace /, using contact estimation");
+    use_contact_sensors_ = false;
+  }
+  if(use_contact_sensors_)
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,"Use contact sensors");
   else
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
+      ROS_INFO_STREAM_NAMED(CLASS_NAME,"Use contact estimation");
+
 
   // Resize the variables
   joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -517,7 +523,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
       // We need to set these values here because the robot is starting in the air with the simulation.
       // Be sure to start the solver and the contact estimation when the robot is grounded.
       state_estimator_->resetGyroscopeIntegration();
-      state_estimator_->startContactsEstimation();
+      state_estimator_->startContactComputation();
       state_estimator_->startHapticContactLoop();
       foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
       foot_holds_planner_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
