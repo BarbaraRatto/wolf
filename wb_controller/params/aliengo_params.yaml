@@ -7,8 +7,8 @@ wb_controller:
   default_base_angular_velocity: 0.4
   default_step_height: 0.065
   max_step_height: 0.15
-  max_step_length: 0.5
-  estimation_position_type: ground_truth
+  max_step_length: 0.4
+  estimation_position_type: estimated_z
   estimation_orientation_type: ground_truth
 
   push_recovery:
@@ -18,7 +18,7 @@ wb_controller:
 
   gains:
 
-      clik_gain: 30.0
+      clik_gain: 5.0
 
       lf_haa_joint: {p: 100.0, i: 0.0, d: 5.0}
       lf_hfe_joint: {p: 300.0, i: 0.0, d: 8.0}
@@ -49,5 +49,3 @@ wb_controller:
       waistZ:
           Kp: {x: 0.0, y: 0.0, z: 100.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
           Kd: {x: 0.0, y: 0.0, z: 10.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
-
-
