@@ -24,7 +24,7 @@
 		<xacro:if value="${load_force_sensors}">
 			<gazebo>
 				<plugin name="${name}_kfe_sensor" filename="libgazebo_ros_ft_sensor.so">
-                                        <robotNamespace>/anymacl/internal_wrench/</robotNamespace>
+                                        <robotNamespace>/anymalc/internal_wrench/</robotNamespace>
 					<updateRate>100.0</updateRate>
 					<topicName>${name}_kfe_joint</topicName>
 					<jointName>${name}_kfe_joint</jointName>
