@@ -51,7 +51,7 @@
 	</include>
 
 	<!-- Spawn a robot into Gazebo -->
-        <node name="spawn_robot_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model $(arg robot_name) -z 0.5"/>
+        <node name="spawn_robot_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model $(arg robot_name) -z 0.55"/>
 
         <!-- Get robot to 0 position -->
         <node name="goto0" pkg="$(arg robot_name)_description" type="go0" args="1.0"  />

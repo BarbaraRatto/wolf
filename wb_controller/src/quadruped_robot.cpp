@@ -145,6 +145,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   for(unsigned int i=0;i<hip_names_.size();i++)
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Hip names: "<<hip_names_[i]);
 
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Base name: "<<base_name_);
+
   hip_names_ = sortByLegPrefix(hip_names_);
   foot_names_ = sortByLegPrefix(foot_names_);
   leg_names_ = sortByLegPrefix(leg_names_);

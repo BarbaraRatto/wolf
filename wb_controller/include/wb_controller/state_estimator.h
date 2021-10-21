@@ -88,9 +88,10 @@ public:
     const std::map<std::string,bool>& getContacts() const;
 
     const std::map<std::string, Eigen::Vector3d>& getContactPositionInWorld() const;
-    void startContactsEstimation();
 
-    void stopContactsEstimation();
+    void startContactComputation();
+
+    void stopContactComputation();
 
     void toggleHapticContactLoop();
 
@@ -159,7 +160,7 @@ private:
     is consired true */
     std::atomic<double> contact_force_th_;
 
-    std::atomic<bool> contacts_estimation_active_;
+    std::atomic<bool> contact_computation_active_;
 
     std::atomic<bool> haptic_contact_loop_active_;
 
