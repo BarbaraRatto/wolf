@@ -130,6 +130,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                      / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
                      )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
+  //int stack_pos_offset = 1; // FIXME 100.0 * arm_aggregated
+  //stacks_[WALKING] /= ( 1000.0 * feet_aggregated + 50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_
+  //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+
   if(ee_names_.size() > 0)
   {
     arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[ee_names_[0]],arms_[ee_names_[0]]->getXSize());
