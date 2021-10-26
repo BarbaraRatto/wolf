@@ -6,3 +6,4 @@ float64[] velocity_actual
 float64[] velocity_reference
 float64[] position_error
 float64[] velocity_error
+float64 cost
