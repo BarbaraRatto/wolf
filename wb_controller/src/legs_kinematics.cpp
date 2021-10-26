@@ -16,8 +16,6 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   robot_model_->getRobotState("home", qhome_);
   robot_model_->setJointPosition(qhome_);
 
-  robot_model_->getJointLimits(qmin_, qmax_);
-
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
 
@@ -101,8 +99,9 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     }
   }
 
-  // Check if the desired positions are valid and clamp them
-  jointLimitsCheck(des_joint_positions_,qmin_,qmax_);
+  // Check if the desired positions and velocities are valid and clamp them
+  robot_model_->clampJointPositions(des_joint_positions_);
+  robot_model_->clampJointVelocities(des_joint_velocities_);
 
   return true;
 }
@@ -136,7 +135,7 @@ const Eigen::VectorXd& LegsKinematics::getDesiredJointVelocities()
 bool LegsKinematics::setJointHomePositions(Eigen::VectorXd& qhome)
 {
   // Check if qhome is between qmin and qmax
-  if(jointLimitsCheck(qhome,qmin_,qmax_))
+  if(!robot_model_->checkJointLimits(qhome))
   {
       ROS_WARN_NAMED(CLASS_NAME,"Can not set qhome, joint limits violated!");
       return false;
@@ -165,35 +164,6 @@ void LegsKinematics::reset()
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
   xdot_stance_ff_.setZero();
   xdot_swing_ff_.setZero();
-}
-
-void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
-{
-   qmax_ = qmax;
-   qmin_ = qmin;
-}
-
-bool LegsKinematics::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd& qmin, const Eigen::VectorXd& qmax)
-{
-    assert(q.size() == qmin.size());
-    assert(qmin.size() == qmax.size());
-    bool violated_limits = false;
-    for(unsigned int i=0;i<q.size();i++)
-    {
-        if(q(i)<qmin(i))
-        {
-            q(i) = qmin(i);
-            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the minimum limit of "<<qmin(i));
-            violated_limits = true;
-        }
-        if(q(i)>qmax(i))
-        {
-            q(i) = qmax(i);
-            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum limit of "<<qmax(i));
-            violated_limits = true;
-        }
-    }
-    return violated_limits;
 }
 
 void LegsKinematics::setDesiredBaseHeight(const double& des_base_height)

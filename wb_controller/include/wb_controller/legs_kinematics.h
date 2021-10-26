@@ -47,17 +47,6 @@ public:
 
   const Eigen::VectorXd& getJointHomePositions();
 
-  /**
-       * @brief check if the joints position are between a max and min value, saturate the value if the limits are violated
-       * @param q input vector to check
-       * @param qmin min values
-       * @param qmax max values
-       * @return true is the limits are violated
-       */
-  bool jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd& qmin,  const Eigen::VectorXd& qmax);
-
-  void setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin);
-
   const Eigen::VectorXd& getDesiredJointPositions();
 
   const Eigen::VectorXd& getDesiredJointVelocities();
@@ -102,10 +91,6 @@ private:
   Eigen::VectorXd des_joint_velocities_;
   /** @brief Homing position */
   Eigen::VectorXd qhome_;
-  /** @brief Min joints position */
-  Eigen::VectorXd qmin_;
-  /** @brief Max joints position */
-  Eigen::VectorXd qmax_;
   /** @brief Feet pose w.r.t world */
   Eigen::Affine3d world_T_foot_;
   /** @brief Stance feed forward term in the clik control loop */

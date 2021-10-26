@@ -173,8 +173,72 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     base_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
   }
 
+  // Get inertias
   getInertiaMatrix(tmp_M_);
   getInertiaInverse(tmp_Mi_);
+
+  // Get limits
+  getEffortLimits(tau_max_);
+  getVelocityLimits(qdot_max_);
+  getJointLimits(q_min_, q_max_);
+
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Position limits set to: "<< std::endl <<"-min:" <<q_min_.transpose() << std::endl <<"-max:" <<q_max_.transpose());
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: "<< std::endl <<"-max:" <<qdot_max_.transpose());
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: "  << std::endl <<"-max:" <<tau_max_.transpose());
+
+}
+
+bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
+{
+    assert(q.size() == q_min_.size());
+    bool violated_limits = false;
+    for(unsigned int i=0;i<q.size();i++)// Maybe I should skip the FB...
+    {
+        if(q(i)<q_min_(i))
+        {
+            q(i) = q_min_(i);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum position limit of "<<q_min_(i));
+            violated_limits = true;
+        } else if(q(i)>q_max_(i))
+        {
+            q(i) = q_max_(i);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum position limit of "<<q_max_(i));
+            violated_limits = true;
+        }
+    }
+    return violated_limits;
+}
+
+bool QuadrupedRobot::clampJointEfforts(Eigen::VectorXd &tau)
+{
+    assert(tau.size() == tau_max_.size());
+    bool violated_limits = false;
+    for(unsigned int i=0;i<tau.size();i++)
+    {
+        if(tau(i)>tau_max_(i))
+        {
+            tau(i) = tau_max_(i);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum effort limit of "<<tau_max_(i));
+            violated_limits = true;
+        }
+    }
+    return violated_limits;
+}
+
+bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
+{
+    assert(qdot.size() == qdot_max_.size());
+    bool violated_limits = false;
+    for(unsigned int i=0;i<qdot_max_.size();i++)
+    {
+        if(qdot(i)>qdot_max_(i))
+        {
+            qdot(i) = qdot_max_(i);
+            ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum velocity limit of "<<qdot_max_(i));
+            violated_limits = true;
+        }
+    }
+    return violated_limits;
 }
 
 bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool update_desired_acceleration)
