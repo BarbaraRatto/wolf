@@ -60,7 +60,7 @@ wb_controller:
           weight: 0.1
 
       CoM:
-          weight: 0.5
+          weight: 0.25
 
       angular_momentum:
           weight: 0.1
