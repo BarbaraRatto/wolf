@@ -21,6 +21,7 @@ namespace wb_controller
 #define N_ARMS 1 // Fixed number of arms supported
 #define THREADS_SLEEP_TIME_ms 4
 #define BASE_LINK_FRAME_NAME "base_link"
+#define THROTTLE_SEC 3.0
 extern double _period;
 
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
