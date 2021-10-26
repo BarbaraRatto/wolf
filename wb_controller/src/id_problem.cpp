@@ -100,6 +100,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   wrenches_lims_ = std::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
         foot_names_, wrench_lower_lims_, wrench_upper_lims_,id_->getContactsWrenchAffine());
 
+  Eigen::VectorXd tau_max;
+  model_->getEffortLimits(tau_max);
+  torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
+
   std::list<unsigned int> idx_XYZ  = {0,1,2}; //xyz
   std::list<unsigned int> idx_XY   = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
@@ -115,7 +119,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                           / (com_)
                           / (waistRPY_%id_RPY)// + arm_aggregated
                           / (postural_)
-                          )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+                          )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_<<torque_lims_;
 
   // Original stack, it doesn't work with aliengo e anymal
   //int stack_pos_offset = 2;
@@ -132,7 +136,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   int stack_pos_offset = 0;
   stacks_[WALKING] /= ( feet_aggregated + waistRPY_%id_RPY + postural_ +  com_ + angular_momentum_
-                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_<<torque_lims_;
 
   if(ee_names_.size() > 0)
   {
@@ -372,12 +376,14 @@ void IDProblem::swingWithFoot(const string &foot_name)
 {
   feet_[foot_name]->setActive(false);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
+  //torque_lims_->disableContact(foot_name);
 }
 
 void IDProblem::stanceWithFoot(const string &foot_name)
 {
   feet_[foot_name]->setActive(true);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
+  //torque_lims_->enableContact(foot_name);
 }
 
 void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z)
