@@ -674,9 +674,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     des_joint_d_gain_[i] = pid_scale_ * joint_d_gain_[i];
   }
 
-   // Check if the desired efforts are valid and clamp them
-  if(robot_model_->clampJointEfforts(des_joint_efforts_))
-    ROS_WARN_NAMED(CLASS_NAME,"Effort limits violated!");
+   // Check if the desired efforts are valid otherwise clamp them
+  robot_model_->clampJointEfforts(des_joint_efforts_solver_);
 
   // Write to the hardware interface
   for (unsigned int i = 0; i < joint_states_.size(); i++)
