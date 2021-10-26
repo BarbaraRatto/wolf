@@ -234,11 +234,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities_",des_joint_velocities_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_",joint_velocities_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_pids_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_efforts",joint_efforts_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
 
