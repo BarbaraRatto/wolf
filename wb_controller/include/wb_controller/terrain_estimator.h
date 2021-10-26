@@ -7,7 +7,6 @@
 #include <atomic>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/gait_generator.h>
-#include <wb_controller/legs_kinematics.h>
 #include <wb_controller/footholds_planner.h>
 
 namespace wb_controller
@@ -61,6 +60,8 @@ public:
 
     const Eigen::Affine3d& getTerrainPoseWorld() const;
     const Eigen::Affine3d& getTerrainPoseHf()  const;
+
+    bool isOnFlatTerrain();
 
 private:
 
