@@ -1,6 +1,8 @@
 # TODO list
 
-
+- apdat com velocity based on the % of trj executed
+- delta com only for the front legs
+- step reflexes
 - solver getting crazy and losing contacts?
 - Robustness tests when walking on rough terrain with push recovery
 - IK with joint limits / qhome
@@ -17,7 +19,6 @@
 - State estimation
 - Experiments on the real robot
 - Merge 20.04
-- step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)
