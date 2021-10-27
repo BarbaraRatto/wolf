@@ -199,10 +199,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
   state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
 
-  legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_));
-  legs_kinematics_->activateBaseHeightControl();
-  des_joint_positions_ = legs_kinematics_->getJointHomePositions();
-
   legs_impedance_.reset(new LegsImpedance(gait_generator_,robot_model_));
 
   terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_,robot_model_));
@@ -210,6 +206,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
   terrain_estimator_->setMinPitch(-M_PI);
+
+  legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_,terrain_estimator_));
+  legs_kinematics_->activateBaseHeightControl();
+  des_joint_positions_ = legs_kinematics_->getJointHomePositions();
 
   com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
 

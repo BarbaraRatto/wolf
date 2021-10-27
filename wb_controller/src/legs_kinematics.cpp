@@ -2,7 +2,7 @@
 
 namespace wb_controller {
 
-LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
+LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, TerrainEstimator::Ptr terrain_estimator)
   : base_height_control_active_(false), clik_gain_(1.0)
 {
 
@@ -10,6 +10,8 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   gait_generator_ = gait_generator;
   assert(robot_model);
   robot_model_ = robot_model;
+  assert(terrain_estimator);
+  terrain_estimator_ = terrain_estimator;
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
@@ -77,8 +79,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     else
     {
       // At the first cycle of stance, set the joints position at the current homing position
-      // Note: this makes the ramp exp not working anymore!
-      if(gait_generator_->isTouchDown(foot_names[i]))
+      // Note: reset only on flat terrain otherwise we lose the legs adaptation to uneven terrain
+      if(gait_generator_->isTouchDown(foot_names[i]) && terrain_estimator_->isOnFlatTerrain())
          qstance_.segment(idx,3) = qhome_.segment(idx,3);
 
       if(base_height_control_active_)

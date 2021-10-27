@@ -6,6 +6,7 @@
 #include <wb_controller/geometry.h>
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/quadruped_robot.h>
+#include <wb_controller/terrain_estimator.h>
 
 namespace wb_controller
 {
@@ -27,7 +28,7 @@ public:
    */
   typedef std::shared_ptr<const LegsKinematics> ConstPtr;
 
-  LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
+  LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, TerrainEstimator::Ptr terrain_estimator);
 
   /**
        * @brief Compute the desired joint positions and velocities
@@ -70,6 +71,8 @@ private:
   QuadrupedRobot::Ptr robot_model_;
 
   GaitGenerator::Ptr gait_generator_;
+
+  TerrainEstimator::Ptr terrain_estimator_;
 
   /** @brief True if the control of the base height is active */
   std::atomic<bool> base_height_control_active_;
