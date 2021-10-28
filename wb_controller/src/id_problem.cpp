@@ -64,7 +64,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   postural_->setWeightIsDiagonalFlag(true);
   //   --------------------------
   com_ = std::make_shared<OpenSoT::tasks::acceleration::CoM>(*model_, id_->getJointsAccelerationAffine());
-  com_->setLambda(0.,100.);
+  com_->setLambda(0.,0.);
   com_->setWeightIsDiagonalFlag(true);
 
   //

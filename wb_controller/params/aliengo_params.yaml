@@ -61,6 +61,7 @@ wb_controller:
 
       CoM:
           weight: 0.25
+          lambda2: 100.0
 
       angular_momentum:
           weight: 0.1
