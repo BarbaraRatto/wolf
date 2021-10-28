@@ -119,7 +119,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                           / (com_)
                           / (waistRPY_%id_RPY)// + arm_aggregated
                           / (postural_)
-                          )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_<<torque_lims_;
+                          )<<wrenches_lims_<<qddot_lims_<<friction_cones_<<torque_lims_;
 
   // Original stack, it doesn't work with aliengo e anymal
   //int stack_pos_offset = 2;
@@ -136,7 +136,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   int stack_pos_offset = 0;
   stacks_[WALKING] /= ( feet_aggregated + waistRPY_%id_RPY + postural_ +  com_ + angular_momentum_
-                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_<<torque_lims_;
+                     )<<wrenches_lims_<<qddot_lims_<<friction_cones_<<torque_lims_;
 
   if(ee_names_.size() > 0)
   {
@@ -383,14 +383,14 @@ void IDProblem::swingWithFoot(const string &foot_name)
 {
   feet_[foot_name]->setActive(false);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
-  //torque_lims_->disableContact(foot_name);
+  torque_lims_->disableContact(foot_name);
 }
 
 void IDProblem::stanceWithFoot(const string &foot_name)
 {
   feet_[foot_name]->setActive(true);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
-  //torque_lims_->enableContact(foot_name);
+  torque_lims_->enableContact(foot_name);
 }
 
 void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z)
