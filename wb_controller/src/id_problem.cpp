@@ -119,6 +119,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   stacks_[MANIPULATION] = ( (feet_aggregated)
                           / (com_)
                           / (waistRPY_%id_RPY)// + arm_aggregated
+                          / (postural_%id_legs)
                           )<<wrenches_lims_<<qddot_lims_<<friction_cones_<<torque_lims_;
 
   // Original stack, it doesn't work with aliengo e anymal
@@ -135,6 +136,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   int stack_pos_offset = 0;
+  stacks_[WALKING] /= ( feet_aggregated + waistRPY_%id_RPY + postural_%id_legs +  com_ + angular_momentum_
                      )<<wrenches_lims_<<qddot_lims_<<friction_cones_<<torque_lims_;
 
   if(ee_names_.size() > 0)
