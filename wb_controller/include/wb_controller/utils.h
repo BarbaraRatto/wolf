@@ -23,6 +23,7 @@ namespace wb_controller
 #define BASE_LINK_FRAME_NAME "base_link"
 #define THROTTLE_SEC 3.0
 #define COMPUTE_COST
+#define EPS 0.001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot

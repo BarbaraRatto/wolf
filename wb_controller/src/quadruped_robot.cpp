@@ -194,12 +194,12 @@ bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
     bool violated_limits = false;
     for(unsigned int i=0;i<q.size();i++)// Maybe I should skip the FB...
     {
-        if(q(i)<q_min_(i))
+        if(q(i)<q_min_(i)+EPS)
         {
             q(i) = q_min_(i);
             ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum POSITION limit of "<<q_min_(i));
             violated_limits = true;
-        } else if(q(i)>q_max_(i))
+        } else if(q(i)>q_max_(i)+EPS)
         {
             q(i) = q_max_(i);
             ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum POSITION limit of "<<q_max_(i));
@@ -215,9 +215,8 @@ bool QuadrupedRobot::clampJointEfforts(Eigen::VectorXd &tau)
     bool violated_limits = false;
     for(unsigned int i=0;i<tau.size();i++)
     {
-        if(tau(i)>tau_max_(i))
+        if(std::abs(tau(i))>tau_max_(i)+EPS)
         {
-            tau(i) = tau_max_(i);
             ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum EFFORT limit of "<<tau_max_(i));
             violated_limits = true;
         }
@@ -231,7 +230,7 @@ bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
     bool violated_limits = false;
     for(unsigned int i=0;i<qdot_max_.size();i++)
     {
-        if(qdot(i)>qdot_max_(i))
+        if(std::abs(qdot(i))>qdot_max_(i)+EPS)
         {
             qdot(i) = qdot_max_(i);
             ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
