@@ -194,7 +194,7 @@ bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
     bool violated_limits = false;
     for(unsigned int i=0;i<q.size();i++)// Maybe I should skip the FB...
     {
-        if(q(i)<q_min_(i)+EPS)
+        if(q(i)<q_min_(i)-EPS)
         {
             q(i) = q_min_(i);
             ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum POSITION limit of "<<q_min_(i));
