@@ -7,6 +7,7 @@
     <xacro:arg name="task_period" default="0.004"/>
     <xacro:arg name="arm_enabled" default="false"/>
     <xacro:arg name="arm_name" default="kinova"/>
+    <xacro:arg name="floating_base_link" default="true"/>
 
     <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
     <xacro:include filename="$(find aliengo_description)/urdfs/materials.xacro"/>
@@ -44,12 +45,14 @@
     </link>
 
     <!-- Floating-base Joint -->
-    <link name="world"/>
-    <joint name="floating_base_joint" type="floating">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <parent link="world"/>
-      <child link="base_link"/>
-    </joint>
+    <xacro:if value="$(arg floating_base_link)">
+	    <link name="world"/>
+	    <joint name="floating_base_joint" type="floating">
+	      <origin rpy="0 0 0" xyz="0 0 0"/>
+	      <parent link="world"/>
+	      <child link="base_link"/>
+	    </joint>
+    </xacro:if>
     <joint name="floating_base" type="fixed">
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="base_link"/>
