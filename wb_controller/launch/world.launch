@@ -45,6 +45,7 @@
 
         <!-- Send the robot urdf to parameter server and spawn it -->
         <include file="$(find wb_controller)/launch/upload.launch">
+                <arg name="task_period" value="$(arg task_period)" />
                 <arg name="robot_name" value="$(arg robot_name)" />
 		<arg name="internal_wrench" value="$(arg internal_wrench)" />
                 <arg name="arm_name" value="$(arg arm_name)" />
