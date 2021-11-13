@@ -1,5 +1,6 @@
 <?xml version="1.0" ?>
 <launch>
+        <arg name="sensors" default="false" />
         <arg name="robot_name" default="spot"/>
         <arg name="task_period" default="0.004"/>
         <arg name="arm_enabled" default="false"/>

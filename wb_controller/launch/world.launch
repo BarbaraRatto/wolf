@@ -5,6 +5,7 @@
 	<arg name="internal_wrench" default="false"/>
 
 	<!-- These are the arguments you can pass this launch file, for example paused:=true -->
+        <arg name="sensors" default="false" />
         <arg name="robot_name" default="spot"/>
 	<arg name="paused" default="true"/>
 	<arg name="use_sim_time" default="true"/>
