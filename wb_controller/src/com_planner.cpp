@@ -4,10 +4,10 @@ using namespace rt_logger;
 
 namespace wb_controller {
 
-ComPlanner::ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator)
+ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator)
 {
 
-  state_estimator_ = state_estimator;
+  robot_model_ = robot_model;
   foothold_planner_ = foothold_planner;
   terrain_estimator_ = terrain_estimator;
 
@@ -34,14 +34,15 @@ void ComPlanner::update(double /*dt*/)
   //  |      |
   //  |      |
   //  lh --- rh
-  auto feet_pos = state_estimator_->getFeetPositionInBase();
+  auto feet_pos = robot_model_->getFeetPositionInBase();
 
-  auto world_T_base = state_estimator_->getFloatingBasePose();
+  auto world_T_base = robot_model_->getBasePoseInWorld();
 
-  base_X_com_ = world_T_base.inverse() * state_estimator_->getComPosition();
+  robot_model_->getCOM(com_);
+  base_X_com_ = world_T_base.inverse() * com_;
   p0_ = base_X_com_.head(2); // This should be defined w.r.t base
 
-  foothold_planner_->setComCorrection(base_X_com_); // This is defined wrt base
+  //foothold_planner_->setComCorrection(base_X_com_); // This is defined wrt base
 
   base_velocity_ = foothold_planner_->getBaseLinearVelocityReference();
   base_velocity_xy_ = base_velocity_.head(2);

@@ -6,13 +6,17 @@ using namespace rt_logger;
 namespace wb_controller {
 
 TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
-                                   FootholdsPlanner::Ptr foot_holds_planner)
+                                   FootholdsPlanner::Ptr foot_holds_planner,
+                                   QuadrupedRobot::Ptr robot_model)
 {
   assert(state_estimator);
   state_estimator_ = state_estimator;
 
   assert(foot_holds_planner);
   foot_holds_planner_ = foot_holds_planner;
+
+  assert(robot_model);
+  robot_model_ = robot_model;
 
   update_ = false;
 
@@ -113,7 +117,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   world_T_terrain_.translation() = world_X_terrain_;
   world_T_terrain_.linear() = world_R_terrain_;
   // 7.2 Horizontal frame transformations
-  hf_T_terrain_ = foot_holds_planner_->getHfRotationInWorld().transpose() * world_T_terrain_;
+  hf_T_terrain_ = robot_model_->getHfRotationInWorld().transpose() * world_T_terrain_;
   hf_X_terrain_ = hf_T_terrain_.translation();
   hf_R_terrain_ = hf_T_terrain_.linear();
   rotTorpy(hf_R_terrain_,tmp_vector3d_);
@@ -131,7 +135,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   posture_adjustment_dot_ = (posture_adjustment_ - posture_adjustment_prev_)/dt;
   posture_adjustment_prev_ = posture_adjustment_;
   posture_adjustment_dot_base_ << posture_adjustment_dot_, 0.0, 0.0;
-  posture_adjustment_dot_world_ = foot_holds_planner_->getBaseRotationInWorld() * posture_adjustment_dot_base_;  // w.r.t world
+  posture_adjustment_dot_world_ = robot_model_->getBaseRotationInWorld() * posture_adjustment_dot_base_;  // w.r.t world
   //kin_->setDesiredPostureAdjustmentDot(tmp_vector3d_); // This is ok but I need to be sure that state_estimator_->getFloatingHfPosition()(2) is adapted wrt terrain
 
   // 10 - Adjust the references for the desired Hf height and orientation (roll and pitch)
@@ -144,7 +148,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 void TerrainEstimator::update()
 {
   auto foot_names = foot_holds_planner_->getFootNames();
-  auto foot_positions = state_estimator_->getFeetPositionInWorld();
+  auto foot_positions = robot_model_->getFeetPositionInWorld();
 
   A_(0,0) = foot_positions[foot_names[0]](0);
   A_(0,1) = foot_positions[foot_names[0]](1);
@@ -262,6 +266,14 @@ const Eigen::Affine3d &TerrainEstimator::getTerrainPoseWorld() const
 const Eigen::Affine3d &TerrainEstimator::getTerrainPoseHf() const
 {
   return hf_T_terrain_;
+}
+
+bool TerrainEstimator::isOnFlatTerrain()
+{
+ if(std::abs(roll_out_world_) <= 0.01 && std::abs(pitch_out_world_) <= 0.01)
+   return true;
+ else
+   return false;
 }
 
 } // namespace

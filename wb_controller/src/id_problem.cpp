@@ -12,7 +12,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 {
 
   foot_names_    = model_->getFootNames();
-  arm_names_     = model_->getArmEndEffectorNames();
+  ee_names_      = model_->getEndEffectorNames();
   contact_names_ = model_->getContactNames();
 
   //
@@ -35,12 +35,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   }
   //   --------------------------
   ROS_INFO_NAMED(CLASS_NAME,"Initialize ARM tasks");
-  for(unsigned int i=0; i<arm_names_.size(); i++)
+  for(unsigned int i=0; i<ee_names_.size(); i++)
   {
-    arms_[arm_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(arm_names_[i], *model_, arm_names_[i],
+    arms_[ee_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(ee_names_[i], *model_, ee_names_[i],
                                                                                      BASE_LINK_FRAME_NAME, id_->getJointsAccelerationAffine());
-    arms_[arm_names_[i]]->setLambda(1.,1.);
-    arms_[arm_names_[i]]->setWeightIsDiagonalFlag(true);
+    arms_[ee_names_[i]]->setLambda(1.,1.);
+    arms_[ee_names_[i]]->setWeightIsDiagonalFlag(true);
   }
   //   --------------------------
   angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_,id_->getJointsAccelerationAffine());
@@ -76,17 +76,17 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
 
   OpenSoT::constraints::force::FrictionCones::friction_cones fcs;
-  fc_.second = 0.7; // mu
+  fc_.second = 1.0; // mu
   fc_.first.setIdentity();
   for(unsigned int i = 0; i < foot_names_.size(); i++)
     fcs.push_back(fc_);
   friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_,fcs);
 
-  Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(model_->getJointNum());
-  Eigen::VectorXd xmin = -xmax;
+  joint_acceleration_lim_ = 1000.;
+  ones_ = Eigen::VectorXd::Ones(model_->getJointNum());
 
   qddot_lims_ = std::make_shared<OpenSoT::constraints::GenericConstraint>(
-        "acc_lims", id_->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
+        "acc_lims", id_->getJointsAccelerationAffine(), joint_acceleration_lim_ * ones_, -1.0 * joint_acceleration_lim_ * ones_, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
 
   x_force_lower_lim_ = -2000;
   y_force_lower_lim_ = -2000;
@@ -130,14 +130,18 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                      / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
                      )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
-  if(arm_names_.size() > 0)
+  //int stack_pos_offset = 1; // FIXME 100.0 * arm_aggregated
+  //stacks_[WALKING] /= ( 1000.0 * feet_aggregated + 50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_
+  //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+
+  if(ee_names_.size() > 0)
   {
-    arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
-    //arm_aggregated_weighted = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[arm_names_[0]],arms_[arm_names_[0]]->getXSize());
-    if(arm_names_.size() > 1)
+    arm_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[ee_names_[0]],arms_[ee_names_[0]]->getXSize());
+    //arm_aggregated_weighted = std::make_shared<OpenSoT::tasks::Aggregated>(arms_[ee_names_[0]],arms_[ee_names_[0]]->getXSize());
+    if(ee_names_.size() > 1)
     {
-      for(unsigned int i=1;i<arm_names_.size();i++)
-        arm_aggregated = arm_aggregated + arms_[arm_names_[i]];
+      for(unsigned int i=1;i<ee_names_.size();i++)
+        arm_aggregated = arm_aggregated + arms_[ee_names_[i]];
 
       //arm_aggregated_weighted = 50.0 * arm_aggregated%idx_XYZ + arm_aggregated%id_RPY;
     }
@@ -181,15 +185,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   for(unsigned int i=0; i<foot_names_.size(); i++)
     tasks_ros_[foot_names_[i]] = std::make_shared<CartesianWrapper>(nh,feet_[foot_names_[i]]); // FEET
-  for(unsigned int i=0; i<arm_names_.size(); i++)
+  for(unsigned int i=0; i<ee_names_.size(); i++)
   {
-    tasks_ros_[arm_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[arm_names_[i]]); // ARMS
-    tasks_ros_[arm_names_[i]]->OPTIONS.set_ext_reference = true;
+    tasks_ros_[ee_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[ee_names_[i]]); // ARMS
+    tasks_ros_[ee_names_[i]]->OPTIONS.set_ext_reference = true;
   }
-  for (auto& tmp_map : tasks_ros_)
-    tmp_map.second->dynamicReconfigureUpdate();
 
-  selectStack(stacks_t::WALKING);
+  //selectStack(stacks_t::WALKING);
 }
 
 IDProblem::~IDProblem()
@@ -198,18 +200,29 @@ IDProblem::~IDProblem()
 
 void IDProblem::setFrictionConesMu(const double& mu)
 {
-  if(mu>=0.0 && mu<=1.0)
-  {
-    fc_.second = mu;
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set mu to: "<<mu);
-  }
-  else
-    ROS_WARN_NAMED(CLASS_NAME,"Mu has to be between 0 and 1!");
+  assert(mu>=0.0 && mu<=1.0);
+  fc_.second = mu;
+}
+
+double IDProblem::getFrictionConesMu() const
+{
+   return fc_.second;
 }
 
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
 {
    fc_.first = R;
+}
+
+void IDProblem::setJointAccelerationAbsLim(const double& lim)
+{
+   assert(lim>=0.0);
+   joint_acceleration_lim_ = lim;
+}
+
+double IDProblem::getJointAccelerationAbsLim()
+{
+   return joint_acceleration_lim_;
 }
 
 void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,const double& z_force)
@@ -249,7 +262,7 @@ void IDProblem::selectStack(const stacks_t& stack)
 
     current_stack_ = stack;
 
-    if(arm_names_.size()>0)
+    if(ee_names_.size()>0)
     {
       std::string frame;
       if(stack == stacks_t::WALKING)
@@ -264,8 +277,8 @@ void IDProblem::selectStack(const stacks_t& stack)
         tmp_map.second->setBaseLink(frame);
         tmp_map.second->update(Eigen::VectorXd(1));
       }
-      //for (unsigned int i=0;i<arm_names_.size();i++)
-      //  tasks_ros_[arm_names_[i]]->reset();
+      //for (unsigned int i=0;i<ee_names_.size();i++)
+      //  tasks_ros_[ee_names_[i]]->reset();
     }
 
     for (auto& tmp_map : tasks_ros_)
@@ -305,6 +318,9 @@ void IDProblem::update()
     if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
+
+  qddot_lims_->setBounds(joint_acceleration_lim_ * ones_,-1.0*joint_acceleration_lim_ * ones_);
+
   //Update the external lambda/references etc...
   for (auto& tmp_map : tasks_ros_)
     tmp_map.second->update();
@@ -331,7 +347,7 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 {
   bool res_solv = false;
   bool res_id = false;
-  if (solver_lock_.try_lock())
+  if (solver_ && solver_lock_.try_lock())
   {
     update();
     res_solv = solver_->solve(x_);

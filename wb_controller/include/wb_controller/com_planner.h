@@ -27,7 +27,7 @@ public:
    */
   typedef std::shared_ptr<const ComPlanner> ConstPtr;
 
-  ComPlanner(StateEstimator::Ptr state_estimator, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator);
+  ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator);
 
   void update(double dt);
 
@@ -39,7 +39,7 @@ private:
 
   double c_, c_filt_, c_ref_;
   std::vector<std::string> feet_order_;
-  StateEstimator::Ptr state_estimator_;
+  QuadrupedRobot::Ptr robot_model_;
   FootholdsPlanner::Ptr foothold_planner_;
   TerrainEstimator::Ptr terrain_estimator_;
   Eigen::Vector3d com_velocity_ref_;
@@ -54,6 +54,8 @@ private:
   Eigen::Vector2d base_velocity_xy_versor_;
   Eigen::Vector2d p_int_;
   Eigen::Vector2d p_int_versor_;
+
+  Eigen::Vector3d com_;
 
 
 };

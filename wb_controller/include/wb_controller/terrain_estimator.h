@@ -7,7 +7,6 @@
 #include <atomic>
 #include <wb_controller/state_estimator.h>
 #include <wb_controller/gait_generator.h>
-#include <wb_controller/legs_kinematics.h>
 #include <wb_controller/footholds_planner.h>
 
 namespace wb_controller
@@ -32,7 +31,8 @@ public:
     enum estimation_t {NONE=0,FLAT_TERRAIN,ROUGH_TERRAIN};
 
     TerrainEstimator(StateEstimator::Ptr state_estimator,
-                     FootholdsPlanner::Ptr foot_holds_planner);
+                     FootholdsPlanner::Ptr foot_holds_planner,
+                     QuadrupedRobot::Ptr robot_model);
 
     void setEstimationType();
 
@@ -61,6 +61,8 @@ public:
     const Eigen::Affine3d& getTerrainPoseWorld() const;
     const Eigen::Affine3d& getTerrainPoseHf()  const;
 
+    bool isOnFlatTerrain();
+
 private:
 
     void update();
@@ -78,6 +80,7 @@ private:
 
     StateEstimator::Ptr state_estimator_;
     FootholdsPlanner::Ptr foot_holds_planner_;
+    QuadrupedRobot::Ptr robot_model_;
 
     double roll_;
     double pitch_;

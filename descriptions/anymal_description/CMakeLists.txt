@@ -3,13 +3,7 @@ project(anymal_description)
 
 find_package(catkin REQUIRED)
 
-
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES rrbot_description
-#  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
-)
+catkin_package()
 
 install(DIRECTORY gazebo/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/gazebo

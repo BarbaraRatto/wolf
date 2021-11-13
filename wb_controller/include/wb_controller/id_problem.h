@@ -101,6 +101,17 @@ public:
     void setFrictionConesR(const Eigen::Matrix3d& R);
 
     /**
+     * @brief set the absolute value for joint acceleration limits
+     * @param limit -> max = limit, min = -1.0 * lim
+     */
+    void setJointAccelerationAbsLim(const double &lim);
+
+    /**
+     * @brief get the absolute value for joint acceleration limits
+     */
+    double getJointAccelerationAbsLim();
+
+    /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
      * @param lower bound values
      */
@@ -152,6 +163,11 @@ public:
          * @brief Switch between WALKING and MANIPULATION stack
          */
     void switchStack();
+
+    /**
+     * @brief get the mu parameter for the friction cones
+     */
+    double getFrictionConesMu() const;
 
     /**
      * @brief Cartesian tasks
@@ -247,9 +263,17 @@ private:
     Eigen::Vector6d wrench_upper_lims_;
     Eigen::Vector6d wrench_lower_lims_;
 
+    /**
+     * @brief joint acceleration limits
+     */
+    Eigen::VectorXd ones_;
+    std::atomic<double> joint_acceleration_lim_;
+
+
     double x_force_lower_lim_;
     double y_force_lower_lim_;
     double z_force_lower_lim_;
+
 
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
@@ -258,7 +282,7 @@ private:
     std::mutex solver_lock_;
 
     std::vector<std::string> foot_names_;
-    std::vector<std::string> arm_names_;
+    std::vector<std::string> ee_names_;
     std::vector<std::string> contact_names_;
 
     Eigen::Affine3d tmp_affine3d_;

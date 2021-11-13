@@ -115,7 +115,7 @@ public:
         throw std::runtime_error("Controller not initialized yet!");
 
       if(controller_ptr->getGaitGenerator()!=nullptr)
-        addButtonHandler(boost::bind(&wb_controller::GaitGenerator::switchGait,controller_ptr->getGaitGenerator()),JoyHandler::SELECT);
+        addButtonHandler(boost::bind(&wb_controller::Controller::switchGait,controller_ptr),JoyHandler::SELECT);
       else
         throw std::runtime_error("GaitGenerator not initialized yet!");
     }

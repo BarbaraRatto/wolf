@@ -25,6 +25,7 @@
 #include <wb_controller/quadruped_robot.h>
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/legs_kinematics.h>
+#include <wb_controller/legs_impedance.h>
 #include <wb_controller/footholds_planner.h>
 #include <wb_controller/com_planner.h>
 #include <wb_controller/state_estimator.h>
@@ -104,6 +105,16 @@ public:
     void toggleSolver();
 
     /**
+         * @brief Start/Stop solver integration
+         */
+    void startSolver(const bool& start);
+
+    /**
+         * @brief get the flag value for the solver
+         */
+    bool isSolverActive() const;
+
+    /**
          * @brief Start/Stop the base height control
          */
     void toggleBaseHeightControl();
@@ -114,16 +125,32 @@ public:
     void toggleInertiaCompensation();
 
     /**
+         * @brief Start/Stop the inertia compensation at the leg level, useful if the robot has very low inertia at the knee joints
+         */
+    void startInertiaCompensation(const bool& start);
+
+    /**
+         * @brief get the flag value for the inertia compensation
+         */
+    bool isInertiaCompensationActive() const;
+
+    /**
          * @brief Set the duty factor for the feet
          * @param const double duty_factor
          */
     bool setDutyFactor(const double& duty_factor);
 
     /**
-         * @brief Set the gait type
-         * @param const std::string& gait_type
+         * @brief Set absoulte value of the joint acceleration limits
+         * @param lim
          */
-    bool setGaitType(const std::string& gait_type);
+    bool setJointAccelerationLimit(const double &lim);
+
+    /**
+         * @brief Set the mu value for the friction cones
+         * @param mu [0,1]
+         */
+    bool setFrictionConesMu(const double &mu);
 
     /**
          * @brief Set the swing frequency
@@ -134,12 +161,22 @@ public:
     /**
          * @brief Select the stack to use
          */
-    bool selectStack(const std::string &stack);
+    bool selectStack(const std::string& stack);
 
     /**
          * @brief Switch between WALKING and MANIPULATION stack
          */
     void switchStack();
+
+    /**
+         * @brief Select the gait to use
+         */
+    bool selectGait(const std::string& gait);
+
+    /**
+         * @brief Switch between TROT and CRAWL gait
+         */
+    void switchGait();
 
     /**
          * @brief Get desired contact forces
@@ -177,6 +214,11 @@ public:
     LegsKinematics* getLegsKinematics() const;
 
     /**
+         * @brief Get the legs impedance pointer
+         */
+    LegsImpedance* getLegsImpedance() const;
+
+    /**
          * @brief Get the terrain estimator pointer
          */
     TerrainEstimator* getTerrainEstimator() const;
@@ -186,11 +228,6 @@ public:
          */
     QuadrupedRobot* getRobotModel() const;
 
-
-
-    // FIXME To be moved in a class handling the computation for impedances
-    Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
-    Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
 
 private:
 
@@ -265,7 +302,9 @@ private:
     /** @brief Terrain Estimator */
     TerrainEstimator::Ptr terrain_estimator_;
     /** @brief Legs Kinematics */
-    LegsKinematics::Ptr kin_;
+    LegsKinematics::Ptr legs_kinematics_;
+    /** @brief LegsImpedance */
+    LegsImpedance::Ptr legs_impedance_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
     /** @brief Device handler */
@@ -294,7 +333,7 @@ private:
     bool use_contact_sensors_;
 
     /** @brief True if the solver is started */
-    std::atomic<bool> solver_started_;
+    std::atomic<bool> solver_active_;
     /** @brief True if the initialization phase is done */
     std::atomic<bool> init_done_;
     /** @brief True if the pid control is active */

@@ -89,6 +89,7 @@ private:
   Eigen::Vector6d base_twist_;
   Eigen::Vector3d com_vel_hf_;
   Eigen::Matrix3d I_hf_;
+  Eigen::Matrix3d I_world_;
   // Thresholds
   Eigen::Vector3d dynamic_th_dot_;
   Eigen::Vector3d static_th_dot_;
@@ -152,17 +153,17 @@ public:
     void setBaseOrientation(const Eigen::Vector3d& orientation);
     void setDefaultBaseOrientation(const Eigen::Vector3d& orientation);
     void setDefaultBasePosition(const Eigen::Vector3d& position);
-    void setBaseVelocityScaleX(const double scale);
-    void setBaseVelocityScaleY(const double scale);
-    void setBaseVelocityScaleZ(const double scale);
-    void setBaseVelocityScaleRoll(const double scale);
-    void setBaseVelocityScalePitch(const double scale);
-    void setBaseVelocityScaleYaw(const double scale);
-    void setLinearVelocityCmd(const double linear);
-    void setAngularVelocityCmd(const double angular);
-    void setStepHeight(const double height);
-    void setMaxStepHeight(const double max);
-    void setMaxStepLength(const double max);
+    void setBaseVelocityScaleX(const double& scale);
+    void setBaseVelocityScaleY(const double& scale);
+    void setBaseVelocityScaleZ(const double& scale);
+    void setBaseVelocityScaleRoll(const double& scale);
+    void setBaseVelocityScalePitch(const double& scale);
+    void setBaseVelocityScaleYaw(const double& scale);
+    void setLinearVelocityCmd(const double& linear);
+    void setAngularVelocityCmd(const double& angular);
+    void setStepHeight(const double& height);
+    void setMaxStepHeight(const double& max);
+    void setMaxStepLength(const double& max);
     void increaseStepHeight();
     void decreaseStepHeight();
     void increaseSwingFrequency();
@@ -189,19 +190,18 @@ public:
     double getAngularVelocityCmd() const ;
     double getStepHeight() const ;
     double getStepLength() const ;
-    const Gait::gait_t& getGaitType() const;
+    Gait::gait_t getGaitType() const;
     Eigen::Vector3d& getCurrentFoothold(const std::string& foot_name) ;
     Eigen::Vector3d& getCurrentFootholdHF(const std::string& foot_name) ;
     Eigen::Vector3d& getVirtualFoothold(const std::string& foot_name) ;
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
     void togglePushRecovery();
+    bool isPushRecoveryActive() const;
+    void startPushRecovery(bool start);
     bool isAnyFootInTouchDown();
     bool areAllFeetInStance();
     bool isAnyFootInSwing();
     const std::vector<std::string>& getFootNames() const;
-    const Eigen::Matrix3d& getBaseRotationInHf() const; // FIXME move to robot
-    const Eigen::Matrix3d& getHfRotationInWorld() const; // FIXME move to robot
-    const Eigen::Matrix3d &getBaseRotationInWorld() const; // FIXME move to robot
     double getSwingFrequency();
 
 
@@ -274,7 +274,7 @@ private:
     Eigen::Vector3d world_delta_foot_;
     Eigen::Vector3d world_X_virtual_foothold_offset_;
 
-    Eigen::Matrix3d world_R_base_;
+    Eigen::Matrix3d world_R_hf_;
     Eigen::Matrix3d hf_R_base_;
 
     Eigen::Vector3d delta_com_;
@@ -292,12 +292,12 @@ private:
     Eigen::Vector3d base_position_reference_;
     Eigen::Vector3d base_linear_velocity_reference_;
     Eigen::Vector3d base_angular_velocity_reference_;
-    Eigen::Matrix3d world_R_hf_;
+
 
     GaitGenerator::Ptr gait_generator_;
     QuadrupedRobot::Ptr robot_model_;
 
-    Eigen::Affine3d world_T_foot_, world_T_base_, base_T_hip_, hip_T_foot_, base_T_foot_;
+    Eigen::Affine3d base_T_foot_;
     std::vector<Eigen::Vector3d> hf_X_initial_footholds_;
     std::vector<Eigen::Vector3d> hf_X_initial_hips_;
 
@@ -306,13 +306,14 @@ private:
     std::map<std::string,Eigen::Vector3d> current_foothold_;
     std::map<std::string,Eigen::Vector3d> current_foothold_hf_;
 
-    double yaw_base_;
     double step_length_;
 
     friend class PushRecovery;
     PushRecovery::Ptr push_recovery_;
 
     Eigen::Affine3d tmp_affine3d_;
+    Eigen::Affine3d tmp_affine3d_1_;
+    Eigen::Affine3d tmp_matrix3d_;
 };
 
 } // namespace

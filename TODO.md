@@ -1,34 +1,23 @@
 # TODO list
 
-- Make solo work
-- Remove sensors description
-- Debug c and delta_com... they don't seem to do anything useful
-- Estimated_z does not work with spot when using estimated forces
-- desired forces and calculated one are different when using internal_wrench ( this looks like a problem with the force sensors, RBDL mass is correct )
-- counterbalance the ROLL with the terrain estimator
-- switching to Manipulation remove contacts (moving the arm weight to 1 seems to solve the problem), switching to walking bounce the height
-- Arm control shaking
-- Remove postural for the arm!!!!
-- Move hf and other transforms to quadruped robot
-- Quadruped robot as decorator with horizontal frame informations as well?
-- push recovery tests
-- collision avoidance
 
-- Move terrain estimator inside state estimator as a subclass
-- Remove dynamic reconfigure
+- solver getting crazy and losing contacts?
+- Robustness tests when walking on rough terrain with push recovery
+- IK with joint limits / qhome
+- Export filters
+- Debug c and delta_com... they don't seem to do anything useful
+- counterbalance the ROLL with the terrain estimator
+- Remove postural for the arm!!!!
+- collision avoidance
 - Clean wb_robot_hw, parse hardcoded info from urdf/srdf
 - Move odom thread to state_estimator
-- Postural gains still in the controller... fix!
 - add trajectory for arm
 - Web app
-- Clean solo, test it without inertia comp.
 - Convex hull in acceleration
 - State estimation
 - Experiments on the real robot
-- Fix device interface Add XBOX
-- IK with joint limits
+- Merge 20.04
 - step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)
-- remove sensors and clean up the urdfs! In progress...
