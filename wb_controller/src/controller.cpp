@@ -223,15 +223,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   device_handler_.reset(new JoyHandler(controller_nh,this));
 
-  // initialize the filters
-  cutoff_hz_gyro_ = 300.; // FIXME Export
-  cutoff_hz_qdot_ = 300.;
-
-  qdot_filter_.setOmega(2.0*M_PI*cutoff_hz_qdot_);
+  // initialize the filters  
   qdot_filter_.setDamping(1.0);
   qdot_filter_.setTimeStep(period_);
-
-  imu_gyroscope_filter_.setOmega(2.0*M_PI*cutoff_hz_gyro_);
   imu_gyroscope_filter_.setDamping(1.0);
   imu_gyroscope_filter_.setTimeStep(period_);
 
@@ -299,6 +293,29 @@ bool Controller::setFrictionConesMu(const double& mu)
     return false;
   }
   return true;
+}
+
+
+void Controller::setCutoffFreqQdot(const double &hz)
+{
+    if(hz >= 0.0)
+    {
+        qdot_filter_.setOmega(2.0*M_PI*hz);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for qdot filter at "<< hz);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Cutoff frequency has to be >= 0.0 [Hz]!");
+}
+
+void Controller::setCutoffFreqGyro(const double &hz)
+{
+    if(hz >= 0.0)
+    {
+        imu_gyroscope_filter_.setOmega(2.0*M_PI*hz);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for imu gyroscope filter at "<< hz);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Cutoff frequency has to be >= 0.0 [Hz]!");
 }
 
 bool Controller::setSwingFrequency(const double& swing_frequency)
