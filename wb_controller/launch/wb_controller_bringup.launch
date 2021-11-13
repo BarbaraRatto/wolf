@@ -12,11 +12,13 @@
     <arg name="gazebo" default="true" />
     <arg name="arm_enabled" default="false" />
     <arg name="arm_name" default="teleop" />
+    <arg name="xbox"     default="false" />
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
     <param name="internal_wrench" value="$(arg internal_wrench)"/>
     <param name="robot_name" type="str"  value="$(arg robot_name)" />
+    <param name="use_xbox_controller" value="$(arg xbox)"/>
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">

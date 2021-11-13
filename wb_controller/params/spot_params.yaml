@@ -10,8 +10,6 @@ wb_controller:
   max_step_length: 0.5
   estimation_position_type: ground_truth
   estimation_orientation_type: ground_truth
-  
-  use_xbox_controller: true
 
   push_recovery:
       k: {x: 0.5, y: 0.5, r: 0.01}

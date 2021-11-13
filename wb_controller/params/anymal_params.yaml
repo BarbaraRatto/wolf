@@ -10,8 +10,6 @@ wb_controller:
   estimation_position_type: ground_truth
   estimation_orientation_type: ground_truth
   
-  use_xbox_controller: true
-  
   gains:
 
       clik_gain: 1.0
