@@ -32,6 +32,8 @@
                 <arg name="arm_name" value="$(arg arm_name)"/>
                 <arg name="debug" value="$(arg gazebo_debug)"/>
             </include>
+            <!-- Set the robot to the home position loaded from the SRDF file -->
+            <node name="goto0" pkg="wb_controller" type="go0"/>
     </group>
 
     <group unless="$(arg gazebo)">

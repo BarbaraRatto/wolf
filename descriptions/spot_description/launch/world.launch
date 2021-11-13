@@ -55,7 +55,5 @@
 	<!-- Spawn a robot into Gazebo -->
         <node name="spawn_spot_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param gazebo_robot_description -model spot -z 0.55"/>
 
-        <!-- Get robot to 0 position -->
-        <node name="goto0" pkg="spot_description" type="go0" args="1.0"  />
 </launch>
 
