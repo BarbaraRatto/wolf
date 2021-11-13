@@ -36,34 +36,21 @@
 
 	<!-- Start gazebo server-->
 	<node name="gazebo" pkg="gazebo_ros" type="$(arg script_type)" respawn="false" output="screen"
-		args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name)" />
+                args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name) -e ode --verbose" />
 	
 	<!-- Start gazebo client -->
 	<group if="$(arg gui)">
 		<node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false" output="screen"/>
 	</group>
 
-	<!-- Send hyq urdf to parameter server and spawn it -->
-	<include file="$(find hyq_description)/launch/upload.launch">
-		<arg name="sensors" value="$(arg sensors)" />
-		<arg name="internal_wrench" value="$(arg internal_wrench)" />
-                <arg name="task_period" value="$(arg task_period)" />
-                <arg name="arm_name" value="$(arg arm_name)" />
-                <arg name="arm_enabled" value="$(arg arm_enabled)" />
+        <!-- Send solo urdf to parameter server and spawn it -->
+        <include file="$(find solo_description)/launch/upload.launch">
+
 	</include>
 
 	<!-- Spawn a robot into Gazebo -->
-        <node name="spawn_hyq_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model hyq -z 0.65"/>
+        <node name="spawn_solo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param gazebo_robot_description -model solo -z 0.35"/>
 
-	<!-- Get robot to 0 position -->
-        <node name="goto0" pkg="hyq_description" type="go0" args="1.0"  />
 
-	<!-- Start the stereo processing for the simulated multisense -->
-	<group if="$(arg sensors)">
-		<node ns="multisense/camera" name="stereo_proc" pkg="stereo_image_proc" type="stereo_image_proc" respawn="false" output="log">
-			<param name="disparity_range" type="int" value="128"/>
-			<param name="approximate_sync" type="bool" value="false"/>
-		</node>
-	</group>
 </launch>
 
