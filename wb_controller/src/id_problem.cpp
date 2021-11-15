@@ -163,11 +163,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   Eigen::MatrixXd W_reg;
   A_reg = Eigen::MatrixXd::Identity(n,n);
   b_reg = Eigen::VectorXd::Zero(n);
-  W_reg = Eigen::MatrixXd::Identity(n,n);
+  W_reg = Eigen::MatrixXd::Identity(n,n) * 1e-3;
   unsigned int n_limbs = model_->getNumberArms() + model_->getNumberLegs();
   unsigned int n_forces = 6 * n_limbs;
   regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
-  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-6;
+  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-3;
   regularization_->setWeight(W_reg);
 
   for (auto& tmp_map : stacks_)
