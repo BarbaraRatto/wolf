@@ -390,6 +390,12 @@ const double &QuadrupedRobot::getBaseWidth() const
 void QuadrupedRobot::getFloatingBasePositionInertia(Eigen::Matrix3d& M)
 {
   getInertiaMatrix(tmp_M_);
+  M = tmp_M_.block(0,0,3,3);
+}
+
+void QuadrupedRobot::getFloatingBaseOrientationInertia(Eigen::Matrix3d& M)
+{
+  getInertiaMatrix(tmp_M_);
   M = tmp_M_.block(3,3,3,3);
 }
 

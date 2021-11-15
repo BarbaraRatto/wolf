@@ -55,6 +55,7 @@ public:
   bool setState(robot_states_t robot_state);
 
   void getFloatingBasePositionInertia(Eigen::Matrix3d& M);
+  void getFloatingBaseOrientationInertia(Eigen::Matrix3d& M);
   void getLimbInertia(const std::string& limb_name, Eigen::MatrixXd& M);
   void getLimbInertiaInverse(const std::string& limb_name, Eigen::MatrixXd& Mi);
 
