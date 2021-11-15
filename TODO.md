@@ -1,6 +1,6 @@
 # TODO list
 
-
+- ADD IMU and remove ROBOT_REAL
 - solver getting crazy and losing contacts?
 - Robustness tests when walking on rough terrain with push recovery
 - IK with joint limits / qhome
