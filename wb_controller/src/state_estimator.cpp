@@ -35,7 +35,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   terrain_normal_ << 0,0,1;
   imu_orientation_.normalize();
   floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
-  contacts_estimation_active_ = false;
+  contact_computation_active_ = false;
 
   for(unsigned int i=0;i<contact_names.size();i++)
   {
@@ -260,11 +260,11 @@ void StateEstimator::stopHapticContactLoop()
   haptic_contact_loop_active_ = false;
 }
 
-void StateEstimator::startContactsEstimation()
+void StateEstimator::startContactComputation()
 {
-  contacts_estimation_active_ = true;
+  contact_computation_active_ = true;
 
-  ROS_INFO_NAMED(CLASS_NAME,"Start contact estimation");
+  ROS_INFO_NAMED(CLASS_NAME,"Start contact computation");
 }
 
 void StateEstimator::resetGyroscopeIntegration()
@@ -272,11 +272,11 @@ void StateEstimator::resetGyroscopeIntegration()
   reset_gyro_integration_done_ = false;
 }
 
-void StateEstimator::stopContactsEstimation()
+void StateEstimator::stopContactComputation()
 {
-  contacts_estimation_active_ = false;
+  contact_computation_active_ = false;
 
-  ROS_INFO_NAMED(CLASS_NAME,"Stop contact estimation: the contacts state are forced to TRUE");
+  ROS_INFO_NAMED(CLASS_NAME,"Stop contact computation: the contact states are forced to TRUE");
 }
 
 void StateEstimator::update(const double& period)
@@ -310,7 +310,7 @@ void StateEstimator::updateContactState()
       contact_forces_[foot_names[i]] = robot_model_->getFootPoseInWorld(foot_names[i]) * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
     }
 
-    if(contacts_estimation_active_)
+    if(contact_computation_active_)
       contacts_[foot_names[i]] = (contact_forces_[foot_names[i]].dot(terrain_normal_) >= contact_force_th_ ? true : false);
     else
       contacts_[foot_names[i]] = true;
@@ -337,7 +337,7 @@ void StateEstimator::updateContactState()
 
     tmp_vector3d_ = robot_model_->getEndEffectorPoseInWorld(ee_names[i]) * tmp_vector3d_; // contact_force_world = world_T_ee * contact_force_ee
 
-    if(contacts_estimation_active_)
+    if(contact_computation_active_)
       contacts_[ee_names[i]] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
     else
       contacts_[ee_names[i]] = false;
