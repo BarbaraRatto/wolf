@@ -268,5 +268,13 @@ const Eigen::Affine3d &TerrainEstimator::getTerrainPoseHf() const
   return hf_T_terrain_;
 }
 
+bool TerrainEstimator::isOnFlatTerrain()
+{
+ if(std::abs(roll_out_world_) <= 0.01 && std::abs(pitch_out_world_) <= 0.01)
+   return true;
+ else
+   return false;
+}
+
 } // namespace
 

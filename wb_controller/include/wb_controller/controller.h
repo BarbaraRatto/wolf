@@ -141,10 +141,33 @@ public:
     bool setDutyFactor(const double& duty_factor);
 
     /**
+         * @brief Set absoulte value of the joint acceleration limits
+         * @param lim
+         */
+    bool setJointAccelerationLimit(const double &lim);
+
+    /**
+         * @brief Set the mu value for the friction cones
+         * @param mu [0,1]
+         */
+    bool setFrictionConesMu(const double &mu);
+
+    /**
          * @brief Set the swing frequency
          * @param const double& swing_frequency
          */
     bool setSwingFrequency(const double& swing_frequency);
+
+    /**
+         * @brief set cutoff frequency for the qdot filter
+         */
+    void setCutoffFreqQdot(const double& hz);
+
+    /**
+         * @brief set cutoff frequency for the gyroscope filter
+         */
+    void setCutoffFreqGyro(const double& hz);
+
 
     /**
          * @brief Select the stack to use
@@ -215,6 +238,7 @@ public:
          * @brief Get Robot Model
          */
     QuadrupedRobot* getRobotModel() const;
+
 
 private:
 
@@ -310,10 +334,6 @@ private:
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
     /** @brief imu_gyroscope_filter */
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
-     /** @brief cutoff_hz_ */
-    std::atomic<double> cutoff_hz_gyro_;
-    /** @brief cutoff_hz_ */
-    std::atomic<double> cutoff_hz_qdot_;
     /** @brief True if the solver istance has been created */
     bool solver_created_;
     /** @brief True if the controller uses the external contact sensors */

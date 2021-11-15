@@ -1,12 +1,12 @@
 <?xml version="1.0" ?>
 <launch>
 
+	<arg name="sensors" default="true"/>
+
 	<!-- Load the sensors that measured the internal wrench in the joints -->
 	<arg name="internal_wrench" default="false"/>
 
 	<!-- These are the arguments you can pass this launch file, for example paused:=true -->
-        <arg name="sensors" default="false" />
-        <arg name="robot_name" default="spot"/>
 	<arg name="paused" default="true"/>
 	<arg name="use_sim_time" default="true"/>
 	<arg name="gui" default="true"/>
@@ -36,23 +36,21 @@
 
 	<!-- Start gazebo server-->
 	<node name="gazebo" pkg="gazebo_ros" type="$(arg script_type)" respawn="false" output="screen"
-		args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name)" />
+                args="$(arg command_arg1) $(arg command_arg2) $(arg full_world_name) -e ode --verbose" />
 	
 	<!-- Start gazebo client -->
 	<group if="$(arg gui)">
 		<node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false" output="screen"/>
 	</group>
 
-        <!-- Send the robot urdf to parameter server and spawn it -->
-        <include file="$(find wb_controller)/launch/upload.launch">
-                <arg name="task_period" value="$(arg task_period)" />
-                <arg name="robot_name" value="$(arg robot_name)" />
-		<arg name="internal_wrench" value="$(arg internal_wrench)" />
-                <arg name="arm_name" value="$(arg arm_name)" />
-                <arg name="arm_enabled" value="$(arg arm_enabled)" />
+        <!-- Send solo urdf to parameter server and spawn it -->
+        <include file="$(find solo_description)/launch/upload.launch">
+
 	</include>
 
 	<!-- Spawn a robot into Gazebo -->
-        <node name="spawn_robot_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model $(arg robot_name) -z 0.55"/>
+        <node name="spawn_solo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param gazebo_robot_description -model solo -z 0.35"/>
+
+
 </launch>
 

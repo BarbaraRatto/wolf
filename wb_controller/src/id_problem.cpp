@@ -76,17 +76,17 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
 
   OpenSoT::constraints::force::FrictionCones::friction_cones fcs;
-  fc_.second = 0.7; // mu
+  fc_.second = 1.0; // mu
   fc_.first.setIdentity();
   for(unsigned int i = 0; i < foot_names_.size(); i++)
     fcs.push_back(fc_);
   friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_,fcs);
 
-  Eigen::VectorXd xmax = 500.*Eigen::VectorXd::Ones(model_->getJointNum());
-  Eigen::VectorXd xmin = -xmax;
+  joint_acceleration_lim_ = 1000.;
+  ones_ = Eigen::VectorXd::Ones(model_->getJointNum());
 
   qddot_lims_ = std::make_shared<OpenSoT::constraints::GenericConstraint>(
-        "acc_lims", id_->getJointsAccelerationAffine(), xmax, xmin, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
+        "acc_lims", id_->getJointsAccelerationAffine(), joint_acceleration_lim_ * ones_, -1.0 * joint_acceleration_lim_ * ones_, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
 
   x_force_lower_lim_ = -2000;
   y_force_lower_lim_ = -2000;
@@ -129,6 +129,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                      // arm_aggregated
                      / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
                      )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+
+  //int stack_pos_offset = 1; // FIXME 100.0 * arm_aggregated
+  //stacks_[WALKING] /= ( 1000.0 * feet_aggregated + 50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_
+  //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   if(ee_names_.size() > 0)
   {
@@ -187,7 +191,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     tasks_ros_[ee_names_[i]]->OPTIONS.set_ext_reference = true;
   }
 
-  selectStack(stacks_t::WALKING);
+  //selectStack(stacks_t::WALKING);
 }
 
 IDProblem::~IDProblem()
@@ -196,13 +200,8 @@ IDProblem::~IDProblem()
 
 void IDProblem::setFrictionConesMu(const double& mu)
 {
-  if(mu>=0.0 && mu<=1.0)
-  {
-    fc_.second = mu;
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set mu to: "<<mu);
-  }
-  else
-    ROS_WARN_NAMED(CLASS_NAME,"Mu has to be between 0 and 1!");
+  assert(mu>=0.0 && mu<=1.0);
+  fc_.second = mu;
 }
 
 double IDProblem::getFrictionConesMu() const
@@ -213,6 +212,17 @@ double IDProblem::getFrictionConesMu() const
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
 {
    fc_.first = R;
+}
+
+void IDProblem::setJointAccelerationAbsLim(const double& lim)
+{
+   assert(lim>=0.0);
+   joint_acceleration_lim_ = lim;
+}
+
+double IDProblem::getJointAccelerationAbsLim()
+{
+   return joint_acceleration_lim_;
 }
 
 void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,const double& z_force)
@@ -308,6 +318,9 @@ void IDProblem::update()
     if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
+
+  qddot_lims_->setBounds(joint_acceleration_lim_ * ones_,-1.0*joint_acceleration_lim_ * ones_);
+
   //Update the external lambda/references etc...
   for (auto& tmp_map : tasks_ros_)
     tmp_map.second->update();
@@ -334,7 +347,7 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 {
   bool res_solv = false;
   bool res_id = false;
-  if (solver_lock_.try_lock())
+  if (solver_ && solver_lock_.try_lock())
   {
     update();
     res_solv = solver_->solve(x_);
