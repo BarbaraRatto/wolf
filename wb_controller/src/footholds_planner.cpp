@@ -229,7 +229,7 @@ void FootholdsPlanner::calculateFootSteps()
 
       //6) Sum delta com and the delta for the push recovery
       //hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + delta_com_;
-      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + hf_R_base_ * delta_com_;
+      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
       // 6) Sum everything to obtain the new foothold displacement w.r.t world

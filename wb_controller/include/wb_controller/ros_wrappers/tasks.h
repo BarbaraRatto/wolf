@@ -85,6 +85,11 @@ public:
       task_->reset();
     }
 
+    virtual void computeCost(Eigen::VectorXd& x) override
+    {
+      cost_ = task_->computeCost(x);
+    }
+
 protected:
 
     std::shared_ptr<realtime_tools::RealtimePublisher<msg_t>> rt_pub_;
@@ -218,6 +223,9 @@ public:
             wb_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_reference);
             wb_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_reference);
             wb_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_reference);
+
+            // COST
+            rt_pub_->msg_.cost = cost_;
 
             rt_pub_->unlockAndPublish();
         }
@@ -452,6 +460,9 @@ public:
             // Pose - Translation
             wb_controller::vector3dToPosePosition(tmp_vector3d_,rt_pub_->msg_.pose_reference);
 
+            // COST
+            rt_pub_->msg_.cost = cost_;
+
             rt_pub_->unlockAndPublish();
         }
     }
@@ -505,6 +516,9 @@ public:
                 rt_pub_->msg_.position_error[i] = position_error(i);
                 rt_pub_->msg_.velocity_error[i] = velocity_error(i);
             }
+
+            // COST
+            rt_pub_->msg_.cost = cost_;
 
             rt_pub_->unlockAndPublish();
 

@@ -55,6 +55,7 @@ public:
   bool setState(robot_states_t robot_state);
 
   void getFloatingBasePositionInertia(Eigen::Matrix3d& M);
+  void getFloatingBaseOrientationInertia(Eigen::Matrix3d& M);
   void getLimbInertia(const std::string& limb_name, Eigen::MatrixXd& M);
   void getLimbInertiaInverse(const std::string& limb_name, Eigen::MatrixXd& Mi);
 
@@ -89,6 +90,27 @@ public:
   Eigen::Affine3d &getEndEffectorPoseInBase(const std::string &name);
 
   const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
+
+  /**
+       * @brief check if the joint velocities are above a max value, saturate the value if the limits are violated
+       * @param qdot input vector to check
+       * @return true is the limits are violated
+       */
+  bool clampJointVelocities(Eigen::VectorXd &qdot);
+
+  /**
+       * @brief check if the joint positions are between a max and min value, saturate the value if the limits are violated
+       * @param q input vector to check
+       * @return true is the limits are violated
+       */
+  bool clampJointPositions(Eigen::VectorXd &q);
+
+  /**
+       * @brief check if the joint efforts are above a max value, saturate the value if the limits are violated
+       * @param tau input vector to check
+       * @return true is the limits are violated
+       */
+  bool clampJointEfforts(Eigen::VectorXd &tau);
 
 private:
 
@@ -136,6 +158,14 @@ private:
   std::map<std::string,Eigen::Affine3d> base_T_ee_;
   /** @brief Arm end-effector pose w.r.t world */
   std::map<std::string,Eigen::Affine3d> world_T_ee_;
+  /** @brief Min joints position */
+  Eigen::VectorXd q_min_;
+  /** @brief Max joints position */
+  Eigen::VectorXd q_max_;
+  /** @brief Max joints velocity */
+  Eigen::VectorXd qdot_max_;
+  /** @brief Max joints effort */
+  Eigen::VectorXd tau_max_;
 
   std::atomic<robot_states_t> robot_state_;
 

@@ -9,6 +9,7 @@
 #include <OpenSoT/tasks/acceleration/CoM.h>
 #include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
+#include <OpenSoT/constraints/acceleration/TorqueLimits.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/iHQP.h>
 #include <OpenSoT/utils/InverseDynamics.h>
@@ -194,6 +195,11 @@ public:
      * @brief qddot_lims_ some bounds
      */
     OpenSoT::constraints::GenericConstraint::Ptr qddot_lims_;
+
+    /**
+     * @brief torque_lims_ some bounds
+     */
+    OpenSoT::constraints::acceleration::TorqueLimits::Ptr torque_lims_;
 
     /**
      * @brief wrenches_lims_ bounds

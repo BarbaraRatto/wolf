@@ -199,10 +199,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
   state_estimator_ = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
-  legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_));
-  legs_kinematics_->activateBaseHeightControl();
-  des_joint_positions_ = legs_kinematics_->getJointHomePositions();
-
   legs_impedance_.reset(new LegsImpedance(gait_generator_,robot_model_));
 
   terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_,robot_model_));
@@ -211,6 +207,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
   terrain_estimator_->setMinPitch(-M_PI);
+
+  legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_,terrain_estimator_));
+  legs_kinematics_->activateBaseHeightControl();
+  des_joint_positions_ = legs_kinematics_->getJointHomePositions();
 
   com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
 
@@ -242,11 +242,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities_",des_joint_velocities_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_",joint_velocities_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_pids_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_efforts",joint_efforts_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
 
@@ -679,6 +681,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     des_joint_i_gain_[i] = pid_scale_ * joint_i_gain_[i];
     des_joint_d_gain_[i] = pid_scale_ * joint_d_gain_[i];
   }
+
+   // Check if the desired efforts are valid otherwise clamp them
+  robot_model_->clampJointEfforts(des_joint_efforts_solver_);
 
   // Write to the hardware interface
   for (unsigned int i = 0; i < joint_states_.size(); i++)
