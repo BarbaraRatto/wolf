@@ -217,7 +217,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   id_prob_.reset(new IDProblem(nh_,robot_model_));
 
   device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
-  std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(nh_.param("use_xbox_controller", false));
+  bool xbox = false;
+  root_nh.getParam("/use_xbox_controller",xbox);
+  if(!xbox)
+    ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller");
+  else
+     ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller");
+  std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(xbox);
 
   // initialize the filters
   cutoff_hz_gyro_ = 300.; // FIXME Export
