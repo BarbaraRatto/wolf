@@ -33,6 +33,8 @@ public:
     unsigned int getNdof() {return n_dof_;}
     bool isInitialized() {return initialized_;}
 
+    std::vector<std::string> loadJointNamesFromSRDF();
+
 protected:
 
     std::string robot_name_;

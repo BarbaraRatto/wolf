@@ -18,7 +18,7 @@ else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 nor C++14 support. Please use a different C++ compiler.")
 endif()
 
-find_package(catkin REQUIRED COMPONENTS roscpp hardware_interface urdf transmission_interface)
+find_package(catkin REQUIRED COMPONENTS roscpp hardware_interface urdf transmission_interface srdfdom urdf)
 
 find_package(PkgConfig)
 pkg_check_modules(EIGEN3 eigen3 REQUIRED)
