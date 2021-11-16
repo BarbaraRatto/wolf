@@ -19,7 +19,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //  This utility internally creates the right variables which later we will use to
   //  create all the tasks and constraints
   //
-  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_);
+  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_, OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT);
 
   //
   // Here we create all the tasks
@@ -70,11 +70,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //
   // Here we create the constraints & bounds
   //
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Dynamic Feasibility");
   dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_,
                                                                                       id_->getJointsAccelerationAffine(), id_->getContactsWrenchAffine(), foot_names_);
 
   dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
 
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Friction Cones");
   OpenSoT::constraints::force::FrictionCones::friction_cones fcs;
   fc_.second = 1.0; // mu
   fc_.first.setIdentity();
@@ -94,12 +96,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot's weight is: "<<model_->getMass());
 
+
   wrench_upper_lims_<<2000,2000,2000,Eigen::Vector3d::Zero();
   wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
 
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Wrench Limits");
   wrenches_lims_ = std::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
         foot_names_, wrench_lower_lims_, wrench_upper_lims_,id_->getContactsWrenchAffine());
 
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Torque Limits");
   Eigen::VectorXd tau_max;
   model_->getEffortLimits(tau_max);
   tau_max.head(6).setZero();
