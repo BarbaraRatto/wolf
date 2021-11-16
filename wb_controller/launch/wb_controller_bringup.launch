@@ -67,8 +67,10 @@
     </node>
 
     <!-- joy -->
+    <arg name="joy_deadzone" default="0.1"/>
     <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/wb_controller">
             <param name="autorepeat_rate " value="500" />
+            <param name="deadzone" value="$(arg joy_deadzone)"/>
     </node>
 
     <!-- Convert joint states to TF transforms for rviz, etc -->
