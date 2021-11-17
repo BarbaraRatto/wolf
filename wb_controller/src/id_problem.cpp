@@ -109,7 +109,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   std::list<unsigned int> id_XY    = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
-  std::list<unsigned int> id_legs  = {6,7,8,9,10,11,12,13,14,15,16,17};
+  std::list<unsigned int> id_legs;
+  id_legs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
+  std::list<unsigned int>::iterator it;
+  unsigned int idx = FLOATING_BASE_DOFS;
+  for (it = id_legs.begin(); it != id_legs.end(); ++it)
+  {
+      *it = idx;
+      idx++;
+  }
 
   OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;//, arm_aggregated_weighted;
   feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%id_XYZ,feet_[foot_names_[0]]->getXSize());
