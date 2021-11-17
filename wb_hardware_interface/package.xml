@@ -12,6 +12,7 @@
   <depend>hardware_interface</depend> 
   <depend>transmission_interface</depend>
   <depend>urdf</depend>
+  <depend>srdfdom</depend>
 
   <export>
     <cpp cflags="-I${prefix}/include"/>
