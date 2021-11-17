@@ -6,6 +6,7 @@
 - apdat com velocity based on the % of trj executed
 - delta com only for the front legs
 - step reflexes
+- ADD IMU and remove ROBOT_REAL
 - solver getting crazy and losing contacts?
 - Robustness tests when walking on rough terrain with push recovery
 - IK has a serious problem when going in singularity, damping helps but it needs to be tuned and exported...?
