@@ -1,4 +1,7 @@
 #include <wb_hardware_interface/wb_robot_hw.h>
+#include <srdfdom/model.h>
+#include <urdf_parser/urdf_parser.h>
+#include <srdfdom/srdf_writer.h>
 
 using namespace hardware_interface;
 
@@ -9,6 +12,36 @@ WbRobotHwInterface::WbRobotHwInterface()
 
 WbRobotHwInterface::~WbRobotHwInterface()
 {
+}
+
+std::vector<std::string> WbRobotHwInterface::loadJointNamesFromSRDF()
+{
+    std::vector<std::string> joint_names;
+    ros::NodeHandle nh;
+    std::string srdf, urdf;
+    if(!nh.getParam("/robot_description",urdf))
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"robot_description not available in the ros param server");
+        return joint_names;
+    }
+    if(!nh.getParam("/robot_semantic_description",srdf))
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"robot_description_semantic not available in the ros param server");
+        return joint_names;
+    }
+
+    srdf::Model s;
+    urdf::ModelInterfaceSharedPtr u = urdf::parseURDF(urdf);
+    s.initString(*u,srdf);
+
+    auto group_states = s.getGroupStates();
+
+    for(unsigned int i=0;i<group_states.size();i++)
+        if(group_states[i].name_ == "home") // look for the home group state and get the names of the joints in there
+            for(auto & tmp : group_states[i].joint_values_)
+                joint_names.push_back(tmp.first);
+
+    return joint_names;
 }
 
 bool WbRobotHwInterface::initializeInterfaces(const std::vector<std::string>& joint_names)
@@ -57,7 +90,7 @@ bool WbRobotHwInterface::initializeInterfaces(const std::vector<std::string>& jo
 
         // Create joint state interface for all joints
         joint_state_interface_.registerHandle(hardware_interface::JointStateHandle(
-                                                  joint_names_[j], &joint_position_[j], &joint_velocity_[j], &joint_effort_[j]));
+                                              joint_names_[j], &joint_position_[j], &joint_velocity_[j], &joint_effort_[j]));
 
         joint_effort_interface_.registerHandle(JointHandle(joint_state_interface_.getHandle(joint_names_[j]), &joint_effort_command_[j]));
     }
