@@ -7,6 +7,7 @@
     <xacro:arg name="task_period" default="0.004"/>
     <xacro:arg name="arm_enabled" default="false"/>
     <xacro:arg name="arm_name" default="kinova"/>
+    <xacro:arg name="sensors" default="false"/>
 
     <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
     <xacro:include filename="$(find aliengo_description)/urdfs/materials.xacro"/>
@@ -20,6 +21,11 @@
     <xacro:include filename="$(find aliengo_description)/gazebo/gazebo.urdf.xacro">
          <xacro:arg name="task_period" value="$(arg task_period)"/>
     </xacro:include>
+
+    <!-- sensors -->
+    <xacro:if value="$(arg sensors)">
+        <xacro:include filename="$(find sensors_description)/urdfs/sensors/imu.gazebo.xacro"/>
+    </xacro:if>
 
     <!-- Rollover Protection mode will add an additional stick on the top, use "true" or "false" to switch it. -->
     <xacro:property name="rolloverProtection" value="false"/>
@@ -119,11 +125,11 @@
 
     <joint name="imu_joint" type="fixed">
         <parent link="trunk"/>
-        <child link="imu_link"/>
+        <child link="trunk_imu"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
     </joint>
 
-    <link name="imu_link">
+    <link name="trunk_imu">
         <inertial>
             <mass value="0.001"/>
             <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -179,5 +185,20 @@
            <xacro:include filename="$(find aliengo_description)/urdfs/arm/$(arg arm_name)_adapter.urdf.xacro" /> -->
     </xacro:if>
 
+    <xacro:if value="$(arg sensors)">
+            <xacro:imu_sensor
+                imu_name="trunk_imu"
+                imu_topic="trunk_imu/data"
+                update_rate="250"
+                rate_mean="0"
+                rate_stddev="0"
+                rate_bias_mean="0"
+                rate_bias_stddev="0"
+                accel_mean="0"
+                accel_stddev="0"
+                accel_bias_mean="0"
+                accel_bias_stddev="0">
+            </xacro:imu_sensor>
+    </xacro:if>
 
 </robot>

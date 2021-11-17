@@ -10,7 +10,7 @@
 
         <!-- send aliengo urdf to param server -->
         <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find aliengo_description)/robots/aliengo.urdf.xacro'
-        arm_enabled:=$(arg arm_enabled) arm_name:=$(arg arm_name) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period)"/>
+        arm_enabled:=$(arg arm_enabled) arm_name:=$(arg arm_name) sensors:=$(arg sensors) load_force_sensors:=$(arg internal_wrench) task_period:=$(arg task_period)"/>
 
         <group if="$(arg arm_enabled)">
               <param name="robot_semantic_description" command="$(find xacro)/xacro --inorder '$(find aliengo_description)/robots/aliengo_$(arg arm_name).srdf.xacro'" />

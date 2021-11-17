@@ -217,9 +217,8 @@ bool QuadrupedRobot::clampJointEfforts(Eigen::VectorXd &tau)
     bool violated_limits = false;
     for(unsigned int i=0;i<tau.size();i++)
     {
-        if(tau(i)>tau_max_(i))
+        if(std::abs(tau(i))>tau_max_(i)+EPS)
         {
-            tau(i) = tau_max_(i);
             ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum EFFORT limit of "<<tau_max_(i));
             violated_limits = true;
         }
@@ -233,7 +232,7 @@ bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
     bool violated_limits = false;
     for(unsigned int i=0;i<qdot_max_.size();i++)
     {
-        if(qdot(i)>qdot_max_(i))
+        if(std::abs(qdot(i))>qdot_max_(i))
         {
             qdot(i) = qdot_max_(i);
             ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
@@ -454,6 +453,12 @@ const double &QuadrupedRobot::getBaseWidth() const
 }
 
 void QuadrupedRobot::getFloatingBasePositionInertia(Eigen::Matrix3d& M)
+{
+  getInertiaMatrix(tmp_M_);
+  M = tmp_M_.block(0,0,3,3);
+}
+
+void QuadrupedRobot::getFloatingBaseOrientationInertia(Eigen::Matrix3d& M)
 {
   getInertiaMatrix(tmp_M_);
   M = tmp_M_.block(3,3,3,3);
