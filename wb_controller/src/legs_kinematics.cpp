@@ -181,6 +181,13 @@ void LegsKinematics::setFeedForwardStanceDot(const Eigen::Vector3d& xdot_stance_
 void LegsKinematics::setFeedForwardSwingDot(const Eigen::Vector3d& xdot_swing_ff)
 {
   xdot_swing_ff_ = xdot_swing_ff;
+
+void LegsKinematics::setAdaptiveDamping(const double &damp_max, const double &determinant_max)
+{
+    assert(damp_max>=0.0);
+    damp_max_ = damp_max;
+    assert(determinant_max>=0.0);
+    determinant_max_ = determinant_max;
 }
 
 void LegsKinematics::activateBaseHeightControl()

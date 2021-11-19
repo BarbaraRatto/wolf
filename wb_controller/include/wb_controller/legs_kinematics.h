@@ -44,6 +44,8 @@ public:
 
   void setFeedForwardSwingDot(const Eigen::Vector3d& xdot_swing_ff);
 
+  void setAdaptiveDamping(const double& damp_max, const double& determinant_max);
+
   bool setJointHomePositions(Eigen::VectorXd& qhome);
 
   const Eigen::VectorXd& getJointHomePositions();
