@@ -52,10 +52,7 @@
 	</include>
 
 	<!-- Spawn a robot into Gazebo -->
-        <node name="spawn_anymal_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model anymal -z 0.5"/>
-
-        <!-- Get robot to 0 position -->
-        <node name="goto0" pkg="anymal_description" type="go0" args="1.0"  />
+        <node name="spawn_anymal_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param gazebo_robot_description -model anymal -z 0.5"/>
 
 </launch>
 

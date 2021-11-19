@@ -195,13 +195,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   imu_orientation_.normalize();
   pid_scale_ = 1.0;
 
-  gait_generator_.reset(new GaitGenerator(robot_model_->getFootNames(),Gait::TROT,"ellipse"));
-  foot_holds_planner_.reset(new FootholdsPlanner(gait_generator_,robot_model_));
-  state_estimator_.reset(new StateEstimator(gait_generator_,robot_model_));
+  gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT,"ellipse");
+  foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
+  state_estimator_ = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
   legs_impedance_.reset(new LegsImpedance(gait_generator_,robot_model_));
 
   terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_,robot_model_));
+
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
   terrain_estimator_->setMaxPitch(M_PI);
@@ -215,7 +216,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
   id_prob_.reset(new IDProblem(nh_,robot_model_));
 
-  device_handler_.reset(new JoyHandler(controller_nh,this));
+  device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
+  bool xbox = false;
+  root_nh.getParam("/use_xbox_controller",xbox);
+  if(!xbox)
+    ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller");
+  else
+     ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller");
+  std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(xbox);
 
   // initialize the filters
   cutoff_hz_gyro_ = 300.; // FIXME Export
@@ -244,7 +252,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
 
-  ros_wrapper_.reset(new ControllerRosWrapper(root_nh,controller_nh,this));
+  ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
   return true;
 }

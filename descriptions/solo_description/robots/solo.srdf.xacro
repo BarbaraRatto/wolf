@@ -1,6 +1,5 @@
 <?xml version="1.0" ?>
 <robot name="solo" xmlns:xacro="http://ros.org/wiki/xacro">
-
     <group name="lf_leg">
         <joint name="lf_haa_joint" />
         <joint name="lf_hfe_joint" />

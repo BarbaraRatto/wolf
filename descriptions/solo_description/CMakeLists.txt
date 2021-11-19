@@ -47,5 +47,3 @@ install(DIRECTORY urdfs/
   PATTERN ".svn" EXCLUDE)
 
 
-catkin_install_python(PROGRAMS scripts/go0
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
