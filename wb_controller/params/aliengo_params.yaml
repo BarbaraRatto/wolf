@@ -10,6 +10,8 @@ wb_controller:
   max_step_length: 0.4
   estimation_position_type: estimated_z
   estimation_orientation_type: ground_truth
+  damp_max: 0.1
+  determinant_max: 0.5
 
   push_recovery:
       k: {x: 0.5, y: 0.5, r: 0.01}
