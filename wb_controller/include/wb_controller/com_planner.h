@@ -55,6 +55,8 @@ private:
   Eigen::Vector2d p_int_;
   Eigen::Vector2d p_int_versor_;
 
+  Eigen::Vector3d com_;
+
 
 };
 

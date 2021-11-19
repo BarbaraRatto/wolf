@@ -114,9 +114,14 @@ private:
   Eigen::Vector3d xdot_swing_ff_;
 
   Eigen::MatrixXd J_;
-  Eigen::MatrixXd J_foot_;
+  Eigen::Matrix3d J_foot_;
+  Eigen::Matrix3d J_foot_transp_;
+  Eigen::Matrix3d J_foot_inv_;
+  Eigen::Matrix3d I_;
   Eigen::Vector3d x_err_;
   Eigen::Vector3d x_err_dot_;
+  double damp_max_;
+  double determinant_max_;
 
 
   /** @brief Support temporary Affine3d */

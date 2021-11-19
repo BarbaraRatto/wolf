@@ -22,25 +22,24 @@ public:
   const std::string CLASS_NAME = "Gait";
 
   enum gait_t {CRAWL=0,TROT,ONE_FOOT_LF,ONE_FOOT_RH,ONE_FOOT_RF,ONE_FOOT_LH};
-
-  static inline std::string enum_to_string(const Gait::gait_t& gait_type)
-  {
-    switch(gait_type)
-    {
-       case Gait::gait_t::CRAWL:
-          return "CRAWL";
-       case Gait::gait_t::TROT:
-          return "TROT";
-    };
-  }
-
-  static inline Gait::gait_t string_to_enum(const std::string& gait_type)
-  {
-    if (gait_type == "CRAWL")
-      return Gait::gait_t::CRAWL;
-    else if (gait_type == "TROT")
-      return Gait::gait_t::TROT;
-  }
+  //typedef std::map<std::string, gait_t> gait_map_t;
+  //inline static gait_map_t gaits_ = {
+  //  { "CRAWL", gait_t::CRAWL },
+  //  { "TROT",  gait_t::TROT  },
+  //};
+  //
+  //static inline std::string enum_to_string(const Gait::gait_t& gait_type)
+  //{
+  //  for(auto& tmp : gaits_)
+  //  if(tmp.second == gait_type)
+  //    return tmp.first;
+  //  return "";
+  //}
+  //
+  //static inline Gait::gait_t string_to_enum(const std::string& gait_type)
+  //{
+  //  return gaits_[gait_type];
+  //}
 
   Gait(const std::vector<std::string>& foot_names, const gait_t& gait_type)
   {
@@ -122,8 +121,6 @@ private:
   unsigned int max_priority_;
 
   std::vector<std::string> next_feet_to_move_;
-
-
 };
 
 class GaitGenerator
@@ -192,10 +189,10 @@ public:
     gait_type_ = gait_type;
   }
 
-  void setGaitTypeName(const std::string& gait_type_name)
-  {
-    setGaitType(Gait::string_to_enum(gait_type_name));
-  }
+  //void setGaitTypeName(std::string gait_type_name)
+  //{
+  //  setGaitType(Gait::string_to_enum(gait_type_name));
+  //}
 
   const Eigen::Affine3d& getReference(const std::string& foot_name)
   {
@@ -356,15 +353,20 @@ public:
     return feet_[foot_name].state_machine->getSwingPeriod();
   }
 
-  const Gait::gait_t& getGaitType()
+  Gait::gait_t getGaitType()
   {
     return gait_type_;
   }
 
-  std::string getGaitTypeName()
-  {
-    return Gait::enum_to_string(gait_type_);
-  }
+  //std::string getGaitTypeName()
+  //{
+  //  return Gait::enum_to_string(gait_type_);
+  //}
+
+  //Gait::gait_map_t getGaitTypeMap()
+  //{
+  //  return Gait::gaits_;
+  //}
 
   void setTerrainRotation(const Eigen::Matrix3d& world_R_terrain)
   {
