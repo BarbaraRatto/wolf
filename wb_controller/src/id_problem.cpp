@@ -149,7 +149,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
   int stack_pos_offset = 0;
-  stacks_[WALKING] /= ( feet_aggregated + waistRPY_%id_RPY + postural_%id_legs +  com_ + angular_momentum_
+  stacks_[WALKING] /= ( feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z  + postural_%id_legs +  com_ + angular_momentum_
                      )<<wrenches_lims_<<qddot_lims_<<friction_cones_<<torque_lims_;
 
   if(ee_names_.size() > 0)
