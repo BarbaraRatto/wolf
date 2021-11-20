@@ -7,6 +7,7 @@
         <xacro:arg name="arm_name" default="teleop"/>
 	<!-- This argument allows us to load joint sensors that measure the internal wrenches -->
 	<xacro:arg name="load_force_sensors" default="false"/>
+	<xacro:arg name="floating_base_link" default="true"/>
 
 	<!-- The following included files set up definitions of parts of the robot body -->
 	<xacro:include filename="$(find hyq_description)/urdfs/common.xacro"/>
@@ -34,7 +35,7 @@ is the world frame). For more, see http://ros.org/wiki/xacro -->
 
 	<!-- body -->
 	<!-- trunk -->
-	<xacro:hyq_trunk name="base">
+	<xacro:hyq_trunk name="base" floating_base_link="$(arg floating_base_link)">
 		<!--origin xyz="-0.443 -0.191 -0.276" rpy="0 0 0"/-->
 	</xacro:hyq_trunk>
 

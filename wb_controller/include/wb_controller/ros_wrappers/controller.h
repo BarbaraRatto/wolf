@@ -98,6 +98,17 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default cutoff freq gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
+        double damp_max = 0.001;
+        if (!controller_nh.getParam("damp_max", damp_max))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No damp_max given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),damp_max);
+        }
+        double determinant_max = 0.1;
+        if (!controller_nh.getParam("determinant_max", determinant_max))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No determinant_max given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),determinant_max);
+        }
+        controller_->getLegsKinematics()->setAdaptiveDamping(damp_max,determinant_max);
 
         Eigen::Vector3d k, dynamic_th, static_th;
         if (!controller_nh.getParam("push_recovery/k/x", k(0)) || // gains

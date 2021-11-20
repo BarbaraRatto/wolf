@@ -10,6 +10,7 @@ wb_controller:
   max_step_length: 0.5
   estimation_position_type: ground_truth
   estimation_orientation_type: ground_truth
+  
   gains:
 
       clik_gain: 5.0

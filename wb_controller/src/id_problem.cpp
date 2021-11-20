@@ -19,7 +19,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //  This utility internally creates the right variables which later we will use to
   //  create all the tasks and constraints
   //
-  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_);
+  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_, OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT);
 
   //
   // Here we create all the tasks
@@ -64,17 +64,19 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   postural_->setWeightIsDiagonalFlag(true);
   //   --------------------------
   com_ = std::make_shared<OpenSoT::tasks::acceleration::CoM>(*model_, id_->getJointsAccelerationAffine());
-  com_->setLambda(0.,100.);
+  com_->setLambda(0.,0.);
   com_->setWeightIsDiagonalFlag(true);
 
   //
   // Here we create the constraints & bounds
   //
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Dynamic Feasibility");
   dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_,
                                                                                       id_->getJointsAccelerationAffine(), id_->getContactsWrenchAffine(), foot_names_);
 
   dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
 
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Friction Cones");
   OpenSoT::constraints::force::FrictionCones::friction_cones fcs;
   fc_.second = 1.0; // mu
   fc_.first.setIdentity();
@@ -94,28 +96,44 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
 
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot's weight is: "<<model_->getMass());
 
+
   wrench_upper_lims_<<2000,2000,2000,Eigen::Vector3d::Zero();
   wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
 
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Wrench Limits");
   wrenches_lims_ = std::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
         foot_names_, wrench_lower_lims_, wrench_upper_lims_,id_->getContactsWrenchAffine());
 
-  std::list<unsigned int> idx_XYZ  = {0,1,2}; //xyz
-  std::list<unsigned int> idx_XY   = {0,1};   //xy
+  ROS_INFO_NAMED(CLASS_NAME,"Initialize Torque Limits");
+  Eigen::VectorXd tau_max;
+  model_->getEffortLimits(tau_max);
+  tau_max.head(6).setZero();
+  torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
+
+  std::list<unsigned int> id_XYZ   = {0,1,2}; //xyz
+  std::list<unsigned int> id_XY    = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
-  std::list<unsigned int> id_legs  = {6,7,8,9,10,11,12,13,14,15,16,17};
+  std::list<unsigned int> id_legs;
+  id_legs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
+  std::list<unsigned int>::iterator it;
+  unsigned int idx = FLOATING_BASE_DOFS;
+  for (it = id_legs.begin(); it != id_legs.end(); ++it)
+  {
+      *it = idx;
+      idx++;
+  }
 
   OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;//, arm_aggregated_weighted;
-  feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%idx_XYZ,feet_[foot_names_[0]]->getXSize());
+  feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%id_XYZ,feet_[foot_names_[0]]->getXSize());
   for(unsigned int i=1;i<foot_names_.size();i++)
-    feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%idx_XYZ;
+    feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
   stacks_[MANIPULATION] = ( (feet_aggregated)
                           / (com_)
                           / (waistRPY_%id_RPY)// + arm_aggregated
-                          / (postural_)
-                          )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+                          / (postural_%id_legs)
+                          )<<wrenches_lims_<<qddot_lims_<<friction_cones_<<torque_lims_;
 
   // Original stack, it doesn't work with aliengo e anymal
   //int stack_pos_offset = 2;
@@ -124,15 +142,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //                     / (postural_ + com_ + angular_momentum_)
   //                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
 
-  int stack_pos_offset = 1;
-  stacks_[WALKING] = ( (feet_aggregated)
-                     // arm_aggregated
-                     / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
-                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
-
-  //int stack_pos_offset = 1; // FIXME 100.0 * arm_aggregated
-  //stacks_[WALKING] /= ( 1000.0 * feet_aggregated + 50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_
+  //int stack_pos_offset = 1;
+  //stacks_[WALKING] = ( (feet_aggregated)
+  //                   // arm_aggregated
+  //                   / (50.0 * waistRPY_%id_RPY + postural_ + com_ + angular_momentum_)
   //                   )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
+
+  int stack_pos_offset = 0;
+  stacks_[WALKING] /= ( feet_aggregated + waistRPY_%id_RPY + postural_%id_legs +  com_ + angular_momentum_
+                     )<<wrenches_lims_<<qddot_lims_<<friction_cones_<<torque_lims_;
 
   if(ee_names_.size() > 0)
   {
@@ -143,7 +161,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
       for(unsigned int i=1;i<ee_names_.size();i++)
         arm_aggregated = arm_aggregated + arms_[ee_names_[i]];
 
-      //arm_aggregated_weighted = 50.0 * arm_aggregated%idx_XYZ + arm_aggregated%id_RPY;
+      //arm_aggregated_weighted = 50.0 * arm_aggregated%id_XYZ + arm_aggregated%id_RPY;
     }
 
     stacks_[MANIPULATION]->getStack()[2] = 30.0 * arm_aggregated + stacks_[MANIPULATION]->getStack()[2];
@@ -158,11 +176,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   Eigen::MatrixXd W_reg;
   A_reg = Eigen::MatrixXd::Identity(n,n);
   b_reg = Eigen::VectorXd::Zero(n);
-  W_reg = Eigen::MatrixXd::Identity(n,n);
+  W_reg = Eigen::MatrixXd::Identity(n,n) * 1e-3;
   unsigned int n_limbs = model_->getNumberArms() + model_->getNumberLegs();
   unsigned int n_forces = 6 * n_limbs;
   regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
-  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-6;
+  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-3;
   regularization_->setWeight(W_reg);
 
   for (auto& tmp_map : stacks_)
@@ -355,6 +373,13 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
       res_id = id_->computedTorque(x_, tau, qddot_, contact_wrenches_);
     solver_lock_.unlock();
   }
+
+  // Update the costs
+#ifdef COMPUTE_COST
+  for (auto& tmp_map : tasks_ros_)
+    tmp_map.second->computeCost(x_);
+#endif
+
   return (res_solv && res_id);
 }
 
@@ -372,12 +397,14 @@ void IDProblem::swingWithFoot(const string &foot_name)
 {
   feet_[foot_name]->setActive(false);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
+  torque_lims_->disableContact(foot_name);
 }
 
 void IDProblem::stanceWithFoot(const string &foot_name)
 {
   feet_[foot_name]->setActive(true);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
+  torque_lims_->enableContact(foot_name);
 }
 
 void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z)

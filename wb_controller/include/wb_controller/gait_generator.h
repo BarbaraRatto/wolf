@@ -343,6 +343,28 @@ public:
     return avg;
   }
 
+  double getAvgTrajectoryCompletion()
+  {
+    double avg = 0.0;
+    int n_swinging_feet = 0;
+    for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    {
+      if(it->second.state_machine->isSwing())
+      {
+        avg = avg + it->second.trajectory->getCompletion();
+        n_swinging_feet++;
+      }
+    }
+    if(n_swinging_feet>0)
+        avg = avg / n_swinging_feet;
+    return avg;
+  }
+
+  double getTrajectoryCompletion(const std::string& foot_name)
+  {
+    return feet_[foot_name].trajectory->getCompletion();
+  }
+
   double getStancePeriod(const std::string& foot_name)
   {
     return feet_[foot_name].state_machine->getStancePeriod();

@@ -42,15 +42,32 @@ wb_controller:
       kp_stance: {haa: 300.0, hfe: 300.0, kfe: 300.0}
       kd_stance: {haa: 20.0, hfe: 20.0, kfe: 20.0}
 
+      lf_foot:
+          weight: 10.0
+      rf_foot:
+          weight: 10.0
+      rh_foot:
+          weight: 10.0
+      lh_foot:
+          weight: 10.0
+
+
       waistRPY:
           Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
           Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
+          weight: 5.0
 
       waistZ:
           Kp: {x: 0.0, y: 0.0, z: 50.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
           Kd: {x: 0.0, y: 0.0, z: 5.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+      Postural:
+          weight: 0.1
 
       CoM:
-          weight: 15.0
+          weight: 0.5
+          lambda2: 100.0
+
+      angular_momentum:
+          weight: 0.1
 
 

@@ -279,7 +279,7 @@ private:
     /** @brief Xbot robot model */
     QuadrupedRobot::Ptr robot_model_;
     /** @brief Dynamic problem formulation */
-    IDProblem::Ptr id_prob_;
+    std::unique_ptr<IDProblem> id_prob_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */

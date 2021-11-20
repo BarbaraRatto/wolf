@@ -2,7 +2,7 @@
 
 namespace wb_controller {
 
-LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
+LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, TerrainEstimator::Ptr terrain_estimator)
   : base_height_control_active_(false), clik_gain_(1.0)
 {
 
@@ -10,13 +10,13 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   gait_generator_ = gait_generator;
   assert(robot_model);
   robot_model_ = robot_model;
+  assert(terrain_estimator);
+  terrain_estimator_ = terrain_estimator;
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
   robot_model_->getRobotState("home", qhome_);
   robot_model_->setJointPosition(qhome_);
-
-  robot_model_->getJointLimits(qmin_, qmax_);
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
@@ -79,9 +79,9 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     else
     {
       // At the first cycle of stance, set the joints position at the current homing position
-      // Note: this makes the ramp exp not working anymore!
-      //if(gait_generator_->isTouchDown(foot_names[i]))
-      //   qstance_.segment(idx,3) = qhome_.segment(idx,3);
+      // Note: reset only on flat terrain otherwise we lose the legs adaptation to uneven terrain
+      if(gait_generator_->isTouchDown(foot_names[i]) && terrain_estimator_->isOnFlatTerrain())
+         qstance_.segment(idx,3) = qhome_.segment(idx,3);
 
       if(base_height_control_active_)
       {
@@ -101,8 +101,9 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     }
   }
 
-  // Check if the desired positions are valid and clamp them
-  jointLimitsCheck(des_joint_positions_,qmin_,qmax_);
+  // Check if the desired positions and velocities are valid and clamp them
+  robot_model_->clampJointPositions(des_joint_positions_);
+  robot_model_->clampJointVelocities(des_joint_velocities_);
 
   return true;
 }
@@ -136,7 +137,7 @@ const Eigen::VectorXd& LegsKinematics::getDesiredJointVelocities()
 bool LegsKinematics::setJointHomePositions(Eigen::VectorXd& qhome)
 {
   // Check if qhome is between qmin and qmax
-  if(jointLimitsCheck(qhome,qmin_,qmax_))
+  if(!robot_model_->checkJointLimits(qhome))
   {
       ROS_WARN_NAMED(CLASS_NAME,"Can not set qhome, joint limits violated!");
       return false;
@@ -167,35 +168,6 @@ void LegsKinematics::reset()
   xdot_swing_ff_.setZero();
 }
 
-void LegsKinematics::setJointLimits(const Eigen::VectorXd& qmax, const Eigen::VectorXd& qmin)
-{
-   qmax_ = qmax;
-   qmin_ = qmin;
-}
-
-bool LegsKinematics::jointLimitsCheck(Eigen::VectorXd& q, const Eigen::VectorXd& qmin, const Eigen::VectorXd& qmax)
-{
-    assert(q.size() == qmin.size());
-    assert(qmin.size() == qmax.size());
-    bool violated_limits = false;
-    for(unsigned int i=0;i<q.size();i++)
-    {
-        if(q(i)<qmin(i))
-        {
-            q(i) = qmin(i);
-            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the minimum limit of "<<qmin(i));
-            violated_limits = true;
-        }
-        if(q(i)>qmax(i))
-        {
-            q(i) = qmax(i);
-            //ROS_WARN_STREAM_NAMED(CLASS_NAME,"Joint("<<_dof_names[i]<<") violates the maximum limit of "<<qmax(i));
-            violated_limits = true;
-        }
-    }
-    return violated_limits;
-}
-
 void LegsKinematics::setDesiredBaseHeight(const double& des_base_height)
 {
   des_base_height_ = des_base_height;
@@ -209,6 +181,14 @@ void LegsKinematics::setFeedForwardStanceDot(const Eigen::Vector3d& xdot_stance_
 void LegsKinematics::setFeedForwardSwingDot(const Eigen::Vector3d& xdot_swing_ff)
 {
   xdot_swing_ff_ = xdot_swing_ff;
+}
+
+void LegsKinematics::setAdaptiveDamping(const double &damp_max, const double &determinant_max)
+{
+    assert(damp_max>=0.0);
+    damp_max_ = damp_max;
+    assert(determinant_max>=0.0);
+    determinant_max_ = determinant_max;
 }
 
 void LegsKinematics::activateBaseHeightControl()

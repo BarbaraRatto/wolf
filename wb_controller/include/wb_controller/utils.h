@@ -20,6 +20,9 @@ namespace wb_controller
 #define N_LEGS 4 // Fixed number of legs supported
 #define N_ARMS 1 // Fixed number of arms supported
 #define THREADS_SLEEP_TIME_ms 4
+#define THROTTLE_SEC 3.0
+#define COMPUTE_COST
+#define EPS 0.001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot

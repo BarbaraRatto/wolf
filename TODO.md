@@ -2,24 +2,22 @@
 
 - solver getting crazy and losing contacts?
 - Robustness tests when walking on rough terrain with push recovery
-- IK with joint limits / qhome
-- Export filters
-- Fix spawn
-- push recovery tests
-- Remove sensors description
-- Debug c and delta_com... they don't seem to do anything useful
-- counterbalance the ROLL with the terrain estimator
 - Remove postural for the arm!!!!
+- apdat com velocity based on the % of trj executed
+- delta com only for the front legs
+- step reflexes
+- ADD IMU and remove ROBOT_REAL
+- solver getting crazy and losing contacts?
+- Robustness tests when walking on rough terrain with push recovery
+- Make one level stack works with arm as well
+- Update the robot params to the new id problem without hardcoded values
 - collision avoidance
-- Clean wb_robot_hw, parse hardcoded info from urdf/srdf
-- Move odom thread to state_estimator
+- Clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
 - add trajectory for arm
 - Web app
 - Convex hull in acceleration
 - State estimation
 - Experiments on the real robot
-- Merge 20.04
-- step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)

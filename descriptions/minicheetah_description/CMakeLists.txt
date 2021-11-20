@@ -20,6 +20,3 @@ install(DIRECTORY robots/
 install(DIRECTORY urdfs/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdfs
   PATTERN ".svn" EXCLUDE)
-
-catkin_install_python(PROGRAMS scripts/go0
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

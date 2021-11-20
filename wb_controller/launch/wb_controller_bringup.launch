@@ -12,11 +12,13 @@
     <arg name="gazebo" default="true" />
     <arg name="arm_enabled" default="false" />
     <arg name="arm_name" default="teleop" />
+    <arg name="xbox"     default="false" />
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
     <param name="internal_wrench" value="$(arg internal_wrench)"/>
     <param name="robot_name" type="str"  value="$(arg robot_name)" />
+    <param name="use_xbox_controller" value="$(arg xbox)"/>
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">
@@ -67,8 +69,10 @@
     </node>
 
     <!-- joy -->
+    <arg name="joy_deadzone" default="0.1"/>
     <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/wb_controller">
             <param name="autorepeat_rate " value="500" />
+            <param name="deadzone" value="$(arg joy_deadzone)"/>
     </node>
 
     <!-- Convert joint states to TF transforms for rviz, etc -->

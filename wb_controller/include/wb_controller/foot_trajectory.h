@@ -155,6 +155,11 @@ public:
       trajectory_finished_ = true;
   }
 
+  double getCompletion()
+  {
+      return swing_frequency_*time_;
+  }
+
 protected:
 
   inline static int _id = 0;
