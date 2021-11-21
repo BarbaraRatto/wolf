@@ -42,6 +42,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                                                                                     model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
     arms_[ee_names_[i]]->setLambda(1.,1.);
     arms_[ee_names_[i]]->setWeightIsDiagonalFlag(true);
+    arms_[ee_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
   }
   //   --------------------------
   angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_,id_->getJointsAccelerationAffine());
@@ -54,11 +55,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                                                                         WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waistRPY_->setLambda(1.,1.);
   waistRPY_->setWeightIsDiagonalFlag(true);
+  waistRPY_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
   //   --------------------------
   waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_, model_->getBaseLinkName(),
                                                                       WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waistZ_->setLambda(1.,1.);
   waistZ_->setWeightIsDiagonalFlag(true);
+  waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
   //   --------------------------
   postural_ = std::make_shared<OpenSoT::tasks::acceleration::Postural>(*model_, id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
