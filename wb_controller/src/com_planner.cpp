@@ -42,14 +42,18 @@ void ComPlanner::computeComVelocityReference()
   //https://kodlab.seas.upenn.edu/uploads/Kod/Schwind95.pdf
   //vcom = 2*X_piede/T
 
-  base_velocity_ = 0.5 * foothold_planner_->getBaseLinearVelocityReference();
+  base_velocity_ = foothold_planner_->getBaseLinearVelocityReference();
 
   com_velocity_ref_.setZero();
   com_velocity_ref_ = terrain_estimator_->getTerrainOrientationWorld().transpose() * base_velocity_; // getPose(): world_T_terrain
   //com_velocity_ref_.z() = 0.0; // No height reference, only damping
 
-  if(foothold_planner_->getGaitType() == Gait::CRAWL) // With the crawl the robot moves approx half the speed
+  if(foothold_planner_->getGaitType() == Gait::TROT)
     com_velocity_ref_ = 0.5 * com_velocity_ref_;
+  else if (foothold_planner_->getGaitType() == Gait::CRAWL)
+    com_velocity_ref_ = 0.25 * com_velocity_ref_;
+  else
+    com_velocity_ref_ = 1.0 * com_velocity_ref_;
 }
 
 void ComPlanner::update(double /*dt*/)
