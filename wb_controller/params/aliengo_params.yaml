@@ -9,7 +9,7 @@ wb_controller:
   max_step_height: 0.15
   max_step_length: 0.4
   estimation_position_type: estimated_z
-  estimation_orientation_type: ground_truth
+  estimation_orientation_type: imu_magnetometer
   damp_max: 0.1
   determinant_max: 0.5
 
@@ -45,30 +45,38 @@ wb_controller:
       kd_stance: {haa: 5.0, hfe: 5.0, kfe: 5.0}
 
       lf_foot:
-          weight: 10.0
+          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          weight: 100.0
       rf_foot:
-          weight: 10.0
+          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          weight: 100.0
       rh_foot:
-          weight: 10.0
+          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          weight: 100.0
       lh_foot:
-          weight: 10.0
-
+          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          weight: 100.0
       waistRPY:
           Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
           Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
-          weight: 5.0
+          weight: 1.0
 
       waistZ:
-          Kp: {x: 0.0, y: 0.0, z: 50.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
-          Kd: {x: 0.0, y: 0.0, z: 5.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+          Kp: {x: 0.0, y: 0.0, z: 200.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+          Kd: {x: 0.0, y: 0.0, z: 50.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
           weight: 1.0
 
       Postural:
-          weight: 0.1
+          weight: 1.0
 
       CoM:
-          weight: 0.25
-          lambda2: 100.0
+          weight:  1.0
+          lambda1: 100.0
+          lambda2: 10.0
 
       angular_momentum:
           weight: 0.1
