@@ -32,6 +32,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                                                                                       model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
     feet_[foot_names_[i]]->setLambda(0.,0.);
     feet_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
+    feet_[foot_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
   }
   //   --------------------------
   ROS_INFO_NAMED(CLASS_NAME,"Initialize ARM tasks");
@@ -64,7 +65,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   postural_->setWeightIsDiagonalFlag(true);
   //   --------------------------
   com_ = std::make_shared<OpenSoT::tasks::acceleration::CoM>(*model_, id_->getJointsAccelerationAffine());
-  com_->setLambda(0.,0.);
+  com_->setLambda(1.,1.);
   com_->setWeightIsDiagonalFlag(true);
 
   //
