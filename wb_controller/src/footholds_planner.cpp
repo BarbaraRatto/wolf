@@ -56,7 +56,7 @@ void FootholdsPlanner::reset()
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = step_height_;
 
-    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_foot
+    robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_foot
     tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base
     desired_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
     virtual_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
@@ -216,7 +216,7 @@ void FootholdsPlanner::calculateFootSteps()
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
       // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
-      robot_model_->getPose(foot_names[i],"base_link",base_T_foot_);
+      robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),base_T_foot_);
       // current foot position in the horizontal frame
       hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
       //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
@@ -381,8 +381,8 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,tmp_affine3d_1_); // base_T_foot_
-      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_hip
+      robot_model_->getPose(gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot_
+      robot_model_->getPose(hips_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_hip
       tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base_
       // initial feet offsets in the horizontal frame
       hf_X_initial_footholds_[i] = tmp_matrix3d_ * tmp_affine3d_1_.translation();

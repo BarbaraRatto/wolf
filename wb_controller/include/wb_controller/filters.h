@@ -19,7 +19,6 @@ inline T secondOrderFilter(T& varOutputSecondFilter , T& varOutputFirstFilter , 
     return varOutputSecondFilter;
 }
 
-
 class AvgFilter
 {
 public:

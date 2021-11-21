@@ -88,6 +88,16 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default friction cones mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
         }
+        double default_cutoff_freq_gyroscope = 300.;
+        if (!controller_nh.getParam("default_cutoff_freq_gyroscope", default_cutoff_freq_gyroscope))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default cutoff freq gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
+        }
+        double default_cutoff_freq_qdot = 300.;
+        if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default cutoff freq gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
+        }
         double damp_max = 0.001;
         if (!controller_nh.getParam("damp_max", damp_max))
         {
@@ -152,6 +162,9 @@ public:
         controller_->getIDProblem()->setJointAccelerationAbsLim(default_joint_acceleration_lim);
         controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 
+        controller_->setCutoffFreqQdot(default_cutoff_freq_qdot);
+        controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
+
         // Getting Kp and Kd gains
         Eigen::Vector3d Kp_swing_leg, Kd_swing_leg, Kp_stance_leg, Kd_stance_leg;
         Kp_swing_leg = Kd_swing_leg = Kp_stance_leg = Kd_stance_leg = Eigen::Vector3d::Identity();
@@ -200,7 +213,7 @@ public:
 
         unsigned int n_feet = controller_->getRobotModel()->getNumberLegs();
         foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::FootHolds>(controller_nh, "foot_holds", 4));
-        foot_holds_pub_->msg_.header.frame_id = BASE_LINK_FRAME_NAME;
+        foot_holds_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         foot_holds_pub_->msg_.name.resize(n_feet);
         foot_holds_pub_->msg_.desired_foothold.resize(n_feet);
         foot_holds_pub_->msg_.virtual_foothold.resize(n_feet);
@@ -251,6 +264,9 @@ public:
 
         server_->registerVariable<double>("set_joint_acc_lim",controller_->getIDProblem()->getJointAccelerationAbsLim(),boost::bind(&wb_controller::Controller::setJointAccelerationLimit,controller_,_1),"set the joint acceleration limit",0.0,1000.0,controller_->getIDProblem()->CLASS_NAME);
         server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wb_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
+
+        server_->registerVariable<double>("set_cutoff_freq_qdot",default_cutoff_freq_qdot,boost::bind(&wb_controller::Controller::setCutoffFreqQdot,controller_,_1),"set cutoff frequency for the joint velocities",0,1000.0);
+        server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wb_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
 
         server_->publishServicesTopics();
     }

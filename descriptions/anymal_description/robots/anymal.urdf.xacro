@@ -15,11 +15,9 @@
          <xacro:arg name="task_period" value="$(arg task_period)"/>
     </xacro:include>
 
-
     <!-- legs transmission -->
     <xacro:include filename="$(find anymal_description)/urdfs/leg.transmission.xacro"/>
     <xacro:include filename="$(find anymal_description)/urdfs/leg.gazebo.xacro"/>
-
 
     <!-- Material for the visual primitives -->  
     <material name="anymal_material">    

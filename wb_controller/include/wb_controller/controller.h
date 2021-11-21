@@ -159,6 +159,17 @@ public:
     bool setSwingFrequency(const double& swing_frequency);
 
     /**
+         * @brief set cutoff frequency for the qdot filter
+         */
+    void setCutoffFreqQdot(const double& hz);
+
+    /**
+         * @brief set cutoff frequency for the gyroscope filter
+         */
+    void setCutoffFreqGyro(const double& hz);
+
+
+    /**
          * @brief Select the stack to use
          */
     bool selectStack(const std::string& stack);
@@ -323,10 +334,6 @@ private:
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
     /** @brief imu_gyroscope_filter */
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
-     /** @brief cutoff_hz_ */
-    std::atomic<double> cutoff_hz_gyro_;
-    /** @brief cutoff_hz_ */
-    std::atomic<double> cutoff_hz_qdot_;
     /** @brief True if the solver istance has been created */
     bool solver_created_;
     /** @brief True if the controller uses the external contact sensors */

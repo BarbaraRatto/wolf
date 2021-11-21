@@ -62,6 +62,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
     const auto& joints = srdf_model.getGroups()[i].joints_;
+    const auto& links  = srdf_model.getGroups()[i].links_;
     // Parse the foot tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("leg") != std::string::npos)
     {
@@ -86,6 +87,14 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         hip_names_.push_back(chains[j].second);
     }
+    // Parse the base link name from the SRDF file
+    if(srdf_model.getGroups()[i].name_.find("base") != std::string::npos)
+    {
+      if(links.size()==1)
+        base_name_ = links[0];
+      else
+        throw std::runtime_error("There can be only one base defined in the SRDF file!");
+    }
   }
 
   n_legs_ = leg_names_.size();
@@ -108,6 +117,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   {
     throw std::runtime_error("Wrong number of hips, check the SRDF file!");
   }
+  if(base_name_.empty())
+    throw std::runtime_error("Base can not be empty! Check the SRDF file!");
 
   for(unsigned int i=0;i<leg_names_.size();i++)
   {
@@ -131,6 +142,11 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     }
   }
 
+  for(unsigned int i=0;i<hip_names_.size();i++)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Hip names: "<<hip_names_[i]);
+
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Base name: "<<base_name_);
+
   hip_names_ = sortByLegPrefix(hip_names_);
   foot_names_ = sortByLegPrefix(foot_names_);
   leg_names_ = sortByLegPrefix(leg_names_);
@@ -148,10 +164,10 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   // Calculate approx base length and width based on the hip positions
   // Hips order: "lf","lh","rf","rh"
   Eigen::Affine3d pose_lf, pose_lh, pose_rf, pose_rh;
-  ModelInterface::getPose(hip_names_[0],BASE_LINK_FRAME_NAME,pose_lf);
-  ModelInterface::getPose(hip_names_[1],BASE_LINK_FRAME_NAME,pose_lh);
-  ModelInterface::getPose(hip_names_[2],BASE_LINK_FRAME_NAME,pose_rf);
-  ModelInterface::getPose(hip_names_[3],BASE_LINK_FRAME_NAME,pose_rh);
+  ModelInterface::getPose(hip_names_[0],base_name_,pose_lf);
+  ModelInterface::getPose(hip_names_[1],base_name_,pose_lh);
+  ModelInterface::getPose(hip_names_[2],base_name_,pose_rf);
+  ModelInterface::getPose(hip_names_[3],base_name_,pose_rh);
   base_width_  = std::abs(pose_lf.translation().y() - pose_rf.translation().y());
   base_length_ = std::abs(pose_lf.translation().x() - pose_lh.translation().x());
 
@@ -250,7 +266,7 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
   bool res = ModelInterface::update(update_position,update_velocity,update_desired_acceleration);
 
   // Update the transformations between world, base and horizontal frame
-  getPose(BASE_LINK_FRAME_NAME,world_T_base_);
+  getPose(base_name_,world_T_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.translation()" << world_T_base_.translation());
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.linear()" << world_T_base_.linear());
   world_R_hf_ = Eigen::Matrix3d::Identity();
@@ -270,7 +286,7 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     getPose(foot_names_[i],world_T_foot_[foot_names_[i]]);
     world_X_foot_[foot_names_[i]] = world_T_foot_[foot_names_[i]].translation();
     // Feet position in base/trunk
-    getPose(foot_names_[i],BASE_LINK_FRAME_NAME,base_T_foot_[foot_names_[i]]);
+    getPose(foot_names_[i],base_name_,base_T_foot_[foot_names_[i]]);
     base_X_foot_[foot_names_[i]] = base_T_foot_[foot_names_[i]].translation();
   }
 
@@ -280,7 +296,7 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     getPose(ee_names_[i],world_T_ee_[ee_names_[i]]);
     world_X_ee_[ee_names_[i]] = world_T_ee_[ee_names_[i]].translation();
     // Arms position in base/trunk
-    getPose(ee_names_[i],BASE_LINK_FRAME_NAME,base_T_ee_[ee_names_[i]]);
+    getPose(ee_names_[i],base_name_,base_T_ee_[ee_names_[i]]);
     base_X_ee_[ee_names_[i]] = base_T_ee_[ee_names_[i]].translation();
   }
 
@@ -425,6 +441,11 @@ const std::vector<std::string>& QuadrupedRobot::getContactNames() const
 const std::vector<std::string>& QuadrupedRobot::getLimbNames() const
 {
   return limb_names_;
+}
+
+const std::string &QuadrupedRobot::getBaseLinkName() const
+{
+  return base_name_;
 }
 
 const std::vector<int>& QuadrupedRobot::getLimbJointsIds(const std::string& limb_name)

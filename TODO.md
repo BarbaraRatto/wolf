@@ -1,15 +1,14 @@
 # TODO list
 
-- Merge anymalc branch
-- Merge torque_limits branch
-- Merge 20.04 branch
+- solver getting crazy and losing contacts?
+- Robustness tests when walking on rough terrain with push recovery
+- Remove postural for the arm!!!!
 - apdat com velocity based on the % of trj executed
 - delta com only for the front legs
 - step reflexes
 - ADD IMU and remove ROBOT_REAL
 - solver getting crazy and losing contacts?
 - Robustness tests when walking on rough terrain with push recovery
-- IK has a serious problem when going in singularity, damping helps but it needs to be tuned and exported...?
 - Make one level stack works with arm as well
 - Update the robot params to the new id problem without hardcoded values
 - collision avoidance

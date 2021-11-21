@@ -1,0 +1,13 @@
+<package>
+  <name>gen3kinova_description</name>
+  <version>0.0.0</version>
+  <description>
+	kinova arm for hyq
+  </description>
+  <maintainer email="marco.camurri@iit.it">Marco Camurri</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+</package>
