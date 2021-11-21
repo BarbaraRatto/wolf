@@ -1,6 +1,6 @@
 # TODO list
 
-- solver getting crazy and losing contacts?
+- Do not use a different stack but just change gains online
 - Robustness tests when walking on rough terrain with push recovery
 - Remove postural for the arm!!!!
 - apdat com velocity based on the % of trj executed
