@@ -26,8 +26,6 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   offsets_applied_ = false;
 
-  delta_com_.fill(0.0);
-
   world_T_terrain_ = Eigen::Affine3d::Identity();
 
   push_recovery_ = std::make_shared<PushRecovery>(this);
@@ -43,7 +41,6 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
   reset();
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/desired_height",base_position_(2));
-  //RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_com",delta_com_);
 }
 
 void FootholdsPlanner::reset()
@@ -228,7 +225,6 @@ void FootholdsPlanner::calculateFootSteps()
       hf_delta_foot_.head(2) =  hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
 
       //6) Sum delta com and the delta for the push recovery
-      //hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + delta_com_;
       hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
@@ -481,11 +477,6 @@ void FootholdsPlanner::increaseStepHeight()
 void FootholdsPlanner::decreaseStepHeight()
 {
   setStepHeight(step_height_ - 0.01); // Decrease step height
-}
-
-void FootholdsPlanner::setComCorrection(const Eigen::Vector3d &delta_com)
-{
-  delta_com_ = delta_com;
 }
 
 void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrain)
