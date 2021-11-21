@@ -101,6 +101,17 @@ public:
      */
     void setFrictionConesR(const Eigen::Matrix3d& R);
 
+
+    /**
+     * @brief set the pose and velocity reference for the feet,
+     * note that the foot tasks are defined wrt the base frame
+     * @param foot_name foot name
+     * @param pose_ref pose reference
+     * @param vel_ref velocity reference (note: we use only the linear part of it)
+     * @param reference_frame if world tranform the references into base frame
+     */
+    void setFootReference(const std::string& foot_name, const Eigen::Affine3d& pose_ref, const Eigen::Vector6d& vel_ref, const std::string& reference_frame);
+
     /**
      * @brief set the absolute value for joint acceleration limits
      * @param limit -> max = limit, min = -1.0 * lim
@@ -292,6 +303,8 @@ private:
     std::vector<std::string> contact_names_;
 
     Eigen::Affine3d tmp_affine3d_;
+    Eigen::Vector6d tmp_vector6d_;
+    Eigen::Vector3d tmp_vector3d_;
 
 };
 

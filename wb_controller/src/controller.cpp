@@ -629,16 +629,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
 
-            Eigen::Affine3d ref_base, base_T_world;
-            Eigen::Vector6d refdot_base = Eigen::Vector6d::Zero();
-            Eigen::Vector3d refdot_xyz_world;
-            base_T_world = robot_model_->getBasePoseInWorld().inverse();
-            ref_base = base_T_world * gait_generator_->getReference(foot_names[i]);
-            refdot_xyz_world = gait_generator_->getReferenceDot(foot_names[i]).head(3);
-            refdot_base.head(3) = base_T_world * refdot_xyz_world;
-            id_prob_->feet_[foot_names[i]]->setReference(ref_base,refdot_base);
-
-            //id_prob_->feet_[foot_names[i]]->setReference(gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]));
+            id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
+                                       WORLD_FRAME_NAME);
 
             // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
             // Set the wrench limits to enstablish the contacts
