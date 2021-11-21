@@ -234,6 +234,23 @@ void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
    fc_.first = R;
 }
 
+void IDProblem::setFootReference(const std::string& foot_name, const Eigen::Affine3d& pose_ref, const Eigen::Vector6d& vel_ref, const std::string& reference_frame)
+{
+  if(reference_frame == model_->getBaseLinkName())
+    feet_[foot_name]->setReference(pose_ref,vel_ref);
+  else if(reference_frame == WORLD_FRAME_NAME)
+  {
+    tmp_affine3d_.setIdentity();
+    tmp_affine3d_ = model_->getBasePoseInWorld().inverse(); // base_T_world
+    tmp_vector6d_.setZero();
+    tmp_vector3d_ = vel_ref.head(3);
+    tmp_vector6d_.head(3) = tmp_affine3d_ * tmp_vector3d_;
+    feet_[foot_name]->setReference(tmp_affine3d_*pose_ref,tmp_vector6d_);
+  }
+  else
+    throw std::runtime_error("Wrong reference frame, can not set the foot references!");
+}
+
 void IDProblem::setJointAccelerationAbsLim(const double& lim)
 {
    assert(lim>=0.0);
