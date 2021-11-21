@@ -438,7 +438,70 @@ class TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::Carte
 public:
 
     TaskRosWrapper(ros::NodeHandle& nh, OpenSoT::tasks::acceleration::CoM::Ptr task):
-        TaskRosWrapperBase<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask>(nh,task){ server_->publishServicesTopics(); }
+        TaskRosWrapperBase<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask>(nh,task){
+
+
+      // Load params
+      Kp_ = Eigen::Matrix3d::Zero();
+      Kd_ = Eigen::Matrix3d::Zero();
+      bool use_identity = false;
+      for(unsigned int i=0; i<wb_controller::_xyz.size(); i++)
+      {
+          if (!nh.getParam("gains/"+task_id_+"/Kp/" + wb_controller::_xyz[i] , Kp_(i,i)))
+          {
+              ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_xyz[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
+              use_identity = true;
+          }
+          if (!nh.getParam("gains/"+task_id_+"/Kd/"  + wb_controller::_xyz[i] , Kd_(i,i)))
+          {
+              ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_xyz[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
+              use_identity = true;
+          }
+          // Check if the values are positive
+          if(Kp_(i,i)<0.0 || Kd_(i,i)<0.0)
+          {
+              ROS_WARN("Kp and Kd gains must be positive!");
+              use_identity = true;
+          }
+      }
+
+      if(use_identity)
+      {
+        Kp_ = Eigen::Matrix3d::Identity();
+        Kd_ = Eigen::Matrix3d::Identity();
+      }
+
+      task_->setKp(Kp_);
+      task_->setKd(Kd_);
+
+      fromEigenToScalars();
+
+      server_->registerVariable<double>("kp_x",     Kp_(0,0), boost::bind(&TaskRosWrapper::setKpX,this,_1)     ,"Kp(0,0)", 0.0, 1000.0);
+      server_->registerVariable<double>("kp_y",     Kp_(1,1), boost::bind(&TaskRosWrapper::setKpY,this,_1)     ,"Kp(1,1)", 0.0, 1000.0);
+      server_->registerVariable<double>("kp_z",     Kp_(2,2), boost::bind(&TaskRosWrapper::setKpZ,this,_1)     ,"Kp(2,2)", 0.0, 1000.0);
+
+      server_->registerVariable<double>("kd_x",     Kd_(0,0), boost::bind(&TaskRosWrapper::setKdX,this,_1)     ,"Kd(0,0)", 0.0, 1000.0);
+      server_->registerVariable<double>("kd_y",     Kd_(1,1), boost::bind(&TaskRosWrapper::setKdY,this,_1)     ,"Kd(1,1)", 0.0, 1000.0);
+      server_->registerVariable<double>("kd_z",     Kd_(2,2), boost::bind(&TaskRosWrapper::setKdZ,this,_1)     ,"Kd(2,2)", 0.0, 1000.0);
+
+      server_->publishServicesTopics();
+
+    }
+
+    virtual void setExternalGains() override
+    {
+        fromScalarsToEigen();
+
+        task_->setGains(Kp_,Kd_);
+    }
+
+    void setKpX(double value)     { rt_kp_x_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(0,0): "<<value); }
+    void setKpY(double value)     { rt_kp_y_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(1,1): "<<value); }
+    void setKpZ(double value)     { rt_kp_z_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(2,2): "<<value); }
+
+    void setKdX(double value)     { rt_kd_x_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(0,0): "<<value); }
+    void setKdY(double value)     { rt_kd_y_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(1,1): "<<value); }
+    void setKdZ(double value)     { rt_kd_z_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(2,2): "<<value); }
 
     virtual void publish(const ros::Time& time)
     {
@@ -466,6 +529,36 @@ public:
             rt_pub_->unlockAndPublish();
         }
     }
+
+protected:
+
+    void fromScalarsToEigen()
+    {
+      Kp_(0,0) = rt_kp_x_;
+      Kp_(1,1) = rt_kp_y_;
+      Kp_(2,2) = rt_kp_z_;
+
+      Kd_(0,0) = rt_kd_x_;
+      Kd_(1,1) = rt_kd_y_;
+      Kd_(2,2) = rt_kd_z_;
+
+    }
+
+    void fromEigenToScalars()
+    {
+      rt_kp_x_      = Kp_(0,0);
+      rt_kp_y_      = Kp_(1,1);
+      rt_kp_z_      = Kp_(2,2);
+
+      rt_kd_x_      = Kd_(0,0);
+      rt_kd_y_      = Kd_(1,1);
+      rt_kd_z_      = Kd_(2,2);
+    }
+
+private:
+
+    Eigen::Matrix3d Kp_;
+    Eigen::Matrix3d Kd_;
 
 };
 

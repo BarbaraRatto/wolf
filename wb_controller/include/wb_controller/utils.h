@@ -80,6 +80,8 @@ inline void vector3dToVector3(const Eigen::Vector3d& vector3d, geometry_msgs::Ve
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
 extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
+extern std::vector<std::string> _xyz;
+extern std::vector<std::string> _rpy;
 extern std::vector<std::string> _joints_prefix;
 extern std::vector<std::string> _legs_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
