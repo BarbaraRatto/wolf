@@ -69,7 +69,7 @@ wb_controller:
       waistZ:
           Kp: {x: 0.0, y: 0.0, z: 200.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
           Kd: {x: 0.0, y: 0.0, z: 50.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
-          weight: 1.0
+          weight: 0.0
 
       Postural:
           weight: 1.0
