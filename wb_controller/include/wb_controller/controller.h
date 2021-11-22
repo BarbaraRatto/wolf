@@ -170,14 +170,14 @@ public:
 
 
     /**
-         * @brief Select the stack to use
+         * @brief Select the mode to use
          */
-    bool selectStack(const std::string& stack);
+    bool selectMode(const std::string& mode);
 
     /**
-         * @brief Switch between WALKING and MANIPULATION stack
+         * @brief Switch between WALKING and MANIPULATION
          */
-    void switchStack();
+    void switchMode();
 
     /**
          * @brief Select the gait to use

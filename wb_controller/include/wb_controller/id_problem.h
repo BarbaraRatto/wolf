@@ -45,7 +45,7 @@ public:
 
     typedef std::shared_ptr<IDProblem> Ptr;
 
-    enum stacks_t {NONE=0,WALKING,MANIPULATION};
+    enum modes_t {NONE=0,WALKING,MANIPULATION};
 
     /**
      * @brief IDProblem constructor
@@ -162,19 +162,19 @@ public:
     void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
 
     /**
-         * @brief Select the stack type to use
+         * @brief Select the type to use
          */
-    void selectStack(const stacks_t &stack);
+    void selectMode(const modes_t &mode);
 
     /**
-         * @brief Get the current stack type
+         * @brief Get the current type
          */
-    unsigned int getCurrentStack();
+    unsigned int getCurrentMode();
 
     /**
-         * @brief Switch between WALKING and MANIPULATION stack
+         * @brief Switch between WALKING and MANIPULATION
          */
-    void switchStack();
+    void switchMode();
 
     /**
      * @brief get the mu parameter for the friction cones
@@ -247,7 +247,7 @@ private:
     /**
      * @brief map of stacks
      */
-    std::map<unsigned int,OpenSoT::AutoStack::Ptr> stacks_;
+    OpenSoT::AutoStack::Ptr stack_;
 
     /**
      * @brief solver_ iHQP solver
@@ -294,7 +294,7 @@ private:
 
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
-    std::atomic<unsigned int> current_stack_;
+    std::atomic<unsigned int> current_mode_;
 
     std::mutex solver_lock_;
 

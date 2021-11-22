@@ -19,24 +19,24 @@ TEST(IDProblem, Solve)
     ASSERT_TRUE(_id_problem->solve(x));
 }
 
-TEST(IDProblem, SwitchStack)
+TEST(IDProblem, SwitchMode)
 {
     Eigen::VectorXd x;
     ASSERT_TRUE(_id_problem->solve(x));
-    _id_problem->switchStack();
+    _id_problem->switchMode();
     ASSERT_TRUE(_id_problem->solve(x));
 }
 
-TEST(IDProblem, SelectStackWalking)
+TEST(IDProblem, SelectModeWalking)
 {
-    _id_problem->selectStack(wb_controller::IDProblem::stacks_t::WALKING);
+    _id_problem->selectMode(wb_controller::IDProblem::modes_t::WALKING);
     Eigen::VectorXd x;
     ASSERT_TRUE(_id_problem->solve(x));
 }
 
-TEST(IDProblem, SelectStackManipulation)
+TEST(IDProblem, SelectModeManipulation)
 {
-    _id_problem->selectStack(wb_controller::IDProblem::stacks_t::MANIPULATION);
+    _id_problem->selectMode(wb_controller::IDProblem::modes_t::MANIPULATION);
     Eigen::VectorXd x;
     ASSERT_TRUE(_id_problem->solve(x));
 }

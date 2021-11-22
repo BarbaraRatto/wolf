@@ -34,11 +34,11 @@ protected:
 
   void update() // This work as a kind of state machine
   {
-      unsigned int current_stack = wb_controller::IDProblem::stacks_t::NONE;
+      unsigned int current_mode = wb_controller::IDProblem::modes_t::NONE;
       if(controller_ptr_->getIDProblem()!=nullptr)
-        current_stack = controller_ptr_->getIDProblem()->getCurrentStack();
+        current_mode = controller_ptr_->getIDProblem()->getCurrentMode();
 
-      if(start_swing_ && current_stack == wb_controller::IDProblem::stacks_t::WALKING)
+      if(start_swing_ && current_mode == wb_controller::IDProblem::modes_t::WALKING)
       {
           controller_ptr_->getFootholdsPlanner()->setCmd(wb_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
           controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
@@ -109,7 +109,7 @@ public:
       if(controller_ptr!=nullptr)
       {
         addButtonHandler(boost::bind(&wb_controller::Controller::toggleSolver,controller_ptr),JoyHandler::START);
-        addButtonHandler(boost::bind(&wb_controller::Controller::switchStack,controller_ptr),JoyHandler::ONE);
+        addButtonHandler(boost::bind(&wb_controller::Controller::switchMode,controller_ptr),JoyHandler::ONE);
       }
       else
         throw std::runtime_error("Controller not initialized yet!");

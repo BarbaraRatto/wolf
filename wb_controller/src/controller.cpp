@@ -335,29 +335,29 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     return true;
 }
 
-bool Controller::selectStack(const std::string& stack)
+bool Controller::selectMode(const std::string& mode)
 {
     if(id_prob_)
     {
-        if(stack == "WALKING")
-            id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-        else if(stack == "MANIPULATION")
-            id_prob_->selectStack(IDProblem::stacks_t::MANIPULATION);
+        if(mode == "WALKING")
+            id_prob_->selectMode(IDProblem::modes_t::WALKING);
+        else if(mode == "MANIPULATION")
+            id_prob_->selectMode(IDProblem::modes_t::MANIPULATION);
         else
         {
-            ROS_ERROR_NAMED(CLASS_NAME,"Wrong stack!");
+            ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
             return false;
         }
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected stack "<< stack);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
     }
     return true;
 }
 
-void Controller::switchStack()
+void Controller::switchMode()
 {
     if(id_prob_)
     {
-        id_prob_->switchStack();
+        id_prob_->switchMode();
         legs_kinematics_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
         foot_holds_planner_->reset();
     }
@@ -430,7 +430,7 @@ void Controller::startSolver(const bool& start)
     if(!solver_created_)
     {
         ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectStack(IDProblem::stacks_t::WALKING);
+        id_prob_->selectMode(IDProblem::modes_t::WALKING);
         solver_created_ = true;
     }
 
@@ -455,7 +455,7 @@ void Controller::toggleSolver()
     if(!solver_created_)
     {
         ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectStack(IDProblem::stacks_t::WALKING);
+        id_prob_->selectMode(IDProblem::modes_t::WALKING);
         solver_created_ = true;
     }
 
