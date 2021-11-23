@@ -303,7 +303,7 @@ void FootholdsPlanner::resetBaseVelocities()
 void FootholdsPlanner::resetBasePosition()
 {
   for(unsigned int i=0;i<3;i++)
-    base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),0.5);
+    base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
 }
 
 void FootholdsPlanner::resetBaseOrientation()
@@ -311,7 +311,7 @@ void FootholdsPlanner::resetBaseOrientation()
   default_base_orientation_(2) = base_orientation_(2); // Keep the same yaw
 
   for(unsigned int i=0;i<3;i++)
-    base_orientation_(i) = secondOrderFilter(base_orientation_(i),base_orientation_filt_(i),default_base_orientation_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
+    base_orientation_(i) = secondOrderFilter(base_orientation_(i),base_orientation_filt_(i),default_base_orientation_(i),1.0); //FIXME hardcoded gain, it should be based on the sampling time
 
   rpyToRot(base_orientation_,base_rotation_reference_);
   base_rotation_reference_.transposeInPlace();
@@ -337,7 +337,7 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
   hf_base_linear_velocity_ref_(2) = base_linear_velocity_cmd_ * base_linear_velocity_scale_z_;
 
   for(unsigned int i=0;i<3;i++)
-    hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.01); //FIXME hardcoded gain, it should be based on the sampling time
+    hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
 
   base_linear_velocity_reference_ = world_R_hf_ * hf_base_linear_velocity_;
 
