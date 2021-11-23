@@ -141,12 +141,6 @@ public:
     bool setDutyFactor(const double& duty_factor);
 
     /**
-         * @brief Set absoulte value of the joint acceleration limits
-         * @param lim
-         */
-    bool setJointAccelerationLimit(const double &lim);
-
-    /**
          * @brief Set the mu value for the friction cones
          * @param mu [0,1]
          */

@@ -113,17 +113,6 @@ public:
     void setFootReference(const std::string& foot_name, const Eigen::Affine3d& pose_ref, const Eigen::Vector6d& vel_ref, const std::string& reference_frame);
 
     /**
-     * @brief set the absolute value for joint acceleration limits
-     * @param limit -> max = limit, min = -1.0 * lim
-     */
-    void setJointAccelerationAbsLim(const double &lim);
-
-    /**
-     * @brief get the absolute value for joint acceleration limits
-     */
-    double getJointAccelerationAbsLim();
-
-    /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
      * @param lower bound values
      */
@@ -203,11 +192,6 @@ public:
     OpenSoT::tasks::acceleration::Postural::Ptr postural_;
 
     /**
-     * @brief qddot_lims_ some bounds
-     */
-    OpenSoT::constraints::GenericConstraint::Ptr qddot_lims_;
-
-    /**
      * @brief torque_lims_ some bounds
      */
     OpenSoT::constraints::acceleration::TorqueLimits::Ptr torque_lims_;
@@ -228,16 +212,6 @@ private:
      * @brief update call after the model.update() to update the autostack
      */
     void update();
-
-    /**
-     * @brief dynamics_con_ constraint relates the floating base with the contact forces
-     */
-    OpenSoT::constraints::TaskToConstraint::Ptr dynamics_con_;
-
-    /**
-     * @brief dynamics_task_ constraint relates the floating base with the contact forces
-     */
-    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr dynamics_task_;
 
     /**
      * @brief friction_cones_ constraints

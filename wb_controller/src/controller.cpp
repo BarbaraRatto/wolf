@@ -247,30 +247,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     return true;
 }
 
-bool Controller::setJointAccelerationLimit(const double& lim)
-{
-
-    if(id_prob_)
-    {
-        if(lim>=0.0)
-        {
-            id_prob_->setJointAccelerationAbsLim(lim);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set joint acceleration limit to "<< lim);
-        }
-        else
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"Lim has to be major than 0!");
-            return false;
-        }
-    }
-    else
-    {
-        ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
-        return false;
-    }
-    return true;
-}
-
 bool Controller::setFrictionConesMu(const double& mu)
 {
 
