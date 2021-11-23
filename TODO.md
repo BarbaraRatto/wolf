@@ -1,6 +1,5 @@
 # TODO list
 
-- Add joint limits
 - Change name to WOLF
 - Remove ground truth and contact sensors (gt does not work anymore)
 - Do not use a different stack but just change gains online
