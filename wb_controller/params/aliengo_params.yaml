@@ -2,7 +2,7 @@ wb_controller:
   type: wb_controller/Controller
   default_duty_factor: 0.3
   default_swing_frequency: 4.2
-  default_contact_threshold: 40.0
+  default_contact_threshold: 30.0
   default_base_linear_velocity: 0.5
   default_base_angular_velocity: 0.4
   default_step_height: 0.065
@@ -45,20 +45,20 @@ wb_controller:
       kd_stance: {haa: 5.0, hfe: 5.0, kfe: 5.0}
 
       lf_foot:
-          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
-          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          Kp: {x: 100.0, y: 100.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 30.0, roll: 0, pitch: 0, yaw: 0}
           weight: 100.0
       rf_foot:
-          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
-          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          Kp: {x: 100.0, y: 100.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 30.0, roll: 0, pitch: 0, yaw: 0}
           weight: 100.0
       rh_foot:
-          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
-          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          Kp: {x: 100.0, y: 100.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 30.0, roll: 0, pitch: 0, yaw: 0}
           weight: 100.0
       lh_foot:
-          Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
-          Kd: {x: 15.0, y: 15.0, z: 15.0, roll: 0, pitch: 0, yaw: 0}
+          Kp: {x: 100.0, y: 100.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
+          Kd: {x: 15.0, y: 15.0, z: 30.0, roll: 0, pitch: 0, yaw: 0}
           weight: 100.0
 
       waistRPY:
