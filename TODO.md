@@ -1,10 +1,11 @@
 # TODO list
 
+- Add joint limits
+- Change name to WOLF
+- Remove ground truth and contact sensors (gt does not work anymore)
 - Do not use a different stack but just change gains online
-- Robustness tests when walking on rough terrain with push recovery
+- Robustness tests with push recovery
 - Remove postural for the arm!!!!
-- apdat com velocity based on the % of trj executed
-- delta com only for the front legs
 - step reflexes
 - ADD IMU and remove ROBOT_REAL
 - solver getting crazy and losing contacts?
