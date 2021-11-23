@@ -6,7 +6,7 @@ using namespace OpenSoT;
 
 namespace wb_controller {
 
-IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
+IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
   model_(model),
   current_stack_(stacks_t::NONE)
 {
@@ -92,6 +92,22 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   model_->getEffortLimits(tau_max);
   tau_max.head(FLOATING_BASE_DOFS).setZero();
   torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
+  //   --------------------------
+  Eigen::VectorXd q_max, q_min, q_home, qddot_max;
+  Eigen::MatrixXd M;
+  model_->getJointLimits(q_min,q_max);
+  q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
+  q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
+  model_->getRobotState("home",q_home);
+  //model_->getInertiaInverseTimesVector(tau_max,qddot_max);
+  model_->setJointPosition(q_home);
+  model_->update();
+  model_->getInertiaMatrix(M);
+  qddot_max = M.inverse() * tau_max;
+  qddot_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * 10000.0;
+  for(unsigned int i=0; i<qddot_max.size(); i++)
+      qddot_max(i) = std::abs(qddot_max(i)); // The acceleration limits have to be positive
+  q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),q_max,q_min,qddot_max,dt);
 
   //
   // Here we create some indices for the subtask definitions
@@ -122,22 +138,11 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                           / (com_)
                           / (waistRPY_%id_RPY)// + arm_aggregated
                           / (postural_%id_legs)
-                          )<<wrenches_lims_<<friction_cones_<<torque_lims_;
-
-  // Original stack, it doesn't work with aliengo e anymal
-  //int stack_pos_offset = 2;
-  //stacks_[WALKING] = ( (feet_aggregated)
-  //                     / (waistRPY_%id_RPY)
-  //                     / (postural_ + com_ + angular_momentum_)
-  //                     )<<wrenches_lims_<<qddot_lims_<<dynamics_con_<<friction_cones_;
-
-  //int stack_pos_offset = 1;
-  //stacks_[WALKING] = ((feet_aggregated)  / ( waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_) / (postural_%id_legs)
-  //                   )<<wrenches_lims_<<torque_lims_<<friction_cones_;
+                          )<<wrenches_lims_<<friction_cones_<<torque_lims_<<q_lims_;
 
   int stack_pos_offset = 0;
   stacks_[WALKING] = ((feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_) / (postural_%id_legs)
-                     )<<wrenches_lims_<<torque_lims_<<friction_cones_;
+                     )<<wrenches_lims_<<torque_lims_<<friction_cones_<<q_lims_;
 
   if(ee_names_.size() > 0)
   {

@@ -216,7 +216,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
 
-    id_prob_.reset(new IDProblem(nh_,robot_model_));
+    id_prob_.reset(new IDProblem(nh_,robot_model_,period_));
 
     device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
     bool xbox = false;

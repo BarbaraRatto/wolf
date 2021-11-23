@@ -16,6 +16,7 @@
 #include <OpenSoT/constraints/force/FrictionCone.h>
 #include <OpenSoT/constraints/force/WrenchLimits.h>
 #include <OpenSoT/constraints/TaskToConstraint.h>
+#include <OpenSoT/constraints/acceleration/JointLimits.h>
 
 // ROS
 #include <ros/ros.h>
@@ -53,7 +54,7 @@ public:
      * @param model pointer to external model
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model);
+    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt);
     ~IDProblem();
 
     /**
@@ -200,6 +201,11 @@ public:
      * @brief wrenches_lims_ bounds
      */
     OpenSoT::constraints::force::WrenchesLimits::Ptr wrenches_lims_;
+
+    /**
+     * @brief q_lims_ bounds
+     */
+    OpenSoT::constraints::acceleration::JointLimits::Ptr q_lims_;
 
     /**
      * @brief _model
