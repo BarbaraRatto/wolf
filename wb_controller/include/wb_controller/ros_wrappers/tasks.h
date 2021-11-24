@@ -82,6 +82,7 @@ public:
 
     virtual void reset() override
     {
+      task_->update(Eigen::VectorXd(1)); // FIXME to be moved inside update when a decator will be created
       task_->reset();
     }
 
