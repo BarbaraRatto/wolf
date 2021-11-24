@@ -34,11 +34,7 @@ protected:
 
   void update() // This work as a kind of state machine
   {
-      unsigned int current_mode = wb_controller::IDProblem::modes_t::WALKING;
-      if(controller_ptr_->getIDProblem()!=nullptr)
-        current_mode = controller_ptr_->getIDProblem()->getCurrentMode();
-
-      if(start_swing_ && current_mode == wb_controller::IDProblem::modes_t::WALKING)
+      if(start_swing_)
       {
           controller_ptr_->getFootholdsPlanner()->setCmd(wb_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
           controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
