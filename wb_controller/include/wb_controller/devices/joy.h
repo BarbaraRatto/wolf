@@ -34,7 +34,7 @@ protected:
 
   void update() // This work as a kind of state machine
   {
-      unsigned int current_mode = wb_controller::IDProblem::modes_t::NONE;
+      unsigned int current_mode = wb_controller::IDProblem::modes_t::WALKING;
       if(controller_ptr_->getIDProblem()!=nullptr)
         current_mode = controller_ptr_->getIDProblem()->getCurrentMode();
 

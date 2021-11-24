@@ -8,7 +8,8 @@ namespace wb_controller {
 
 IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   model_(model),
-  current_mode_(modes_t::NONE)
+  current_mode_(modes_t::WALKING),
+  selected_mode_(modes_t::WALKING)
 {
 
   foot_names_    = model_->getFootNames();
@@ -164,7 +165,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
   W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-3;
   regularization_->setWeight(W_reg);
-
   stack_->setRegularisationTask(regularization_);
   stack_->update(Eigen::VectorXd(1));
 
@@ -274,37 +274,7 @@ void IDProblem::setLowerForceBoundZ(const double& force)
 
 void IDProblem::selectMode(const modes_t& mode)
 {
-
-  if(current_mode_ != mode)
-  {
-    solver_lock_.lock();
-
-    current_mode_ = mode;
-
-    if(ee_names_.size()>0)
-    {
-      std::string frame;
-      if(mode == modes_t::WALKING)
-        frame = model_->getBaseLinkName();
-      else if (mode == modes_t::MANIPULATION)
-        frame = WORLD_FRAME_NAME;
-      else
-        ROS_WARN_NAMED(CLASS_NAME,"Wrong mode!");
-
-      for (auto& tmp_map : arms_)
-      {
-        tmp_map.second->setBaseLink(frame);
-        tmp_map.second->update(Eigen::VectorXd(1));
-      }
-      //for (unsigned int i=0;i<ee_names_.size();i++)
-      //  tasks_ros_[ee_names_[i]]->reset();
-    }
-
-    for (auto& tmp_map : tasks_ros_)
-      tmp_map.second->reset();
-
-    solver_lock_.unlock();
-  }
+  selected_mode_ = mode;
 }
 
 void IDProblem::switchMode()
@@ -320,8 +290,41 @@ unsigned int IDProblem::getCurrentMode()
   return current_mode_;
 }
 
+void IDProblem::resetTasks()
+{
+  for (auto& tmp_map : tasks_ros_)
+    tmp_map.second->reset();
+}
+
 void IDProblem::update()
 {
+
+  // Update mode
+  if(current_mode_ != selected_mode_)
+  {
+    current_mode_.store(selected_mode_.load());
+
+    if(ee_names_.size()>0)
+    {
+      std::string frame;
+      if(current_mode_ == modes_t::WALKING)
+        frame = model_->getBaseLinkName();
+      else if (current_mode_ == modes_t::MANIPULATION)
+        frame = WORLD_FRAME_NAME;
+      else
+        ROS_WARN_NAMED(CLASS_NAME,"Wrong mode!");
+
+      for (auto& tmp_map : arms_)
+      {
+        tmp_map.second->setBaseLink(frame);
+        tmp_map.second->update(Eigen::VectorXd(1));
+      }
+      //for (unsigned int i=0;i<ee_names_.size();i++)
+      //  tasks_ros_[ee_names_[i]]->reset();
+    }
+    resetTasks();
+  }
+
   // Update the mu and the wrench limits
   wrench_lower_lims_(0) = x_force_lower_lim_;
   wrench_lower_lims_(1) = y_force_lower_lim_;
@@ -361,13 +364,12 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 {
   bool res_solv = false;
   bool res_id = false;
-  if (solver_ && solver_lock_.try_lock())
+  if (solver_)
   {
     update();
     res_solv = solver_->solve(x_);
     if(res_solv)
       res_id = id_->computedTorque(x_, tau, qddot_, contact_wrenches_);
-    solver_lock_.unlock();
   }
 
   // Update the costs

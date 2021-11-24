@@ -580,8 +580,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->initializeFeetPosition();
-
             legs_kinematics_->reset();
+            id_prob_->resetTasks();
 
             des_joint_positions_ = legs_kinematics_->getJointHomePositions();
             des_joint_velocities_.fill(0.0);

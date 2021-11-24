@@ -45,7 +45,7 @@ public:
 
     typedef std::shared_ptr<IDProblem> Ptr;
 
-    enum modes_t {NONE=0,WALKING,MANIPULATION};
+    enum modes_t {WALKING=0,MANIPULATION};
 
     /**
      * @brief IDProblem constructor
@@ -100,7 +100,6 @@ public:
      * @param R 3d matrix
      */
     void setFrictionConesR(const Eigen::Matrix3d& R);
-
 
     /**
      * @brief set the pose and velocity reference for the feet,
@@ -167,7 +166,7 @@ public:
     void selectMode(const modes_t &mode);
 
     /**
-         * @brief Get the current type
+         * @brief Get the current mode
          */
     unsigned int getCurrentMode();
 
@@ -180,6 +179,11 @@ public:
      * @brief get the mu parameter for the friction cones
      */
     double getFrictionConesMu() const;
+
+    /**
+     * @brief reset the tasks
+     */
+    void resetTasks();
 
     /**
      * @brief Cartesian tasks
@@ -295,8 +299,7 @@ private:
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
     std::atomic<unsigned int> current_mode_;
-
-    std::mutex solver_lock_;
+    std::atomic<unsigned int> selected_mode_;
 
     std::vector<std::string> foot_names_;
     std::vector<std::string> ee_names_;
