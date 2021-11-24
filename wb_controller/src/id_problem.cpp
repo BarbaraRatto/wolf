@@ -147,9 +147,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
         arm_aggregated = arm_aggregated + arms_[ee_names_[i]];
        //arm_aggregated_weighted = 50.0 * arm_aggregated%id_XYZ + arm_aggregated%id_RPY;
     }
-
-    auto it = stack_->getStack().begin();
-    stack_->getStack().insert(it, arm_aggregated);
+    stack_->getStack()[0] = arm_aggregated + stack_->getStack()[0];
   }
 
   // Regularization and first update FIXME CLEANUP!
