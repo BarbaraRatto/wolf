@@ -43,7 +43,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
                                                                                     model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
     arms_[ee_names_[i]]->setLambda(1.,1.);
     arms_[ee_names_[i]]->setWeightIsDiagonalFlag(true);
-    arms_[ee_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+    arms_[ee_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force); // Note: we use acceleration since we change the base frame, the inertia changes as well. This is causing big jumps in the gains
   }
   //   --------------------------
   angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_,id_->getJointsAccelerationAffine());
