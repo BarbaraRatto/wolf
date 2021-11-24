@@ -1,5 +1,6 @@
 # TODO list
 
+- Ros tasks subclasses
 - Do not use a different stack but just change gains online
 - Robustness tests when walking on rough terrain with push recovery
 - Remove postural for the arm!!!!
