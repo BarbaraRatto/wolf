@@ -779,7 +779,7 @@ bool PushRecovery::update(const double& period)
 
   error_ = base_velocity_ - cmd_velocity_;
 
-  if(cmd_velocity_.norm() > 0.0) // Check if the robot is moving
+  if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->getCmd() == FootholdsPlanner::LINEAR_AND_ANGULAR) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
   else
     current_th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
