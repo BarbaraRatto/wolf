@@ -313,12 +313,7 @@ void IDProblem::update()
         ROS_WARN_NAMED(CLASS_NAME,"Wrong mode!");
 
       for (auto& tmp_map : arms_)
-      {
         tmp_map.second->setBaseLink(frame);
-        tmp_map.second->update(Eigen::VectorXd(1));
-      }
-      //for (unsigned int i=0;i<ee_names_.size();i++)
-      //  tasks_ros_[ee_names_[i]]->reset();
     }
     resetTasks();
   }
