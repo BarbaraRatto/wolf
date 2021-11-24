@@ -334,8 +334,6 @@ private:
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
     /** @brief imu_gyroscope_filter */
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
-    /** @brief True if the solver istance has been created */
-    bool solver_created_;
     /** @brief True if the controller uses the external contact sensors */
     bool use_contact_sensors_;
 

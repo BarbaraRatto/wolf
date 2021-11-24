@@ -28,8 +28,7 @@ std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
 
 Controller::Controller()
-    :solver_created_(false)
-    ,solver_active_(false)
+    :solver_active_(false)
     ,init_done_(false)
     ,pid_active_(true)
     ,inertia_compensation_active_(true)
@@ -425,13 +424,6 @@ void Controller::toggleBaseHeightControl()
 
 void Controller::startSolver(const bool& start)
 {
-    if(!solver_created_)
-    {
-        ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectMode(IDProblem::modes_t::WALKING);
-        solver_created_ = true;
-    }
-
     // Perform the init procedure
     init_done_ = false;
 
@@ -450,13 +442,6 @@ bool Controller::isSolverActive() const
 
 void Controller::toggleSolver()
 {
-    if(!solver_created_)
-    {
-        ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectMode(IDProblem::modes_t::WALKING);
-        solver_created_ = true;
-    }
-
     // Perform the init procedure
     init_done_ = false;
 
