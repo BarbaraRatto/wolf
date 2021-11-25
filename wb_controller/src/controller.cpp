@@ -622,53 +622,37 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             }
         }
 
-        id_prob_->postural_->setGains(legs_impedance_->getKp(),legs_impedance_->getKd());
+        //id_prob_->postural_->setGains(legs_impedance_->getKp(),legs_impedance_->getKd());
 
         // Set the desired base height
-        legs_kinematics_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
+        //legs_kinematics_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
 
         // Set the feed forward stance term with the terrain adjustment
-        legs_kinematics_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
+        //legs_kinematics_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
 
         // Update the desired joint positions from the ik and set that to the postural
         // task
         legs_kinematics_->update(period.toSec(),joint_positions_);
-
         des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
         des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();
 
-        id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
+        //id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Get the solver solution
-        if(!id_prob_->solve(des_joint_efforts_solver_))
-        {
-            des_joint_positions_ = joint_positions_;
-            pid_active_ = true;
-        }
-        else
-            pid_active_ = false;
-    }
-    else // Use a position PID controller
-    {
-        pid_active_ = true;
-    }
-
-    if(pid_active_)
-    {
-        //des_joint_positions_ = joint_positions_; //legs_kinematics_->getJointHomePositions();
-        // Keep the old des joint position
-        des_joint_velocities_.fill(0.0);
-        des_joint_efforts_solver_.fill(0.0);
-        pid_scale_ = 1.0;
+        id_prob_->solve(des_joint_efforts_solver_);
     }
     else
-        pid_scale_ = 0.0;
+    {
+        des_joint_positions_ = legs_kinematics_->getJointHomePositions();
+        des_joint_velocities_.fill(0.0);
+        des_joint_efforts_solver_.fill(0.0);
+    }
 
     for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
     {
-        des_joint_p_gain_[i] = pid_scale_ * joint_p_gain_[i];
-        des_joint_i_gain_[i] = pid_scale_ * joint_i_gain_[i];
-        des_joint_d_gain_[i] = pid_scale_ * joint_d_gain_[i];
+        des_joint_p_gain_[i] =  joint_p_gain_[i];
+        des_joint_i_gain_[i] =  joint_i_gain_[i];
+        des_joint_d_gain_[i] =  joint_d_gain_[i];
     }
 
     // Check if the desired efforts are valid otherwise clamp them
@@ -684,7 +668,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
                                                              -joint_velocities_(i+FLOATING_BASE_DOFS),
                                                              period);
 
-        des_joint_efforts_(i) = (1.0 - pid_scale_) * des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) + pid_scale_ * des_joint_efforts_pids_(i);
+        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) +  des_joint_efforts_pids_(i);
 
         joint_states_[i].setCommand(des_joint_efforts_(i));
     }

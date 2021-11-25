@@ -40,10 +40,6 @@ public:
 
   void setDesiredBaseHeight(const double& des_base_height);
 
-  void setFeedForwardStanceDot(const Eigen::Vector3d& xdot_stance_ff);
-
-  void setFeedForwardSwingDot(const Eigen::Vector3d& xdot_swing_ff);
-
   void setAdaptiveDamping(const double& damp_max, const double& determinant_max);
 
   bool setJointHomePositions(Eigen::VectorXd& qhome);
@@ -86,23 +82,16 @@ private:
   double base_height_;
   double base_height_dot_;
 
-  /** @brief Stance joints position */
-  Eigen::VectorXd qstance_;
-  /** @brief Swing joints position */
-  Eigen::VectorXd qswing_;
   /** @brief Desired joint positions */
   Eigen::VectorXd des_joint_positions_;
   /** @brief Desired joint velocities */
   Eigen::VectorXd des_joint_velocities_;
   /** @brief Homing position */
   Eigen::VectorXd qhome_;
-  /** @brief Feet pose w.r.t world */
-  Eigen::Affine3d world_T_foot_;
-  /** @brief Stance feed forward term in the clik control loop */
-  Eigen::Vector3d xdot_stance_ff_;
-  /** @brief Swing feed forward term in the clik control loop */
-  Eigen::Vector3d xdot_swing_ff_;
-
+  /** @brief Feet pose w.r.t base */
+  Eigen::Affine3d base_T_foot_;
+  /** @brief Feed forward term in the clik control loop */
+  Eigen::Vector3d xdot_ff_;
   Eigen::MatrixXd J_;
   Eigen::Matrix3d J_foot_;
   Eigen::Matrix3d J_foot_transp_;
