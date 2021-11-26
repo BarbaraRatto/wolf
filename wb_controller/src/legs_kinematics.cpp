@@ -32,6 +32,11 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   //qstance_ = qswing_ = qhome_;
 }
 
+void LegsKinematics::setDesiredFootPositions(const std::string& foot_name, const Eigen::Vector3d& position)
+{
+    desired_foot_positions_[foot_name] = position;
+}
+
 bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
 {
 
@@ -47,8 +52,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   for(unsigned int i = 0; i<foot_names.size(); i++)
   {
-    robot_model_->getJacobian(foot_names[i],robot_model_->getBaseLinkName(),J_);
-    robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),base_T_foot_);
+    robot_model_->getJacobian(foot_names[i],J_); //wrt WORLD
+    robot_model_->getPose(robot_model_->getBaseLinkName(),world_T_base_);
 
     int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx because the leg joints are contiguos
 
@@ -60,9 +65,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
     double damp = std::exp(-4.0/determinant_max_*std::abs(J_foot_.determinant()))*damp_max_;
     J_foot_inv_ = J_foot_transp_ * (J_foot_ * J_foot_transp_ + damp*damp * I_).inverse();
 
-    x_err_ = robot_model_->getBasePoseInWorld().inverse() * gait_generator_->getReference(foot_names[i]).translation() - base_T_foot_.translation();
-
-    //xdot_ff_ = robot_model_->getBaseRotationInWorld().transpose() * gait_generator_->getReferenceDot(foot_names[i]).segment(0,3);
+    x_err_ = desired_foot_positions_[foot_names[i]] - world_T_base_.translation();
 
     des_joint_velocities_.segment(idx,3) = J_foot_inv_ * (xdot_ff_ + clik_gain_ * x_err_);
 
@@ -128,8 +131,12 @@ void LegsKinematics::reset()
   x_err_dot_.setZero();
   robot_model_->getJointPosition(des_joint_positions_);
   robot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
-
   des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
+
+  auto foot_names = gait_generator_->getFootNames();
+  for(unsigned int i=0; i<foot_names.size(); i++)
+      desired_foot_positions_[foot_names[i]] = robot_model_->getFootPositionInWorld(foot_names[i]);
+
   xdot_ff_.setZero();
 }
 

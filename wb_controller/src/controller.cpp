@@ -608,6 +608,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
                                        WORLD_FRAME_NAME);
 
+            legs_kinematics_->setDesiredFootPositions(foot_names[i],gait_generator_->getReference(foot_names[i]).translation());
+
             // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
             // Set the wrench limits to enstablish the contacts
             if(gait_generator_->isSwinging(foot_names[i]))
@@ -632,6 +634,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Update the desired joint positions from the ik and set that to the postural
         // task
+
         legs_kinematics_->update(period.toSec(),joint_positions_);
         des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
         des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();

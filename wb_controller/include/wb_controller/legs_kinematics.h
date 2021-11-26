@@ -64,6 +64,8 @@ public:
 
   void reset();
 
+  void setDesiredFootPositions(const std::string &foot_name, const Eigen::Vector3d& position);
+
 private:
 
   QuadrupedRobot::Ptr robot_model_;
@@ -88,8 +90,8 @@ private:
   Eigen::VectorXd des_joint_velocities_;
   /** @brief Homing position */
   Eigen::VectorXd qhome_;
-  /** @brief Feet pose w.r.t base */
-  Eigen::Affine3d base_T_foot_;
+  /** @brief base in world */
+  Eigen::Affine3d world_T_base_;
   /** @brief Feed forward term in the clik control loop */
   Eigen::Vector3d xdot_ff_;
   Eigen::MatrixXd J_;
@@ -101,6 +103,8 @@ private:
   Eigen::Vector3d x_err_dot_;
   double damp_max_;
   double determinant_max_;
+
+  std::map<std::string,Eigen::Vector3d> desired_foot_positions_;
 
 
   /** @brief Support temporary Affine3d */
