@@ -12,6 +12,7 @@
 #include <wb_controller/controller.h>
 #include <wb_controller/ros_wrappers/controller.h>
 #include <wb_controller/devices/joy.h>
+#include <wb_controller/devices/twist.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -218,17 +219,31 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     id_prob_.reset(new IDProblem(nh_,robot_model_,period_));
 
-    device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
-    bool xbox = false;
-    root_nh.getParam("/use_xbox_controller",xbox);
-    if(!xbox)
-        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller");
+    std::string input_device = "ps3";
+    root_nh.getParam("/input_device",input_device);
+    if(input_device == "ps3")
+    {
+        device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller device");
+    }
+    else if(input_device == "xbox")
+    {
+        device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller device");
+    }
+    else if(input_device == "twist")
+    {
+        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+    }
     else
-        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller");
-    std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(xbox);
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
+        return false;
+    }
 
     // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
