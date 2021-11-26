@@ -38,8 +38,6 @@ public:
        */
   bool update(const double& period, const Eigen::VectorXd& current_joint_positions);
 
-  void setDesiredBaseHeight(const double& des_base_height);
-
   void setAdaptiveDamping(const double& damp_max, const double& determinant_max);
 
   bool setJointHomePositions(Eigen::VectorXd& qhome);
@@ -54,14 +52,6 @@ public:
 
   double getClikGain();
 
-  void toggleBaseHeightControl();
-
-  void activateBaseHeightControl();
-
-  void deactivateBaseHeightControl();
-
-  bool isBaseHeightControlActive();
-
   void reset();
 
   void setDesiredFootPositions(const std::string &foot_name, const Eigen::Vector3d& position);
@@ -74,15 +64,7 @@ private:
 
   TerrainEstimator::Ptr terrain_estimator_;
 
-  /** @brief True if the control of the base height is active */
-  std::atomic<bool> base_height_control_active_;
-
   std::atomic<double> clik_gain_;
-
-  std::atomic<double> des_base_height_;
-
-  double base_height_;
-  double base_height_dot_;
 
   /** @brief Desired joint positions */
   Eigen::VectorXd des_joint_positions_;
@@ -92,20 +74,16 @@ private:
   Eigen::VectorXd qhome_;
   /** @brief base in world */
   Eigen::Affine3d world_T_base_;
-  /** @brief Feed forward term in the clik control loop */
-  Eigen::Vector3d xdot_ff_;
   Eigen::MatrixXd J_;
   Eigen::Matrix3d J_foot_;
   Eigen::Matrix3d J_foot_transp_;
   Eigen::Matrix3d J_foot_inv_;
   Eigen::Matrix3d I_;
   Eigen::Vector3d x_err_;
-  Eigen::Vector3d x_err_dot_;
   double damp_max_;
   double determinant_max_;
 
   std::map<std::string,Eigen::Vector3d> desired_foot_positions_;
-
 
   /** @brief Support temporary Affine3d */
   Eigen::Affine3d tmp_affine3d_;

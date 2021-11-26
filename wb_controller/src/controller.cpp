@@ -211,7 +211,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     terrain_estimator_->setMinPitch(-M_PI);
 
     legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_,terrain_estimator_));
-    legs_kinematics_->activateBaseHeightControl();
     des_joint_positions_ = legs_kinematics_->getJointHomePositions();
 
     com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
@@ -381,23 +380,6 @@ bool Controller::setDutyFactor(const double& duty_factor)
     {
         ROS_WARN_NAMED(CLASS_NAME,"setDutyFactor: duty factor has to be between 0 and 1!");
         return false;
-    }
-}
-
-void Controller::toggleBaseHeightControl()
-{
-    if(state_estimator_->getPositionEstimationType() == "estimated_z" || state_estimator_->getPositionEstimationType() == "ground_truth")
-    {
-        legs_kinematics_->toggleBaseHeightControl();
-        if(legs_kinematics_->isBaseHeightControlActive())
-            ROS_INFO_NAMED(CLASS_NAME,"Base height control is ON");
-        else
-            ROS_INFO_NAMED(CLASS_NAME,"Base height control is OFF");
-    }
-    else
-    {
-        legs_kinematics_->deactivateBaseHeightControl();
-        ROS_WARN_NAMED(CLASS_NAME,"Can not activate the base height control, the state estimator (%s) is not configured to do so!",state_estimator_->getPositionEstimationType().c_str());
     }
 }
 

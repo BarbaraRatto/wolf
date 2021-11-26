@@ -3,7 +3,7 @@
 namespace wb_controller {
 
 LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, TerrainEstimator::Ptr terrain_estimator)
-  : base_height_control_active_(false), clik_gain_(1.0)
+  : clik_gain_(1.0)
 {
 
   assert(gait_generator);
@@ -25,11 +25,7 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   damp_max_ = 0.001;
   determinant_max_ = 0.1;
 
-  // Initializations
   reset();
-  //des_joint_positions_.fill(0.0);
-  //des_joint_velocities_.fill(0.0);
-  //qstance_ = qswing_ = qhome_;
 }
 
 void LegsKinematics::setDesiredFootPositions(const std::string& foot_name, const Eigen::Vector3d& position)
@@ -39,11 +35,6 @@ void LegsKinematics::setDesiredFootPositions(const std::string& foot_name, const
 
 bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
 {
-
-  robot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
-  base_height_ = tmp_affine3d_.translation()(2);
-  robot_model_->getFloatingBaseTwist(tmp_vector6d_);
-  base_height_dot_ = tmp_vector6d_(2);
 
   des_joint_velocities_.fill(0.0);
 
@@ -67,7 +58,7 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
     x_err_ = desired_foot_positions_[foot_names[i]] - world_T_base_.translation();
 
-    des_joint_velocities_.segment(idx,3) = J_foot_inv_ * (xdot_ff_ + clik_gain_ * x_err_);
+    des_joint_velocities_.segment(idx,3) = J_foot_inv_ * (clik_gain_ * x_err_);
 
     des_joint_positions_.segment(idx,3) = des_joint_velocities_.segment(idx,3) * period + des_joint_positions_.segment(idx,3);
   }
@@ -127,22 +118,11 @@ const Eigen::VectorXd& LegsKinematics::getJointHomePositions()
 void LegsKinematics::reset()
 {
   des_joint_velocities_.setZero();
-
-  x_err_dot_.setZero();
   robot_model_->getJointPosition(des_joint_positions_);
-  robot_model_->getFloatingBasePose(tmp_affine3d_); // This should have been already updated by the state estimator
-  des_base_height_ = base_height_ = tmp_affine3d_.translation()(2);
 
   auto foot_names = gait_generator_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
       desired_foot_positions_[foot_names[i]] = robot_model_->getFootPositionInWorld(foot_names[i]);
-
-  xdot_ff_.setZero();
-}
-
-void LegsKinematics::setDesiredBaseHeight(const double& des_base_height)
-{
-  des_base_height_ = des_base_height;
 }
 
 void LegsKinematics::setAdaptiveDamping(const double &damp_max, const double &determinant_max)
@@ -151,29 +131,6 @@ void LegsKinematics::setAdaptiveDamping(const double &damp_max, const double &de
     damp_max_ = damp_max;
     assert(determinant_max>=0.0);
     determinant_max_ = determinant_max;
-}
-
-void LegsKinematics::activateBaseHeightControl()
-{
-  base_height_control_active_ = true;
-}
-
-void LegsKinematics::deactivateBaseHeightControl()
-{
-  base_height_control_active_ = false;
-}
-
-void LegsKinematics::toggleBaseHeightControl()
-{
-  base_height_control_active_=!base_height_control_active_;
-}
-
-bool LegsKinematics::isBaseHeightControlActive()
-{
-  if(base_height_control_active_)
-    return true;
-  else
-    return false;
 }
 
 } // namespace

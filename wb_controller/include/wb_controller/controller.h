@@ -115,11 +115,6 @@ public:
     bool isSolverActive() const;
 
     /**
-         * @brief Start/Stop the base height control
-         */
-    void toggleBaseHeightControl();
-
-    /**
          * @brief Start/Stop the inertia compensation at the leg level, useful if the robot has very low inertia at the knee joints
          */
     void toggleInertiaCompensation();
