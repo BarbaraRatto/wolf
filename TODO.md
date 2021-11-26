@@ -1,21 +1,18 @@
 # TODO list
 
+- port the robots to the new stack
 - Change name to WOLF
-- Remove ground truth and contact sensors (gt does not work anymore)
-- Do not use a different stack but just change gains online
+- Remove ground truth and contact sensors
 - Robustness tests with push recovery
 - Remove postural for the arm!!!!
 - step reflexes
 - ADD IMU and remove ROBOT_REAL
-- solver getting crazy and losing contacts?
 - Robustness tests when walking on rough terrain with push recovery
 - Make one level stack works with arm as well
-- Update the robot params to the new id problem without hardcoded values
 - collision avoidance
 - Clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
 - add trajectory for arm
 - Web app
-- Convex hull in acceleration
 - State estimation
 - Experiments on the real robot
 - tests and profiling
