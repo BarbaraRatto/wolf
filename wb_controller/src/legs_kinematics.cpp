@@ -102,8 +102,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
   }
 
   // Check if the desired positions and velocities are valid and clamp them
-  robot_model_->clampJointPositions(des_joint_positions_);
-  robot_model_->clampJointVelocities(des_joint_velocities_);
+  //robot_model_->clampJointPositions(des_joint_positions_);
+  //robot_model_->clampJointVelocities(des_joint_velocities_);
 
   return true;
 }
