@@ -46,10 +46,6 @@ public:
 
   void setAdaptiveDamping(const double& damp_max, const double& determinant_max);
 
-  bool setJointHomePositions(Eigen::VectorXd& qhome);
-
-  const Eigen::VectorXd& getJointHomePositions();
-
   const Eigen::VectorXd& getDesiredJointPositions();
 
   const Eigen::VectorXd& getDesiredJointVelocities();

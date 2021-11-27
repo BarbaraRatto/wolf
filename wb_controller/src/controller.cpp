@@ -192,7 +192,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    des_joint_positions_.fill(0.0);
+    des_joint_positions_ = robot_model_->getJointHomePositions();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     imu_orientation_.normalize();
@@ -213,7 +213,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_,terrain_estimator_));
     legs_kinematics_->activateBaseHeightControl();
-    des_joint_positions_ = legs_kinematics_->getJointHomePositions();
 
     com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
 
@@ -591,7 +590,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             legs_kinematics_->reset();
 
-            des_joint_positions_ = legs_kinematics_->getJointHomePositions();
+            des_joint_positions_ = robot_model_->getJointHomePositions();
             des_joint_velocities_.fill(0.0);
 
             imu_gyroscope_filter_.setTimeStep(period_);
