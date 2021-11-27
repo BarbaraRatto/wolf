@@ -742,7 +742,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
 bool PushRecovery::update(const double& period)
 {
-  bool push_detected = true;
+  bool push_detected = false;
 
   //velocity_filter_.setTimeStep(period);
   th_filter_.setTimeStep(period);
@@ -788,12 +788,15 @@ bool PushRecovery::update(const double& period)
 
   current_th_dot_filt_ = th_filter_.process(current_th_dot_);
 
-  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
-    push_detected = false;
-
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-  for(unsigned int i=0;i<foot_names.size();i++) // Reset
-    deltas_[foot_names[i]].setZero();
+
+  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
+  {
+    for(unsigned int i=0;i<foot_names.size();i++) // Reset
+      deltas_[foot_names[i]].setZero();
+  }
+  else
+    push_detected = true;
 
   if (compute_deltas_ && push_detected)
   {
