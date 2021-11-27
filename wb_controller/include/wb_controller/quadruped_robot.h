@@ -113,6 +113,12 @@ public:
        */
   bool clampJointEfforts(Eigen::VectorXd &tau);
 
+  /**
+       * @brief get robot's home position when standing up
+       * @return qhome
+       */
+  const Eigen::VectorXd& getJointHomePositions();
+
 private:
 
   std::vector<std::string> foot_names_; // foot tip names
@@ -168,6 +174,8 @@ private:
   Eigen::VectorXd qdot_max_;
   /** @brief Max joints effort */
   Eigen::VectorXd tau_max_;
+  /** @brief Homing position when standing up */
+  Eigen::VectorXd qhome_;
 
   std::atomic<robot_states_t> robot_state_;
 

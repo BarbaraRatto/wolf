@@ -137,11 +137,10 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   stacks_[MANIPULATION] = ( (feet_aggregated)
                           / (com_)
                           / (waistRPY_%id_RPY)// + arm_aggregated
-                          / (postural_%id_legs)
                           )<<wrenches_lims_<<friction_cones_<<torque_lims_<<q_lims_;
 
   int stack_pos_offset = 0;
-  stacks_[WALKING] = ((feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_) / (postural_%id_legs)
+  stacks_[WALKING] /= ((feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_)
                      )<<wrenches_lims_<<torque_lims_<<friction_cones_<<q_lims_;
 
   if(ee_names_.size() > 0)
