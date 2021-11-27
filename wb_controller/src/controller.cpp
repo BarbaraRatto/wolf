@@ -12,6 +12,7 @@
 #include <wb_controller/controller.h>
 #include <wb_controller/ros_wrappers/controller.h>
 #include <wb_controller/devices/joy.h>
+#include <wb_controller/devices/twist.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -190,7 +191,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    des_joint_positions_.fill(0.0);
+    des_joint_positions_ = robot_model_->getJointHomePositions();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     imu_orientation_.normalize();
@@ -209,23 +210,36 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     legs_kinematics_ = std::make_shared<LegsKinematics>(gait_generator_,robot_model_,terrain_estimator_);
     legs_kinematics_->activateBaseHeightControl();
-    des_joint_positions_ = legs_kinematics_->getJointHomePositions();
 
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
 
-    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_);
+    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
-    device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
-    bool xbox = false;
-    root_nh.getParam("/use_xbox_controller",xbox);
-    if(!xbox)
-        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller");
+    std::string input_device = "ps3";
+    root_nh.getParam("/input_device",input_device);
+    if(input_device == "ps3")
+    {
+        device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller device");
+    }
+    else if(input_device == "xbox")
+    {
+        device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller device");
+    }
+    else if(input_device == "twist")
+    {
+        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+    }
     else
-        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller");
-    std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(xbox);
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
+        return false;
+    }
 
     // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
@@ -241,30 +255,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
-    return true;
-}
-
-bool Controller::setJointAccelerationLimit(const double& lim)
-{
-
-    if(id_prob_)
-    {
-        if(lim>=0.0)
-        {
-            id_prob_->setJointAccelerationAbsLim(lim);
-            ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set joint acceleration limit to "<< lim);
-        }
-        else
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"Lim has to be major than 0!");
-            return false;
-        }
-    }
-    else
-    {
-        ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
-        return false;
-    }
     return true;
 }
 
@@ -583,7 +573,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             legs_kinematics_->reset();
             id_prob_->resetTasks();
 
-            des_joint_positions_ = legs_kinematics_->getJointHomePositions();
+            des_joint_positions_ = robot_model_->getJointHomePositions();
             des_joint_velocities_.fill(0.0);
 
             imu_gyroscope_filter_.setTimeStep(period_);

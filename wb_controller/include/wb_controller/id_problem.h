@@ -16,6 +16,7 @@
 #include <OpenSoT/constraints/force/FrictionCone.h>
 #include <OpenSoT/constraints/force/WrenchLimits.h>
 #include <OpenSoT/constraints/TaskToConstraint.h>
+#include <OpenSoT/constraints/acceleration/JointLimits.h>
 
 // ROS
 #include <ros/ros.h>
@@ -53,7 +54,7 @@ public:
      * @param model pointer to external model
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model);
+    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt);
     ~IDProblem();
 
     /**
@@ -110,17 +111,6 @@ public:
      * @param reference_frame if world tranform the references into base frame
      */
     void setFootReference(const std::string& foot_name, const Eigen::Affine3d& pose_ref, const Eigen::Vector6d& vel_ref, const std::string& reference_frame);
-
-    /**
-     * @brief set the absolute value for joint acceleration limits
-     * @param limit -> max = limit, min = -1.0 * lim
-     */
-    void setJointAccelerationAbsLim(const double &lim);
-
-    /**
-     * @brief get the absolute value for joint acceleration limits
-     */
-    double getJointAccelerationAbsLim();
 
     /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
@@ -207,11 +197,6 @@ public:
     OpenSoT::tasks::acceleration::Postural::Ptr postural_;
 
     /**
-     * @brief qddot_lims_ some bounds
-     */
-    OpenSoT::constraints::GenericConstraint::Ptr qddot_lims_;
-
-    /**
      * @brief torque_lims_ some bounds
      */
     OpenSoT::constraints::acceleration::TorqueLimits::Ptr torque_lims_;
@@ -220,6 +205,11 @@ public:
      * @brief wrenches_lims_ bounds
      */
     OpenSoT::constraints::force::WrenchesLimits::Ptr wrenches_lims_;
+
+    /**
+     * @brief q_lims_ bounds
+     */
+    OpenSoT::constraints::acceleration::JointLimits::Ptr q_lims_;
 
     /**
      * @brief _model
@@ -232,16 +222,6 @@ private:
      * @brief update call after the model.update() to update the autostack
      */
     void update();
-
-    /**
-     * @brief dynamics_con_ constraint relates the floating base with the contact forces
-     */
-    OpenSoT::constraints::TaskToConstraint::Ptr dynamics_con_;
-
-    /**
-     * @brief dynamics_task_ constraint relates the floating base with the contact forces
-     */
-    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr dynamics_task_;
 
     /**
      * @brief friction_cones_ constraints

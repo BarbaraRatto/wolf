@@ -15,8 +15,7 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
-  robot_model_->getRobotState("home", qhome_);
-  robot_model_->setJointPosition(qhome_);
+  qhome_ = robot_model_->getJointHomePositions();
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
@@ -102,8 +101,8 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
   }
 
   // Check if the desired positions and velocities are valid and clamp them
-  robot_model_->clampJointPositions(des_joint_positions_);
-  robot_model_->clampJointVelocities(des_joint_velocities_);
+  //robot_model_->clampJointPositions(des_joint_positions_);
+  //robot_model_->clampJointVelocities(des_joint_velocities_);
 
   return true;
 }
@@ -132,25 +131,6 @@ const Eigen::VectorXd& LegsKinematics::getDesiredJointPositions()
 const Eigen::VectorXd& LegsKinematics::getDesiredJointVelocities()
 {
   return des_joint_velocities_;
-}
-
-bool LegsKinematics::setJointHomePositions(Eigen::VectorXd& qhome)
-{
-  // Check if qhome is between qmin and qmax
-  if(!robot_model_->checkJointLimits(qhome))
-  {
-      ROS_WARN_NAMED(CLASS_NAME,"Can not set qhome, joint limits violated!");
-      return false;
-  }
-  else
-    qhome_ = qhome;
-
-  return true;
-}
-
-const Eigen::VectorXd& LegsKinematics::getJointHomePositions()
-{
-  return qhome_;
 }
 
 void LegsKinematics::reset()

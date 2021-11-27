@@ -78,11 +78,6 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
         } 
-        double default_joint_acceleration_lim = 450.0; // [rad/s^2]
-        if (!controller_nh.getParam("default_joint_acceleration_lim", default_joint_acceleration_lim))
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No default base joint acceleration limit given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_joint_acceleration_lim);
-        }
         double default_friction_cones_mu = 0.7;
         if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
         {
@@ -159,7 +154,6 @@ public:
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
 
-        controller_->getIDProblem()->setJointAccelerationAbsLim(default_joint_acceleration_lim);
         controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 
         controller_->setCutoffFreqQdot(default_cutoff_freq_qdot);
@@ -262,7 +256,6 @@ public:
         server_->registerVariable<double>("set_kd_stance_hfe",Kd_stance_leg(1),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
         server_->registerVariable<double>("set_kd_stance_kfe",Kd_stance_leg(2),boost::bind(&wb_controller::LegsImpedance::setKdStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
 
-        server_->registerVariable<double>("set_joint_acc_lim",controller_->getIDProblem()->getJointAccelerationAbsLim(),boost::bind(&wb_controller::Controller::setJointAccelerationLimit,controller_,_1),"set the joint acceleration limit",0.0,1000.0,controller_->getIDProblem()->CLASS_NAME);
         server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wb_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
 
         server_->registerVariable<double>("set_cutoff_freq_qdot",default_cutoff_freq_qdot,boost::bind(&wb_controller::Controller::setCutoffFreqQdot,controller_,_1),"set cutoff frequency for the joint velocities",0,1000.0);

@@ -8,6 +8,7 @@
     <xacro:arg name="arm_enabled" default="false"/>
     <xacro:arg name="arm_name" default="kinova"/>
     <xacro:arg name="sensors" default="false"/>
+    <xacro:arg name="floating_base_link" default="true"/>
 
     <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
     <xacro:include filename="$(find aliengo_description)/urdfs/materials.xacro"/>
@@ -40,27 +41,15 @@
         </joint>
     </xacro:if>  -->
 
-    <link name="base_link">
-        <visual>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
-            <geometry>
-                <box size="0.001 0.001 0.001"/>
-            </geometry>
-        </visual>
-    </link>
-
     <!-- Floating-base Joint -->
-    <link name="world"/>
-    <joint name="floating_base_joint" type="floating">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <parent link="world"/>
-      <child link="base_link"/>
-    </joint>
-    <joint name="floating_base" type="fixed">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <parent link="base_link"/>
-      <child link="trunk"/>
-    </joint>
+    <xacro:if value="$(arg floating_base_link)">
+            <link name="world"/>
+            <joint name="floating_base_joint" type="floating">
+              <origin rpy="0 0 0" xyz="0 0 0"/>
+              <parent link="world"/>
+              <child link="trunk"/>
+            </joint>
+    </xacro:if>
 
     <link name="trunk">
         <visual>

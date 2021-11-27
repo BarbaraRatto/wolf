@@ -6,7 +6,7 @@ using namespace OpenSoT;
 
 namespace wb_controller {
 
-IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
+IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
   model_(model),
   current_mode_(modes_t::WALKING),
   selected_mode_(modes_t::WALKING)
@@ -25,7 +25,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //
   // Here we create all the tasks
   //   --------------------------
-  ROS_INFO_NAMED(CLASS_NAME,"Initialize FOOT tasks");
   for(unsigned int i=0; i<foot_names_.size(); i++)
   {
 
@@ -36,7 +35,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
     feet_[foot_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
   }
   //   --------------------------
-  ROS_INFO_NAMED(CLASS_NAME,"Initialize ARM tasks");
   for(unsigned int i=0; i<ee_names_.size(); i++)
   {
     arms_[ee_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(ee_names_[i], *model_, ee_names_[i],
@@ -75,46 +73,46 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
   //
   // Here we create the constraints & bounds
   //
-  ROS_INFO_NAMED(CLASS_NAME,"Initialize Dynamic Feasibility");
-  dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_,
-                                                                                      id_->getJointsAccelerationAffine(), id_->getContactsWrenchAffine(), foot_names_);
-
-  dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
-
-  ROS_INFO_NAMED(CLASS_NAME,"Initialize Friction Cones");
+  //   --------------------------
   OpenSoT::constraints::force::FrictionCones::friction_cones fcs;
   fc_.second = 1.0; // mu
   fc_.first.setIdentity();
   for(unsigned int i = 0; i < foot_names_.size(); i++)
     fcs.push_back(fc_);
   friction_cones_ = std::make_shared<OpenSoT::constraints::force::FrictionCones>(foot_names_,id_->getContactsWrenchAffine(),*model_,fcs);
-
-  joint_acceleration_lim_ = 1000.;
-  ones_ = Eigen::VectorXd::Ones(model_->getJointNum());
-
-  qddot_lims_ = std::make_shared<OpenSoT::constraints::GenericConstraint>(
-        "acc_lims", id_->getJointsAccelerationAffine(), joint_acceleration_lim_ * ones_, -1.0 * joint_acceleration_lim_ * ones_, OpenSoT::constraints::GenericConstraint::Type::CONSTRAINT);
-
+  //   --------------------------
   x_force_lower_lim_ = -2000;
   y_force_lower_lim_ = -2000;
   z_force_lower_lim_ = 0.1*GRAVITY*(model_->getMass()/N_LEGS);
-
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot's weight is: "<<model_->getMass());
-
-
   wrench_upper_lims_<<2000,2000,2000,Eigen::Vector3d::Zero();
   wrench_lower_lims_<<x_force_lower_lim_,y_force_lower_lim_,z_force_lower_lim_,Eigen::Vector3d::Zero();
-
-  ROS_INFO_NAMED(CLASS_NAME,"Initialize Wrench Limits");
   wrenches_lims_ = std::make_shared<OpenSoT::constraints::force::WrenchesLimits>(
         foot_names_, wrench_lower_lims_, wrench_upper_lims_,id_->getContactsWrenchAffine());
-
-  ROS_INFO_NAMED(CLASS_NAME,"Initialize Torque Limits");
+  //   --------------------------
   Eigen::VectorXd tau_max;
   model_->getEffortLimits(tau_max);
-  tau_max.head(6).setZero();
+  tau_max.head(FLOATING_BASE_DOFS).setZero();
   torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
+  //   --------------------------
+  Eigen::VectorXd q_max, q_min, q_home, qddot_max;
+  Eigen::MatrixXd M;
+  model_->getJointLimits(q_min,q_max);
+  q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
+  q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
+  model_->getRobotState("home",q_home);
+  //model_->getInertiaInverseTimesVector(tau_max,qddot_max);
+  model_->setJointPosition(q_home);
+  model_->update();
+  model_->getInertiaMatrix(M);
+  qddot_max = M.inverse() * tau_max;
+  qddot_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * 10000.0;
+  for(unsigned int i=0; i<qddot_max.size(); i++)
+      qddot_max(i) = std::abs(qddot_max(i)); // The acceleration limits have to be positive
+  q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),q_max,q_min,qddot_max,dt);
 
+  //
+  // Here we create some indices for the subtask definitions
+  //
   std::list<unsigned int> id_XYZ   = {0,1,2}; //xyz
   std::list<unsigned int> id_XY    = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
@@ -129,13 +127,16 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model):
       idx++;
   }
 
+  //
+  // Here we create the stack
+  //
   OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;//, arm_aggregated_weighted;
   feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%id_XYZ,feet_[foot_names_[0]]->getXSize());
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ = ((feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_) / (postural_%id_limbs)
-           )<<wrenches_lims_<<torque_lims_<<friction_cones_;
+  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_)
+         << wrenches_lims_<<torque_lims_<<friction_cones_;
 
   if(ee_names_.size() > 0)
   {
@@ -231,17 +232,6 @@ void IDProblem::setFootReference(const std::string& foot_name, const Eigen::Affi
     throw std::runtime_error("Wrong reference frame, can not set the foot references!");
 }
 
-void IDProblem::setJointAccelerationAbsLim(const double& lim)
-{
-   assert(lim>=0.0);
-   joint_acceleration_lim_ = lim;
-}
-
-double IDProblem::getJointAccelerationAbsLim()
-{
-   return joint_acceleration_lim_;
-}
-
 void IDProblem::setLowerForceBound(const double& x_force,const double& y_force,const double& z_force)
 {
   x_force_lower_lim_ = x_force;
@@ -328,8 +318,6 @@ void IDProblem::update()
     if(!wrenches_lims_->getWrenchLimits(tmp_map.first)->isReleased())
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
-
-  qddot_lims_->setBounds(joint_acceleration_lim_ * ones_,-1.0*joint_acceleration_lim_ * ones_);
 
   //Update the external lambda/references etc...
   for (auto& tmp_map : tasks_ros_)

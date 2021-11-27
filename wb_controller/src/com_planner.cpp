@@ -21,6 +21,8 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
 
 void ComPlanner::computeSupportPolygonCenter()
 {
+  // Note: the com position reference has to be defined wrt world because
+  // the com task is wrt world
   auto foot_positions = robot_model_->getFeetPositionInWorld();
   auto foot_names = foothold_planner_->getFootNames();
   support_polygon_center_.setZero();

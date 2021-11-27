@@ -303,7 +303,7 @@ void FootholdsPlanner::resetBaseVelocities()
 void FootholdsPlanner::resetBasePosition()
 {
   for(unsigned int i=0;i<3;i++)
-    base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),0.5);
+    base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
 }
 
 void FootholdsPlanner::resetBaseOrientation()
@@ -311,7 +311,7 @@ void FootholdsPlanner::resetBaseOrientation()
   default_base_orientation_(2) = base_orientation_(2); // Keep the same yaw
 
   for(unsigned int i=0;i<3;i++)
-    base_orientation_(i) = secondOrderFilter(base_orientation_(i),base_orientation_filt_(i),default_base_orientation_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
+    base_orientation_(i) = secondOrderFilter(base_orientation_(i),base_orientation_filt_(i),default_base_orientation_(i),1.0); //FIXME hardcoded gain, it should be based on the sampling time
 
   rpyToRot(base_orientation_,base_rotation_reference_);
   base_rotation_reference_.transposeInPlace();
@@ -337,7 +337,7 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
   hf_base_linear_velocity_ref_(2) = base_linear_velocity_cmd_ * base_linear_velocity_scale_z_;
 
   for(unsigned int i=0;i<3;i++)
-    hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.01); //FIXME hardcoded gain, it should be based on the sampling time
+    hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
 
   base_linear_velocity_reference_ = world_R_hf_ * hf_base_linear_velocity_;
 
@@ -377,7 +377,9 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getPose(gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot_
+      robot_model_->setJointPosition(robot_model_->getJointHomePositions());
+      robot_model_->update();
+      robot_model_->getPose(gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot
       robot_model_->getPose(hips_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_hip
       tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base_
       // initial feet offsets in the horizontal frame
@@ -740,7 +742,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
 bool PushRecovery::update(const double& period)
 {
-  bool push_detected = true;
+  bool push_detected = false;
 
   //velocity_filter_.setTimeStep(period);
   th_filter_.setTimeStep(period);
@@ -779,19 +781,22 @@ bool PushRecovery::update(const double& period)
 
   error_ = base_velocity_ - cmd_velocity_;
 
-  if(cmd_velocity_.norm() > 0.0) // Check if the robot is moving
+  if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->getCmd() == FootholdsPlanner::LINEAR_AND_ANGULAR) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
   else
     current_th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
 
   current_th_dot_filt_ = th_filter_.process(current_th_dot_);
 
-  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
-    push_detected = false;
-
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-  for(unsigned int i=0;i<foot_names.size();i++) // Reset
-    deltas_[foot_names[i]].setZero();
+
+  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
+  {
+    for(unsigned int i=0;i<foot_names.size();i++) // Reset
+      deltas_[foot_names[i]].setZero();
+  }
+  else
+    push_detected = true;
 
   if (compute_deltas_ && push_detected)
   {
