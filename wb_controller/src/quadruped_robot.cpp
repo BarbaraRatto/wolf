@@ -215,12 +215,12 @@ bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
         if(q(i)<q_min_(i))
         {
             q(i) = q_min_(i);
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum POSITION limit of "<<q_min_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum POSITION limit of "<<q_min_(i));
             violated_limits = true;
         } else if(q(i)>q_max_(i))
         {
             q(i) = q_max_(i);
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum POSITION limit of "<<q_max_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum POSITION limit of "<<q_max_(i));
             violated_limits = true;
         }
     }
@@ -235,7 +235,7 @@ bool QuadrupedRobot::clampJointEfforts(Eigen::VectorXd &tau)
     {
         if(std::abs(tau(i))>tau_max_(i)+EPS)
         {
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum EFFORT limit of "<<tau_max_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum EFFORT limit of "<<tau_max_(i));
             violated_limits = true;
         }
     }
@@ -251,7 +251,7 @@ bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
         if(std::abs(qdot(i))>qdot_max_(i))
         {
             qdot(i) = qdot_max_(i);
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
             violated_limits = true;
         }
     }
