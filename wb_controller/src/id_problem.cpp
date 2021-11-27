@@ -7,14 +7,13 @@ using namespace OpenSoT;
 namespace wb_controller {
 
 IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
-  model_(model),
-  current_mode_(modes_t::WALKING),
-  selected_mode_(modes_t::WALKING)
+  model_(model)
 {
 
-  foot_names_    = model_->getFootNames();
-  ee_names_      = model_->getEndEffectorNames();
-  contact_names_ = model_->getContactNames();
+  foot_names_          = model_->getFootNames();
+  ee_names_            = model_->getEndEffectorNames();
+  contact_names_       = model_->getContactNames();
+  current_robot_state_ = model_->getState();
 
   //
   //  This utility internally creates the right variables which later we will use to
@@ -261,24 +260,6 @@ void IDProblem::setLowerForceBoundZ(const double& force)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<force);
 }
 
-void IDProblem::selectMode(const modes_t& mode)
-{
-  selected_mode_ = mode;
-}
-
-void IDProblem::switchMode()
-{
-  if(current_mode_ == modes_t::WALKING)
-    selectMode(modes_t::MANIPULATION);
-  else
-    selectMode(modes_t::WALKING);
-}
-
-unsigned int IDProblem::getCurrentMode()
-{
-  return current_mode_;
-}
-
 void IDProblem::resetTasks()
 {
   for (auto& tmp_map : tasks_ros_)
@@ -287,21 +268,20 @@ void IDProblem::resetTasks()
 
 void IDProblem::update()
 {
-
-  // Update mode
-  if(current_mode_ != selected_mode_)
+  // Update if the robot's state changed
+  if(current_robot_state_ != model_->getState())
   {
-    current_mode_.store(selected_mode_.load());
+    current_robot_state_ = model_->getState();
 
     if(ee_names_.size()>0)
     {
       std::string frame;
-      if(current_mode_ == modes_t::WALKING)
+      if(current_robot_state_ == QuadrupedRobot::WALKING)
         frame = model_->getBaseLinkName();
-      else if (current_mode_ == modes_t::MANIPULATION)
+      else if (current_robot_state_ == QuadrupedRobot::MANIPULATION)
         frame = WORLD_FRAME_NAME;
       else
-        ROS_WARN_NAMED(CLASS_NAME,"Wrong mode!");
+        frame = model_->getBaseLinkName();
 
       for (auto& tmp_map : arms_)
         tmp_map.second->setBaseLink(frame);
@@ -323,14 +303,6 @@ void IDProblem::update()
   //Update the external lambda/references etc...
   for (auto& tmp_map : tasks_ros_)
     tmp_map.second->update();
-
-  // Update robot state
-  if(current_mode_ == modes_t::WALKING)
-    model_->setState(QuadrupedRobot::robot_states_t::WALKING);
-  else if (current_mode_ == modes_t::MANIPULATION)
-    model_->setState(QuadrupedRobot::robot_states_t::MANIPULATION);
-  else
-    model_->setState(QuadrupedRobot::robot_states_t::INIT);
 
   // Update the problem
   stack_->update(Eigen::VectorXd(1));

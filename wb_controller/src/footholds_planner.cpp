@@ -172,6 +172,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
     {
       if(push_detected_ && gait_generator_->getGaitType() == Gait::gait_t::CRAWL)
         gait_generator_->setGaitType(Gait::gait_t::TROT);
+      //robot_model_->setState(QuadrupedRobot::WALKING);
       gait_generator_->activateSwing();
     }
     else

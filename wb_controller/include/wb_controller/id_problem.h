@@ -46,8 +46,6 @@ public:
 
     typedef std::shared_ptr<IDProblem> Ptr;
 
-    enum modes_t {WALKING=0,MANIPULATION};
-
     /**
      * @brief IDProblem constructor
      * @param ros node handle
@@ -149,21 +147,6 @@ public:
      * @param velocity
      */
     void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
-
-    /**
-         * @brief Select the type to use
-         */
-    void selectMode(const modes_t &mode);
-
-    /**
-         * @brief Get the current mode
-         */
-    unsigned int getCurrentMode();
-
-    /**
-         * @brief Switch between WALKING and MANIPULATION
-         */
-    void switchMode();
 
     /**
      * @brief get the mu parameter for the friction cones
@@ -278,8 +261,7 @@ private:
 
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
-    std::atomic<unsigned int> current_mode_;
-    std::atomic<unsigned int> selected_mode_;
+    std::atomic<unsigned int> current_robot_state_;
 
     std::vector<std::string> foot_names_;
     std::vector<std::string> ee_names_;

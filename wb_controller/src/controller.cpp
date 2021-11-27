@@ -322,14 +322,14 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     return true;
 }
 
-bool Controller::selectMode(const std::string& mode)
+bool Controller::selectControlMode(const std::string& mode)
 {
-    if(id_prob_)
+    if(robot_model_)
     {
         if(mode == "WALKING")
-            id_prob_->selectMode(IDProblem::modes_t::WALKING);
+            robot_model_->setState(QuadrupedRobot::WALKING);
         else if(mode == "MANIPULATION")
-            id_prob_->selectMode(IDProblem::modes_t::MANIPULATION);
+            robot_model_->setState(QuadrupedRobot::MANIPULATION);
         else
         {
             ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
@@ -340,16 +340,17 @@ bool Controller::selectMode(const std::string& mode)
     return true;
 }
 
-void Controller::switchMode()
+void Controller::switchControlMode()
 {
-    if(id_prob_)
-    {
-        id_prob_->switchMode();
-        legs_kinematics_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
-        foot_holds_planner_->reset();
-    }
-    else
-        ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
+   if(robot_model_)
+   {
+     if(robot_model_->getState() == QuadrupedRobot::WALKING)
+       robot_model_->setState(QuadrupedRobot::MANIPULATION);
+     else
+       robot_model_->setState(QuadrupedRobot::WALKING);
+   }
+   //legs_kinematics_->reset();
+   //foot_holds_planner_->reset();
 }
 
 bool Controller::selectGait(const string& gait)
@@ -578,6 +579,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
+
+            robot_model_->setState(QuadrupedRobot::WALKING);
 
             init_done_ = true;
         }

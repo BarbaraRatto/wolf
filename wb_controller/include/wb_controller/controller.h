@@ -164,14 +164,14 @@ public:
 
 
     /**
-         * @brief Select the mode to use
+         * @brief Select the control mode to use [WALKING|MANIPULATION]
          */
-    bool selectMode(const std::string& mode);
+    bool selectControlMode(const std::string& mode);
 
     /**
          * @brief Switch between WALKING and MANIPULATION
          */
-    void switchMode();
+    void switchControlMode();
 
     /**
          * @brief Select the gait to use
