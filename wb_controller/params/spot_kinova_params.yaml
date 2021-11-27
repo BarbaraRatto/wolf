@@ -48,9 +48,9 @@ wb_controller:
       kd_stance: {haa: 5.0, hfe: 5.0, kfe: 5.0}
 
       kinova_end_effector:
-          Kp: {x: 10.0, y: 10.0, z: 10.0, roll: 0.1, pitch: 0.1, yaw: 0.1}
-          Kd: {x: 0.1, y: 0.1, z: 0.1, roll: 0.01, pitch: 0.01, yaw: 0.01}
-          weight: 0.01
+          Kp: {x: 100.0, y: 100.0, z: 100.0, roll: 10, pitch: 10, yaw: 10}
+          Kd: {x: 10.0, y: 10.0, z: 10.0, roll: 0.1, pitch: 0.1, yaw: 0.1}
+          weight: 1.0
 
       lf_foot:
           Kp: {x: 1000.0, y: 1000.0, z: 1000.0, roll: 0, pitch: 0, yaw: 0}
@@ -72,7 +72,7 @@ wb_controller:
       waistRPY:
           Kp: {x: 0.0, y: 0.0, z: 0.0, roll: 240.0, pitch: 140.0, yaw: 80.0}
           Kd: {x: 0.0, y: 0.0, z: 0.0, roll: 50.0, pitch: 30.0, yaw: 16.0}
-          weight: 1.0
+          weight: 10.0
 
       waistZ:
           Kp: {x: 0.0, y: 0.0, z: 200.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
@@ -85,7 +85,7 @@ wb_controller:
       CoM:
           Kp: {x: 200.0, y: 200.0, z: 200.0}
           Kd: {x: 50.0, y: 50.0, z: 50.0}
-          weight: 1.0
+          weight: 10.0
 
       angular_momentum:
           weight: 0.1

@@ -634,7 +634,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
         des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();
 
-        id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
+        //id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Get the solver solution
         if(!id_prob_->solve(des_joint_efforts_solver_))

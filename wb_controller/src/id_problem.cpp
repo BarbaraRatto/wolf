@@ -41,7 +41,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
                                                                                     model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
     arms_[ee_names_[i]]->setLambda(1.,1.);
     arms_[ee_names_[i]]->setWeightIsDiagonalFlag(true);
-    arms_[ee_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force); // Note: we use acceleration since we change the base frame, the inertia changes as well. This is causing big jumps in the gains
+    arms_[ee_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Acceleration); // Note: we use acceleration since we change the base frame, the inertia changes as well. This is causing big jumps in the gains
   }
   //   --------------------------
   angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_,id_->getJointsAccelerationAffine());
@@ -135,8 +135,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_)
-         << wrenches_lims_<<torque_lims_<<friction_cones_;
+  stack_ /= (feet_aggregated +waistRPY_%id_RPY + angular_momentum_ + com_);
 
   if(ee_names_.size() > 0)
   {
@@ -150,6 +149,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
     }
     stack_->getStack()[0] = arm_aggregated + stack_->getStack()[0];
   }
+
+  stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
 
   // Regularization and first update FIXME CLEANUP!
   Eigen::Index n = id_->getSerializer()->getSize();
