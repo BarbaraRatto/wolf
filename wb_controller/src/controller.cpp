@@ -608,7 +608,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
 
         // Set the velocity and position reference for the Com
-        com_planner_->update(period.toSec());
+        com_planner_->update();
         id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
         id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
