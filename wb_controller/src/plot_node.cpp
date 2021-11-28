@@ -14,6 +14,7 @@
 #include <wb_controller/utils.h>
 #include <wb_controller/ContactForces.h>
 #include <wb_controller/CartesianTask.h>
+#include <wb_controller/ComTask.h>
 #include <wb_controller/FrictionCones.h>
 #include <wb_controller/TerrainEstimation.h>
 #include <wb_controller/FootHolds.h>
@@ -304,13 +305,13 @@ protected:
   }
 };
 
-class CoMVisualizer : public Visualizer<wb_controller::CartesianTask>
+class CoMVisualizer : public Visualizer<wb_controller::ComTask>
 {
 
   public:
 
   CoMVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
-    :Visualizer<wb_controller::CartesianTask>(nh,topic_name)
+    :Visualizer<wb_controller::ComTask>(nh,topic_name)
   {
   }
 
@@ -318,16 +319,16 @@ class CoMVisualizer : public Visualizer<wb_controller::CartesianTask>
 
 protected:
 
-  virtual void callback(const wb_controller::CartesianTask& msg) override
+  virtual void callback(const wb_controller::ComTask& msg) override
   {
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
         visual_tools_->deleteAllMarkers();
-        wb_controller::CartesianTask com_projection = msg;
-        com_projection.pose_actual.position.z = 0.0;
-        createSphere(com_projection.pose_actual.position,rviz_visual_tools::RED);
-        createSphere(msg.pose_actual.position,rviz_visual_tools::GREEN);
-        createArrow(msg.twist_reference.linear,msg.pose_actual.position,rviz_visual_tools::BLUE,1.0);
+        wb_controller::ComTask com_projection = msg;
+        com_projection.position_actual.z = 0.0;
+        createSphere(com_projection.position_actual,rviz_visual_tools::RED);
+        createSphere(msg.position_actual,rviz_visual_tools::GREEN);
+        createArrow(msg.velocity_reference,msg.position_actual,rviz_visual_tools::BLUE,1.0);
         _mtx.unlock();
     }
   }
