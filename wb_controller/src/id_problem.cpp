@@ -344,6 +344,7 @@ void IDProblem::publish(const ros::Time& time)
   for (auto& tmp_map : arms_)
     tmp_map.second->publish(time);
   waistRPY_->publish(time);
+  waistZ_->publish(time);
   com_->publish(time);
 }
 
@@ -367,6 +368,7 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   for (auto& tmp_map : arms_)
     tmp_map.second->updateCost(x_);
   waistRPY_->updateCost(x_);
+  waistZ_->updateCost(x_);
   com_->updateCost(x_);
 #endif
 
