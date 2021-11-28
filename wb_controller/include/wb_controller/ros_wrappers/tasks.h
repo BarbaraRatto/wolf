@@ -618,7 +618,7 @@ public:
     double weight  = getWeight()(0,0);
     server_->registerVariable<double>("set_lambda_1",    lambda1,     boost::bind(&TaskRosWrapperInterface::setLambda1,this,_1)    ,"set lambda 1"   ,0.0,1000.0);
     server_->registerVariable<double>("set_weight_diag", weight,      boost::bind(&TaskRosWrapperInterface::setWeightDiag,this,_1) ,"set weight diag",0.0,1000.0);
-    Eigen::Matrix3d K = Eigen::Matrix3d::Zero();
+    Eigen::Matrix3d K = getMomentumGain();
     server_->registerVariable<double>("K_roll",    K(0,0), boost::bind(&TaskRosWrapperInterface::setKpRoll, this,_1)    ,"K(0,0)", 0.0, 1000.0);
     server_->registerVariable<double>("K_pitch",   K(1,1), boost::bind(&TaskRosWrapperInterface::setKpPitch,this,_1)    ,"K(1,1)", 0.0, 1000.0);
     server_->registerVariable<double>("K_yaw",     K(2,2), boost::bind(&TaskRosWrapperInterface::setKpYaw,  this,_1)    ,"K(2,2)", 0.0, 1000.0);
