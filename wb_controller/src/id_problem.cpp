@@ -63,6 +63,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   waistRPY_->loadParams();
   waistRPY_->registerReconfigurableVariables();
   //   --------------------------
+  waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
+                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
+  waistZ_->setLambda(1.,1.);
+  waistZ_->setWeightIsDiagonalFlag(true);
+  waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  waistRPY_->loadParams();
+  waistRPY_->registerReconfigurableVariables();
+  //   --------------------------
   postural_ = std::make_shared<OpenSoT::tasks::acceleration::Postural>(*model_, id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
   postural_->setWeightIsDiagonalFlag(true);
@@ -145,7 +153,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
                           )<<wrenches_lims_<<friction_cones_<<torque_lims_<<q_lims_;
 
   int stack_pos_offset = 0;
-  stacks_[WALKING] = ((feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_) / (postural_%id_legs)
+  stacks_[WALKING] = ((feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_) / (postural_%id_legs)
                      )<<wrenches_lims_<<torque_lims_<<friction_cones_<<q_lims_;
 
   if(ee_names_.size() > 0)
