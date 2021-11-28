@@ -91,7 +91,7 @@ public:
       weight = getWeight()(0,0);
     }
     // Check if the values are positive
-    if(lambda1 < 0 || weight < 0)
+    if(lambda1 < 0 || lambda2 < 0 || weight < 0)
       throw std::runtime_error("Lambda and weight must be positive!");
 
     buffer_lambda1_ = lambda1;
@@ -379,7 +379,7 @@ public:
       weight = getWeight()(0,0);
     }
     // Check if the values are positive
-    if(lambda1 < 0 || weight < 0)
+    if(lambda1 < 0 || lambda2 < 0 || weight < 0)
       throw std::runtime_error("Lambda and weight must be positive!");
 
     buffer_lambda1_ = lambda1;
