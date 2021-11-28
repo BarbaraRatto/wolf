@@ -190,6 +190,7 @@ public:
       setWeight(buffer_weight_diag_);
     if(OPTIONS.set_ext_gains)
     {
+      tmp_matrix6d_.setZero();
       tmp_matrix6d_(0,0) = buffer_kp_x_;
       tmp_matrix6d_(1,1) = buffer_kp_y_;
       tmp_matrix6d_(2,2) = buffer_kp_z_;
@@ -197,6 +198,7 @@ public:
       tmp_matrix6d_(4,4) = buffer_kp_pitch_;
       tmp_matrix6d_(5,5) = buffer_kp_yaw_;
       setKp(tmp_matrix6d_);
+      tmp_matrix6d_.setZero();
       tmp_matrix6d_(0,0) = buffer_kd_x_;
       tmp_matrix6d_(1,1) = buffer_kd_y_;
       tmp_matrix6d_(2,2) = buffer_kd_z_;
@@ -207,6 +209,7 @@ public:
     }
     if(OPTIONS.set_ext_reference)
     {
+      tmp_affine3d_.setIdentity();
       tmp_affine3d_ = *buffer_pose_reference_.readFromRT();
       // Filter
       tmp_affine3d_.translation() = position_reference_filter_.process(tmp_affine3d_.translation());
@@ -468,10 +471,12 @@ public:
       setWeight(buffer_weight_diag_);
     if(OPTIONS.set_ext_gains)
     {
+      tmp_matrix3d_.setZero();
       tmp_matrix3d_(0,0) = buffer_kp_x_;
       tmp_matrix3d_(1,1) = buffer_kp_y_;
       tmp_matrix3d_(2,2) = buffer_kp_z_;
       setKp(tmp_matrix3d_);
+      tmp_matrix3d_.setZero();
       tmp_matrix3d_(0,0) = buffer_kd_x_;
       tmp_matrix3d_(1,1) = buffer_kd_y_;
       tmp_matrix3d_(2,2) = buffer_kd_z_;
