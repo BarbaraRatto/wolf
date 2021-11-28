@@ -27,20 +27,26 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=0; i<foot_names_.size(); i++)
   {
 
-    feet_[foot_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(foot_names_[i], *model_, foot_names_[i],
-                                                                                      model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
+    feet_[foot_names_[i]] = std::make_shared<Cartesian>(nh,foot_names_[i], *model_, foot_names_[i],
+                                                        model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
     feet_[foot_names_[i]]->setLambda(0.,0.);
     feet_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
     feet_[foot_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+    feet_[foot_names_[i]]->OPTIONS.set_ext_lambda = false;
+    feet_[foot_names_[i]]->loadParams();
+    feet_[foot_names_[i]]->registerReconfigurableVariables();
   }
   //   --------------------------
   for(unsigned int i=0; i<ee_names_.size(); i++)
   {
-    arms_[ee_names_[i]] = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>(ee_names_[i], *model_, ee_names_[i],
-                                                                                    model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
+    arms_[ee_names_[i]] = std::make_shared<Cartesian>(nh,ee_names_[i], *model_, ee_names_[i],
+                                                      model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
     arms_[ee_names_[i]]->setLambda(1.,1.);
     arms_[ee_names_[i]]->setWeightIsDiagonalFlag(true);
     arms_[ee_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+    arms_[ee_names_[i]]->OPTIONS.set_ext_reference = true;
+    arms_[ee_names_[i]]->loadParams();
+    arms_[ee_names_[i]]->registerReconfigurableVariables();
   }
   //   --------------------------
   angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_,id_->getJointsAccelerationAffine());
@@ -49,25 +55,23 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   angular_momentum_->setReference(Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
   angular_momentum_->setMomentumGain(Eigen::Matrix3d::Identity());
   //   --------------------------
-  waistRPY_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistRPY", *model_, model_->getBaseLinkName(),
-                                                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
+  waistRPY_ = std::make_shared<Cartesian>(nh,"waistRPY", *model_, model_->getBaseLinkName(),
+                                          WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waistRPY_->setLambda(1.,1.);
   waistRPY_->setWeightIsDiagonalFlag(true);
   waistRPY_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  //   --------------------------
-  waistZ_ = std::make_shared<OpenSoT::tasks::acceleration::Cartesian>("waistZ", *model_, model_->getBaseLinkName(),
-                                                                      WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  waistZ_->setLambda(1.,1.);
-  waistZ_->setWeightIsDiagonalFlag(true);
-  waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  waistRPY_->loadParams();
+  waistRPY_->registerReconfigurableVariables();
   //   --------------------------
   postural_ = std::make_shared<OpenSoT::tasks::acceleration::Postural>(*model_, id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
   postural_->setWeightIsDiagonalFlag(true);
   //   --------------------------
-  com_ = std::make_shared<OpenSoT::tasks::acceleration::CoM>(*model_, id_->getJointsAccelerationAffine());
+  com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
   com_->setWeightIsDiagonalFlag(true);
+  com_->loadParams();
+  com_->registerReconfigurableVariables();
 
   //
   // Here we create the constraints & bounds
@@ -141,7 +145,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
                           )<<wrenches_lims_<<friction_cones_<<torque_lims_<<q_lims_;
 
   int stack_pos_offset = 0;
-  stacks_[WALKING] = ((feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_) / (postural_%id_legs)
+  stacks_[WALKING] = ((feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_) / (postural_%id_legs)
                      )<<wrenches_lims_<<torque_lims_<<friction_cones_<<q_lims_;
 
   if(ee_names_.size() > 0)
@@ -184,26 +188,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
 
   qddot_.setZero(model_->getJointNum());
   contact_wrenches_.reserve(contact_names_.size());
-
-  // Add some ROS magic (TO BE MOVED)
-  tasks_ros_["waistRPY"] = std::make_shared<CartesianWrapper>(nh,waistRPY_); // WAIST RPY
-  tasks_ros_["waistZ"] = std::make_shared<CartesianWrapper>(nh,waistZ_); // WAIST Z
-  tasks_ros_["postural"] = std::make_shared<PosturalWrapper>(nh,postural_); // POSTURAL
-  tasks_ros_["postural"]->OPTIONS.set_ext_gains = false;
-  tasks_ros_["com"] = std::make_shared<ComWrapper>(nh,com_); // CoM
-
-  for(unsigned int i=0; i<foot_names_.size(); i++)
-  {
-    tasks_ros_[foot_names_[i]] = std::make_shared<CartesianWrapper>(nh,feet_[foot_names_[i]]); // FEET
-    tasks_ros_[foot_names_[i]]->OPTIONS.set_ext_lambda = false;
-  }
-  for(unsigned int i=0; i<ee_names_.size(); i++)
-  {
-    tasks_ros_[ee_names_[i]] = std::make_shared<CartesianWrapper>(nh,arms_[ee_names_[i]]); // ARMS
-    tasks_ros_[ee_names_[i]]->OPTIONS.set_ext_reference = true;
-  }
-
-  //selectStack(stacks_t::WALKING);
 }
 
 IDProblem::~IDProblem()
@@ -294,13 +278,9 @@ void IDProblem::selectStack(const stacks_t& stack)
       {
         tmp_map.second->setBaseLink(frame);
         tmp_map.second->update(Eigen::VectorXd(1));
+        tmp_map.second->reset();
       }
-      //for (unsigned int i=0;i<ee_names_.size();i++)
-      //  tasks_ros_[ee_names_[i]]->reset();
     }
-
-    for (auto& tmp_map : tasks_ros_)
-      tmp_map.second->reset();
 
     if(solver_.get()!=nullptr)
       solver_.release();
@@ -337,10 +317,6 @@ void IDProblem::update()
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
 
-  //Update the external lambda/references etc...
-  for (auto& tmp_map : tasks_ros_)
-    tmp_map.second->update();
-
   // Update robot state
   if(current_stack_ == stacks_t::WALKING)
     model_->setState(QuadrupedRobot::robot_states_t::WALKING);
@@ -355,8 +331,12 @@ void IDProblem::update()
 
 void IDProblem::publish(const ros::Time& time)
 {
-  for (auto& tmp_map : tasks_ros_)
+  for (auto& tmp_map : feet_)
     tmp_map.second->publish(time);
+  for (auto& tmp_map : arms_)
+    tmp_map.second->publish(time);
+  waistRPY_->publish(time);
+  com_->publish(time);
 }
 
 bool IDProblem::solve(Eigen::VectorXd& tau)
@@ -374,8 +354,12 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 
   // Update the costs
 #ifdef COMPUTE_COST
-  for (auto& tmp_map : tasks_ros_)
-    tmp_map.second->computeCost(x_);
+  for (auto& tmp_map : feet_)
+    tmp_map.second->updateCost(x_);
+  for (auto& tmp_map : arms_)
+    tmp_map.second->updateCost(x_);
+  waistRPY_->updateCost(x_);
+  com_->updateCost(x_);
 #endif
 
   return (res_solv && res_id);
@@ -413,7 +397,6 @@ void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z)
   tmp_affine3d_.linear() = Rot;
   tmp_affine3d_.translation().z() = z;
   waistRPY_->setReference(tmp_affine3d_);
-  waistZ_->setReference(tmp_affine3d_);
 }
 
 void IDProblem::setComReference(const Eigen::Vector3d& position, const Eigen::Vector3d& velocity)
