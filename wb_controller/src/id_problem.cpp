@@ -49,11 +49,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
     arms_[ee_names_[i]]->registerReconfigurableVariables();
   }
   //   --------------------------
-  angular_momentum_ = std::make_shared<OpenSoT::tasks::acceleration::AngularMomentum>(*model_,id_->getJointsAccelerationAffine());
+  angular_momentum_ = std::make_shared<AngularMomentum>(nh,*model_,id_->getJointsAccelerationAffine());
   angular_momentum_->setLambda(0.);
   angular_momentum_->setWeightIsDiagonalFlag(true);
   angular_momentum_->setReference(Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
   angular_momentum_->setMomentumGain(Eigen::Matrix3d::Identity());
+  angular_momentum_->loadParams();
+  angular_momentum_->registerReconfigurableVariables();
   //   --------------------------
   waistRPY_ = std::make_shared<Cartesian>(nh,"waistRPY", *model_, model_->getBaseLinkName(),
                                           WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
@@ -68,12 +70,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   waistZ_->setLambda(1.,1.);
   waistZ_->setWeightIsDiagonalFlag(true);
   waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  waistRPY_->loadParams();
-  waistRPY_->registerReconfigurableVariables();
+  waistZ_->loadParams();
+  waistZ_->registerReconfigurableVariables();
   //   --------------------------
-  postural_ = std::make_shared<OpenSoT::tasks::acceleration::Postural>(*model_, id_->getJointsAccelerationAffine());
+  postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
   postural_->setWeightIsDiagonalFlag(true);
+  postural_->loadParams();
+  postural_->registerReconfigurableVariables();
   //   --------------------------
   com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
@@ -346,6 +350,8 @@ void IDProblem::publish(const ros::Time& time)
   waistRPY_->publish(time);
   waistZ_->publish(time);
   com_->publish(time);
+  postural_->publish(time);
+  angular_momentum_->publish(time);
 }
 
 bool IDProblem::solve(Eigen::VectorXd& tau)
@@ -370,6 +376,8 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   waistRPY_->updateCost(x_);
   waistZ_->updateCost(x_);
   com_->updateCost(x_);
+  postural_->updateCost(x_);
+  angular_momentum_->updateCost(x_);
 #endif
 
   return (res_solv && res_id);

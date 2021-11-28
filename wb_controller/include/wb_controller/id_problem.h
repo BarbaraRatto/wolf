@@ -179,13 +179,13 @@ public:
     Cartesian::Ptr waistRPY_;
     Cartesian::Ptr waistZ_;
     CoM::Ptr com_;
-    OpenSoT::tasks::acceleration::AngularMomentum::Ptr angular_momentum_;
+    AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
 
     /**
      * @brief postural_ a postural task
      */
-    OpenSoT::tasks::acceleration::Postural::Ptr postural_;
+    Postural::Ptr postural_;
 
     /**
      * @brief torque_lims_ some bounds
