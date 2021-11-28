@@ -29,7 +29,7 @@ public:
 
   ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator);
 
-  void update(double dt);
+  void update();
 
   const Eigen::Vector3d& getComVelocity() const;
 
