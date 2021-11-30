@@ -147,6 +147,17 @@ public:
 
     setKp(Kp);
     setKd(Kd);
+
+    std::string type;
+    if (!nh_.getParam("gains/"+_task_id+"/type" , type))
+      ROS_WARN("No gains type given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    else
+      if(type == "acceleration")
+        setGainType(OpenSoT::tasks::acceleration::GainType::Acceleration);
+      else if (type == "force")
+        setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+      else
+        throw std::runtime_error("Wrong gain type, possible values are 'acceleration' or 'force'");
   }
 
   virtual void updateCost(const Eigen::VectorXd& x) override
