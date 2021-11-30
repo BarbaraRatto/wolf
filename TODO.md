@@ -1,5 +1,6 @@
 # TODO list
 
+- Relative tasks between the feet
 - port the robots to the new stack
 - Change name to WOLF
 - Remove ground truth and contact sensors
