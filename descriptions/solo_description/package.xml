@@ -5,6 +5,7 @@
   <name>solo_description</name>
   <version>0.0.1</version>
   <description>Solo Description Package</description>
+  <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>
 
   <license>BSD-3</license>
 
