@@ -62,6 +62,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
     const auto& joints = srdf_model.getGroups()[i].joints_;
+    const auto& links  = srdf_model.getGroups()[i].links_;
     // Parse the foot tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("leg") != std::string::npos)
     {
@@ -86,6 +87,14 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         hip_names_.push_back(chains[j].second);
     }
+    // Parse the base link name from the SRDF file
+    if(srdf_model.getGroups()[i].name_.find("base") != std::string::npos)
+    {
+      if(links.size()==1)
+        base_name_ = links[0];
+      else
+        throw std::runtime_error("There can be only one base defined in the SRDF file!");
+    }
   }
 
   n_legs_ = leg_names_.size();
@@ -108,6 +117,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   {
     throw std::runtime_error("Wrong number of hips, check the SRDF file!");
   }
+  if(base_name_.empty())
+    throw std::runtime_error("Base can not be empty! Check the SRDF file!");
 
   for(unsigned int i=0;i<leg_names_.size();i++)
   {
@@ -115,9 +126,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     {
       std::string current_joint_name = joint_legs_[leg_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
-      joint_legs_idx_[leg_names_[i]].push_back(idx);
+      joint_limb_idx_[leg_names_[i]].push_back(idx);
       ROS_INFO_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
-
     }
   }
 
@@ -127,10 +137,15 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     {
       std::string current_joint_name = joint_arms_[arm_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
-      joint_arms_idx_[arm_names_[i]].push_back(idx);
+      joint_limb_idx_[arm_names_[i]].push_back(idx);
       ROS_INFO_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
     }
   }
+
+  for(unsigned int i=0;i<hip_names_.size();i++)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Hip names: "<<hip_names_[i]);
+
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Base name: "<<base_name_);
 
   hip_names_ = sortByLegPrefix(hip_names_);
   foot_names_ = sortByLegPrefix(foot_names_);
@@ -149,10 +164,10 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   // Calculate approx base length and width based on the hip positions
   // Hips order: "lf","lh","rf","rh"
   Eigen::Affine3d pose_lf, pose_lh, pose_rf, pose_rh;
-  ModelInterface::getPose(hip_names_[0],BASE_LINK_FRAME_NAME,pose_lf);
-  ModelInterface::getPose(hip_names_[1],BASE_LINK_FRAME_NAME,pose_lh);
-  ModelInterface::getPose(hip_names_[2],BASE_LINK_FRAME_NAME,pose_rf);
-  ModelInterface::getPose(hip_names_[3],BASE_LINK_FRAME_NAME,pose_rh);
+  ModelInterface::getPose(hip_names_[0],base_name_,pose_lf);
+  ModelInterface::getPose(hip_names_[1],base_name_,pose_lh);
+  ModelInterface::getPose(hip_names_[2],base_name_,pose_rf);
+  ModelInterface::getPose(hip_names_[3],base_name_,pose_rh);
   base_width_  = std::abs(pose_lf.translation().y() - pose_rf.translation().y());
   base_length_ = std::abs(pose_lf.translation().x() - pose_lh.translation().x());
 
@@ -173,6 +188,79 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     world_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
     base_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
   }
+
+  // Get home position
+  getRobotState("home", qhome_);
+  if(!checkJointLimits(qhome_))
+    throw std::runtime_error("home joint positions are out of the limits! Check the SRDF file!");
+
+  // Get inertias
+  getInertiaMatrix(tmp_M_);
+  getInertiaInverse(tmp_Mi_);
+
+  // Get limits
+  getEffortLimits(tau_max_);
+  getVelocityLimits(qdot_max_);
+  getJointLimits(q_min_, q_max_);
+
+  tau_max_.head(6).setZero();
+
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Position limits set to: "<< std::endl <<"-min:" <<q_min_.transpose() << std::endl <<"-max:" <<q_max_.transpose());
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: "<< std::endl <<"-max:" <<qdot_max_.transpose());
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: "  << std::endl <<"-max:" <<tau_max_.transpose());
+
+}
+
+bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
+{
+    assert(q.size() == q_min_.size());
+    bool violated_limits = false;
+    for(unsigned int i=0;i<q.size();i++)// Maybe I should skip the FB...
+    {
+        if(q(i)<q_min_(i))
+        {
+            q(i) = q_min_(i);
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum POSITION limit of "<<q_min_(i));
+            violated_limits = true;
+        } else if(q(i)>q_max_(i))
+        {
+            q(i) = q_max_(i);
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum POSITION limit of "<<q_max_(i));
+            violated_limits = true;
+        }
+    }
+    return violated_limits;
+}
+
+bool QuadrupedRobot::clampJointEfforts(Eigen::VectorXd &tau)
+{
+    assert(tau.size() == tau_max_.size());
+    bool violated_limits = false;
+    for(unsigned int i=0;i<tau.size();i++)
+    {
+        if(std::abs(tau(i))>tau_max_(i)+EPS)
+        {
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum EFFORT limit of "<<tau_max_(i));
+            violated_limits = true;
+        }
+    }
+    return violated_limits;
+}
+
+bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
+{
+    assert(qdot.size() == qdot_max_.size());
+    bool violated_limits = false;
+    for(unsigned int i=0;i<qdot_max_.size();i++)
+    {
+        if(std::abs(qdot(i))>qdot_max_(i))
+        {
+            qdot(i) = qdot_max_(i);
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
+            violated_limits = true;
+        }
+    }
+    return violated_limits;
 }
 
 bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool update_desired_acceleration)
@@ -183,7 +271,7 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
   bool res = ModelInterface::update(update_position,update_velocity,update_desired_acceleration);
 
   // Update the transformations between world, base and horizontal frame
-  getPose(BASE_LINK_FRAME_NAME,world_T_base_);
+  getPose(base_name_,world_T_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.translation()" << world_T_base_.translation());
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.linear()" << world_T_base_.linear());
   world_R_hf_ = Eigen::Matrix3d::Identity();
@@ -203,7 +291,7 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     getPose(foot_names_[i],world_T_foot_[foot_names_[i]]);
     world_X_foot_[foot_names_[i]] = world_T_foot_[foot_names_[i]].translation();
     // Feet position in base/trunk
-    getPose(foot_names_[i],BASE_LINK_FRAME_NAME,base_T_foot_[foot_names_[i]]);
+    getPose(foot_names_[i],base_name_,base_T_foot_[foot_names_[i]]);
     base_X_foot_[foot_names_[i]] = base_T_foot_[foot_names_[i]].translation();
   }
 
@@ -213,12 +301,9 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     getPose(ee_names_[i],world_T_ee_[ee_names_[i]]);
     world_X_ee_[ee_names_[i]] = world_T_ee_[ee_names_[i]].translation();
     // Arms position in base/trunk
-    getPose(ee_names_[i],BASE_LINK_FRAME_NAME,base_T_ee_[ee_names_[i]]);
+    getPose(ee_names_[i],base_name_,base_T_ee_[ee_names_[i]]);
     base_X_ee_[ee_names_[i]] = base_T_ee_[ee_names_[i]].translation();
   }
-
-  // Update the com position
-  getCOM(com_);
 
   return res;
 }
@@ -363,14 +448,14 @@ const std::vector<std::string>& QuadrupedRobot::getLimbNames() const
   return limb_names_;
 }
 
-const std::vector<int> &QuadrupedRobot::getLegJointsIds(const std::string &leg_name)
+const std::string &QuadrupedRobot::getBaseLinkName() const
 {
-  return joint_legs_idx_[leg_name];
+  return base_name_;
 }
 
-const std::vector<int> &QuadrupedRobot::getArmJointsIds(const std::string &arm_name)
+const std::vector<int>& QuadrupedRobot::getLimbJointsIds(const std::string& limb_name)
 {
-  return joint_arms_idx_[arm_name];
+  return joint_limb_idx_[limb_name];
 }
 
 const unsigned int& QuadrupedRobot::getNumberArms() const
@@ -393,11 +478,35 @@ const double &QuadrupedRobot::getBaseWidth() const
   return base_width_;
 }
 
-const Eigen::Matrix3d &QuadrupedRobot::getFloatingBaseInertia()
+void QuadrupedRobot::getFloatingBasePositionInertia(Eigen::Matrix3d& M)
 {
-  getInertiaMatrix(M_);
-  Ifb_ = M_.block(3,3,3,3);
-  return Ifb_;
+  getInertiaMatrix(tmp_M_);
+  M = tmp_M_.block(0,0,3,3);
+}
+
+void QuadrupedRobot::getFloatingBaseOrientationInertia(Eigen::Matrix3d& M)
+{
+  getInertiaMatrix(tmp_M_);
+  M = tmp_M_.block(3,3,3,3);
+}
+
+void QuadrupedRobot::getLimbInertia(const std::string& limb_name, Eigen::MatrixXd& M)
+{
+  getInertiaMatrix(tmp_M_);
+  int n = static_cast<int>(joint_limb_idx_[limb_name].size());
+  int idx = joint_limb_idx_[limb_name][0];
+  M = tmp_M_.block(idx,idx,n,n);
+}
+
+void QuadrupedRobot::getLimbInertiaInverse(const std::string& limb_name, Eigen::MatrixXd& Mi)
+{
+  getInertiaMatrix(tmp_M_);
+  tmp_Mi_.setZero();
+  tmp_Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,tmp_M_.rows()-FLOATING_BASE_DOFS,tmp_M_.cols()-FLOATING_BASE_DOFS)
+      = tmp_M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,tmp_M_.rows()-FLOATING_BASE_DOFS,tmp_M_.cols()-FLOATING_BASE_DOFS).inverse();
+  int n = static_cast<int>(joint_limb_idx_[limb_name].size());
+  int idx = joint_limb_idx_[limb_name].at(0);
+  Mi = tmp_Mi_.block(idx,idx,n,n);
 }
 
 QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
@@ -411,9 +520,9 @@ bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
   return true;
 }
 
-const Eigen::Vector3d& QuadrupedRobot::getComPosition() const
+const Eigen::VectorXd& QuadrupedRobot::getJointHomePositions()
 {
-  return com_;
+  return qhome_;
 }
 
 };

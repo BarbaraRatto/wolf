@@ -3,18 +3,15 @@
   <version>0.0.1</version>
   <description>
 	This package contains the description (mechanical, kinematic, visual,
-  plugin, etc.) of the used sensors at DLS lab. The files in this package
+  plugin, etc.) of various sensors used in robotics. The files in this package
   are parsed and used by a variety of other components. Most users will
   not interact directly with this package.
   </description>
-  <maintainer email="carlos.mastalli@iit.it">Carlos Mastalli</maintainer>
+  <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>
 
   <license>BSD</license>
 
-<!--  <url type="website">http://ros.org/wiki/pr2_description</url>
-  <url type="bugtracker">https://github.com/PR2/pr2_common/issues</url>-->
-
-  <author>Carlos Mastalli</author>
+  <author>Gennaro Raiola</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 

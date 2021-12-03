@@ -26,8 +26,6 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   offsets_applied_ = false;
 
-  delta_com_.fill(0.0);
-
   world_T_terrain_ = Eigen::Affine3d::Identity();
 
   push_recovery_ = std::make_shared<PushRecovery>(this);
@@ -43,7 +41,6 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
   reset();
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/desired_height",base_position_(2));
-  //RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_com",delta_com_);
 }
 
 void FootholdsPlanner::reset()
@@ -56,7 +53,7 @@ void FootholdsPlanner::reset()
     steps_heading_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = step_height_;
 
-    robot_model_->getPose(foot_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_foot
+    robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_foot
     tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base
     desired_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
     virtual_foothold_[foot_names[i]]    = tmp_affine3d_.translation();
@@ -216,7 +213,7 @@ void FootholdsPlanner::calculateFootSteps()
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
       // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
-      robot_model_->getPose(foot_names[i],"base_link",base_T_foot_);
+      robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),base_T_foot_);
       // current foot position in the horizontal frame
       hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
       //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
@@ -228,8 +225,7 @@ void FootholdsPlanner::calculateFootSteps()
       hf_delta_foot_.head(2) =  hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
 
       //6) Sum delta com and the delta for the push recovery
-      //hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + delta_com_;
-      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]) + hf_R_base_ * delta_com_;
+      hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
       // 6) Sum everything to obtain the new foothold displacement w.r.t world
@@ -381,8 +377,10 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getPose(gait_generator_->getFootNames()[i],BASE_LINK_FRAME_NAME,tmp_affine3d_1_); // base_T_foot_
-      robot_model_->getPose(hips_names[i],BASE_LINK_FRAME_NAME,tmp_affine3d_); // base_T_hip
+      robot_model_->setJointPosition(robot_model_->getJointHomePositions());
+      robot_model_->update();
+      robot_model_->getPose(gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot
+      robot_model_->getPose(hips_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_hip
       tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base_
       // initial feet offsets in the horizontal frame
       hf_X_initial_footholds_[i] = tmp_matrix3d_ * tmp_affine3d_1_.translation();
@@ -394,6 +392,15 @@ void FootholdsPlanner::setInitialOffsets()
   }
 }
 
+void FootholdsPlanner::startPushRecovery(bool start)
+{
+  push_recovery_active_ = start;
+  if(push_recovery_active_)
+    push_recovery_->activateComputeDeltas();
+  else
+    push_recovery_->deactivateComputeDeltas();
+}
+
 void FootholdsPlanner::togglePushRecovery()
 {
   push_recovery_active_ = !push_recovery_active_;
@@ -401,6 +408,11 @@ void FootholdsPlanner::togglePushRecovery()
     push_recovery_->activateComputeDeltas();
   else
     push_recovery_->deactivateComputeDeltas();
+}
+
+bool FootholdsPlanner::isPushRecoveryActive() const
+{
+  return push_recovery_active_;
 }
 
 // Sets
@@ -429,32 +441,32 @@ void FootholdsPlanner::setDefaultBasePosition(const Eigen::Vector3d& position)
   default_base_position_ = position;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleX(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleX(const double& scale)
 {
   base_linear_velocity_scale_x_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleY(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleY(const double& scale)
 {
   base_linear_velocity_scale_y_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleZ(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleZ(const double& scale)
 {
   base_linear_velocity_scale_z_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleRoll(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleRoll(const double& scale)
 {
   base_angular_velocity_scale_roll_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScalePitch(const double scale)
+void FootholdsPlanner::setBaseVelocityScalePitch(const double& scale)
 {
   base_angular_velocity_scale_pitch_ = scale;
 }
 
-void FootholdsPlanner::setBaseVelocityScaleYaw(const double scale)
+void FootholdsPlanner::setBaseVelocityScaleYaw(const double& scale)
 {
   base_angular_velocity_scale_yaw_ = scale;
 }
@@ -467,11 +479,6 @@ void FootholdsPlanner::increaseStepHeight()
 void FootholdsPlanner::decreaseStepHeight()
 {
   setStepHeight(step_height_ - 0.01); // Decrease step height
-}
-
-void FootholdsPlanner::setComCorrection(const Eigen::Vector3d &delta_com)
-{
-  delta_com_ = delta_com;
 }
 
 void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrain)
@@ -489,17 +496,19 @@ void FootholdsPlanner::setPushRecoveryGains(const double &k_x, const double &k_y
   push_recovery_->setGains(k_x,k_y,k_r);
 }
 
-void FootholdsPlanner::setLinearVelocityCmd(const double linear)
+void FootholdsPlanner::setLinearVelocityCmd(const double& linear)
 {
   base_linear_velocity_cmd_ = linear;
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< linear);
 }
 
-void FootholdsPlanner::setAngularVelocityCmd(const double angular)
+void FootholdsPlanner::setAngularVelocityCmd(const double& angular)
 {
   base_angular_velocity_cmd_ = angular;
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< angular);
 }
 
-void FootholdsPlanner::setStepHeight(const double height)
+void FootholdsPlanner::setStepHeight(const double& height)
 {
   if(height > step_height_max_) // Check if it is ok
   {
@@ -519,7 +528,7 @@ void FootholdsPlanner::setStepHeight(const double height)
   }
 }
 
-void FootholdsPlanner::setMaxStepHeight(const double max)
+void FootholdsPlanner::setMaxStepHeight(const double& max)
 {
   if(max >= 0.0) // Check if it is ok
   {
@@ -529,7 +538,7 @@ void FootholdsPlanner::setMaxStepHeight(const double max)
     ROS_WARN_NAMED(CLASS_NAME,"Max step height is less equal than: 0.0");
 }
 
-void FootholdsPlanner::setMaxStepLength(const double max)
+void FootholdsPlanner::setMaxStepLength(const double& max)
 {
   if(max >= 0.0) // Check if it is ok
   {
@@ -621,7 +630,7 @@ double FootholdsPlanner::getStepLength() const
   return step_length_;
 }
 
-const Gait::gait_t &FootholdsPlanner::getGaitType() const
+Gait::gait_t FootholdsPlanner::getGaitType() const
 {
   return gait_generator_->getGaitType();
 }
@@ -733,7 +742,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
 bool PushRecovery::update(const double& period)
 {
-  bool push_detected = true;
+  bool push_detected = false;
 
   //velocity_filter_.setTimeStep(period);
   th_filter_.setTimeStep(period);
@@ -763,7 +772,8 @@ bool PushRecovery::update(const double& period)
   base_velocity_(1) = base_twist_(1);//com_vel_hf_(1);
   base_velocity_(2) = base_twist_(5);
 
-  I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * footholds_planner_ptr_->robot_model_->getFloatingBaseInertia();
+  footholds_planner_ptr_->robot_model_->getFloatingBaseOrientationInertia(I_world_);
+  I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * I_world_;
   base_inertia_z_ = I_hf_(2,2);
 
   // Filter the base velocity
@@ -771,19 +781,22 @@ bool PushRecovery::update(const double& period)
 
   error_ = base_velocity_ - cmd_velocity_;
 
-  if(cmd_velocity_.norm() > 0.0) // Check if the robot is moving
+  if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->getCmd() == FootholdsPlanner::LINEAR_AND_ANGULAR) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
   else
     current_th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
 
   current_th_dot_filt_ = th_filter_.process(current_th_dot_);
 
-  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
-    push_detected = false;
-
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-  for(unsigned int i=0;i<foot_names.size();i++) // Reset
-    deltas_[foot_names[i]].setZero();
+
+  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
+  {
+    for(unsigned int i=0;i<foot_names.size();i++) // Reset
+      deltas_[foot_names[i]].setZero();
+  }
+  else
+    push_detected = true;
 
   if (compute_deltas_ && push_detected)
   {

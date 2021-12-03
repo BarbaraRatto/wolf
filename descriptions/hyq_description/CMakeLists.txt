@@ -4,19 +4,10 @@ project(hyq_description)
 find_package(catkin REQUIRED)
 
 
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES rrbot_description
-#  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
-)
+catkin_package()
 
 install(DIRECTORY gazebo/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/gazebo
-  PATTERN ".svn" EXCLUDE)
-
-install(DIRECTORY launch/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
   PATTERN ".svn" EXCLUDE)
 
 install(DIRECTORY meshes/
@@ -35,5 +26,3 @@ install(DIRECTORY urdfs/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdfs
   PATTERN ".svn" EXCLUDE)
 
-catkin_install_python(PROGRAMS scripts/go0
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

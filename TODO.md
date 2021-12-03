@@ -1,25 +1,21 @@
 # TODO list
 
-- Estimated_z does not work with any robot when using estimated forces... why?
-- Remove sensors description
-- Debug c and delta_com... they don't seem to do anything useful
-- desired forces and calculated one are different when using internal_wrench ( this looks like a problem with the force sensors, RBDL mass is correct )
-- counterbalance the ROLL with the terrain estimator
+- Relative tasks between the feet
+- port the robots to the new stack
+- Change name to WOLF
+- Remove ground truth and contact sensors
+- Robustness tests with push recovery
 - Remove postural for the arm!!!!
-- push recovery tests
+- step reflexes
+- ADD IMU and remove ROBOT_REAL
+- Robustness tests when walking on rough terrain with push recovery
+- Make one level stack works with arm as well
 - collision avoidance
-- Move terrain estimator inside state estimator as a subclass
-- Clean wb_robot_hw, parse hardcoded info from urdf/srdf
-- Move odom thread to state_estimator
-- Postural gains still in the controller... fix!
+- Clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
 - add trajectory for arm
 - Web app
-- Convex hull in acceleration
 - State estimation
 - Experiments on the real robot
-- Merge 20.04
-- IK with joint limits
-- step reflexes
 - tests and profiling
 - check the FIXME around the code clean up
 - startup procedure and solver reset (state machine)

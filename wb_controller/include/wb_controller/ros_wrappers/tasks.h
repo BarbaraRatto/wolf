@@ -8,17 +8,14 @@
 
 // ROS
 #include <wb_controller/CartesianTask.h>
-#include <wb_controller/JointsTask.h>
-#include <wb_controller/taskGenericConfig.h>
-#include <wb_controller/taskPosturalConfig.h>
-#include <wb_controller/taskCartesianConfig.h>
+#include <wb_controller/PosturalTask.h>
 
 // WB
 #include <wb_controller/ros_wrappers/interface.h>
 #include <wb_controller/geometry.h>
 #include <wb_controller/utils.h>
 
-template <typename task_ptr_t, typename msg_t, typename config_t>
+template <typename task_ptr_t, typename msg_t>
 class TaskRosWrapperBase : public TaskRosWrapperInterface
 {
 
@@ -63,38 +60,15 @@ public:
 
         //ros::NodeHandle task_nh(nh.getNamespace()+"/"+task->getTaskID());
         ros::NodeHandle task_nh(task_id_);
-        server_.reset(new dynamic_reconfigure::Server<config_t>(task_nh));
-        server_->setCallback(boost::bind(&TaskRosWrapperBase::dynamicReconfigureCallback, this, _1, _2));
+        server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(task_nh));
+        server_->registerVariable<double>("set_lambda_1",    rt_lambda1_,     boost::bind(&TaskRosWrapperBase::setLambda1,this,_1) ,    "set lambda 1"   ,0.0,1000.0);
+        server_->registerVariable<double>("set_lambda_2",    rt_lambda2_,     boost::bind(&TaskRosWrapperBase::setLambda2,this,_1) ,    "set lambda 2"   ,0.0,1000.0);
+        server_->registerVariable<double>("set_weight_diag", rt_weight_diag_, boost::bind(&TaskRosWrapperBase::setWeightDiag,this,_1) , "set weight diag",0.0,1000.0);
     }
 
-    virtual void dynamicReconfigureCallback(config_t &config, uint32_t level)
-    {
-        switch(level)
-        {
-        case 0:
-            rt_lambda1_ = config.lambda1;
-            rt_lambda2_ = config.lambda2;
-            ROS_INFO_STREAM("Set lambda1 and lambda2 for task "<<task_id_<<" to "<<rt_lambda1_ << " and "<<rt_lambda2_);
-            break;
-        case 1:
-            if(config.weight_diag>=0)
-            {
-                rt_weight_diag_ = config.weight_diag;
-                ROS_INFO_STREAM("Set weight diagonal values for task "<<task_id_<<" to "<<rt_weight_diag_);
-            }
-            else
-                ROS_WARN("Weight diagonal value has to be positive definite!");
-            break;
-        }
-    }
-
-    virtual void dynamicReconfigureUpdate()
-    {
-        default_config_.lambda1 = task_->getLambda();
-        default_config_.lambda2 = task_->getLambda2();
-        default_config_.weight_diag = task_->getWeight()(0,0); // Note: we take the first value of the diagonal.
-        if(server_) server_->updateConfig(default_config_);
-    }
+    void setLambda1(double value) {rt_lambda1_ = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set lambda1: "<<value);}
+    void setLambda2(double value) {rt_lambda2_ = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set lambda2: "<<value);}
+    void setWeightDiag(double value) {rt_weight_diag_ = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set weight diagonal: "<<value);}
 
     virtual void publish(const ros::Time& /*time*/) = 0;
 
@@ -111,21 +85,24 @@ public:
       task_->reset();
     }
 
+    virtual void computeCost(Eigen::VectorXd& x) override
+    {
+      cost_ = task_->computeCost(x);
+    }
+
 protected:
 
-    std::shared_ptr<dynamic_reconfigure::Server<config_t>> server_;
-    config_t default_config_;
     std::shared_ptr<realtime_tools::RealtimePublisher<msg_t>> rt_pub_;
     task_ptr_t task_;
 };
 
-template <typename task_ptr_t, typename msg_t, typename config_t>
-class TaskRosWrapper : public TaskRosWrapperBase<task_ptr_t,msg_t,config_t>
+template <typename task_ptr_t, typename msg_t>
+class TaskRosWrapper : public TaskRosWrapperBase<task_ptr_t,msg_t>
 {
 public:
     TaskRosWrapper(ros::NodeHandle& nh, task_ptr_t task)
     {
-        TaskRosWrapperBase<task_ptr_t,msg_t,config_t>(nh,task);
+        TaskRosWrapperBase<task_ptr_t,msg_t>(nh,task);
     }
 };
 
@@ -133,14 +110,14 @@ public:
 
 // CARTESIAN - CARTESIAN
 template <>
-class TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>
-        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>
+class TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>
+        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>
 {
 
 public:
 
     TaskRosWrapper(ros::NodeHandle& nh, OpenSoT::tasks::acceleration::Cartesian::Ptr task):
-        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig>(nh,task)
+        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask>(nh,task)
     {
 
         Eigen::Affine3d actual_pose;
@@ -154,23 +131,23 @@ public:
         marker_server_->applyChanges();
 
         // Load params
-        Eigen::Matrix6d Kp = Eigen::Matrix6d::Zero();
-        Eigen::Matrix6d Kd = Eigen::Matrix6d::Zero();
+        Kp_ = Eigen::Matrix6d::Zero();
+        Kd_ = Eigen::Matrix6d::Zero();
         bool use_identity = false;
         for(unsigned int i=0; i<wb_controller::_cartesian_names.size(); i++)
         {
-            if (!nh.getParam("gains/"+task_id_+"/Kp/" + wb_controller::_cartesian_names[i] , Kp(i,i)))
+            if (!nh.getParam("gains/"+task_id_+"/Kp/" + wb_controller::_cartesian_names[i] , Kp_(i,i)))
             {
                 ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
                 use_identity = true;
             }
-            if (!nh.getParam("gains/"+task_id_+"/Kd/"  + wb_controller::_cartesian_names[i] , Kd(i,i)))
+            if (!nh.getParam("gains/"+task_id_+"/Kd/"  + wb_controller::_cartesian_names[i] , Kd_(i,i)))
             {
                 ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_cartesian_names[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
                 use_identity = true;
             }
             // Check if the values are positive
-            if(Kp(i,i)<0.0 || Kd(i,i)<0.0)
+            if(Kp_(i,i)<0.0 || Kd_(i,i)<0.0)
             {
                 ROS_WARN("Kp and Kd gains must be positive!");
                 use_identity = true;
@@ -179,19 +156,50 @@ public:
 
         if(use_identity)
         {
-          Kp = Eigen::Matrix6d::Identity();
-          Kd = Eigen::Matrix6d::Identity();
+          Kp_ = Eigen::Matrix6d::Identity();
+          Kd_ = Eigen::Matrix6d::Identity();
         }
 
-        rt_Kp_.initRT(Kp);
-        rt_Kd_.initRT(Kd);
+        task_->setKp(Kp_);
+        task_->setKd(Kd_);
 
-        task_->setKp(Kp);
-        task_->setKd(Kd);
+        fromEigenToScalars();
 
-        position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff
+        position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff FIXME hardcoded
         position_reference_filter_.setTimeStep(wb_controller::_period);
+
+        server_->registerVariable<double>("kp_x",     Kp_(0,0), boost::bind(&TaskRosWrapper::setKpX,this,_1)     ,"Kp(0,0)", 0.0, 1000.0);
+        server_->registerVariable<double>("kp_y",     Kp_(1,1), boost::bind(&TaskRosWrapper::setKpY,this,_1)     ,"Kp(1,1)", 0.0, 1000.0);
+        server_->registerVariable<double>("kp_z",     Kp_(2,2), boost::bind(&TaskRosWrapper::setKpZ,this,_1)     ,"Kp(2,2)", 0.0, 1000.0);
+        server_->registerVariable<double>("kp_roll",  Kp_(3,3), boost::bind(&TaskRosWrapper::setKpRoll,this,_1)  ,"Kp(3,3)", 0.0, 1000.0);
+        server_->registerVariable<double>("kp_pitch", Kp_(4,4), boost::bind(&TaskRosWrapper::setKpPitch,this,_1) ,"Kp(4,4)", 0.0, 1000.0);
+        server_->registerVariable<double>("kp_yaw",   Kp_(5,5), boost::bind(&TaskRosWrapper::setKpYaw,this,_1)   ,"Kp(5,5)", 0.0, 1000.0);
+
+        server_->registerVariable<double>("kd_x",     Kd_(0,0), boost::bind(&TaskRosWrapper::setKdX,this,_1)     ,"Kd(0,0)", 0.0, 1000.0);
+        server_->registerVariable<double>("kd_y",     Kd_(1,1), boost::bind(&TaskRosWrapper::setKdY,this,_1)     ,"Kd(1,1)", 0.0, 1000.0);
+        server_->registerVariable<double>("kd_z",     Kd_(2,2), boost::bind(&TaskRosWrapper::setKdZ,this,_1)     ,"Kd(2,2)", 0.0, 1000.0);
+        server_->registerVariable<double>("kd_roll",  Kd_(3,3), boost::bind(&TaskRosWrapper::setKdRoll,this,_1)  ,"Kd(3,3)", 0.0, 1000.0);
+        server_->registerVariable<double>("kd_pitch", Kd_(4,4), boost::bind(&TaskRosWrapper::setKdPitch,this,_1) ,"Kd(4,4)", 0.0, 1000.0);
+        server_->registerVariable<double>("kd_yaw",   Kd_(5,5), boost::bind(&TaskRosWrapper::setKdYaw,this,_1)   ,"Kd(5,5)", 0.0, 1000.0);
+
+        server_->publishServicesTopics();
     }
+
+    void setKpX(double value)     { rt_kp_x_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(0,0): "<<value); }
+    void setKpY(double value)     { rt_kp_y_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(1,1): "<<value); }
+    void setKpZ(double value)     { rt_kp_z_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(2,2): "<<value); }
+    void setKpRoll(double value)  { rt_kp_roll_  = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(3,3): "<<value); }
+    void setKpPitch(double value) { rt_kp_pitch_ = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(4,4): "<<value); }
+    void setKpYaw(double value)   { rt_kp_yaw_   = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(5,5): "<<value); }
+
+    void setKdX(double value)     { rt_kd_x_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(0,0): "<<value); }
+    void setKdY(double value)     { rt_kd_y_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(1,1): "<<value); }
+    void setKdZ(double value)     { rt_kd_z_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(2,2): "<<value); }
+    void setKdRoll(double value)  { rt_kd_roll_  = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(3,3): "<<value); }
+    void setKdPitch(double value) { rt_kd_pitch_ = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(4,4): "<<value); }
+    void setKdYaw(double value)   { rt_kd_yaw_   = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(5,5): "<<value); }
+
+
 
     virtual void publish(const ros::Time& time) override
     {
@@ -215,6 +223,9 @@ public:
             wb_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_reference);
             wb_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_reference);
             wb_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_reference);
+
+            // COST
+            rt_pub_->msg_.cost = cost_;
 
             rt_pub_->unlockAndPublish();
         }
@@ -242,77 +253,27 @@ public:
         task_->setReference(tmp_affine3d_);
     }
 
-    void getExternalGains(Eigen::MatrixBase<Eigen::Matrix6d>& Kp, Eigen::MatrixBase<Eigen::Matrix6d>& Kd)
-    {
-        Kp = *rt_Kp_.readFromRT();
-        Kd = *rt_Kd_.readFromRT();
-    }
-
-    Eigen::MatrixBase<Eigen::Matrix6d>& getExternalKp()
-    {
-        return *rt_Kp_.readFromRT();
-    }
-
-    Eigen::MatrixBase<Eigen::Matrix6d>& getExternalKd()
-    {
-        return *rt_Kd_.readFromRT();
-    }
+    //void getExternalGains(Eigen::MatrixBase<Eigen::Matrix6d>& Kp, Eigen::MatrixBase<Eigen::Matrix6d>& Kd)
+    //{
+    //    Kp = task_->getKp();
+    //    Kd = task_->getKd();
+    //}
+    //
+    //Eigen::MatrixBase<Eigen::Matrix6d>& getExternalKp()
+    //{
+    //    return Kp = task_->getKp();
+    //}
+    //
+    //Eigen::MatrixBase<Eigen::Matrix6d>& getExternalKd()
+    //{
+    //    return Kd = task_->getKd();
+    //}
 
     virtual void setExternalGains() override
     {
-        task_->setGains(*rt_Kp_.readFromRT(),*rt_Kd_.readFromRT());
-    }
+        fromScalarsToEigen();
 
-    virtual void dynamicReconfigureCallback(wb_controller::taskCartesianConfig &config, uint32_t level) override
-    {
-        TaskRosWrapperBase::dynamicReconfigureCallback(config,level);
-        switch(level)
-        {
-        case 2:
-            Eigen::Matrix6d Kp = Eigen::Matrix6d::Zero();
-            Eigen::Matrix6d Kd = Eigen::Matrix6d::Zero();
-
-            Kp(0,0) = config.kp_x;
-            Kp(1,1) = config.kp_y;
-            Kp(2,2) = config.kp_z;
-            Kp(3,3) = config.kp_roll;
-            Kp(4,4) = config.kp_pitch;
-            Kp(5,5) = config.kp_yaw;
-
-            Kd(0,0) = config.kd_x;
-            Kd(1,1) = config.kd_y;
-            Kd(2,2) = config.kd_z;
-            Kd(3,3) = config.kd_roll;
-            Kd(4,4) = config.kd_pitch;
-            Kd(5,5) = config.kd_yaw;
-
-            ROS_INFO_STREAM("Set Kp and Kd for task: "<<task_id_);
-
-            rt_Kp_.writeFromNonRT(Kp);
-            rt_Kd_.writeFromNonRT(Kd);
-
-            break;
-        }
-    }
-
-    virtual void dynamicReconfigureUpdate() override
-    {
-
-        default_config_.kp_x     = task_->getKp()(0,0);
-        default_config_.kp_y     = task_->getKp()(1,1);
-        default_config_.kp_z     = task_->getKp()(2,2);
-        default_config_.kp_roll  = task_->getKp()(3,3);
-        default_config_.kp_pitch = task_->getKp()(4,4);
-        default_config_.kp_yaw   = task_->getKp()(5,5);
-
-        default_config_.kd_x     = task_->getKd()(0,0);
-        default_config_.kd_y     = task_->getKd()(1,1);
-        default_config_.kd_z     = task_->getKd()(2,2);
-        default_config_.kd_roll  = task_->getKd()(3,3);
-        default_config_.kd_pitch = task_->getKd()(4,4);
-        default_config_.kd_yaw   = task_->getKd()(5,5);
-
-        TaskRosWrapperBase::dynamicReconfigureUpdate();
+        task_->setGains(Kp_,Kd_);
     }
 
     virtual void reset() override
@@ -331,6 +292,41 @@ public:
     }
 
 protected:
+
+    void fromScalarsToEigen()
+    {
+      Kp_(0,0) = rt_kp_x_;
+      Kp_(1,1) = rt_kp_y_;
+      Kp_(2,2) = rt_kp_z_;
+      Kp_(3,3) = rt_kp_roll_;
+      Kp_(4,4) = rt_kp_pitch_;
+      Kp_(5,5) = rt_kp_yaw_;
+
+      Kd_(0,0) = rt_kd_x_;
+      Kd_(1,1) = rt_kd_y_;
+      Kd_(2,2) = rt_kd_z_;
+      Kd_(3,3) = rt_kd_roll_;
+      Kd_(4,4) = rt_kd_pitch_;
+      Kd_(5,5) = rt_kd_yaw_;
+
+    }
+
+    void fromEigenToScalars()
+    {
+      rt_kp_x_      = Kp_(0,0);
+      rt_kp_y_      = Kp_(1,1);
+      rt_kp_z_      = Kp_(2,2);
+      rt_kp_roll_   = Kp_(3,3);
+      rt_kp_pitch_  = Kp_(4,4);
+      rt_kp_yaw_    = Kp_(5,5);
+
+      rt_kd_x_      = Kd_(0,0);
+      rt_kd_y_      = Kd_(1,1);
+      rt_kd_z_      = Kd_(2,2);
+      rt_kd_roll_   = Kd_(3,3);
+      rt_kd_pitch_  = Kd_(4,4);
+      rt_kd_yaw_    = Kd_(5,5);
+    }
 
     virtual void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
     {
@@ -428,18 +424,84 @@ private:
     visualization_msgs::InteractiveMarker marker_;
 
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> position_reference_filter_;
+
+    Eigen::Matrix6d Kp_;
+    Eigen::Matrix6d Kd_;
 };
 
 // COM - GENERIC
 template <>
-class TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>
-        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>
+class TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask>
+        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask>
 {
 
 public:
 
     TaskRosWrapper(ros::NodeHandle& nh, OpenSoT::tasks::acceleration::CoM::Ptr task):
-        TaskRosWrapperBase<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig>(nh,task){}
+        TaskRosWrapperBase<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask>(nh,task){
+
+
+      // Load params
+      Kp_ = Eigen::Matrix3d::Zero();
+      Kd_ = Eigen::Matrix3d::Zero();
+      bool use_identity = false;
+      for(unsigned int i=0; i<wb_controller::_xyz.size(); i++)
+      {
+          if (!nh.getParam("gains/"+task_id_+"/Kp/" + wb_controller::_xyz[i] , Kp_(i,i)))
+          {
+              ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_xyz[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
+              use_identity = true;
+          }
+          if (!nh.getParam("gains/"+task_id_+"/Kd/"  + wb_controller::_xyz[i] , Kd_(i,i)))
+          {
+              ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wb_controller::_xyz[i].c_str(),task_id_.c_str(),nh.getNamespace().c_str());
+              use_identity = true;
+          }
+          // Check if the values are positive
+          if(Kp_(i,i)<0.0 || Kd_(i,i)<0.0)
+          {
+              ROS_WARN("Kp and Kd gains must be positive!");
+              use_identity = true;
+          }
+      }
+
+      if(use_identity)
+      {
+        Kp_ = Eigen::Matrix3d::Identity();
+        Kd_ = Eigen::Matrix3d::Identity();
+      }
+
+      task_->setKp(Kp_);
+      task_->setKd(Kd_);
+
+      fromEigenToScalars();
+
+      server_->registerVariable<double>("kp_x",     Kp_(0,0), boost::bind(&TaskRosWrapper::setKpX,this,_1)     ,"Kp(0,0)", 0.0, 1000.0);
+      server_->registerVariable<double>("kp_y",     Kp_(1,1), boost::bind(&TaskRosWrapper::setKpY,this,_1)     ,"Kp(1,1)", 0.0, 1000.0);
+      server_->registerVariable<double>("kp_z",     Kp_(2,2), boost::bind(&TaskRosWrapper::setKpZ,this,_1)     ,"Kp(2,2)", 0.0, 1000.0);
+
+      server_->registerVariable<double>("kd_x",     Kd_(0,0), boost::bind(&TaskRosWrapper::setKdX,this,_1)     ,"Kd(0,0)", 0.0, 1000.0);
+      server_->registerVariable<double>("kd_y",     Kd_(1,1), boost::bind(&TaskRosWrapper::setKdY,this,_1)     ,"Kd(1,1)", 0.0, 1000.0);
+      server_->registerVariable<double>("kd_z",     Kd_(2,2), boost::bind(&TaskRosWrapper::setKdZ,this,_1)     ,"Kd(2,2)", 0.0, 1000.0);
+
+      server_->publishServicesTopics();
+
+    }
+
+    virtual void setExternalGains() override
+    {
+        fromScalarsToEigen();
+
+        task_->setGains(Kp_,Kd_);
+    }
+
+    void setKpX(double value)     { rt_kp_x_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(0,0): "<<value); }
+    void setKpY(double value)     { rt_kp_y_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(1,1): "<<value); }
+    void setKpZ(double value)     { rt_kp_z_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kp(2,2): "<<value); }
+
+    void setKdX(double value)     { rt_kd_x_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(0,0): "<<value); }
+    void setKdY(double value)     { rt_kd_y_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(1,1): "<<value); }
+    void setKdZ(double value)     { rt_kd_z_     = value; ROS_INFO_STREAM(task_id_<<" - "<<"Set Kd(2,2): "<<value); }
 
     virtual void publish(const ros::Time& time)
     {
@@ -461,22 +523,55 @@ public:
             // Pose - Translation
             wb_controller::vector3dToPosePosition(tmp_vector3d_,rt_pub_->msg_.pose_reference);
 
+            // COST
+            rt_pub_->msg_.cost = cost_;
+
             rt_pub_->unlockAndPublish();
         }
     }
+
+protected:
+
+    void fromScalarsToEigen()
+    {
+      Kp_(0,0) = rt_kp_x_;
+      Kp_(1,1) = rt_kp_y_;
+      Kp_(2,2) = rt_kp_z_;
+
+      Kd_(0,0) = rt_kd_x_;
+      Kd_(1,1) = rt_kd_y_;
+      Kd_(2,2) = rt_kd_z_;
+
+    }
+
+    void fromEigenToScalars()
+    {
+      rt_kp_x_      = Kp_(0,0);
+      rt_kp_y_      = Kp_(1,1);
+      rt_kp_z_      = Kp_(2,2);
+
+      rt_kd_x_      = Kd_(0,0);
+      rt_kd_y_      = Kd_(1,1);
+      rt_kd_z_      = Kd_(2,2);
+    }
+
+private:
+
+    Eigen::Matrix3d Kp_;
+    Eigen::Matrix3d Kd_;
 
 };
 
 // POSTURAL - GENERIC
 template <>
-class TaskRosWrapper<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig>
-        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig>
+class TaskRosWrapper<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::PosturalTask>
+        : public TaskRosWrapperBase<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::PosturalTask>
 {
 
 public:
 
     TaskRosWrapper(ros::NodeHandle& nh, OpenSoT::tasks::acceleration::Postural::Ptr task):
-        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig>(nh,task)
+        TaskRosWrapperBase<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::PosturalTask>(nh,task)
     {
         const unsigned int& size = task_->getActualPositions().size();
         tmp_vectorxd_.resize(size);
@@ -487,6 +582,8 @@ public:
         rt_pub_->msg_.velocity_reference.resize(size);
         rt_pub_->msg_.position_error.resize(size);
         rt_pub_->msg_.velocity_error.resize(size);
+
+        server_->publishServicesTopics();
     }
 
     virtual void publish(const ros::Time& time)
@@ -512,6 +609,9 @@ public:
                 rt_pub_->msg_.position_error[i] = position_error(i);
                 rt_pub_->msg_.velocity_error[i] = velocity_error(i);
             }
+
+            // COST
+            rt_pub_->msg_.cost = cost_;
 
             rt_pub_->unlockAndPublish();
 
@@ -566,9 +666,9 @@ public:
     }*/
 };
 
-typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask,wb_controller::taskCartesianConfig> CartesianWrapper;
-typedef TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask,wb_controller::taskGenericConfig> ComWrapper;
-typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::JointsTask,wb_controller::taskGenericConfig> PosturalWrapper;
+typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Cartesian::Ptr,wb_controller::CartesianTask> CartesianWrapper;
+typedef TaskRosWrapper<OpenSoT::tasks::acceleration::CoM::Ptr,wb_controller::CartesianTask> ComWrapper;
+typedef TaskRosWrapper<OpenSoT::tasks::acceleration::Postural::Ptr,wb_controller::PosturalTask> PosturalWrapper;
 
 #endif // ROS_WRAPPERS_TASKS_H
 

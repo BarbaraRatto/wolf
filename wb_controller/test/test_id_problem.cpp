@@ -6,11 +6,12 @@
 static wb_controller::QuadrupedRobot::Ptr _robot;
 static wb_controller::IDProblem::Ptr _id_problem;
 static std::unique_ptr<ros::NodeHandle> _root_nh_ptr; // FIXME
+static double _period = 0.001;
 
 // TEST CASES
 TEST(IDProblem, Constructor)
 {
-    _id_problem.reset(new wb_controller::IDProblem(*_root_nh_ptr,_robot));
+    _id_problem.reset(new wb_controller::IDProblem(*_root_nh_ptr,_robot,_period));
 }
 
 TEST(IDProblem, Solve)

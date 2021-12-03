@@ -19,9 +19,10 @@ namespace wb_controller
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4 // Fixed number of legs supported
 #define N_ARMS 1 // Fixed number of arms supported
-#define N_BASES 2 // Fixed number of bases supported trunk + arm
 #define THREADS_SLEEP_TIME_ms 4
-#define BASE_LINK_FRAME_NAME "base_link"
+#define THROTTLE_SEC 3.0
+#define COMPUTE_COST
+#define EPS 0.001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
@@ -79,6 +80,8 @@ inline void vector3dToVector3(const Eigen::Vector3d& vector3d, geometry_msgs::Ve
 // NOTE: by default we use the same leg order as RBDL (alphabetic order)
 extern std::vector<std::string> _dof_names;
 extern std::vector<std::string> _cartesian_names;
+extern std::vector<std::string> _xyz;
+extern std::vector<std::string> _rpy;
 extern std::vector<std::string> _joints_prefix;
 extern std::vector<std::string> _legs_prefix;
 enum _leg_id {LF=0,LH,RF,RH};

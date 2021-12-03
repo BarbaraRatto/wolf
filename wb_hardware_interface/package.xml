@@ -3,7 +3,7 @@
   <name>wb_hardware_interface</name>
   <version>0.0.1</version>
   <description>Hardware Interface</description>
-  <maintainer email="gennaro.raiola@gmail.com">graiola</maintainer>
+  <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>
 
   <license>TODO</license>
 
@@ -12,6 +12,7 @@
   <depend>hardware_interface</depend> 
   <depend>transmission_interface</depend>
   <depend>urdf</depend>
+  <depend>srdfdom</depend>
 
   <export>
     <cpp cflags="-I${prefix}/include"/>

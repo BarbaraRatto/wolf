@@ -8,9 +8,6 @@
 
   <license>BSD-3</license>
 
-  <author email="lisler@anybotics.com">Linus Isler</author>
-  <maintainer email="lisler@anybotics.com">Linus Isler</maintainer>
-
   <buildtool_depend>catkin</buildtool_depend>
 
 </package>

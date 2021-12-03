@@ -9,12 +9,14 @@
 #include <OpenSoT/tasks/acceleration/CoM.h>
 #include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
+#include <OpenSoT/constraints/acceleration/TorqueLimits.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/iHQP.h>
 #include <OpenSoT/utils/InverseDynamics.h>
 #include <OpenSoT/constraints/force/FrictionCone.h>
 #include <OpenSoT/constraints/force/WrenchLimits.h>
 #include <OpenSoT/constraints/TaskToConstraint.h>
+#include <OpenSoT/constraints/acceleration/JointLimits.h>
 
 // ROS
 #include <ros/ros.h>
@@ -52,7 +54,7 @@ public:
      * @param model pointer to external model
      * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model);
+    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt);
     ~IDProblem();
 
     /**
@@ -99,6 +101,17 @@ public:
      * @param R 3d matrix
      */
     void setFrictionConesR(const Eigen::Matrix3d& R);
+
+
+    /**
+     * @brief set the pose and velocity reference for the feet,
+     * note that the foot tasks are defined wrt the base frame
+     * @param foot_name foot name
+     * @param pose_ref pose reference
+     * @param vel_ref velocity reference (note: we use only the linear part of it)
+     * @param reference_frame if world tranform the references into base frame
+     */
+    void setFootReference(const std::string& foot_name, const Eigen::Affine3d& pose_ref, const Eigen::Vector6d& vel_ref, const std::string& reference_frame);
 
     /**
      * @brief set the lower bound for the wrench limits along the selected axis (w.r.t world)
@@ -154,6 +167,11 @@ public:
     void switchStack();
 
     /**
+     * @brief get the mu parameter for the friction cones
+     */
+    double getFrictionConesMu() const;
+
+    /**
      * @brief Cartesian tasks
      */
     std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> feet_;
@@ -175,14 +193,19 @@ public:
     OpenSoT::tasks::acceleration::Postural::Ptr postural_;
 
     /**
-     * @brief qddot_lims_ some bounds
+     * @brief torque_lims_ some bounds
      */
-    OpenSoT::constraints::GenericConstraint::Ptr qddot_lims_;
+    OpenSoT::constraints::acceleration::TorqueLimits::Ptr torque_lims_;
 
     /**
      * @brief wrenches_lims_ bounds
      */
     OpenSoT::constraints::force::WrenchesLimits::Ptr wrenches_lims_;
+
+    /**
+     * @brief q_lims_ bounds
+     */
+    OpenSoT::constraints::acceleration::JointLimits::Ptr q_lims_;
 
     /**
      * @brief _model
@@ -195,16 +218,6 @@ private:
      * @brief update call after the model.update() to update the autostack
      */
     void update();
-
-    /**
-     * @brief dynamics_con_ constraint relates the floating base with the contact forces
-     */
-    OpenSoT::constraints::TaskToConstraint::Ptr dynamics_con_;
-
-    /**
-     * @brief dynamics_task_ constraint relates the floating base with the contact forces
-     */
-    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr dynamics_task_;
 
     /**
      * @brief friction_cones_ constraints
@@ -247,9 +260,17 @@ private:
     Eigen::Vector6d wrench_upper_lims_;
     Eigen::Vector6d wrench_lower_lims_;
 
+    /**
+     * @brief joint acceleration limits
+     */
+    Eigen::VectorXd ones_;
+    std::atomic<double> joint_acceleration_lim_;
+
+
     double x_force_lower_lim_;
     double y_force_lower_lim_;
     double z_force_lower_lim_;
+
 
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
@@ -262,6 +283,8 @@ private:
     std::vector<std::string> contact_names_;
 
     Eigen::Affine3d tmp_affine3d_;
+    Eigen::Vector6d tmp_vector6d_;
+    Eigen::Vector3d tmp_vector3d_;
 
 };
 
