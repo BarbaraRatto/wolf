@@ -537,9 +537,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             state_estimator_->startContactComputation();
             state_estimator_->startHapticContactLoop();
             foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
-            foot_holds_planner_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
+            foot_holds_planner_->setDefaultBasePosition(Eigen::Vector3d(0.0,0.0,robot_model_->getStandUpHeight()));
             foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
-            foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
+            foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
             foot_holds_planner_->initializeFeetPosition();
 
             legs_kinematics_->reset();
