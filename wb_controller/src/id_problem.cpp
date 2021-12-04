@@ -114,7 +114,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   model_->getJointLimits(q_min,q_max);
   q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
   q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
-  model_->getRobotState("home",q_home);
+  q_home = model_->getStandUpJointPostion();
   //model_->getInertiaInverseTimesVector(tau_max,qddot_max);
   model_->setJointPosition(q_home);
   model_->update();
