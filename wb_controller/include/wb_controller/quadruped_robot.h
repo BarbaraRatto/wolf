@@ -115,9 +115,16 @@ public:
 
   /**
        * @brief get robot's home position when standing up
-       * @return qhome
+       * @return q_stand_up
        */
-  const Eigen::VectorXd& getJointHomePositions();
+  const Eigen::VectorXd& getStandUpJointPostion();
+
+  /**
+       * @brief get robot's home position when standing down
+       * @return q_stand_down
+       */
+  const Eigen::VectorXd& getStandDownJointPostion();
+
 
 private:
 
@@ -175,7 +182,9 @@ private:
   /** @brief Max joints effort */
   Eigen::VectorXd tau_max_;
   /** @brief Homing position when standing up */
-  Eigen::VectorXd qhome_;
+  Eigen::VectorXd q_stand_up_;
+  /** @brief Homing position when standing down */
+  Eigen::VectorXd q_stand_down_;
 
   std::atomic<robot_states_t> robot_state_;
 

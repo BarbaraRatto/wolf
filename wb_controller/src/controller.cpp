@@ -149,7 +149,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    des_joint_positions_ = robot_model_->getJointHomePositions();
+    des_joint_positions_ = robot_model_->getStandUpJointPostion();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     imu_orientation_.normalize();
