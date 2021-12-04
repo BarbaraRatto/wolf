@@ -212,6 +212,19 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   if(!checkJointLimits(q_stand_down_))
     throw std::runtime_error("stand down joint positions are out of the limits! Check the SRDF file!");
 
+  // Define default height based on standup
+  stand_up_height_ = 0.0;
+  Eigen::Affine3d pose;
+  setJointPosition(q_stand_up_);
+  update();
+  for(unsigned int i=0;i<foot_names_.size();i++)
+  {
+    getPose(foot_names_[i],base_name_,pose);
+    stand_up_height_ = pose.translation().z() + stand_up_height_;
+  }
+  stand_up_height_ =  -stand_up_height_/N_LEGS;
+
+
 }
 
 bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
@@ -532,5 +545,11 @@ const Eigen::VectorXd& QuadrupedRobot::getStandDownJointPostion()
 {
   return q_stand_down_;
 }
+
+const double &QuadrupedRobot::getStandUpHeight()
+{
+  return stand_up_height_;
+}
+
 
 };

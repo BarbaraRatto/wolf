@@ -126,6 +126,12 @@ public:
   const Eigen::VectorXd& getStandDownJointPostion();
 
 
+  /**
+       * @brief get robot's base height when standing up
+       * @return height
+       */
+  const double& getStandUpHeight();
+
 private:
 
   std::vector<std::string> foot_names_; // foot tip names
@@ -185,6 +191,8 @@ private:
   Eigen::VectorXd q_stand_up_;
   /** @brief Homing position when standing down */
   Eigen::VectorXd q_stand_down_;
+  /** @brief Base's height when standing up */
+  double stand_up_height_;
 
   std::atomic<robot_states_t> robot_state_;
 
