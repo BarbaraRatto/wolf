@@ -22,6 +22,7 @@ public:
   const std::string CLASS_NAME = "Gait";
 
   enum gait_t {CRAWL=0,TROT,ONE_FOOT_LF,ONE_FOOT_RH,ONE_FOOT_RF,ONE_FOOT_LH};
+  enum trajectory_t {ELLIPSE=0};
   //typedef std::map<std::string, gait_t> gait_map_t;
   //inline static gait_map_t gaits_ = {
   //  { "CRAWL", gait_t::CRAWL },
@@ -139,7 +140,7 @@ public:
      */
   typedef std::shared_ptr<const GaitGenerator> ConstPtr;
 
-  GaitGenerator(const std::vector<std::string>& foot_names, const Gait::gait_t& gait_type, const std::string& trajectory_type)
+  GaitGenerator(const std::vector<std::string>& foot_names, const Gait::gait_t& gait_type, const Gait::trajectory_t& trajectory_type = Gait::ELLIPSE)
   {
     assert(foot_names.size()==N_LEGS);// We assume we are working with a dog
     foot_names_ = foot_names;
@@ -535,17 +536,16 @@ private:
     Eigen::Affine3d initial_pose;
   };
 
-  TrajectoryInterface* selectTrajectoryType(const std::string& trajectory_type)
+  TrajectoryInterface* selectTrajectoryType(Gait::trajectory_t trajectory_type)
   {
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected " << trajectory_type << " trajectory");
-    if(std::strcmp(trajectory_type.c_str(),"ellipse")==0)
+    //ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected " << trajectory_type << " trajectory");
+    switch(trajectory_type)
     {
+    case Gait::ELLIPSE:
       return new Ellipse();
-    }
-    else
-    {
+    default:
       throw std::runtime_error("Wrong trajectory type!");
-    }
+    };
     return nullptr;
   }
 
