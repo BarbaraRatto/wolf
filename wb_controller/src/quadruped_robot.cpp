@@ -191,7 +191,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   // Get home position
   getRobotState("home", qhome_);
-  checkJointLimits(qhome_);
+  if(!checkJointLimits(qhome_))
+    throw std::runtime_error("home joint positions are out of the limits! Check the SRDF file!");
 
   // Get inertias
   getInertiaMatrix(tmp_M_);

@@ -174,23 +174,18 @@ public:
     /**
      * @brief Cartesian tasks
      */
-    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> feet_;
-    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> arms_;
-    OpenSoT::tasks::acceleration::Cartesian::Ptr waistRPY_;
-    OpenSoT::tasks::acceleration::Cartesian::Ptr waistZ_;
-    OpenSoT::tasks::acceleration::CoM::Ptr com_;
-    OpenSoT::tasks::acceleration::AngularMomentum::Ptr angular_momentum_;
+    std::map<std::string,Cartesian::Ptr> feet_;
+    std::map<std::string,Cartesian::Ptr> arms_;
+    Cartesian::Ptr waistRPY_;
+    Cartesian::Ptr waistZ_;
+    CoM::Ptr com_;
+    AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
-
-    /**
-     * @brief Expose the tasks to ROS
-     */
-    std::map<std::string,TaskRosWrapperInterface::Ptr> tasks_ros_;
 
     /**
      * @brief postural_ a postural task
      */
-    OpenSoT::tasks::acceleration::Postural::Ptr postural_;
+    Postural::Ptr postural_;
 
     /**
      * @brief torque_lims_ some bounds

@@ -149,7 +149,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    des_joint_positions_.fill(0.0);
+    des_joint_positions_ = robot_model_->getJointHomePositions();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     imu_orientation_.normalize();
@@ -545,6 +545,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             legs_kinematics_->reset();
 
             robot_model_->getJointPosition(des_joint_positions_);
+
             des_joint_velocities_.fill(0.0);
 
             imu_gyroscope_filter_.setTimeStep(period_);
@@ -562,7 +563,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
 
         // Set the velocity and position reference for the Com
-        com_planner_->update(period.toSec());
+        com_planner_->update();
         id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
         id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
