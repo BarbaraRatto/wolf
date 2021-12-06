@@ -9,24 +9,26 @@
     <xacro:arg name="arm_name" default="kinova"/>
     <xacro:arg name="sensors" default="false"/>
     <xacro:arg name="floating_base_link" default="true"/>
+    <xacro:arg name="robot_name"  default="aliengo"/>
+    <xacro:arg name="base_name"   default="trunk"/>
 
-    <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
-    <xacro:include filename="$(find aliengo_description)/urdfs/materials.xacro"/>
-    <xacro:include filename="$(find aliengo_description)/urdfs/leg.xacro"/>
-
-    <!-- legs transmission -->
-    <xacro:include filename="$(find aliengo_description)/urdfs/leg.transmission.xacro"/>
-    <xacro:include filename="$(find aliengo_description)/urdfs/leg.gazebo.xacro"/>
+    <!-- load generic materials -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/materials.xacro"/>
 
     <!-- generic simulator_gazebo plugins for starting mechanism control, ros time -->
-    <xacro:include filename="$(find aliengo_description)/gazebo/gazebo.urdf.xacro">
-         <xacro:arg name="task_period" value="$(arg task_period)"/>
-    </xacro:include>
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/gazebo.urdf.xacro"/>
+
+    <!-- legs transmission and gazebo plugins -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.transmission.xacro"/>
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.gazebo.xacro"/>
 
     <!-- sensors -->
     <xacro:if value="$(arg sensors)">
         <xacro:include filename="$(find sensors_description)/urdfs/sensors/imu.gazebo.xacro"/>
     </xacro:if>
+
+    <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
+    <xacro:include filename="$(find aliengo_description)/urdfs/leg.xacro"/>
 
     <!-- Rollover Protection mode will add an additional stick on the top, use "true" or "false" to switch it. -->
     <xacro:property name="rolloverProtection" value="false"/>
