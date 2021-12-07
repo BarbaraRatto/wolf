@@ -2,7 +2,6 @@
 
 - relative tasks between the feet
 - image with XBOX controller
-- merge arm branch
 - port the robots to the new stack
 - change name to WOLF
 - remove ground truth and contact sensors

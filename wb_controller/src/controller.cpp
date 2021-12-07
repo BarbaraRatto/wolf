@@ -29,8 +29,7 @@ std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
 
 Controller::Controller()
-    :solver_created_(false)
-    ,solver_active_(false)
+    :solver_active_(false)
     ,init_done_(false)
     ,inertia_compensation_active_(true)
     ,stopping_(false)
@@ -156,23 +155,21 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
-    state_estimator_ = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
+    state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
+    legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
 
-    legs_impedance_.reset(new LegsImpedance(gait_generator_,robot_model_));
-
-    terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_,robot_model_));
-
+    terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
     terrain_estimator_->setMinRoll(-M_PI);
     terrain_estimator_->setMaxPitch(M_PI);
     terrain_estimator_->setMinPitch(-M_PI);
 
-    legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_,terrain_estimator_));
+    legs_kinematics_ = std::make_shared<LegsKinematics>(gait_generator_,robot_model_,terrain_estimator_);
     legs_kinematics_->activateBaseHeightControl();
 
-    com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
+    com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
 
-    id_prob_.reset(new IDProblem(nh_,robot_model_,period_));
+    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
@@ -279,34 +276,35 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     return true;
 }
 
-bool Controller::selectStack(const std::string& stack)
+bool Controller::selectControlMode(const std::string& mode)
 {
-    if(id_prob_)
+    if(robot_model_)
     {
-        if(stack == "WALKING")
-            id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-        else if(stack == "MANIPULATION")
-            id_prob_->selectStack(IDProblem::stacks_t::MANIPULATION);
+        if(mode == "WALKING")
+            robot_model_->setState(QuadrupedRobot::WALKING);
+        else if(mode == "MANIPULATION")
+            robot_model_->setState(QuadrupedRobot::MANIPULATION);
         else
         {
-            ROS_ERROR_NAMED(CLASS_NAME,"Wrong stack!");
+            ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
             return false;
         }
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected stack "<< stack);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
     }
     return true;
 }
 
-void Controller::switchStack()
+void Controller::switchControlMode()
 {
-    if(id_prob_)
-    {
-        id_prob_->switchStack();
-        legs_kinematics_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
-        foot_holds_planner_->reset();
-    }
-    else
-        ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
+   if(robot_model_)
+   {
+     if(robot_model_->getState() == QuadrupedRobot::WALKING)
+       robot_model_->setState(QuadrupedRobot::MANIPULATION);
+     else
+       robot_model_->setState(QuadrupedRobot::WALKING);
+   }
+   //legs_kinematics_->reset();
+   //foot_holds_planner_->reset();
 }
 
 bool Controller::selectGait(const string& gait)
@@ -371,13 +369,6 @@ void Controller::toggleBaseHeightControl()
 
 void Controller::startSolver(const bool& start)
 {
-    if(!solver_created_)
-    {
-        ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-        solver_created_ = true;
-    }
-
     // Perform the init procedure
     init_done_ = false;
 
@@ -396,13 +387,6 @@ bool Controller::isSolverActive() const
 
 void Controller::toggleSolver()
 {
-    if(!solver_created_)
-    {
-        ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-        solver_created_ = true;
-    }
-
     // Perform the init procedure
     init_done_ = false;
 
@@ -541,7 +525,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
             foot_holds_planner_->initializeFeetPosition();
-
             legs_kinematics_->reset();
 
             robot_model_->getJointPosition(des_joint_positions_);
@@ -550,6 +533,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
+
+            robot_model_->setState(QuadrupedRobot::WALKING);
 
             init_done_ = true;
         }

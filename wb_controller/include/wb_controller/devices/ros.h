@@ -41,11 +41,9 @@ protected:
         if(base_pitch_scale_>1.0) base_pitch_scale_ = 1.0; if(base_pitch_scale_<-1.0) base_pitch_scale_ = -1.0;
         if(base_yaw_scale_>1.0) base_yaw_scale_ = 1.0; if(base_yaw_scale_<-1.0) base_yaw_scale_ = -1.0;
 
-        unsigned int current_stack = wb_controller::IDProblem::stacks_t::NONE;
-        if(controller_ptr_->getIDProblem()!=nullptr)
-            current_stack = controller_ptr_->getIDProblem()->getCurrentStack();
+        unsigned int current_robot_state = controller_ptr_->getRobotModel()->getState();
 
-        if(start_swing_ && current_stack == wb_controller::IDProblem::stacks_t::WALKING)
+        if(start_swing_ && current_robot_state == wb_controller::QuadrupedRobot::WALKING)
         {
             controller_ptr_->getFootholdsPlanner()->setCmd(wb_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);

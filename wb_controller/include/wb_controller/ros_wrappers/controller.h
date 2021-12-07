@@ -238,9 +238,9 @@ public:
                                                    boost::bind(&wb_controller::Controller::selectGait,controller_,_1),
                                                    "select gait", {{"TROT","TROT"},{"CRAWL","CRAWL"}});
 
-        server_->registerEnumVariable<std::string>("select_stack","WALKING",
-                                                   boost::bind(&wb_controller::Controller::selectStack,controller_,_1),
-                                                   "select stack", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
+        server_->registerEnumVariable<std::string>("select_control_mode","WALKING",
+                                                   boost::bind(&wb_controller::Controller::selectControlMode,controller_,_1),
+                                                   "select mode", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
 
         server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
         server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
