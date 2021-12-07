@@ -5,7 +5,7 @@
   <arg name="gui"         default="true"/>
   <arg name="robot_name"  default="spot"/>
   <arg name="arm_enabled" default="false"/>
-  <arg name="arm_name"    default="teleop"/>
+  <arg name="arm_name"    default="kinova"/>
 
   <param name="use_gui"   value="$(arg gui)"/>
 

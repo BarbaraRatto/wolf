@@ -7,15 +7,18 @@
     <xacro:arg name="arm_enabled" default="false"/>
     <xacro:arg name="arm_name" default="kinova"/>
     <xacro:arg name="floating_base_link" default="true"/>
+    <xacro:arg name="robot_name"  default="spot"/>
+    <xacro:arg name="base_name"   default="base_link"/>
 
-    <!-- legs transmission -->
-    <xacro:include filename="$(find spot_description)/urdfs/leg.transmission.xacro"/>
-    <xacro:include filename="$(find spot_description)/urdfs/leg.gazebo.xacro"/>
+    <!-- load generic materials -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/materials.xacro"/>
 
     <!-- generic simulator_gazebo plugins for starting mechanism control, ros time -->
-    <xacro:include filename="$(find spot_description)/gazebo/gazebo.urdf.xacro">
-         <xacro:arg name="task_period" value="$(arg task_period)"/>
-    </xacro:include>
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/gazebo.urdf.xacro"/>
+
+    <!-- legs transmission and gazebo plugins -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.transmission.xacro"/>
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.gazebo.xacro"/>
 
     <!-- dynamics inertial value -->
     <!-- body -->

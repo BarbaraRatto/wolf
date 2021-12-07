@@ -3,11 +3,6 @@
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="solo">
 
-    <!-- Things that are needed only for Gazebo (not the physical robot). These include sensor and controller plugin specifications -->
-    <xacro:include filename="$(find solo_description)/urdfs/leg.transmission.xacro"/>
-    <xacro:include filename="$(find solo_description)/urdfs/leg.gazebo.xacro"/>
-
-
     <!-- These are absoulte distance value, the sign are decided below -->
     <xacro:property name="base_2_HAA_x" value="${194.60 * 0.001}" />
     <xacro:property name="base_2_HAA_y" value="${87.50 * 0.001}" />

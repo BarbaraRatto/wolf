@@ -5,30 +5,35 @@
     <xacro:property name="color" value="0.8 0.8 0.8" />
     <xacro:property name="opacity" value="1.0" />
 
-    <xacro:arg name="load_force_sensors" default="false"/>	
+    <xacro:arg name="load_force_sensors" default="false"/>
+    <xacro:arg name="task_period" default="0.004"/>
     <xacro:arg name="floating_base_link" default="true"/>
+    <xacro:arg name="robot_name"  default="solo"/>
+    <xacro:arg name="base_name"   default="base_link"/>
 
-    <xacro:include filename="$(find solo_description)/gazebo/gazebo.urdf.xacro">
-        <xacro:arg name="task_period" value="$(arg task_period)"/>
-    </xacro:include>
+    <!-- generic simulator_gazebo plugins for starting mechanism control, ros time -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/gazebo.urdf.xacro"/>
 
+    <!-- legs transmission and gazebo plugins -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.transmission.xacro"/>
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.gazebo.xacro"/>
 
-                <!-- Floating-base Joint -->
-		<xacro:if value="$(arg floating_base_link)">
-		        <link name="world"/>
-		        <joint name="floating_base_joint" type="floating">
-		            <origin rpy="0 0 0" xyz="0 0 0"/>
-		            <parent link="world"/>
-		            <child link="base_link"/>
-		        </joint>
-		</xacro:if>
+    <!-- Floating-base Joint -->
+    <xacro:if value="$(arg floating_base_link)">
+            <link name="world"/>
+            <joint name="floating_base_joint" type="floating">
+                <origin rpy="0 0 0" xyz="0 0 0"/>
+                <parent link="world"/>
+                <child link="base_link"/>
+            </joint>
+    </xacro:if>
 
-		<link name="base_link" />
-                <joint name="floating_base" type="fixed">
-                    <origin rpy="0 0 0" xyz="0 0 0"/>
-                    <parent link="base_link"/>
-                    <child link="trunk"/>
-                </joint>
+    <link name="base_link" />
+    <joint name="floating_base" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="base_link"/>
+        <child link="trunk"/>
+    </joint>
 
     <link name="trunk">
         <inertial>
