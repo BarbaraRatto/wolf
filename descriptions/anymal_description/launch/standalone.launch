@@ -33,7 +33,7 @@
 
   <!-- RViz -->
   <node name="rviz" pkg="rviz" type="rviz"
-        args="-d $(find anymal_description)/config/rviz/standalone.rviz"
+        args="-d $(find anymal_description)/rviz/standalone.rviz"
         output="screen"/>
 
 </launch>
