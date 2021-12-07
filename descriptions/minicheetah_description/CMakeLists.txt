@@ -1,13 +1,9 @@
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.0.0)
 project(minicheetah_description)
 
 find_package(catkin REQUIRED COMPONENTS)
 
 catkin_package()
-
-install(DIRECTORY gazebo/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/gazebo
-  PATTERN ".svn" EXCLUDE)
 
 install(DIRECTORY meshes/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes
