@@ -69,8 +69,8 @@
     <!-- foot -->
     <xacro:property name="foot_mass" value="0.06"/>
     <xacro:property name="foot_radius" value="0.03"/>
-    <xacro:property name="foot_x" value="-0.01"/>
-    <xacro:property name="foot_z" value="-0.35"/>
+    <xacro:property name="foot_x" value="-0.005"/>
+    <xacro:property name="foot_z" value="-0.348"/>
 
     <!-- Floating-base Joint -->
     <xacro:if value="$(arg floating_base_link)">
@@ -209,7 +209,9 @@
         <geometry>
             <sphere radius="${foot_radius-0.01}"/>
         </geometry>
-        <material name="green"/>
+        <material name="green">
+          <color rgba="0.0 0.8 0.0 1.0"/>
+        </material>
     </visual>
     <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -318,7 +320,9 @@
         <geometry>
             <sphere radius="${foot_radius-0.01}"/>
         </geometry>
-        <material name="green"/>
+        <material name="green">
+          <color rgba="0.0 0.8 0.0 1.0"/>
+        </material>
     </visual>
     <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -427,7 +431,9 @@
         <geometry>
             <sphere radius="${foot_radius-0.01}"/>
         </geometry>
-        <material name="green"/>
+        <material name="green">
+          <color rgba="0.0 0.8 0.0 1.0"/>
+        </material>
     </visual>
     <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -536,7 +542,9 @@
         <geometry>
             <sphere radius="${foot_radius-0.01}"/>
         </geometry>
-        <material name="green"/>
+        <material name="green">
+          <color rgba="0.0 0.8 0.0 1.0"/>
+        </material>
     </visual>
     <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>

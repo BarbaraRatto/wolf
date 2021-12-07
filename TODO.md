@@ -1,23 +1,19 @@
 # TODO list
 
-- Ros tasks subclasses
-- Do not use a different stack but just change gains online
-- Robustness tests when walking on rough terrain with push recovery
+- relative tasks between the feet
+- image with XBOX controller
 - port the robots to the new stack
-- Change name to WOLF
-- Remove ground truth and contact sensors
-- Robustness tests with push recovery
-- Remove postural for the arm!!!!
+- change name to WOLF
+- remove ground truth and contact sensors
+- robustness tests with push recovery
 - step reflexes
-- ADD IMU and remove ROBOT_REAL
-- Robustness tests when walking on rough terrain with push recovery
-- Make one level stack works with arm as well
-- collision avoidance
-- Clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
+- add IMU and remove ROBOT_REAL
+- collision avoidance for the arm
+- clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
 - add trajectory for arm
-- Web app
-- State estimation
-- Experiments on the real robot
+- web app (AWS?)
+- state estimation
+- experiments on the real robot
 - tests and profiling
 - check the FIXME around the code clean up
-- startup procedure and solver reset (state machine)
+- startup procedure and solver reset (state machine?)

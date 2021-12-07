@@ -52,10 +52,10 @@
 
     <!-- Load controller config -->
     <group if="$(arg arm_enabled)">
-          <rosparam command="load" file="$(find wb_controller)/params/$(arg robot_name)_$(arg arm_name)_params.yaml" ns="$(arg robot_name)"/>
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_'+arg('arm_name')+'_params.yaml')" ns="$(arg robot_name)"/>
     </group>
     <group unless="$(arg arm_enabled)">
-          <rosparam command="load" file="$(find wb_controller)/params/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_params.yaml')" ns="$(arg robot_name)"/>
     </group>
 
     <!-- Spawn our controller and its friends -->
@@ -100,7 +100,7 @@
 
             <!-- plotJuggler -->
             <node pkg="plotjuggler" type="plotjuggler" name="plotjuggler" ns="/$(arg robot_name)/wb_controller"
-                args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
+                args="$(eval '--layout '+find(arg('robot_name')+'_description')+'/plotjuggler/'+arg('robot_name')+'.xml --nosplash')">
             </node>
 
             <!-- Rviz -->
@@ -108,7 +108,7 @@
                 type="rviz"
                 name="rviz"
                 pkg="rviz"
-                args="-d $(find wb_controller)/rviz_files/$(arg robot_name)_wbc.rviz" />
+                args="$(eval '-d '+find(arg('robot_name')+'_description')+'/rviz/'+arg('robot_name')+'_wbc.rviz')" />
    </group>
 
 </launch>

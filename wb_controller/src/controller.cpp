@@ -197,7 +197,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     imu_orientation_.normalize();
     pid_scale_ = 1.0;
 
-    gait_generator_     = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT,"ellipse");
+    gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
     state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
     legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
@@ -572,7 +572,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->initializeFeetPosition();
             legs_kinematics_->reset();
-            id_prob_->resetTasks();
 
             des_joint_positions_ = robot_model_->getJointHomePositions();
             des_joint_velocities_.fill(0.0);
@@ -594,7 +593,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
 
         // Set the velocity and position reference for the Com
-        com_planner_->update(period.toSec());
+        com_planner_->update();
         id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
         id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
