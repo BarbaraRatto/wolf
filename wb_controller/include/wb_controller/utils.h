@@ -13,7 +13,7 @@
 
 namespace wb_controller
 {
-//#define ROBOT_REAL
+#define ROBOT_REAL
 #define GRAVITY 9.81
 //#define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6

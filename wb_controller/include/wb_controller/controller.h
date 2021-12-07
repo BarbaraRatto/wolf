@@ -298,6 +298,8 @@ private:
     Eigen::Vector3d imu_gyroscope_filt_;
     /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
+    /** @brief Ground Truth Orientation */
+    Eigen::Quaterniond ground_truth_orientation_;
     /** @brief Reference for the waist RPY */
     Eigen::Vector3d des_base_rpy_;
     /** @brief Thread for the odometry publisher */
