@@ -3,7 +3,7 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 <xacro:arg name="task_period" default="0.004"/>
 <xacro:arg name="robot_name"  default="robot"/>
-<xacro:arg name="base_link"   default="base"/>
+<xacro:arg name="base_name"   default="base"/>
 
 	<gazebo>
 		<plugin name="gazebo_ros_controller_manager" filename="libgazebo_ros_control.so">
@@ -14,7 +14,7 @@
 
 		<plugin filename="libgazebo_ros_p3d.so" name="gazebo_ros_p3d">
                         <robotNamespace>$(arg robot_name)</robotNamespace>
-                        <bodyName>$(arg base_link)</bodyName>
+                        <bodyName>$(arg base_name)</bodyName>
 			<topicName>ground_truth</topicName>
 			<frameName>world</frameName>
 			<xyzOffsets>0 0 0</xyzOffsets>
