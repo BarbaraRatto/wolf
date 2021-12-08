@@ -125,12 +125,17 @@ public:
        */
   const Eigen::VectorXd& getStandDownJointPostion();
 
-
   /**
        * @brief get robot's base height when standing up
        * @return height
        */
   const double& getStandUpHeight();
+
+  /**
+       * @brief get robot's base height when standing down
+       * @return height
+       */
+  const double& getStandDownHeight();
 
 private:
 
@@ -193,6 +198,8 @@ private:
   Eigen::VectorXd q_stand_down_;
   /** @brief Base's height when standing up */
   double stand_up_height_;
+  /** @brief Base's height when standing down */
+  double stand_down_height_;
 
   std::atomic<robot_states_t> robot_state_;
 
