@@ -140,6 +140,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_efforts_solver_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_contact_forces_.resize(robot_model_->getContactNames().size(),Eigen::Vector6d::Zero());
 
     // Initializations
@@ -151,6 +152,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_ = robot_model_->getStandUpJointPostion();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
+    des_joint_efforts_solver_.fill(0.0);
     imu_orientation_.normalize();
 
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
@@ -170,6 +172,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
 
     id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
+
+    ramp_ = std::make_shared<Ramp>(3.0);
 
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
@@ -199,7 +203,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities_",des_joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities",des_joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_",joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
@@ -540,6 +543,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             des_joint_velocities_.fill(0.0);
 
+            ramp_->reset();
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
 
@@ -568,10 +572,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         const std::vector<std::string>& foot_names = robot_model_->getFootNames();
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
-
             id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
                                        WORLD_FRAME_NAME);
-
             // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
             // Set the wrench limits to enstablish the contacts
             if(gait_generator_->isSwinging(foot_names[i]))
@@ -594,34 +596,38 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         // Set the feed forward stance term with the terrain adjustment
         legs_kinematics_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
 
-        // Update the desired joint positions from the ik and set that to the postural
-        // task
+        // Update the desired joint positions from the ik
         legs_kinematics_->update(period.toSec(),joint_positions_);
 
-        //des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
-        //des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();
+        des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
+        des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();
 
         //id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Get the solver solution
-        if(!id_prob_->solve(des_joint_efforts_))
+        if(!id_prob_->solve(des_joint_efforts_solver_))
         {
           ROS_WARN_NAMED(CLASS_NAME,"IDProblem failed to solve");
-          des_joint_efforts_.fill(0.0);
           solver_active_ = false;
+          ramp_->reset();
         }
+        else
+          des_joint_efforts_ = des_joint_efforts_solver_;
     }
     else
-      des_joint_efforts_.fill(0.0);
+    {
+      if(state_estimator_->getFloatingBasePosition().z() > (robot_model_->getStandDownHeight() + EPS))
+        des_joint_efforts_ = ramp_->update(period_) * des_joint_efforts_solver_;
+      else
+        des_joint_efforts_.fill(0.0);
+    }
 
     // Check if the desired efforts are valid otherwise clamp them
     robot_model_->clampJointEfforts(des_joint_efforts_);
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
-    {
-        joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
-    }
+      joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
 
     // Publish
     ros_wrapper_->publish(time);

@@ -264,6 +264,8 @@ private:
     Eigen::VectorXd des_joint_positions_;
     /** @brief Desired joint velocities */
     Eigen::VectorXd des_joint_velocities_;
+    /** @brief Desired joint efforts computed by the solver */
+    Eigen::VectorXd des_joint_efforts_solver_;
     /** @brief Desired joint efforts sent to the hardware interface */
     Eigen::VectorXd des_joint_efforts_;
     /** @brief Xbot robot model */
@@ -320,6 +322,8 @@ private:
     std::atomic<bool> inertia_compensation_active_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
+    /** @brief Ramp down the values */
+    std::shared_ptr<Ramp> ramp_;
 
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
