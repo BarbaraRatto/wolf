@@ -249,6 +249,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities_",des_joint_velocities_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities",des_joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_",joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
@@ -520,16 +521,8 @@ void Controller::starting(const ros::Time&  /*time*/)
     ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
 }
 
-void Controller::update(const ros::Time& time, const ros::Duration& period)
+void Controller::updateStateEstimator(const double &dt)
 {
-    // Read from the hardware interfaces:
-    // 1) Joints
-    readJoints();
-    // 2) IMU
-    readImu();
-
-    period_ = period.toSec();
-
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
@@ -554,7 +547,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-
     if(use_contact_sensors_)
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
@@ -564,7 +556,20 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             state_estimator_->setContactForces(foot_names[i],tmp_vector3d_);
         }
 
-    state_estimator_->update(period.toSec());
+    state_estimator_->update(dt);
+
+}
+
+void Controller::update(const ros::Time& time, const ros::Duration& period)
+{
+    // Read from the hardware interfaces:
+    period_ = period.toSec();
+    // 1) Joints
+    readJoints();
+    // 2) IMU
+    readImu();
+    // 3) Update state estimator
+    updateStateEstimator(period_);
 
     if(solver_active_) // Use the ID solver to calculate the torques
     {
@@ -610,6 +615,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         legs_impedance_->startInertiaCompensation(inertia_compensation_active_);
         legs_impedance_->update();
 
+        const std::vector<std::string>& foot_names = robot_model_->getFootNames();
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
 

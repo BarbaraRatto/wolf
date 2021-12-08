@@ -366,6 +366,11 @@ private:
          */
     void readImu();
 
+    /**
+         * @brief update the state estimator
+         */
+    void updateStateEstimator(const double& dt);
+
 };
 
 
