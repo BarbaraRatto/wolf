@@ -4,7 +4,7 @@
         <arg name="robot_name" default="spot"/>
         <arg name="task_period" default="0.004"/>
         <arg name="arm_enabled" default="false"/>
-        <arg name="arm_name" default="teleop"/>
+        <arg name="arm_name" default="kinova"/>
         <arg name="urdf_file" default="$(eval find(arg('robot_name') + '_description') + '/robots/' + arg('robot_name') + '.urdf.xacro')"/>
         <arg name="srdf_file" default="$(eval find(arg('robot_name') + '_description') + '/robots/' + arg('robot_name') + '.srdf.xacro')"/>
         <arg name="srdf_file_arm" default="$(eval find(arg('robot_name') + '_description') + '/robots/' + arg('robot_name') + '_' + arg('arm_name') + '.srdf.xacro')"/>

@@ -22,7 +22,7 @@
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">
-            <include file="$(find wb_controller)/launch/world.launch">
+            <include file="$(find wolf_description_utils)/launch/world.launch">
                 <arg name="sensors" value="$(arg sensors)" />
                 <arg name="robot_name" value="$(arg robot_name)" />
                 <arg name="internal_wrench" value="$(arg internal_wrench)" />
@@ -34,11 +34,11 @@
                 <arg name="debug" value="$(arg gazebo_debug)"/>
             </include>
             <!-- Set the robot to the home position loaded from the SRDF file -->
-            <node name="goto0" pkg="wb_controller" type="go0"/>
+            <node name="goto0" pkg="wolf_description_utils" type="go0"/>
     </group>
 
     <group unless="$(arg gazebo)">
-        <include file="$(find wb_controller)/launch/upload.launch">
+        <include file="$(find wolf_description_utils)/launch/upload.launch">
            <arg name="sensors" value="$(arg sensors)" />
            <arg name="robot_name" value="$(arg robot_name)" />
            <arg name="arm_enabled" value="$(arg arm_enabled)"/>

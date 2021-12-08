@@ -1,30 +1,9 @@
-######################
-# set up the project #
-######################
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.0)
 project(solo_description)
 
+find_package(catkin)
 
-# required to use std::shared_ptr in code AND to link the DG plugins
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wl,--no-as-needed")
-
-
-############################
-# Search for dependencies. #
-############################
-
-# find dependencies using catkin
-
-find_package(catkin REQUIRED
-  COMPONENTS
-)
-catkin_package(
-  CATKIN_DEPENDS
-)
-
-install(DIRECTORY gazebo/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/gazebo
-  PATTERN ".svn" EXCLUDE)
+catkin_package()
 
 install(DIRECTORY meshes/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes

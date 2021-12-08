@@ -16,7 +16,7 @@
 	<arg name="world_name" default="empty.world"/>
         <arg name="task_period" default="0.004"/>
         <arg name="arm_enabled" default="false"/>
-        <arg name="arm_name" default="teleop"/>
+        <arg name="arm_name" default="kinova"/>
 
         <arg if="$(arg wb_empty_world)" name="full_world_name" default="$(find wb_gazebo_resources)/worlds/$(arg world_name)"/>
 	<arg unless="$(arg wb_empty_world)" name="full_world_name" default="worlds/$(arg world_name)"/>
@@ -43,8 +43,9 @@
 		<node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false" output="screen"/>
 	</group>
 
-        <!-- Send the robot urdf to parameter server and spawn it -->
-        <include file="$(find wb_controller)/launch/upload.launch">
+        <!-- Send the robot urdf to parameter server -->
+        <include file="$(find wolf_description_utils)/launch/upload.launch">
+                <arg name="sensors" value="$(arg sensors)" />
                 <arg name="task_period" value="$(arg task_period)" />
                 <arg name="robot_name" value="$(arg robot_name)" />
 		<arg name="internal_wrench" value="$(arg internal_wrench)" />

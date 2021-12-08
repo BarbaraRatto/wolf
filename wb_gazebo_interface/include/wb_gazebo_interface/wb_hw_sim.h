@@ -20,8 +20,12 @@
 // URDF include
 #include <urdf/model.h>
 
-// WB HW interface
+// HW interface
 #include <wb_hardware_interface/wb_robot_hw.h>
+
+// Eigen
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Dense>
 
 namespace wb_gazebo_interface
 {
@@ -88,6 +92,10 @@ private:
 
   std::vector<double> torque_offsets;
   bool useTorqueOffsets;
+
+  Eigen::Quaterniond quaterniond_tmp_;
+  Eigen::Matrix3d world_R_base_;
+  Eigen::Vector3d vector3d_tmp_;
 };
 
 }

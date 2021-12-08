@@ -13,7 +13,7 @@
 
 namespace wb_controller
 {
-//#define ROBOT_REAL
+#define ANGULAR_VELOCITIES_WRT_BASE // Comment it if the IMU's velocities are defined wrt world
 #define GRAVITY 9.81
 //#define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6

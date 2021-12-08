@@ -2,12 +2,6 @@
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-
-	<!-- Things that are needed only for Gazebo (not the physical robot). These include sensor and controller plugin specifications -->
-	<xacro:include filename="$(find hyq_description)/urdfs/leg/leg.transmission.xacro"/>
-	<xacro:include filename="$(find hyq_description)/urdfs/leg/leg.gazebo.xacro"/>
-
-
 	<!-- ================================== Leg ================================== -->
 	<!-- The xacro macro xacro:hyq_leg contains: hip assembly, upper and lower leg -->
 	<xacro:macro name="hyq_leg" params="name parent *origin reflect_hip reflect_upper reflect_front knee_bent_backward load_force_sensors">

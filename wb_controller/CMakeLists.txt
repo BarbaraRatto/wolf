@@ -87,9 +87,6 @@ install(DIRECTORY params/
 catkin_install_python(PROGRAMS scripts/keyboard_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-catkin_install_python(PROGRAMS scripts/go0
-   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
 if (CATKIN_ENABLE_TESTING)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface wb_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)

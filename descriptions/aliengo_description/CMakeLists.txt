@@ -5,14 +5,6 @@ find_package(catkin REQUIRED)
 
 catkin_package()
 
-install(DIRECTORY gazebo/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/gazebo
-  PATTERN ".svn" EXCLUDE)
-
-install(DIRECTORY launch/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-  PATTERN ".svn" EXCLUDE)
-
 install(DIRECTORY meshes/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes
   PATTERN ".svn" EXCLUDE)

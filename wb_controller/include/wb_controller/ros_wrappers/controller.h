@@ -41,57 +41,57 @@ public:
         double default_duty_factor = 0.3;
         if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default duty factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_duty_factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
         }
         double default_swing_frequency = 3.0; // [Hz]
         if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default swing frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_swing_frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
         }
         double default_contact_threshold = 50.0; // [N]
         if (!controller_nh.getParam("default_contact_threshold", default_contact_threshold))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
         }
         double default_step_height = 0.05; // [m]
         if (!controller_nh.getParam("default_step_height", default_step_height))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_step_height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
         }
         double max_step_height = 0.15; // [m]
         if (!controller_nh.getParam("max_step_height", max_step_height))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No max step height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
+            ROS_WARN_NAMED(CLASS_NAME,"No max_step_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
         }
         double max_step_length = 0.5; // [m]
         if (!controller_nh.getParam("max_step_length", max_step_length))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No max step length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
+            ROS_WARN_NAMED(CLASS_NAME,"No max_step_length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
         }
         double default_base_linear_velocity = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default base linear velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
         }
         double default_base_angular_velocity = 0.5; // [rad/s]
         if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
         } 
         double default_friction_cones_mu = 0.7;
         if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default friction cones mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
         }
         double default_cutoff_freq_gyroscope = 300.;
         if (!controller_nh.getParam("default_cutoff_freq_gyroscope", default_cutoff_freq_gyroscope))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default cutoff freq gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
         }
         double default_cutoff_freq_qdot = 300.;
         if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default cutoff freq gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
         double damp_max = 0.001;
         if (!controller_nh.getParam("damp_max", damp_max))
@@ -133,13 +133,13 @@ public:
 
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
-            ROS_WARN_NAMED(CLASS_NAME,"No default estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
         else
             controller_->getStateEstimator()->setPositionEstimationType(estimation_position_type);
 
         std::string estimation_orientation_type;
         if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
-            ROS_WARN_NAMED(CLASS_NAME,"No default estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
         else
             controller_->getStateEstimator()->setOrientationEstimationType(estimation_orientation_type);
 

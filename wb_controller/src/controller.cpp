@@ -489,8 +489,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
     if(state_estimator_->getOrientationEstimationType() == "ground_truth")
     {
-        state_estimator_->setGroundTruthBaseOrientation(imu_orientation_);
-        state_estimator_->setGroundTruthBaseAngularVelocity(imu_gyroscope_filt_);
+        ground_truth_orientation_.w() = ground_truth_.getOrientation()[0];
+        ground_truth_orientation_.x() = ground_truth_.getOrientation()[1];
+        ground_truth_orientation_.y() = ground_truth_.getOrientation()[2];
+        ground_truth_orientation_.z() = ground_truth_.getOrientation()[3];
+        state_estimator_->setGroundTruthBaseOrientation(ground_truth_orientation_);
+        state_estimator_->setGroundTruthBaseAngularVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getAngularVelocity()));
     }
     else
     {
