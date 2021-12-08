@@ -115,6 +115,51 @@ inline QuadrupedRobot* createRobotModel(ros::NodeHandle& root_nh)
   return new wb_controller::QuadrupedRobot(urdf,srdf);
 }
 
+class Ramp
+{
+public:
+  enum type_t {DOWN=0,UP};
+
+  Ramp(const double& T, type_t type = DOWN)
+  {
+    assert(T>0.0);
+    T_ = T;
+    type_ = type;
+    reset();
+  }
+
+  void reset()
+  {
+    t_ = 0.0;
+  }
+
+  double update(const double& dt)
+  {
+    double out;
+    if(type_ == DOWN)
+    {
+      out = 1.0 - t_/T_;
+    }
+    else
+    {
+      out = t_/T_;
+    }
+
+    if(t_>=T_)
+      t_ = T_;
+    else
+      t_ += dt;
+
+    return out;
+  }
+
+private:
+  double t_;
+  double T_;
+  type_t type_;
+
+};
+
 class Trigger
 {
 public:
