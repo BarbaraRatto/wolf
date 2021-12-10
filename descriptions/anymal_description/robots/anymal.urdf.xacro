@@ -735,16 +735,13 @@
     </link>   
 
     <!-- Extensions -->
-    <xacro:leg_transmission name="rf"/>
-    <xacro:leg_gazebo name="rf" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="lf"/>
-    <xacro:leg_gazebo name="lf" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="rh"/>
-    <xacro:leg_gazebo name="rh" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="lh"/>
-    <xacro:leg_gazebo name="lh" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="rf"/>
+    <xacro:leg_gazebo prefix="rf" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="lf"/>
+    <xacro:leg_gazebo prefix="lf" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="rh"/>
+    <xacro:leg_gazebo prefix="rh" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="lh"/>
+    <xacro:leg_gazebo prefix="lh" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
 
 </robot>
