@@ -1,13 +1,15 @@
 # TODO list
 
+- q_lims subconstraint
+- add safety checks so that the controller doesn't get crazy
+- robustness tests with push recovery
+- startup procedure and solver reset (state machine?)
 - relative tasks between the feet
-- image with XBOX controller
 - port the robots to the new stack
 - change name to WOLF
+- move headers code in cpp
 - remove ground truth and contact sensors
-- robustness tests with push recovery
 - step reflexes
-- add IMU and remove ROBOT_REAL
 - collision avoidance for the arm
 - clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
 - add trajectory for arm
@@ -16,4 +18,4 @@
 - experiments on the real robot
 - tests and profiling
 - check the FIXME around the code clean up
-- startup procedure and solver reset (state machine?)
+
