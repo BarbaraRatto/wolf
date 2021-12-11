@@ -1,123 +1,90 @@
 #!/usr/bin/env python
 
-# Modified from https://github.com/ros-teleop/teleop_twist_keyboard
-# Original author: Graylin Trevor Jay
-# Website: http://wiki.ros.org/teleop_twist_keyboard
+# WOLF Keyboard controller
 
-import sys
-import select
-import tty
-import termios
-from termios import tcflush, TCIFLUSH
+import pygame
 
-import roslib
 import rospy
+import numpy as np
 
 from geometry_msgs.msg import Twist
 
+import rospkg
+
+rospack = rospkg.RosPack()
+rospack.list()
+img_path = rospack.get_path('wb_controller') + "/resources/keyboard_controls.png"
 
 msg = """
 Reading from the keyboard  and Publishing to Twist!
 ---------------------------
 Moving around:
-   u    i    o
-   j    k    l
-   m    ,    .
-For Holonomic mode (strafing), hold down the shift key:
----------------------------
-   U    I    O
-   J    K    L
-   M    <    >
-t : up (+z)
-b : down (-z)
-anything else : stop
-ESC to quit
+  q   w   e
+  a   s   d
+
+o : up (+z)
+l : down (-z)
 """
 
+
 moveBindings = {
-        'i':(1,0,0,0),
-        'o':(1,0,0,-1),
-        'j':(0,0,0,1),
-        'l':(0,0,0,-1),
-        'u':(1,0,0,1),
-        ',':(-1,0,0,0),
-        '.':(-1,0,0,1),
-        'm':(-1,0,0,-1),
-        'O':(1,-1,0,0),
-        'I':(1,0,0,0),
-        'J':(0,1,0,0),
-        'L':(0,-1,0,0),
-        'U':(1,1,0,0),
-        '<':(-1,0,0,0),
-        '>':(-1,-1,0,0),
-        'M':(-1,1,0,0),
-        't':(0,0,1,0),
-        'b':(0,0,-1,0),
+        "w": np.array([1,0,0,0]),
+        "s": np.array([-1,0,0,0]),
+        "a": np.array([0,0,0,1]),
+        "d": np.array([0,0,0,-1]),
+        "q": np.array([0, 1, 0, 0]),
+        "e": np.array([0, -1, 0, 0]),
+        "o": np.array([0,0,1,0]),
+        "l": np.array([0,0,-1,0])
     }
 
-key = ""
-
-def isData():
-    return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
 
 if __name__=="__main__":
-    settings = termios.tcgetattr(sys.stdin)
-
-
     rospy.init_node('keyboard_node')
 
     robot_name = rospy.get_param('/robot_name')
     pub = rospy.Publisher('%s/wb_controller/twist'%(robot_name), Twist, queue_size = 1)
 
-    old_settings = termios.tcgetattr(sys.stdin)
+    pygame.init()
 
-    x = 0
-    y = 0
-    z = 0
-    th = 0
+    white = (255, 255, 255)
+    X = 760
+    Y = 340
+    display_surface = pygame.display.set_mode((X, Y))
 
-    try:
-        tty.setcbreak(sys.stdin.fileno())
+    pygame.display.set_caption('Keyboard controls')
 
-        print(msg)
+    # create a surface object, image is drawn on it.
+    image = pygame.image.load(img_path)
 
-        while 1:
+    while not rospy.is_shutdown():
+        display_surface.fill(white)
+        display_surface.blit(image, (-100, -100))
 
-            if isData():
-                key = sys.stdin.read(1)
+        pygame.event.pump()
+        keys = pygame.key.get_pressed()
 
-                if key == '\x1b':         # x1b is ESC
-                    break
-            else:
-                key = ""
+        command = np.array([0, 0, 0, 0])
+        for key in moveBindings:
+            if keys[ord(key)]:
+                command += moveBindings[key]
 
-            if key in moveBindings.keys():
-                x = moveBindings[key][0]
-                y = moveBindings[key][1]
-                z = moveBindings[key][2]
-                th = moveBindings[key][3]
-            else:
-                x = 0
-                y = 0
-                z = 0
-                th = 0
+        if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
+            exit()
 
-            twist = Twist()
-            twist.linear.x = x; twist.linear.y = y; twist.linear.z = z;
-            twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th
-            pub.publish(twist)
-
-            termios.tcflush(sys.stdin, TCIFLUSH)
-
-            rospy.sleep(0.1)
-
-    finally:
-        x = 0
-        y = 0
-        z = 0
-        th = 0
         twist = Twist()
-        twist.linear.x = x; twist.linear.y = y; twist.linear.z = z;
-        twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th
+        twist.linear.x = command[0]
+        twist.linear.y = command[1]
+        twist.linear.z = command[2]
+        twist.angular.x = 0.
+        twist.angular.y = 0.
+        twist.angular.z = command[3]
         pub.publish(twist)
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+
+        pygame.display.update()
+
+        rospy.sleep(0.01)
+
+
+
+
