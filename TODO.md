@@ -1,6 +1,7 @@
 # TODO list
 
 - q_lims subconstraint
+- add script in description_utils to create model.config and model.sdf for gazebo
 - add safety checks so that the controller doesn't get crazy
 - robustness tests with push recovery
 - startup procedure and solver reset (state machine?)
