@@ -22,20 +22,28 @@ Moving around:
   q   w   e
   a   s   d
 
+Orientation:
+   u    
+h  j  k  
+
 o : up (+z)
 l : down (-z)
 """
 
 
-moveBindings = {
-        "w": np.array([1,0,0,0]),
-        "s": np.array([-1,0,0,0]),
-        "a": np.array([0,0,0,1]),
-        "d": np.array([0,0,0,-1]),
-        "q": np.array([0, 1, 0, 0]),
-        "e": np.array([0, -1, 0, 0]),
-        "o": np.array([0,0,1,0]),
-        "l": np.array([0,0,-1,0])
+moveBindings = { #     x y z r p y
+        "w": np.array([1,0,0,0,0,0]),
+        "s": np.array([-1,0,0,0,0,0]),
+        "a": np.array([0,0,0,0,0,1]),
+        "d": np.array([0,0,0,0,0,-1]),
+        "q": np.array([0,1,0,0,0,0]),
+        "e": np.array([0,-1,0,0,0,0]),
+        "o": np.array([0,0,1,0,0,0]),
+        "l": np.array([0,0,-1,0,0,0]),
+        "u": np.array([0,0,0,0,1,0]),
+        "j": np.array([0,0,0,0,-1,0]),
+        "h": np.array([0,0,0,1,0,0]),
+        "k": np.array([0,0,0,-1,0,0])
     }
 
 
@@ -64,7 +72,7 @@ if __name__=="__main__":
         pygame.event.pump()
         keys = pygame.key.get_pressed()
 
-        command = np.array([0, 0, 0, 0])
+        command = np.array([0, 0, 0, 0, 0, 0])
         for key in moveBindings:
             if keys[ord(key)]:
                 command += moveBindings[key]
@@ -76,9 +84,9 @@ if __name__=="__main__":
         twist.linear.x = command[0]
         twist.linear.y = command[1]
         twist.linear.z = command[2]
-        twist.angular.x = 0.
-        twist.angular.y = 0.
-        twist.angular.z = command[3]
+        twist.angular.x = command[3]
+        twist.angular.y = command[4]
+        twist.angular.z = command[5]
         pub.publish(twist)
 
         pygame.display.update()
