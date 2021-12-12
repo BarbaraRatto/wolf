@@ -56,8 +56,8 @@ if __name__=="__main__":
     pygame.init()
 
     white = (255, 255, 255)
-    X = 760
-    Y = 340
+    X = 710
+    Y = 440
     display_surface = pygame.display.set_mode((X, Y))
 
     pygame.display.set_caption('Keyboard controls')
@@ -67,7 +67,7 @@ if __name__=="__main__":
 
     while not rospy.is_shutdown():
         display_surface.fill(white)
-        display_surface.blit(image, (-100, -100))
+        display_surface.blit(image, (-125, -50))
 
         pygame.event.pump()
         keys = pygame.key.get_pressed()
