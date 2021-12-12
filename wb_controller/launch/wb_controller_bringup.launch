@@ -12,7 +12,7 @@
     <arg name="gazebo" default="true" />
     <arg name="arm_enabled" default="false" />
     <arg name="arm_name" default="kinova" />
-    <arg name="input_device" default="ps3" /> <!--Supported: ps3/xbox/twist -->
+    <arg name="input_device" default="ps3" /> <!--Supported: ps3/xbox/twist/keyboard -->
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
@@ -88,8 +88,6 @@
 
 
     <group if="$(arg full_gui)">
-
-
             <!-- rt_gui node launch -->
             <!-- <include  file="$(find rt_gui)/launch/server_node.launch"/> -->
 
@@ -109,6 +107,10 @@
                 name="rviz"
                 pkg="rviz"
                 args="$(eval '-d '+find(arg('robot_name')+'_description')+'/rviz/'+arg('robot_name')+'_wbc.rviz')" />
+   </group>
+
+   <group if="$(eval input_device == 'keyboard')">
+	<node pkg="wb_controller" type="keyboard_node" name="keyboard_node" output="screen"/>
    </group>
 
 </launch>
