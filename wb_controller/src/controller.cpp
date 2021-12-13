@@ -232,6 +232,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
         ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
     }
+    else if(input_device == "keyboard")
+    {
+        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+    }
     else
     {
         ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");

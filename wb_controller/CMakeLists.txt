@@ -84,6 +84,10 @@ install(DIRECTORY params/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params
   PATTERN ".svn" EXCLUDE)
 
+install(DIRECTORY resources/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/resources
+  PATTERN ".svn" EXCLUDE)
+
 catkin_install_python(PROGRAMS scripts/keyboard_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
