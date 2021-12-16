@@ -168,11 +168,12 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
   }
   gait_generator_->setTerrainRotation(world_T_terrain_.linear());
 
-    if(robot_model_->getState() == QuadrupedRobot::robot_states_t::WALKING &&
-       (cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_))
+    if(cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_)
     {
+      if(push_detected_ && gait_generator_->getGaitType() == Gait::gait_t::CRAWL)
+        gait_generator_->setGaitType(Gait::gait_t::TROT);
+      //robot_model_->setState(QuadrupedRobot::WALKING);
       gait_generator_->activateSwing();
-      //gait_generator_->setGaitType(Gait::gait_t::TROT);
     }
     else
     {
@@ -377,7 +378,9 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->getPose(gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot_
+      robot_model_->setJointPosition(robot_model_->getJointHomePositions());
+      robot_model_->update();
+      robot_model_->getPose(gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot
       robot_model_->getPose(hips_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_hip
       tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base_
       // initial feet offsets in the horizontal frame
@@ -740,7 +743,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
 bool PushRecovery::update(const double& period)
 {
-  bool push_detected = true;
+  bool push_detected = false;
 
   //velocity_filter_.setTimeStep(period);
   th_filter_.setTimeStep(period);
@@ -786,12 +789,15 @@ bool PushRecovery::update(const double& period)
 
   current_th_dot_filt_ = th_filter_.process(current_th_dot_);
 
-  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
-    push_detected = false;
-
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-  for(unsigned int i=0;i<foot_names.size();i++) // Reset
-    deltas_[foot_names[i]].setZero();
+
+  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
+  {
+    for(unsigned int i=0;i<foot_names.size();i++) // Reset
+      deltas_[foot_names[i]].setZero();
+  }
+  else
+    push_detected = true;
 
   if (compute_deltas_ && push_detected)
   {

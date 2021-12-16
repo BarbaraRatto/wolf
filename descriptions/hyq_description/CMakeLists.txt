@@ -1,14 +1,9 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.0)
 project(hyq_description)
 
 find_package(catkin REQUIRED)
 
-
 catkin_package()
-
-install(DIRECTORY gazebo/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/gazebo
-  PATTERN ".svn" EXCLUDE)
 
 install(DIRECTORY meshes/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes
@@ -24,5 +19,13 @@ install(DIRECTORY rviz/
 
 install(DIRECTORY urdfs/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdfs
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY params/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY plotjuggler/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plotjuggler
   PATTERN ".svn" EXCLUDE)
 

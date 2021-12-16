@@ -30,6 +30,7 @@ find_package(ModelInterfaceRBDL REQUIRED)
 add_message_files(FILES
                  CartesianTask.msg
                  PosturalTask.msg
+                 ComTask.msg
                  ContactForces.msg
                  FootHolds.msg
                  TerrainEstimation.msg
@@ -83,18 +84,11 @@ install(DIRECTORY params/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params
   PATTERN ".svn" EXCLUDE)
 
-install(DIRECTORY plot_juggler_files/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plot_juggler_files
-  PATTERN ".svn" EXCLUDE)
-
-install(DIRECTORY rviz_files/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/rviz_files
+install(DIRECTORY resources/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/resources
   PATTERN ".svn" EXCLUDE)
 
 catkin_install_python(PROGRAMS scripts/keyboard_node
-   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
-catkin_install_python(PROGRAMS scripts/go0
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if (CATKIN_ENABLE_TESTING)

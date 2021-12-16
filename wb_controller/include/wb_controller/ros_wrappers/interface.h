@@ -21,116 +21,105 @@ class RosWrapperInterface
 
 public:
 
-    typedef std::shared_ptr<RosWrapperInterface> Ptr;
+  typedef std::shared_ptr<RosWrapperInterface> Ptr;
 
-    RosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
-    virtual ~RosWrapperInterface(){spinner_->stop();}
-    virtual void publish(const ros::Time& /*time*/) = 0;
+  RosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
+  virtual ~RosWrapperInterface(){spinner_->stop();}
+  virtual void publish(const ros::Time& /*time*/) = 0;
 
 protected:
 
-    std::shared_ptr<ros::AsyncSpinner> spinner_;
-    std::shared_ptr<ddynamic_reconfigure::DDynamicReconfigure> server_;
+  std::shared_ptr<ros::AsyncSpinner> spinner_;
+  std::shared_ptr<ddynamic_reconfigure::DDynamicReconfigure> server_;
 };
 
+template<class Msg_type>
 class TaskRosWrapperInterface : public RosWrapperInterface
 {
 
 public:
 
+  typedef std::shared_ptr<TaskRosWrapperInterface> Ptr;
+
   struct {
-      std::atomic<bool> set_ext_lambda    = true;
-      std::atomic<bool> set_ext_weight    = true;
-      std::atomic<bool> set_ext_gains     = true;
-      std::atomic<bool> set_ext_reference = false;
+    std::atomic<bool> set_ext_lambda    = true;
+    std::atomic<bool> set_ext_weight    = true;
+    std::atomic<bool> set_ext_gains     = true;
+    std::atomic<bool> set_ext_reference = false;
   } OPTIONS;
 
-    typedef std::shared_ptr<TaskRosWrapperInterface> Ptr;
+  TaskRosWrapperInterface(const std::string& task_name, ros::NodeHandle& nh)
+  {
+    task_name_ = task_name;
+    nh_ = nh;
+    rt_pub_.reset(new realtime_tools::RealtimePublisher<Msg_type>(nh_,task_name_, 4));
+    ros::NodeHandle task_nh(task_name_);
+    server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(task_nh));
+  }
 
-    TaskRosWrapperInterface() {}
-    virtual ~TaskRosWrapperInterface(){}
+  virtual ~TaskRosWrapperInterface(){}
 
-    /**
-     * @brief setExternalLambda set the external lambda 1 and 2 to the task, RT-SAFE
-     */
-    virtual void setExternalLambda() {}
-    /**
-     * @brief getExternalLambda, RT-SAFE
-     * @return return the lambda created from the dynamic reconfigure interface
-     */
-    virtual void getExternalLambda(double& /*lambda1*/, double& /*lambda2*/) {}
-    /**
-     * @brief setExternalReference set the external reference to the task, RT-SAFE
-     */
-    virtual void setExternalReference() {}
-    /**
-     * @brief getExternalReference, RT-SAFE
-     * @return return the reference created by the interactive marker
-     */
-    virtual Eigen::Affine3d& getExternalReference() {}
-    /**
-     * @brief setExternalGains set the external gains to the task, RT-SAFE
-     */
-    virtual void setExternalGains() {}
-    /**
-     * @brief getExternalGains, RT-SAFE
-     * @return return the gains created by the dynamic reconfigure interface
-     */
-    template<typename Derived>
-    void getExternalGains(Eigen::MatrixBase<Derived>& /*Kp*/, Eigen::MatrixBase<Derived>& /*Kd*/) {}
-    /**
-     * @brief getExternalKp, RT-SAFE
-     * @return return the Kp gain
-     */
-    template<typename Derived>
-    Eigen::MatrixBase<Derived>& getExternalKp() {}
-    /**
-     * @brief getExternalKd, RT-SAFE
-     * @return return the Kd gain
-     */
-    template<typename Derived>
-    Eigen::MatrixBase<Derived>& getExternalKd() {}
+  virtual void loadParams() = 0;
 
-    /**
-     * @brief update performs the sets from NON-RT to RT, RT-SAFE
-     */
-    virtual void update() = 0;
+  virtual void registerReconfigurableVariables() = 0;
 
-    virtual void reset() {};
+  virtual void updateCost(const Eigen::VectorXd& x) = 0;
 
-    virtual void computeCost(Eigen::VectorXd& x) {};
+  void setLambda1(double value)    {buffer_lambda1_ = value;     ROS_INFO_STREAM(task_name_<<" - "<<"Set lambda1: "<<value);}
+  void setLambda2(double value)    {buffer_lambda2_ = value;     ROS_INFO_STREAM(task_name_<<" - "<<"Set lambda2: "<<value);}
+  void setWeightDiag(double value) {buffer_weight_diag_ = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set weight diagonal: "<<value);}
 
- protected:
+  void setKpX(double value)     { buffer_kp_x_     = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kp(0,0): "<<value); }
+  void setKpY(double value)     { buffer_kp_y_     = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kp(1,1): "<<value); }
+  void setKpZ(double value)     { buffer_kp_z_     = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kp(2,2): "<<value); }
+  void setKpRoll(double value)  { buffer_kp_roll_  = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kp(3,3): "<<value); }
+  void setKpPitch(double value) { buffer_kp_pitch_ = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kp(4,4): "<<value); }
+  void setKpYaw(double value)   { buffer_kp_yaw_   = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kp(5,5): "<<value); }
 
-    Eigen::VectorXd       tmp_vectorxd_;
-    Eigen::Affine3d       tmp_affine3d_;
-    Eigen::Vector6d       tmp_vector6d_;
-    Eigen::Vector3d       tmp_vector3d_;
-    Eigen::Quaterniond    tmp_quaterniond_;
+  void setKdX(double value)     { buffer_kd_x_     = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kd(0,0): "<<value); }
+  void setKdY(double value)     { buffer_kd_y_     = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kd(1,1): "<<value); }
+  void setKdZ(double value)     { buffer_kd_z_     = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kd(2,2): "<<value); }
+  void setKdRoll(double value)  { buffer_kd_roll_  = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kd(3,3): "<<value); }
+  void setKdPitch(double value) { buffer_kd_pitch_ = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kd(4,4): "<<value); }
+  void setKdYaw(double value)   { buffer_kd_yaw_   = value; ROS_INFO_STREAM(task_name_<<" - "<<"Set Kd(5,5): "<<value); }
 
-    realtime_tools::RealtimeBuffer<Eigen::Affine3d> rt_pose_reference_;
+protected:
 
-    std::atomic<double> rt_lambda1_;
-    std::atomic<double> rt_lambda2_;
-    std::atomic<double> rt_weight_diag_;
+  ros::NodeHandle       nh_;
 
-    std::atomic<double> rt_kp_x_;
-    std::atomic<double> rt_kp_y_;
-    std::atomic<double> rt_kp_z_;
-    std::atomic<double> rt_kp_roll_;
-    std::atomic<double> rt_kp_pitch_;
-    std::atomic<double> rt_kp_yaw_;
+  std::string           task_name_;
 
-    std::atomic<double> rt_kd_x_;
-    std::atomic<double> rt_kd_y_;
-    std::atomic<double> rt_kd_z_;
-    std::atomic<double> rt_kd_roll_;
-    std::atomic<double> rt_kd_pitch_;
-    std::atomic<double> rt_kd_yaw_;
+  Eigen::VectorXd       tmp_vectorXd_;
+  Eigen::Affine3d       tmp_affine3d_;
+  Eigen::Vector6d       tmp_vector6d_;
+  Eigen::Vector3d       tmp_vector3d_;
+  Eigen::Matrix6d       tmp_matrix6d_;
+  Eigen::Matrix3d       tmp_matrix3d_;
+  Eigen::Quaterniond    tmp_quaterniond_;
 
-    double cost_;
+  realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_pose_reference_;
 
-    std::string task_id_;
+  std::atomic<double> buffer_lambda1_;
+  std::atomic<double> buffer_lambda2_;
+  std::atomic<double> buffer_weight_diag_;
+
+  std::atomic<double> buffer_kp_x_;
+  std::atomic<double> buffer_kp_y_;
+  std::atomic<double> buffer_kp_z_;
+  std::atomic<double> buffer_kp_roll_;
+  std::atomic<double> buffer_kp_pitch_;
+  std::atomic<double> buffer_kp_yaw_;
+
+  std::atomic<double> buffer_kd_x_;
+  std::atomic<double> buffer_kd_y_;
+  std::atomic<double> buffer_kd_z_;
+  std::atomic<double> buffer_kd_roll_;
+  std::atomic<double> buffer_kd_pitch_;
+  std::atomic<double> buffer_kd_yaw_;
+
+  std::shared_ptr<realtime_tools::RealtimePublisher<Msg_type>> rt_pub_;
+
+  double cost_;
 
 };
 

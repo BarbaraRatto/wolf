@@ -8,15 +8,19 @@
    <!-- This argument allows us to load joint sensors that measure the internal wrenches -->
    <xacro:arg name="load_force_sensors" default="false"/>
    <xacro:arg name="task_period" default="0.004"/>
+   <xacro:arg name="floating_base_link" default="true"/>
+   <xacro:arg name="robot_name"  default="anymalc"/>
+   <xacro:arg name="base_name"   default="base"/>
+
+   <!-- load generic materials -->
+   <xacro:include filename="$(find wolf_description_utils)/urdfs/materials.xacro"/>
 
    <!-- generic simulator_gazebo plugins for starting mechanism control, ros time -->
-   <xacro:include filename="$(find anymalc_description)/gazebo/gazebo.urdf.xacro">
-        <xacro:arg name="task_period" value="$(arg task_period)"/>
-   </xacro:include> -->
+   <xacro:include filename="$(find wolf_description_utils)/urdfs/gazebo.urdf.xacro"/>
 
-    legs transmission -->
-   <xacro:include filename="$(find anymalc_description)/urdfs/leg.transmission.xacro"/>
-   <xacro:include filename="$(find anymalc_description)/urdfs/leg.gazebo.xacro"/>
+   <!-- legs transmission and gazebo plugins -->
+   <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.transmission.xacro"/>
+   <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.gazebo.xacro"/>
 
     <!-- Base link -->
     <link name="base">
@@ -66,12 +70,14 @@
     </link>
 
     <!-- Floating-base Joint -->
-    <link name="world"/>
-    <joint name="floating_base_joint" type="floating">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <parent link="world"/>
-      <child link="base"/>
-    </joint>
+    <xacro:if value="$(arg floating_base_link)">
+            <link name="world"/>
+            <joint name="floating_base_joint" type="floating">
+              <origin rpy="0 0 0" xyz="0 0 0"/>
+              <parent link="world"/>
+              <child link="base"/>
+            </joint>
+    </xacro:if>
 
     <!-- Fixed joint to add dummy inertia link -->
     <joint name="base_to_base_inertia" type="fixed">
@@ -577,7 +583,7 @@
     </joint>
     <!-- Camera color optical link -->
     <link name="depth_camera_right_color_optical_frame"/>
-    <!-- parent to cage joint, located between mounting plate on trunk and the cage -->
+    <!-- parent to cage joint, located between mounting plate on base and the cage -->
     <joint name="base_to_lidar_cage" type="fixed">
         <parent link="base"/>
         <child link="lidar_cage"/>
@@ -1621,17 +1627,14 @@
     </link>
 
     <!-- Extensions -->
-    <xacro:leg_transmission name="rf"/>
-    <xacro:leg_gazebo name="rf" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="lf"/>
-    <xacro:leg_gazebo name="lf" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="rh"/>
-    <xacro:leg_gazebo name="rh" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="lh"/>
-    <xacro:leg_gazebo name="lh" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="rf"/>
+    <xacro:leg_gazebo prefix="rf" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="lf"/>
+    <xacro:leg_gazebo prefix="lf" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="rh"/>
+    <xacro:leg_gazebo prefix="rh" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="lh"/>
+    <xacro:leg_gazebo prefix="lh" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
 
 
 </robot>

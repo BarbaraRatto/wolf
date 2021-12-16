@@ -1,13 +1,9 @@
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.0.0)
 project(minicheetah_description)
 
 find_package(catkin REQUIRED COMPONENTS)
 
 catkin_package()
-
-install(DIRECTORY gazebo/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/gazebo
-  PATTERN ".svn" EXCLUDE)
 
 install(DIRECTORY meshes/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes
@@ -17,6 +13,19 @@ install(DIRECTORY robots/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/robots
   PATTERN ".svn" EXCLUDE)
 
+install(DIRECTORY rviz/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/rviz
+  PATTERN ".svn" EXCLUDE)
+
 install(DIRECTORY urdfs/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdfs
   PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY params/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params
+  PATTERN ".svn" EXCLUDE)
+
+install(DIRECTORY plotjuggler/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/plotjuggler
+  PATTERN ".svn" EXCLUDE)
+

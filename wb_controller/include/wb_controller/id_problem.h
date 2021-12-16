@@ -46,8 +46,6 @@ public:
 
     typedef std::shared_ptr<IDProblem> Ptr;
 
-    enum stacks_t {NONE=0,WALKING,MANIPULATION};
-
     /**
      * @brief IDProblem constructor
      * @param ros node handle
@@ -102,7 +100,6 @@ public:
      */
     void setFrictionConesR(const Eigen::Matrix3d& R);
 
-
     /**
      * @brief set the pose and velocity reference for the feet,
      * note that the foot tasks are defined wrt the base frame
@@ -152,21 +149,6 @@ public:
     void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
 
     /**
-         * @brief Select the stack type to use
-         */
-    void selectStack(const stacks_t &stack);
-
-    /**
-         * @brief Get the current stack type
-         */
-    unsigned int getCurrentStack();
-
-    /**
-         * @brief Switch between WALKING and MANIPULATION stack
-         */
-    void switchStack();
-
-    /**
      * @brief get the mu parameter for the friction cones
      */
     double getFrictionConesMu() const;
@@ -174,23 +156,18 @@ public:
     /**
      * @brief Cartesian tasks
      */
-    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> feet_;
-    std::map<std::string,OpenSoT::tasks::acceleration::Cartesian::Ptr> arms_;
-    OpenSoT::tasks::acceleration::Cartesian::Ptr waistRPY_;
-    OpenSoT::tasks::acceleration::Cartesian::Ptr waistZ_;
-    OpenSoT::tasks::acceleration::CoM::Ptr com_;
-    OpenSoT::tasks::acceleration::AngularMomentum::Ptr angular_momentum_;
+    std::map<std::string,Cartesian::Ptr> feet_;
+    std::map<std::string,Cartesian::Ptr> arms_;
+    Cartesian::Ptr waistRPY_;
+    Cartesian::Ptr waistZ_;
+    CoM::Ptr com_;
+    AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
-
-    /**
-     * @brief Expose the tasks to ROS
-     */
-    std::map<std::string,TaskRosWrapperInterface::Ptr> tasks_ros_;
 
     /**
      * @brief postural_ a postural task
      */
-    OpenSoT::tasks::acceleration::Postural::Ptr postural_;
+    Postural::Ptr postural_;
 
     /**
      * @brief torque_lims_ some bounds
@@ -227,7 +204,7 @@ private:
     /**
      * @brief map of stacks
      */
-    std::map<unsigned int,OpenSoT::AutoStack::Ptr> stacks_;
+    OpenSoT::AutoStack::Ptr stack_;
 
     /**
      * @brief solver_ iHQP solver
@@ -274,9 +251,7 @@ private:
 
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
-    std::atomic<unsigned int> current_stack_;
-
-    std::mutex solver_lock_;
+    std::atomic<unsigned int> current_robot_state_;
 
     std::vector<std::string> foot_names_;
     std::vector<std::string> ee_names_;

@@ -186,32 +186,50 @@ namespace wb_gazebo_interface
     base_orientation_[2] = gzPose.Rot().Y();
     base_orientation_[3] = gzPose.Rot().Z();
 
-
     //IMU data:
     ignition::math::Quaterniond imu_quat(1, 0, 0, 0);
     ignition::math::Vector3d imu_ang_vel(0, 0, 0);
     ignition::math::Vector3d imu_lin_acc(0, 0, 0);
 
-    if(imu_sensor_ != NULL)
+    // In this case we are using the IMU sensor which has angular velocities and accelerations defined wrt the trunk/base
+    if(imu_sensor_ != nullptr)
     {
       imu_quat    = imu_sensor_->Orientation();
       imu_ang_vel = imu_sensor_->AngularVelocity();
       imu_lin_acc = imu_sensor_->LinearAcceleration();
     }
+    // In this case we need to transform the angular velocities and accelerations from world measurements (Gazebo) to trunk/base (IMU)
     else
     {
+      quaterniond_tmp_.w() = gzPose.Rot().W();
+      quaterniond_tmp_.x() = gzPose.Rot().X();
+      quaterniond_tmp_.y() = gzPose.Rot().Y();
+      quaterniond_tmp_.z() = gzPose.Rot().Z();
+      quaterniond_tmp_.normalize();
+      world_R_base_ = quaterniond_tmp_.toRotationMatrix();
+
       imu_quat.W() = gzPose.Rot().W();
       imu_quat.X() = gzPose.Rot().X();
       imu_quat.Y() = gzPose.Rot().Y();
       imu_quat.Z() = gzPose.Rot().Z();
 
-      imu_ang_vel.X() = gzAngularVel.X();
-      imu_ang_vel.Y() = gzAngularVel.Y();
-      imu_ang_vel.Z() = gzAngularVel.Z();
+      vector3d_tmp_ << static_cast<double>(gzAngularVel.X()),
+                       static_cast<double>(gzAngularVel.Y()),
+                       static_cast<double>(gzAngularVel.Z());
+      vector3d_tmp_ = world_R_base_.transpose() * vector3d_tmp_; // base_angular_vel = base_R_world * world_angular_vel
 
-      imu_lin_acc.X() =  base_ang_acc_[0];
-      imu_lin_acc.Y() =  base_ang_acc_[1];
-      imu_lin_acc.Z() =  base_ang_acc_[2];
+      imu_ang_vel.X() = vector3d_tmp_(0);
+      imu_ang_vel.Y() = vector3d_tmp_(1);
+      imu_ang_vel.Z() = vector3d_tmp_(2);
+
+      vector3d_tmp_ << static_cast<double>(base_ang_acc_[0]),
+                       static_cast<double>(base_ang_acc_[1]),
+                       static_cast<double>(base_ang_acc_[2]);
+      vector3d_tmp_ = world_R_base_.transpose() * vector3d_tmp_; // base_angular_acc = base_R_world * world_angular_acc
+
+      imu_lin_acc.X() = vector3d_tmp_(0);
+      imu_lin_acc.Y() = vector3d_tmp_(1);
+      imu_lin_acc.Z() = vector3d_tmp_(2);
     }
 
     imu_orientation_[0] = imu_quat.W();

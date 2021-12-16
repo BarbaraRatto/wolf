@@ -8,24 +8,27 @@
     <xacro:arg name="arm_enabled" default="false"/>
     <xacro:arg name="arm_name" default="kinova"/>
     <xacro:arg name="sensors" default="false"/>
+    <xacro:arg name="floating_base_link" default="true"/>
+    <xacro:arg name="robot_name"  default="aliengo"/>
+    <xacro:arg name="base_name"   default="trunk"/>
 
-    <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
-    <xacro:include filename="$(find aliengo_description)/urdfs/materials.xacro"/>
-    <xacro:include filename="$(find aliengo_description)/urdfs/leg.xacro"/>
-
-    <!-- legs transmission -->
-    <xacro:include filename="$(find aliengo_description)/urdfs/leg.transmission.xacro"/>
-    <xacro:include filename="$(find aliengo_description)/urdfs/leg.gazebo.xacro"/>
+    <!-- load generic materials -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/materials.xacro"/>
 
     <!-- generic simulator_gazebo plugins for starting mechanism control, ros time -->
-    <xacro:include filename="$(find aliengo_description)/gazebo/gazebo.urdf.xacro">
-         <xacro:arg name="task_period" value="$(arg task_period)"/>
-    </xacro:include>
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/gazebo.urdf.xacro"/>
+
+    <!-- legs transmission and gazebo plugins -->
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.transmission.xacro"/>
+    <xacro:include filename="$(find wolf_description_utils)/urdfs/leg.gazebo.xacro"/>
 
     <!-- sensors -->
     <xacro:if value="$(arg sensors)">
         <xacro:include filename="$(find sensors_description)/urdfs/sensors/imu.gazebo.xacro"/>
     </xacro:if>
+
+    <xacro:include filename="$(find aliengo_description)/urdfs/const.xacro"/>
+    <xacro:include filename="$(find aliengo_description)/urdfs/leg.xacro"/>
 
     <!-- Rollover Protection mode will add an additional stick on the top, use "true" or "false" to switch it. -->
     <xacro:property name="rolloverProtection" value="false"/>
@@ -40,27 +43,15 @@
         </joint>
     </xacro:if>  -->
 
-    <link name="base_link">
-        <visual>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
-            <geometry>
-                <box size="0.001 0.001 0.001"/>
-            </geometry>
-        </visual>
-    </link>
-
     <!-- Floating-base Joint -->
-    <link name="world"/>
-    <joint name="floating_base_joint" type="floating">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <parent link="world"/>
-      <child link="base_link"/>
-    </joint>
-    <joint name="floating_base" type="fixed">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <parent link="base_link"/>
-      <child link="trunk"/>
-    </joint>
+    <xacro:if value="$(arg floating_base_link)">
+            <link name="world"/>
+            <joint name="floating_base_joint" type="floating">
+              <origin rpy="0 0 0" xyz="0 0 0"/>
+              <parent link="world"/>
+              <child link="trunk"/>
+            </joint>
+    </xacro:if>
 
     <link name="trunk">
         <visual>
@@ -169,17 +160,14 @@
     <!-- <xacro:stairs stairs="15" xpos="0" ypos="2.0" zpos="0" /> -->
 
     <!-- Extensions -->
-    <xacro:leg_transmission name="rf"/>
-    <xacro:leg_gazebo name="rf" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="lf"/>
-    <xacro:leg_gazebo name="lf" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="rh"/>
-    <xacro:leg_gazebo name="rh" load_force_sensors="$(arg load_force_sensors)"/>
-
-    <xacro:leg_transmission name="lh"/>
-    <xacro:leg_gazebo name="lh" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="rf"/>
+    <xacro:leg_gazebo prefix="rf" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="lf"/>
+    <xacro:leg_gazebo prefix="lf" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="rh"/>
+    <xacro:leg_gazebo prefix="rh" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
+    <xacro:leg_transmission prefix="lh"/>
+    <xacro:leg_gazebo prefix="lh" robot_name="$(arg robot_name)" load_force_sensors="$(arg load_force_sensors)"/>
 
     <xacro:if value="$(arg arm_enabled)">
            <xacro:include filename="$(find aliengo_description)/urdfs/arm/$(arg arm_name)_adapter.urdf.xacro" /> -->
@@ -189,7 +177,7 @@
             <xacro:imu_sensor
                 imu_name="trunk_imu"
                 imu_topic="trunk_imu/data"
-                update_rate="250"
+                update_rate="${1.0 / $(arg task_period)}"
                 rate_mean="0"
                 rate_stddev="0"
                 rate_bias_mean="0"

@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <launch>
 
-    <arg name="robot_name" default="hyq"/>
+    <arg name="robot_name" default="spot"/>
     <arg name="sensors" default="false" />
     <arg name="internal_wrench" default="false" />
     <arg name="world_name" default="empty.world" />
@@ -11,18 +11,18 @@
     <arg name="full_gui" default="false" />
     <arg name="gazebo" default="true" />
     <arg name="arm_enabled" default="false" />
-    <arg name="arm_name" default="teleop" />
-    <arg name="xbox"     default="false" />
+    <arg name="arm_name" default="kinova" />
+    <arg name="input_device" default="ps3" /> <!--Supported: ps3/xbox/twist/keyboard -->
 
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
     <param name="internal_wrench" value="$(arg internal_wrench)"/>
     <param name="robot_name" type="str"  value="$(arg robot_name)" />
-    <param name="use_xbox_controller" value="$(arg xbox)"/>
+    <param name="input_device" value="$(arg input_device)"/>
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">
-            <include file="$(find wb_controller)/launch/world.launch">
+            <include file="$(find wolf_description_utils)/launch/world.launch">
                 <arg name="sensors" value="$(arg sensors)" />
                 <arg name="robot_name" value="$(arg robot_name)" />
                 <arg name="internal_wrench" value="$(arg internal_wrench)" />
@@ -34,11 +34,11 @@
                 <arg name="debug" value="$(arg gazebo_debug)"/>
             </include>
             <!-- Set the robot to the home position loaded from the SRDF file -->
-            <node name="goto0" pkg="wb_controller" type="go0"/>
+            <node name="goto0" pkg="wolf_description_utils" type="go0"/>
     </group>
 
     <group unless="$(arg gazebo)">
-        <include file="$(find wb_controller)/launch/upload.launch">
+        <include file="$(find wolf_description_utils)/launch/upload.launch">
            <arg name="sensors" value="$(arg sensors)" />
            <arg name="robot_name" value="$(arg robot_name)" />
            <arg name="arm_enabled" value="$(arg arm_enabled)"/>
@@ -52,10 +52,10 @@
 
     <!-- Load controller config -->
     <group if="$(arg arm_enabled)">
-          <rosparam command="load" file="$(find wb_controller)/params/$(arg robot_name)_$(arg arm_name)_params.yaml" ns="$(arg robot_name)"/>
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_'+arg('arm_name')+'_params.yaml')" ns="$(arg robot_name)"/>
     </group>
     <group unless="$(arg arm_enabled)">
-          <rosparam command="load" file="$(find wb_controller)/params/$(arg robot_name)_params.yaml" ns="$(arg robot_name)"/>
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_params.yaml')" ns="$(arg robot_name)"/>
     </group>
 
     <!-- Spawn our controller and its friends -->
@@ -88,8 +88,6 @@
 
 
     <group if="$(arg full_gui)">
-
-
             <!-- rt_gui node launch -->
             <!-- <include  file="$(find rt_gui)/launch/server_node.launch"/> -->
 
@@ -100,7 +98,7 @@
 
             <!-- plotJuggler -->
             <node pkg="plotjuggler" type="plotjuggler" name="plotjuggler" ns="/$(arg robot_name)/wb_controller"
-                args="--layout $(find wb_controller)/plot_juggler_files/$(arg robot_name).xml --nosplash">
+                args="$(eval '--layout '+find(arg('robot_name')+'_description')+'/plotjuggler/'+arg('robot_name')+'.xml --nosplash')">
             </node>
 
             <!-- Rviz -->
@@ -108,7 +106,11 @@
                 type="rviz"
                 name="rviz"
                 pkg="rviz"
-                args="-d $(find wb_controller)/rviz_files/$(arg robot_name)_wbc.rviz" />
+                args="$(eval '-d '+find(arg('robot_name')+'_description')+'/rviz/'+arg('robot_name')+'_wbc.rviz')" />
+   </group>
+
+   <group if="$(eval input_device == 'keyboard')">
+	<node pkg="wb_controller" type="keyboard_node" name="keyboard_node" output="screen"/>
    </group>
 
 </launch>

@@ -189,6 +189,11 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     base_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
   }
 
+  // Get home position
+  getRobotState("home", qhome_);
+  if(!checkJointLimits(qhome_))
+    throw std::runtime_error("home joint positions are out of the limits! Check the SRDF file!");
+
   // Get inertias
   getInertiaMatrix(tmp_M_);
   getInertiaInverse(tmp_Mi_);
@@ -215,12 +220,12 @@ bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
         if(q(i)<q_min_(i))
         {
             q(i) = q_min_(i);
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum POSITION limit of "<<q_min_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the minimum POSITION limit of "<<q_min_(i));
             violated_limits = true;
         } else if(q(i)>q_max_(i))
         {
             q(i) = q_max_(i);
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum POSITION limit of "<<q_max_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum POSITION limit of "<<q_max_(i));
             violated_limits = true;
         }
     }
@@ -235,7 +240,7 @@ bool QuadrupedRobot::clampJointEfforts(Eigen::VectorXd &tau)
     {
         if(std::abs(tau(i))>tau_max_(i)+EPS)
         {
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum EFFORT limit of "<<tau_max_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum EFFORT limit of "<<tau_max_(i));
             violated_limits = true;
         }
     }
@@ -251,7 +256,7 @@ bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
         if(std::abs(qdot(i))>qdot_max_(i))
         {
             qdot(i) = qdot_max_(i);
-            ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
+            ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
             violated_limits = true;
         }
     }
@@ -513,6 +518,11 @@ bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
 {
   robot_state_ = state;
   return true;
+}
+
+const Eigen::VectorXd& QuadrupedRobot::getJointHomePositions()
+{
+  return qhome_;
 }
 
 };

@@ -12,6 +12,7 @@
 #include <wb_controller/controller.h>
 #include <wb_controller/ros_wrappers/controller.h>
 #include <wb_controller/devices/joy.h>
+#include <wb_controller/devices/twist.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -28,8 +29,7 @@ std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
 
 Controller::Controller()
-    :solver_created_(false)
-    ,solver_active_(false)
+    :solver_active_(false)
     ,init_done_(false)
     ,pid_active_(true)
     ,inertia_compensation_active_(true)
@@ -191,43 +191,59 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    des_joint_positions_.fill(0.0);
+    des_joint_positions_ = robot_model_->getJointHomePositions();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
     imu_orientation_.normalize();
     pid_scale_ = 1.0;
 
-    gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT,"ellipse");
+    gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
-    state_estimator_ = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
+    state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
+    legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
 
-    legs_impedance_.reset(new LegsImpedance(gait_generator_,robot_model_));
-
-    terrain_estimator_.reset(new TerrainEstimator(state_estimator_,foot_holds_planner_,robot_model_));
-
+    terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
     terrain_estimator_->setMinRoll(-M_PI);
     terrain_estimator_->setMaxPitch(M_PI);
     terrain_estimator_->setMinPitch(-M_PI);
 
-    legs_kinematics_.reset(new LegsKinematics(gait_generator_,robot_model_,terrain_estimator_));
-    des_joint_positions_ = legs_kinematics_->getJointHomePositions();
+    legs_kinematics_ = std::make_shared<LegsKinematics>(gait_generator_,robot_model_,terrain_estimator_);
 
-    com_planner_.reset(new ComPlanner(robot_model_,foot_holds_planner_,terrain_estimator_));
+    com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
 
-    id_prob_.reset(new IDProblem(nh_,robot_model_,period_));
+    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
-    device_handler_ = std::make_shared<JoyHandler>(controller_nh,this);
-    bool xbox = false;
-    root_nh.getParam("/use_xbox_controller",xbox);
-    if(!xbox)
-        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller");
+    std::string input_device = "ps3";
+    root_nh.getParam("/input_device",input_device);
+    if(input_device == "ps3")
+    {
+        device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller device");
+    }
+    else if(input_device == "xbox")
+    {
+        device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller device");
+    }
+    else if(input_device == "twist")
+    {
+        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+    }
+    else if(input_device == "keyboard")
+    {
+        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+    }
     else
-        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller");
-    std::dynamic_pointer_cast<JoyHandler>(device_handler_)->setXBOXController(xbox);
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
+        return false;
+    }
 
     // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this)); // FIXME
+    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
@@ -310,34 +326,35 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     return true;
 }
 
-bool Controller::selectStack(const std::string& stack)
+bool Controller::selectControlMode(const std::string& mode)
 {
-    if(id_prob_)
+    if(robot_model_)
     {
-        if(stack == "WALKING")
-            id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-        else if(stack == "MANIPULATION")
-            id_prob_->selectStack(IDProblem::stacks_t::MANIPULATION);
+        if(mode == "WALKING")
+            robot_model_->setState(QuadrupedRobot::WALKING);
+        else if(mode == "MANIPULATION")
+            robot_model_->setState(QuadrupedRobot::MANIPULATION);
         else
         {
-            ROS_ERROR_NAMED(CLASS_NAME,"Wrong stack!");
+            ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
             return false;
         }
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected stack "<< stack);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
     }
     return true;
 }
 
-void Controller::switchStack()
+void Controller::switchControlMode()
 {
-    if(id_prob_)
-    {
-        id_prob_->switchStack();
-        legs_kinematics_->reset(); // FIXME no THREAD SAFE, to move in the main loop and check for the switch! something like switched = true ... still bouncing
-        foot_holds_planner_->reset();
-    }
-    else
-        ROS_WARN_NAMED(CLASS_NAME,"Did you press start?");
+   if(robot_model_)
+   {
+     if(robot_model_->getState() == QuadrupedRobot::WALKING)
+       robot_model_->setState(QuadrupedRobot::MANIPULATION);
+     else
+       robot_model_->setState(QuadrupedRobot::WALKING);
+   }
+   //legs_kinematics_->reset();
+   //foot_holds_planner_->reset();
 }
 
 bool Controller::selectGait(const string& gait)
@@ -385,13 +402,6 @@ bool Controller::setDutyFactor(const double& duty_factor)
 
 void Controller::startSolver(const bool& start)
 {
-    if(!solver_created_)
-    {
-        ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-        solver_created_ = true;
-    }
-
     // Perform the init procedure
     init_done_ = false;
 
@@ -410,13 +420,6 @@ bool Controller::isSolverActive() const
 
 void Controller::toggleSolver()
 {
-    if(!solver_created_)
-    {
-        ROS_INFO_NAMED(CLASS_NAME,"Reset the solver");
-        id_prob_->selectStack(IDProblem::stacks_t::WALKING);
-        solver_created_ = true;
-    }
-
     // Perform the init procedure
     init_done_ = false;
 
@@ -519,8 +522,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
     if(state_estimator_->getOrientationEstimationType() == "ground_truth")
     {
-        state_estimator_->setGroundTruthBaseOrientation(imu_orientation_);
-        state_estimator_->setGroundTruthBaseAngularVelocity(imu_gyroscope_filt_);
+        ground_truth_orientation_.w() = ground_truth_.getOrientation()[0];
+        ground_truth_orientation_.x() = ground_truth_.getOrientation()[1];
+        ground_truth_orientation_.y() = ground_truth_.getOrientation()[2];
+        ground_truth_orientation_.z() = ground_truth_.getOrientation()[3];
+        state_estimator_->setGroundTruthBaseOrientation(ground_truth_orientation_);
+        state_estimator_->setGroundTruthBaseAngularVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getAngularVelocity()));
     }
     else
     {
@@ -555,14 +562,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->initializeFeetPosition();
-
             legs_kinematics_->reset();
 
-            des_joint_positions_ = legs_kinematics_->getJointHomePositions();
+            des_joint_positions_ = robot_model_->getJointHomePositions();
             des_joint_velocities_.fill(0.0);
 
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
+
+            robot_model_->setState(QuadrupedRobot::WALKING);
 
             init_done_ = true;
         }
@@ -576,7 +584,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
 
         // Set the velocity and position reference for the Com
-        com_planner_->update(period.toSec());
+        com_planner_->update();
         id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
         id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
@@ -628,7 +636,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
     else
     {
-        des_joint_positions_ = legs_kinematics_->getJointHomePositions();
+        //des_joint_positions_ = legs_kinematics_->getJointHomePositions();
         des_joint_velocities_.fill(0.0);
         des_joint_efforts_solver_.fill(0.0);
     }

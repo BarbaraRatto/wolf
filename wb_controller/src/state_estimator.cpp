@@ -379,7 +379,7 @@ void StateEstimator::updateFloatingBase(const double& period)
 
   // Note: we assume that the IMU is orientated as the base/waist of the robot
   // if this is not the case, it is necessary to add a transfomation from the IMU frame to the
-  // base/waist frame
+  // base/trunk frame
 
   switch(estimation_orientation)
   {
@@ -393,8 +393,7 @@ void StateEstimator::updateFloatingBase(const double& period)
     quatToRotMat(imu_orientation_.normalized(),base_R_world_);
     rotTorpy(base_R_world_,base_rpy_);
     floating_base_pose_.linear() = base_R_world_.transpose();
-    //IMU is in base frame in the real robot while in gazebo is in the world frame
-#ifdef ROBOT_REAL
+#ifdef ANGULAR_VELOCITIES_WRT_BASE
     floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
 #else
     floating_base_velocity_.segment(3,3) = imu_gyroscope_;
@@ -408,33 +407,24 @@ void StateEstimator::updateFloatingBase(const double& period)
       rotTorpy(base_R_world_,base_rpy_);
       reset_gyro_integration_done_ = true;
     }
-#ifdef ROBOT_REAL
-    //IMU is in base frame in the real robot
+#ifdef ANGULAR_VELOCITIES_WRT_BASE
     rpyToEarBase(base_rpy_,mapRPYderivativesToOmega_);
 #else
-    //IMU in gazebo is in the world frame
     rpyToEarWorld(base_rpy_,mapRPYderivativesToOmega_);
 #endif
     // Map the omegas in the base into rpy derivatives and integrate
     base_rpy_ += (mapRPYderivativesToOmega_.inverse() * imu_gyroscope_) * period;
-
-#ifdef ROBOT_REAL
     // Overwrite measures if one of them is more noisy (e.g. only yaw is noisy)
-    quatToRotMat(imu_orientation_.normalized(),raw_base_R_world_);
-    rotTorpy(raw_base_R_world_,raw_base_rpy_);
-    base_rpy_.head(2) = raw_base_rpy_.head(2);
-#endif
-
+    //quatToRotMat(imu_orientation_.normalized(),raw_base_R_world_);
+    //rotTorpy(raw_base_R_world_,raw_base_rpy_);
+    //base_rpy_.head(2) = raw_base_rpy_.head(2);
     //set the affine transformation for angular position
     rpyToRot(base_rpy_, base_R_world_);
     floating_base_pose_.linear() = base_R_world_.transpose();
-
-    //set the affine transformation for angular velocity
-#ifdef ROBOT_REAL
-    //IMU is in base frame in the real robot
+    // Set the affine transformation for angular velocity
+#ifdef ANGULAR_VELOCITIES_WRT_BASE
     floating_base_velocity_.segment(3,3) = base_R_world_.transpose() * imu_gyroscope_;
 #else
-    //IMU in gazebo is in the world frame
     floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 #endif
 

@@ -13,6 +13,8 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
 
   com_velocity_ref_.setZero();
   com_position_ref_.setZero();
+
+  update_ = true;
   computeComPositionReference();
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_velocity_ref",com_velocity_ref_);
@@ -21,6 +23,8 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
 
 void ComPlanner::computeSupportPolygonCenter()
 {
+  // Note: the com position reference has to be defined wrt world because
+  // the com task is wrt world
   auto foot_positions = robot_model_->getFeetPositionInWorld();
   auto foot_names = foothold_planner_->getFootNames();
   support_polygon_center_.setZero();
@@ -32,7 +36,20 @@ void ComPlanner::computeSupportPolygonCenter()
 
 void ComPlanner::computeComPositionReference()
 {
-  computeSupportPolygonCenter();
+  // Update the support polygon everytime there is a touchdown
+  //if(foothold_planner_->isAnyFootInTouchDown())
+  //  update_ = true;
+
+  // If all feet in stance then update the support polygon center
+  if (foothold_planner_->areAllFeetInStance())
+  {
+    //if(update_)
+    //{
+      computeSupportPolygonCenter();
+      update_ = false;
+    //}
+  }
+
   com_position_ref_ << support_polygon_center_(0), support_polygon_center_(1), foothold_planner_->getBaseHeight();
 }
 
@@ -56,24 +73,10 @@ void ComPlanner::computeComVelocityReference()
     com_velocity_ref_ = 1.0 * com_velocity_ref_;
 }
 
-void ComPlanner::update(double /*dt*/)
+void ComPlanner::update()
 {
-
-   computeComVelocityReference();
-
-   // Update the support polygon everytime there is a touchdown
-   //if(foothold_planner_->isAnyFootInTouchDown())
-   //  update_ = true;
-
-   // If all feet in stance then update the support polygon center
-   if (foothold_planner_->areAllFeetInStance())
-   {
-     //if(update_)
-     //{
-       computeComPositionReference();
-       update_ = false;
-     //}
-   }
+  computeComVelocityReference();
+  computeComPositionReference();
 }
 
 const Eigen::Vector3d &ComPlanner::getComVelocity() const

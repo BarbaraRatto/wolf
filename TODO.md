@@ -1,23 +1,22 @@
 # TODO list
 
-- Change name to WOLF
-- Remove ground truth and contact sensors (gt does not work anymore)
-- Do not use a different stack but just change gains online
-- Robustness tests with push recovery
-- Remove postural for the arm!!!!
+- q_lims subconstraint
+- add script in description_utils to create model.config and model.sdf for gazebo
+- add safety checks so that the controller doesn't get crazy
+- robustness tests with push recovery
+- startup procedure and solver reset (state machine?)
+- relative tasks between the feet
+- port the robots to the new stack
+- change name to WOLF
+- move headers code in cpp
+- remove ground truth and contact sensors
 - step reflexes
-- ADD IMU and remove ROBOT_REAL
-- solver getting crazy and losing contacts?
-- Robustness tests when walking on rough terrain with push recovery
-- Make one level stack works with arm as well
-- Update the robot params to the new id problem without hardcoded values
-- collision avoidance
-- Clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
+- collision avoidance for the arm
+- clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
 - add trajectory for arm
-- Web app
-- Convex hull in acceleration
-- State estimation
-- Experiments on the real robot
+- web app (AWS?)
+- state estimation
+- experiments on the real robot
 - tests and profiling
 - check the FIXME around the code clean up
-- startup procedure and solver reset (state machine)
+
