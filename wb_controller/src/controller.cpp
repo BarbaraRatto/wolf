@@ -589,8 +589,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
-        legs_impedance_->startInertiaCompensation(inertia_compensation_active_);
-        legs_impedance_->update();
+        //legs_impedance_->startInertiaCompensation(inertia_compensation_active_);
+        //legs_impedance_->update();
 
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
@@ -623,7 +623,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         // Update the desired joint positions from the ik and set that to the postural
         // task
 
-        legs_kinematics_->update();
+        legs_kinematics_->update(joint_positions_);
         des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
         des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();
 

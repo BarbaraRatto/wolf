@@ -272,6 +272,12 @@ bool QuadrupedRobot::getJacobian(const Eigen::VectorXd &q, const std::string &li
     return success;
 }
 
+//void QuadrupedRobot::getInertiaMatrix(const Eigen::VectorXd &q, Eigen::MatrixXd &M) const
+//{
+//    M.setZero(_rbdl_model.dof_count, _rbdl_model.dof_count);
+//    RigidBodyDynamics::CompositeRigidBodyAlgorithm(_rbdl_model, q, M, false);
+//}
+
 bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, const std::string& target_frame, Eigen::Affine3d& pose)
 {
     bool ret = true;
@@ -557,19 +563,19 @@ const double &QuadrupedRobot::getBaseWidth() const
 
 void QuadrupedRobot::getFloatingBasePositionInertia(Eigen::Matrix3d& M)
 {
-  getInertiaMatrix(tmp_M_);
+  XBot::ModelInterfaceRBDL::getInertiaMatrix(tmp_M_);
   M = tmp_M_.block(0,0,3,3);
 }
 
 void QuadrupedRobot::getFloatingBaseOrientationInertia(Eigen::Matrix3d& M)
 {
-  getInertiaMatrix(tmp_M_);
+  XBot::ModelInterfaceRBDL::getInertiaMatrix(tmp_M_);
   M = tmp_M_.block(3,3,3,3);
 }
 
 void QuadrupedRobot::getLimbInertia(const std::string& limb_name, Eigen::MatrixXd& M)
 {
-  getInertiaMatrix(tmp_M_);
+  XBot::ModelInterfaceRBDL::getInertiaMatrix(tmp_M_);
   int n = static_cast<int>(joint_limb_idx_[limb_name].size());
   int idx = joint_limb_idx_[limb_name][0];
   M = tmp_M_.block(idx,idx,n,n);
@@ -577,7 +583,7 @@ void QuadrupedRobot::getLimbInertia(const std::string& limb_name, Eigen::MatrixX
 
 void QuadrupedRobot::getLimbInertiaInverse(const std::string& limb_name, Eigen::MatrixXd& Mi)
 {
-  getInertiaMatrix(tmp_M_);
+  XBot::ModelInterfaceRBDL::getInertiaMatrix(tmp_M_);
   tmp_Mi_.setZero();
   tmp_Mi_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,tmp_M_.rows()-FLOATING_BASE_DOFS,tmp_M_.cols()-FLOATING_BASE_DOFS)
       = tmp_M_.block(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS,tmp_M_.rows()-FLOATING_BASE_DOFS,tmp_M_.cols()-FLOATING_BASE_DOFS).inverse();

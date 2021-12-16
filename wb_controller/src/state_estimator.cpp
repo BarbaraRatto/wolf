@@ -485,6 +485,7 @@ void StateEstimator::updateFloatingBase(const double& period)
   // Finally update the floating base with the full pose and velocities
   floating_base_pose_.translation() = floating_base_position_;
   robot_model_->setFloatingBaseState(floating_base_pose_,floating_base_velocity_); // This should trigger the update of the model
+  robot_model_->update();
 }
 
 }

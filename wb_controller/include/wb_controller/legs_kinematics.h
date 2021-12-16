@@ -30,7 +30,7 @@ public:
 
   LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, TerrainEstimator::Ptr terrain_estimator);
 
-  bool update();
+  bool update(const Eigen::VectorXd &current_joint_positions);
 
   const Eigen::VectorXd& getDesiredJointPositions();
 
@@ -39,6 +39,8 @@ public:
   void reset();
 
 private:
+
+  const Eigen::VectorXd& computeIk(const unsigned int& idx, const std::string& foot_name, const Eigen::VectorXd& q0, const Eigen::Vector3d& ref);
 
   QuadrupedRobot::Ptr robot_model_;
 
@@ -56,7 +58,7 @@ private:
   Eigen::VectorXd des_joint_velocities_;
   /** @brief Homing position */
   Eigen::VectorXd qhome_;
-  /** @brief joint position */
+  /** @brief Joint position */
   Eigen::VectorXd q_;
   /** @brief base in world */
   Eigen::Affine3d world_T_base_;

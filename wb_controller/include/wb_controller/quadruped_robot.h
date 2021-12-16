@@ -169,6 +169,15 @@ public:
   bool getJacobian(const Eigen::VectorXd& q, const std::string& link_name, const std::string& target_frame, Eigen::MatrixXd& J);
 
 
+  /**
+   * @brief Gets the inertia matrix in joint position q
+   *
+   * @param q The joint positions.
+   * @param M The inertia matrix
+   */
+  //virtual void getInertiaMatrix(const Eigen::VectorXd& q, Eigen::MatrixXd& M) const;
+
+
 private:
 
   std::vector<std::string> foot_names_; // foot tip names
