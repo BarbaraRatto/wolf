@@ -209,6 +209,83 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: "<< std::endl <<"-max:" <<qdot_max_.transpose());
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: "  << std::endl <<"-max:" <<tau_max_.transpose());
 
+  tmp_jacobian_.setZero(6, _rbdl_model.dof_count);
+}
+
+bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)
+{
+
+    int body_id = linkId(source_frame);
+    if( body_id == -1 ){
+        Logger::error() << "in " << __func__ << ": link " << source_frame << " not defined in RBDL model!" << Logger::endl();
+        return false;
+    }
+
+    tmp_vector3d_.setZero();
+
+    tmp_matrix3d_ = RigidBodyDynamics::CalcBodyWorldOrientation(_rbdl_model,
+                                                                q,
+                                                                body_id,
+                                                                false);
+
+    tmp_vector3d_ = RigidBodyDynamics::CalcBodyToBaseCoordinates(_rbdl_model,
+                                                                 q,
+                                                                 body_id,
+                                                                 tmp_vector3d_,
+                                                                 false);
+
+    tmp_matrix3d_.transposeInPlace();
+
+    pose.linear() = tmp_matrix3d_;
+    pose.translation() = tmp_vector3d_;
+
+    return true;
+}
+
+bool QuadrupedRobot::getJacobian(const Eigen::VectorXd &q, const std::string &link_name, Eigen::MatrixXd &J)
+{
+    int body_id = linkId(link_name);
+    if( body_id == -1 ){
+        Logger::error() << "in " << __func__ << ": link " << link_name << " not defined in RBDL model!" << Logger::endl();
+        return false;
+    }
+
+    tmp_jacobian_.setZero();
+    tmp_vector3d_.setZero();
+
+    RigidBodyDynamics::CalcPointJacobian6D(_rbdl_model, q, body_id, tmp_vector3d_, tmp_jacobian_, false);
+
+    J.resize(6, _rbdl_model.dof_count);
+
+    J.topRows(3) = tmp_jacobian_.bottomRows(3);
+    J.bottomRows(3) = tmp_jacobian_.topRows(3);
+
+    return true;
+
+}
+
+bool QuadrupedRobot::getJacobian(const Eigen::VectorXd &q, const std::string &link_name, const std::string &target_frame, Eigen::MatrixXd &J)
+{
+    bool success = getJacobian(q,link_name, J);
+    success = getOrientation(target_frame, tmp_matrix3d_) && success;
+    J = tmp_matrix3d_.transpose() * J;
+    return success;
+}
+
+bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, const std::string& target_frame, Eigen::Affine3d& pose)
+{
+    bool ret = true;
+    ret = getPose(q, source_frame, tmp_affine3d_) && ret;
+    ret = getPose(q, target_frame, tmp_affine3d_1_) && ret;
+
+    if(!ret)
+    {
+        return false;
+    }
+
+    pose = tmp_affine3d_1_.inverse() * tmp_affine3d_;
+
+    return true;
 }
 
 bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)

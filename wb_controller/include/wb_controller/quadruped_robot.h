@@ -119,6 +119,55 @@ public:
        */
   const Eigen::VectorXd& getJointHomePositions();
 
+  /**
+  * @brief Computes the pose of the source_frame w.r.t. the target_frame
+  *
+  * @param q The joint positions.
+  * @param source_frame The source link name.
+  * @param target_frame The target link name.
+  * @param pose A homogeneous transformation which transforms a point from source frame to target frame
+  *       P_target = T * P_source
+  * @return True if both source_frame and target_frame are valid. False otherwise.
+  */
+  bool getPose(const Eigen::VectorXd& q, const std::string& source_frame, const std::string& target_frame, Eigen::Affine3d& pose);
+
+  /**
+  * @brief Computes the pose of the source_frame w.r.t. the world frame
+  *
+  * @param q The joint positions.
+  * @param source_frame The source link name.
+  * @param pose A homogeneous transformation which transforms a point from source frame to world frame
+  *       P_world = T * P_source
+  * @return True if source_frame is valid. False otherwise.
+  */
+  bool getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose);
+
+
+  /**
+   * @brief Gets the Jacobian of link_name expressed in the world frame, i.e a matrix such that its product with
+   * the derivative of the configuration vector gives the velocity twist of link_name (i.e. first linear then angular velocity). The reference point is the origin of the link with link_name name.
+   *
+   * @param q The joint positions.
+   * @param link_name The link name
+   * @param J  The Jacobian expressed in the world frame
+   * @return True if the link_name and target_frame are valid link names. False otherwise.
+   */
+  bool getJacobian(const Eigen::VectorXd& q, const std::string& link_name, Eigen::MatrixXd& J);
+
+  /**
+   * @brief Gets the Jacobian of link_name expressed in the target_frame, i.e a matrix such that its product with
+   * the derivative of the configuration vector gives the velocity twist of link_name according to target_frame
+   * (i.e. first linear then angular velocity).
+   * The reference point is the origin of the link with link_name name.
+   *
+   * @param q The joint positions.
+   * @param link_name The link name
+   * @param target_frame The target frame name
+   * @param J  The Jacobian expressed in the world frame
+   * @return True if the link_name is a valid link name. False otherwise.
+   */
+  bool getJacobian(const Eigen::VectorXd& q, const std::string& link_name, const std::string& target_frame, Eigen::MatrixXd& J);
+
 
 private:
 
@@ -182,6 +231,12 @@ private:
 
   Eigen::MatrixXd tmp_Mi_;
   Eigen::MatrixXd tmp_M_;
+
+  Eigen::MatrixXd tmp_jacobian_;
+  Eigen::Matrix3d tmp_matrix3d_;
+  Eigen::Vector3d tmp_vector3d_;
+  Eigen::Affine3d tmp_affine3d_;
+  Eigen::Affine3d tmp_affine3d_1_;
 
 };
 
