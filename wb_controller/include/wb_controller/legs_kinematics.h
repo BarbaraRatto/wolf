@@ -30,27 +30,13 @@ public:
 
   LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, TerrainEstimator::Ptr terrain_estimator);
 
-  /**
-       * @brief Compute the desired joint positions and velocities
-       * @param control period
-       * @param current joint positions
-       * @return true is the joints position limits are violated
-       */
-  bool update(const double& period, const Eigen::VectorXd& current_joint_positions);
-
-  void setAdaptiveDamping(const double& damp_max, const double& determinant_max);
+  bool update();
 
   const Eigen::VectorXd& getDesiredJointPositions();
 
   const Eigen::VectorXd& getDesiredJointVelocities();
 
-  void setClikGain(const double& clik_gain);
-
-  double getClikGain();
-
   void reset();
-
-  void setDesiredFootPositions(const std::string &foot_name, const Eigen::Vector3d& position);
 
 private:
 
@@ -60,7 +46,9 @@ private:
 
   TerrainEstimator::Ptr terrain_estimator_;
 
-  std::atomic<double> clik_gain_;
+  Eigen::MatrixXd J_;
+  Eigen::Matrix3d J_foot_;
+  Eigen::Matrix3d J_foot_inv_;
 
   /** @brief Desired joint positions */
   Eigen::VectorXd des_joint_positions_;
@@ -68,18 +56,16 @@ private:
   Eigen::VectorXd des_joint_velocities_;
   /** @brief Homing position */
   Eigen::VectorXd qhome_;
+  /** @brief joint position */
+  Eigen::VectorXd q_;
   /** @brief base in world */
   Eigen::Affine3d world_T_base_;
-  Eigen::MatrixXd J_;
-  Eigen::Matrix3d J_foot_;
-  Eigen::Matrix3d J_foot_transp_;
-  Eigen::Matrix3d J_foot_inv_;
-  Eigen::Matrix3d I_;
-  Eigen::Vector3d x_err_;
-  double damp_max_;
-  double determinant_max_;
-
-  std::map<std::string,Eigen::Vector3d> desired_foot_positions_;
+  /** @brief foot in world */
+  Eigen::Affine3d world_T_foot_;
+  /** @brief world adjustment */
+  Eigen::Vector3d world_adj_;
+  /** @brief base adjustment */
+  Eigen::Vector3d base_adj_;
 
   /** @brief Support temporary Affine3d */
   Eigen::Affine3d tmp_affine3d_;

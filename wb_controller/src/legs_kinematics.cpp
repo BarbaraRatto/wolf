@@ -3,7 +3,6 @@
 namespace wb_controller {
 
 LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, TerrainEstimator::Ptr terrain_estimator)
-  : clik_gain_(1.0)
 {
 
   assert(gait_generator);
@@ -15,24 +14,15 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   // Set home position, qmin and qmax defined in the srdf
   // Initial values
-  qhome_ = robot_model_->getJointHomePositions();
+  qhome_ = q_ = robot_model_->getJointHomePositions();
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());
 
-  I_ = Eigen::Matrix3d::Identity();
-  damp_max_ = 0.001;
-  determinant_max_ = 0.1;
-
   reset();
 }
 
-void LegsKinematics::setDesiredFootPositions(const std::string& foot_name, const Eigen::Vector3d& position)
-{
-    desired_foot_positions_[foot_name] = position;
-}
-
-bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current_joint_positions)
+bool LegsKinematics::update()
 {
 
   des_joint_velocities_.fill(0.0);
@@ -42,24 +32,37 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
 
   for(unsigned int i = 0; i<foot_names.size(); i++)
   {
-    robot_model_->getJacobian(foot_names[i],J_); //wrt WORLD
-    robot_model_->getPose(robot_model_->getBaseLinkName(),world_T_base_);
 
-    int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx because the leg joints are contiguos
+    if(gait_generator_->isInStance(foot_names[i]))
+    {
 
-    if(gait_generator_->isLiftOff(foot_names[i]))
-        des_joint_positions_.segment(idx,3) = current_joint_positions.segment(idx,3);
+        int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx because the leg joints are contiguos
 
-    J_foot_ = J_.block<3,3>(0,idx);
-    J_foot_transp_ = J_foot_.transpose();
-    double damp = std::exp(-4.0/determinant_max_*std::abs(J_foot_.determinant()))*damp_max_;
-    J_foot_inv_ = J_foot_transp_ * (J_foot_ * J_foot_transp_ + damp*damp * I_).inverse();
+        robot_model_->getPose(robot_model_->getBaseLinkName(),world_T_base_);
+        robot_model_->getPose(foot_names[i],world_T_foot_);
 
-    x_err_ = desired_foot_positions_[foot_names[i]] - world_T_base_.translation();
+        world_adj_ = world_T_foot_.translation() - world_T_base_.translation();
+        base_adj_ =  world_T_base_.rotation().transpose() * world_adj_;
 
-    des_joint_velocities_.segment(idx,3) = J_foot_inv_ * (clik_gain_ * x_err_);
+        q_.segment(idx,3) = qhome_.segment(idx,3);
 
-    des_joint_positions_.segment(idx,3) = des_joint_velocities_.segment(idx,3) * period + des_joint_positions_.segment(idx,3);
+
+        while(true)
+        {
+            robot_model_->getPose(q_,foot_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_);
+            robot_model_->getJacobian(q_,foot_names[i],robot_model_->getBaseLinkName(),J_);
+
+            J_foot_ = J_.block<3,3>(0,idx);
+            J_foot_inv_ = J_foot_.inverse();
+
+            tmp_vector3d_ = J_foot_inv_ * (base_adj_ - tmp_affine3d_.translation());
+            q_.segment(idx,3) = tmp_vector3d_ + q_.segment(idx,3);
+
+            if(tmp_vector3d_.norm() < EPS)
+                break;
+        }
+        des_joint_positions_.segment(idx,3) = q_.segment(idx,3);
+    }
   }
 
   // Check if the desired positions and velocities are valid and clamp them
@@ -67,22 +70,6 @@ bool LegsKinematics::update(const double& period, const Eigen::VectorXd& current
   //robot_model_->clampJointVelocities(des_joint_velocities_);
 
   return true;
-}
-
-void LegsKinematics::setClikGain(const double& clik_gain)
-{
-  if(clik_gain < 0.0) // Check if it is ok
-      ROS_WARN_NAMED(CLASS_NAME,"CLIK gain has to be positive!");
-  else
-  {
-     clik_gain_ = clik_gain;
-     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set CLIK gain at "<< clik_gain);
-  }
-}
-
-double LegsKinematics::getClikGain()
-{
-  return clik_gain_;
 }
 
 const Eigen::VectorXd& LegsKinematics::getDesiredJointPositions()
@@ -99,18 +86,6 @@ void LegsKinematics::reset()
 {
   des_joint_velocities_.setZero();
   robot_model_->getJointPosition(des_joint_positions_);
-
-  auto foot_names = gait_generator_->getFootNames();
-  for(unsigned int i=0; i<foot_names.size(); i++)
-      desired_foot_positions_[foot_names[i]] = robot_model_->getFootPositionInWorld(foot_names[i]);
-}
-
-void LegsKinematics::setAdaptiveDamping(const double &damp_max, const double &determinant_max)
-{
-    assert(damp_max>=0.0);
-    damp_max_ = damp_max;
-    assert(determinant_max>=0.0);
-    determinant_max_ = determinant_max;
 }
 
 } // namespace

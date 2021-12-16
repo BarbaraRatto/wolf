@@ -93,17 +93,6 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
-        double damp_max = 0.001;
-        if (!controller_nh.getParam("damp_max", damp_max))
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No damp_max given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),damp_max);
-        }
-        double determinant_max = 0.1;
-        if (!controller_nh.getParam("determinant_max", determinant_max))
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No determinant_max given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),determinant_max);
-        }
-        controller_->getLegsKinematics()->setAdaptiveDamping(damp_max,determinant_max);
 
         Eigen::Vector3d k, dynamic_th, static_th;
         if (!controller_nh.getParam("push_recovery/k/x", k(0)) || // gains
@@ -189,13 +178,6 @@ public:
         }
         controller_ptr->getLegsImpedance()->setSwingStanceGains(Kp_swing_leg,Kd_swing_leg,Kp_stance_leg,Kd_stance_leg);
 
-        double default_clik_gain = 0.0; // Default value
-        if (!controller_nh.getParam("gains/clik_gain", default_clik_gain))
-        {
-          ROS_WARN_NAMED(CLASS_NAME,"No clik_gain given in the namespace: %s, set 0 as default value ", controller_nh.getNamespace().c_str());
-        }
-        controller_ptr->getLegsKinematics()->setClikGain(default_clik_gain);
-
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
@@ -232,7 +214,6 @@ public:
         server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wb_controller::FootholdsPlanner::setAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
         server_->registerVariable<double>("set_step_height",default_step_height,boost::bind(&wb_controller::FootholdsPlanner::setStepHeight,controller_->getFootholdsPlanner(),_1),"set step height",0.0,max_step_height);
         server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wb_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,100.0);
-        server_->registerVariable<double>("set_click_gain",controller_->getLegsKinematics()->getClikGain(),boost::bind(&wb_controller::LegsKinematics::setClikGain,controller_->getLegsKinematics(),_1),"set CLIK gain",0.0,1000.0);
 
         server_->registerEnumVariable<std::string>("select_gait","TROT",
                                                    boost::bind(&wb_controller::Controller::selectGait,controller_,_1),
