@@ -378,10 +378,8 @@ void FootholdsPlanner::setInitialOffsets()
     const std::vector<std::string>& hips_names = robot_model_->getHipNames();
     for(unsigned int i=0; i<hips_names.size(); i++)
     {
-      robot_model_->setJointPosition(robot_model_->getJointHomePositions());
-      robot_model_->update();
-      robot_model_->getPose(gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot
-      robot_model_->getPose(hips_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_hip
+      robot_model_->getPose(robot_model_->getJointHomePositions(),gait_generator_->getFootNames()[i],robot_model_->getBaseLinkName(),tmp_affine3d_1_); // base_T_foot
+      robot_model_->getPose(robot_model_->getJointHomePositions(),hips_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_hip
       tmp_matrix3d_ = robot_model_->getBaseRotationInHf(); // hf_R_base_
       // initial feet offsets in the horizontal frame
       hf_X_initial_footholds_[i] = tmp_matrix3d_ * tmp_affine3d_1_.translation();

@@ -109,21 +109,21 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   tau_max.head(FLOATING_BASE_DOFS).setZero();
   torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
   //   --------------------------
-  Eigen::VectorXd q_max, q_min, q_home, qddot_max;
-  Eigen::MatrixXd M;
-  model_->getJointLimits(q_min,q_max);
-  q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
-  q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
-  model_->getRobotState("home",q_home);
-  //model_->getInertiaInverseTimesVector(tau_max,qddot_max);
-  model_->setJointPosition(q_home);
-  model_->update();
-  model_->getInertiaMatrix(M);
-  qddot_max = M.inverse() * tau_max;
-  qddot_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * 10000.0;
-  for(unsigned int i=0; i<qddot_max.size(); i++)
-      qddot_max(i) = std::abs(qddot_max(i)); // The acceleration limits have to be positive
-  q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),q_max,q_min,qddot_max,dt);
+  //Eigen::VectorXd q_max, q_min, q_home, qddot_max;
+  //Eigen::MatrixXd M;
+  //model_->getJointLimits(q_min,q_max);
+  //q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
+  //q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
+  //model_->getRobotState("home",q_home);
+  ////model_->getInertiaInverseTimesVector(tau_max,qddot_max);
+  //model_->setJointPosition(q_home);
+  //model_->update();
+  //model_->getInertiaMatrix(M);
+  //qddot_max = M.inverse() * tau_max;
+  //qddot_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * 10000.0;
+  //for(unsigned int i=0; i<qddot_max.size(); i++)
+  //    qddot_max(i) = std::abs(qddot_max(i)); // The acceleration limits have to be positive
+  //q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),q_max,q_min,qddot_max,dt);
 
   //
   // Here we create some indices for the subtask definitions
