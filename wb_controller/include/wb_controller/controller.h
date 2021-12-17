@@ -259,32 +259,18 @@ private:
     Eigen::VectorXd des_joint_positions_;
     /** @brief Desired joint velocities */
     Eigen::VectorXd des_joint_velocities_;
-    /** @brief Desired joint efforts sent to the hardware interface */
-    Eigen::VectorXd des_joint_efforts_;
     /** @brief Desired joint efforts computed by the solver */
     Eigen::VectorXd des_joint_efforts_solver_;
     /** @brief Desired joint efforts computed by the impedance control */
     Eigen::VectorXd des_joint_efforts_impedance_;
+    /** @brief Desired joint efforts sent to the hardware interface */
+    Eigen::VectorXd des_joint_efforts_;
     /** @brief Xbot robot model */
     QuadrupedRobot::Ptr robot_model_;
     /** @brief Dynamic problem formulation */
     std::unique_ptr<IDProblem> id_prob_;
-    /** @brief Desired P value for the joints PID controller */
-    std::vector<double> des_joint_p_gain_;
-    /** @brief Desired I value for the joints PID controller */
-    std::vector<double> des_joint_i_gain_;
-    /** @brief Desired D value for the joints PID controller */
-    std::vector<double> des_joint_d_gain_;
-    /** @brief Actual P value for the joints PID controller */
-    std::vector<double> joint_p_gain_;
-    /** @brief Actual I value for the joints PID controller */
-    std::vector<double> joint_i_gain_;
-    /** @brief Actual D value for the joints PID controller */
-    std::vector<double> joint_d_gain_;
     /** @brief Desired contact forces */
     std::vector<Eigen::Vector6d> des_contact_forces_;
-    /** @brief Vector containing the pids for the joints */
-    std::vector<control_toolbox::Pid> pids_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
@@ -319,21 +305,16 @@ private:
     StateEstimator::Ptr state_estimator_;
     /** @brief Manage the ros interfacing */
     RosWrapperInterface::Ptr ros_wrapper_;
-    /** @brief pid scale, range between 0 and 1. 0 the pid is deactivated, 1 the pid is providing full torque */
-    std::atomic<double> pid_scale_;
     /** @brief qdot_filter */
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
     /** @brief imu_gyroscope_filter */
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
     /** @brief True if the controller uses the external contact sensors */
     bool use_contact_sensors_;
-
     /** @brief True if the solver is started */
     std::atomic<bool> solver_active_;
     /** @brief True if the initialization phase is done */
     std::atomic<bool> init_done_;
-    /** @brief True if the pid control is active */
-    std::atomic<bool> pid_active_;
     /** @brief True if the inertia compensation is active */
     std::atomic<bool> inertia_compensation_active_;
     /** @brief True if the controller is stopping */
@@ -360,6 +341,11 @@ private:
          * @brief update the imu reading from the imu interface
          */
     void readImu();
+
+    /**
+         * @brief update the state estimator
+         */
+    void updateStateEstimator(const double& dt);
 
 };
 

@@ -31,7 +31,6 @@ double _period = 0.001;
 Controller::Controller()
     :solver_active_(false)
     ,init_done_(false)
-    ,pid_active_(true)
     ,inertia_compensation_active_(true)
     ,stopping_(false)
 {
@@ -120,46 +119,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         return false;
     }
 
-    des_joint_p_gain_.resize(joint_states_.size());
-    des_joint_i_gain_.resize(joint_states_.size());
-    des_joint_d_gain_.resize(joint_states_.size());
-    joint_p_gain_.resize(joint_states_.size());
-    joint_i_gain_.resize(joint_states_.size());
-    joint_d_gain_.resize(joint_states_.size());
-
-    pids_.resize(joint_states_.size());
-    for (unsigned int i = 0; i < joint_states_.size(); i++)
-    {
-        // Getting PID gains
-        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/p", joint_p_gain_[i]))
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"No P gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
-            return false;
-        }
-        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/i", joint_i_gain_[i]))
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"No D gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
-            return false;
-        }
-        if (!controller_nh.getParam("gains/" + joint_names_[i] + "/d", joint_d_gain_[i]))
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"No I gain given in the namespace: %s. ", controller_nh.getNamespace().c_str());
-            return false;
-        }
-        // Check if the values are positive
-        if(joint_p_gain_[i]<0.0 || joint_i_gain_[i]<0.0 || joint_d_gain_[i]<0.0)
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"PID gains must be positive!");
-            return false;
-        }
-        ROS_DEBUG_NAMED(CLASS_NAME,"P value for joint %i is: %f",i,joint_p_gain_[i]);
-        ROS_DEBUG_NAMED(CLASS_NAME,"I value for joint %i is: %f",i,joint_i_gain_[i]);
-        ROS_DEBUG_NAMED(CLASS_NAME,"D value for joint %i is: %f",i,joint_d_gain_[i]);
-
-        pids_[i].setGains(joint_p_gain_[i],joint_i_gain_[i],joint_d_gain_[i],0,0);
-        //pids_[i].initDynamicReconfig(controller_nh); // FIXME change namespace for the pids
-    }
-
     if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
     {
         ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
@@ -180,9 +139,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_solver_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_impedance_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     des_contact_forces_.resize(robot_model_->getContactNames().size(),Eigen::Vector6d::Zero());
 
     // Initializations
@@ -191,11 +150,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    des_joint_positions_ = robot_model_->getJointHomePositions();
+    des_joint_positions_ = robot_model_->getStandUpJointPostion();
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
+    des_joint_efforts_solver_.fill(0.0);
     imu_orientation_.normalize();
-    pid_scale_ = 1.0;
 
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
@@ -252,7 +211,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities",joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_impedance_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_impedance",des_joint_efforts_impedance_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_efforts",joint_efforts_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
@@ -354,8 +313,6 @@ void Controller::switchControlMode()
      else
        robot_model_->setState(QuadrupedRobot::WALKING);
    }
-   //legs_kinematics_->reset();
-   //foot_holds_planner_->reset();
 }
 
 bool Controller::selectGait(const string& gait)
@@ -503,16 +460,8 @@ void Controller::starting(const ros::Time&  /*time*/)
     ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
 }
 
-void Controller::update(const ros::Time& time, const ros::Duration& period)
+void Controller::updateStateEstimator(const double &dt)
 {
-    // Read from the hardware interfaces:
-    // 1) Joints
-    readJoints();
-    // 2) IMU
-    readImu();
-
-    period_ = period.toSec();
-
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
@@ -537,7 +486,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-
     if(use_contact_sensors_)
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
@@ -547,7 +495,20 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             state_estimator_->setContactForces(foot_names[i],tmp_vector3d_);
         }
 
-    state_estimator_->update(period.toSec());
+    state_estimator_->update(dt);
+
+}
+
+void Controller::update(const ros::Time& time, const ros::Duration& period)
+{
+    // Read from the hardware interfaces:
+    period_ = period.toSec();
+    // 1) Joints
+    readJoints();
+    // 2) IMU
+    readImu();
+    // 3) Update state estimator
+    updateStateEstimator(period_);
 
     legs_impedance_->update();
     legs_kinematics_->update(joint_positions_);
@@ -565,14 +526,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             state_estimator_->startContactComputation();
             state_estimator_->startHapticContactLoop();
             foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
-            foot_holds_planner_->setDefaultBasePosition(state_estimator_->getFloatingBasePosition());
+            foot_holds_planner_->setDefaultBasePosition(Eigen::Vector3d(0.0,0.0,robot_model_->getStandUpHeight()));
             foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
-            foot_holds_planner_->setDefaultBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
+            foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
             foot_holds_planner_->initializeFeetPosition();
-            legs_kinematics_->reset();
-
-            des_joint_positions_ = robot_model_->getJointHomePositions();
-            des_joint_velocities_.fill(0.0);
+            //legs_kinematics_->reset();
 
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
@@ -596,12 +554,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
+        const std::vector<std::string>& foot_names = robot_model_->getFootNames();
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
-
             id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
                                        WORLD_FRAME_NAME);
-
             // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
             // Set the wrench limits to enstablish the contacts
             if(gait_generator_->isSwinging(foot_names[i]))
@@ -616,53 +573,25 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             }
         }
 
-        //id_prob_->postural_->setGains(legs_impedance_->getKp(),legs_impedance_->getKd());
-
-        // Set the desired base height
-        //legs_kinematics_->setDesiredBaseHeight(foot_holds_planner_->getBaseHeight());
-
-        // Set the feed forward stance term with the terrain adjustment
-        //legs_kinematics_->setFeedForwardStanceDot(terrain_estimator_->getPostureAdjustmentDot());
-
-        // Update the desired joint positions from the ik and set that to the postural
-        // task
-
-        //id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
-
         // Get the solver solution
-        id_prob_->solve(des_joint_efforts_solver_);
+        if(!id_prob_->solve(des_joint_efforts_solver_))
+        {
+          ROS_WARN_NAMED(CLASS_NAME,"IDProblem failed to solve");
+          solver_active_ = false;
+          des_joint_efforts_solver_.fill(0.0);
+        }
     }
     else
-    {
-        //des_joint_positions_ = legs_kinematics_->getJointHomePositions();
-        des_joint_velocities_.fill(0.0);
         des_joint_efforts_solver_.fill(0.0);
-    }
 
-    for (unsigned int i = 0; i < des_joint_p_gain_.size(); i++)
-    {
-        des_joint_p_gain_[i] =  joint_p_gain_[i];
-        des_joint_i_gain_[i] =  joint_i_gain_[i];
-        des_joint_d_gain_[i] =  joint_d_gain_[i];
-    }
+    des_joint_efforts_ = des_joint_efforts_solver_ +  des_joint_efforts_impedance_;
 
     // Check if the desired efforts are valid otherwise clamp them
-    robot_model_->clampJointEfforts(des_joint_efforts_solver_);
+    robot_model_->clampJointEfforts(des_joint_efforts_);
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
-    {
-
-        //pids_[i].setGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i],0,0);
-        //
-        //des_joint_efforts_pids_(i) = pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
-        //                                                     -joint_velocities_(i+FLOATING_BASE_DOFS),
-        //                                                     period);
-
-        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) +  des_joint_efforts_impedance_(i+FLOATING_BASE_DOFS);
-
-        joint_states_[i].setCommand(des_joint_efforts_(i));
-    }
+        joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
 
     // Publish
     ros_wrapper_->publish(time);
@@ -772,11 +701,6 @@ std::vector<Eigen::Vector6d>& Controller::getDesiredContactForces()
     if(id_prob_)
         des_contact_forces_ = id_prob_->getContactWrenches();
     return des_contact_forces_;
-}
-
-const Eigen::VectorXd& Controller::getDesiredJointEfforts() const
-{
-    return des_joint_efforts_solver_;
 }
 
 } //namespace

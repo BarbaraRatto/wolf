@@ -37,7 +37,7 @@ std::vector<std::string> WbRobotHwInterface::loadJointNamesFromSRDF()
     auto group_states = s.getGroupStates();
 
     for(unsigned int i=0;i<group_states.size();i++)
-        if(group_states[i].name_ == "home") // FIXME look for the home group state and get the names of the joints in there
+        if(group_states[i].name_ == "standup") // FIXME look for the home group state and get the names of the joints in there
             for(auto & tmp : group_states[i].joint_values_)
                 joint_names.push_back(tmp.first);
 

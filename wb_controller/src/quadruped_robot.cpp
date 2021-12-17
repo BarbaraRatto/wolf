@@ -189,11 +189,6 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     base_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
   }
 
-  // Get home position
-  getRobotState("home", qhome_);
-  if(!checkJointLimits(qhome_))
-    throw std::runtime_error("home joint positions are out of the limits! Check the SRDF file!");
-
   // Get inertias
   getInertiaMatrix(tmp_M_);
   getInertiaInverse(tmp_Mi_);
@@ -210,6 +205,36 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: "  << std::endl <<"-max:" <<tau_max_.transpose());
 
   tmp_jacobian_.setZero(6, _rbdl_model.dof_count);
+
+  // Get home positions
+  getRobotState("standup", q_stand_up_);
+  if(!checkJointLimits(q_stand_up_))
+    throw std::runtime_error("stand up joint positions are out of the limits! Check the SRDF file!");
+  getRobotState("standdown", q_stand_down_);
+  if(!checkJointLimits(q_stand_down_))
+    throw std::runtime_error("stand down joint positions are out of the limits! Check the SRDF file!");
+
+  // Define default heights
+  stand_up_height_ = 0.0;
+  Eigen::Affine3d pose;
+  setJointPosition(q_stand_up_);
+  update();
+  for(unsigned int i=0;i<foot_names_.size();i++)
+  {
+    getPose(foot_names_[i],base_name_,pose);
+    stand_up_height_ = pose.translation().z() + stand_up_height_;
+  }
+  stand_up_height_ =  -stand_up_height_/N_LEGS;
+
+  stand_down_height_ = 0.0;
+  setJointPosition(q_stand_down_);
+  update();
+  for(unsigned int i=0;i<foot_names_.size();i++)
+  {
+    getPose(foot_names_[i],base_name_,pose);
+    stand_down_height_ = pose.translation().z() + stand_down_height_;
+  }
+  stand_down_height_ =  -stand_down_height_/N_LEGS;
 }
 
 bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)
@@ -603,9 +628,25 @@ bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
   return true;
 }
 
-const Eigen::VectorXd& QuadrupedRobot::getJointHomePositions()
+const Eigen::VectorXd& QuadrupedRobot::getStandUpJointPostion()
 {
-  return qhome_;
+  return q_stand_up_;
 }
+
+const Eigen::VectorXd& QuadrupedRobot::getStandDownJointPostion()
+{
+  return q_stand_down_;
+}
+
+const double &QuadrupedRobot::getStandUpHeight()
+{
+  return stand_up_height_;
+}
+
+const double &QuadrupedRobot::getStandDownHeight()
+{
+  return stand_down_height_;
+}
+
 
 };

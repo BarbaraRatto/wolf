@@ -12,9 +12,7 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   assert(terrain_estimator);
   terrain_estimator_ = terrain_estimator;
 
-  // Set home position, qmin and qmax defined in the srdf
-  // Initial values
-  qhome_ = q_ = robot_model_->getJointHomePositions();
+  qhome_ = robot_model_->getStandUpJointPostion();
 
   des_joint_positions_.resize(qhome_.size());
   des_joint_velocities_.resize(qhome_.size());

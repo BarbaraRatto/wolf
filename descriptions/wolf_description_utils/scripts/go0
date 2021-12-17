@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
 	robot = SRDF.from_xml_string(srdf_data)
 
-	for joint in robot.group_state_map['home'].joints:
+	for joint in robot.group_state_map['standdown'].joints:
 		joint_names.append(joint.name)
 		joint_positions.append(joint.value[0])
 

@@ -93,31 +93,49 @@ public:
   const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
 
   /**
-       * @brief check if the joint velocities are above a max value, saturate the value if the limits are violated
-       * @param qdot input vector to check
-       * @return true is the limits are violated
-       */
+   * @brief check if the joint velocities are above a max value, saturate the value if the limits are violated
+   * @param qdot input vector to check
+   * @return true is the limits are violated
+   */
   bool clampJointVelocities(Eigen::VectorXd &qdot);
 
   /**
-       * @brief check if the joint positions are between a max and min value, saturate the value if the limits are violated
-       * @param q input vector to check
-       * @return true is the limits are violated
-       */
+   * @brief check if the joint positions are between a max and min value, saturate the value if the limits are violated
+   * @param q input vector to check
+   * @return true is the limits are violated
+   */
   bool clampJointPositions(Eigen::VectorXd &q);
 
   /**
-       * @brief check if the joint efforts are above a max value, saturate the value if the limits are violated
-       * @param tau input vector to check
-       * @return true is the limits are violated
-       */
+   * @brief check if the joint efforts are above a max value, saturate the value if the limits are violated
+   * @param tau input vector to check
+   * @return true is the limits are violated
+   */
   bool clampJointEfforts(Eigen::VectorXd &tau);
 
   /**
-       * @brief get robot's home position when standing up
-       * @return qhome
-       */
-  const Eigen::VectorXd& getJointHomePositions();
+   * @brief get robot's home position when standing up
+   * @return q_stand_up
+   */
+  const Eigen::VectorXd& getStandUpJointPostion();
+
+  /*
+   * @brief get robot's home position when standing down
+   * @return q_stand_down
+   */
+  const Eigen::VectorXd& getStandDownJointPostion();
+
+  /**
+   * @brief get robot's base height when standing up
+   * @return height
+   */
+  const double& getStandUpHeight();
+
+  /**
+   * @brief get robot's base height when standing down
+   * @return height
+   */
+  const double& getStandDownHeight();
 
   /**
   * @brief Computes the pose of the source_frame w.r.t. the target_frame
@@ -177,7 +195,6 @@ public:
    */
   //virtual void getInertiaMatrix(const Eigen::VectorXd& q, Eigen::MatrixXd& M) const;
 
-
 private:
 
   std::vector<std::string> foot_names_; // foot tip names
@@ -234,7 +251,13 @@ private:
   /** @brief Max joints effort */
   Eigen::VectorXd tau_max_;
   /** @brief Homing position when standing up */
-  Eigen::VectorXd qhome_;
+  Eigen::VectorXd q_stand_up_;
+  /** @brief Homing position when standing down */
+  Eigen::VectorXd q_stand_down_;
+  /** @brief Base's height when standing up */
+  double stand_up_height_;
+  /** @brief Base's height when standing down */
+  double stand_down_height_;
 
   std::atomic<robot_states_t> robot_state_;
 
