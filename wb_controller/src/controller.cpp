@@ -181,7 +181,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_solver_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    des_joint_efforts_pids_.resize(static_cast<Eigen::Index>(joint_states_.size()));
+    des_joint_efforts_pids_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     des_contact_forces_.resize(robot_model_->getContactNames().size(),Eigen::Vector6d::Zero());
 
@@ -201,6 +201,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
     state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
     legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
+    legs_impedance_->startInertiaCompensation(true);
 
     terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
@@ -247,8 +248,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities_",des_joint_velocities_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_",joint_velocities_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities",des_joint_velocities_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities",joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_pids_);
@@ -548,6 +549,12 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     state_estimator_->update(period.toSec());
 
+    legs_impedance_->update();
+    legs_kinematics_->update(joint_positions_);
+    des_joint_positions_    = legs_kinematics_->getDesiredJointPositions();
+    des_joint_velocities_   = legs_kinematics_->getDesiredJointVelocities();
+    des_joint_efforts_pids_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
+
     if(solver_active_) // Use the ID solver to calculate the torques
     {
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
@@ -575,7 +582,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             init_done_ = true;
         }
 
-        foot_holds_planner_->update(period.toSec()); // FIXME This should be done only after pid_scale_ = 0
+        foot_holds_planner_->update(period.toSec());
 
         terrain_estimator_->computeTerrainEstimation(period.toSec());
 
@@ -588,9 +595,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
 
         id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
-
-        //legs_impedance_->startInertiaCompensation(inertia_compensation_active_);
-        //legs_impedance_->update();
 
         for(unsigned int i = 0; i<foot_names.size(); i++)
         {
@@ -623,10 +627,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         // Update the desired joint positions from the ik and set that to the postural
         // task
 
-        legs_kinematics_->update(joint_positions_);
-        des_joint_positions_ = legs_kinematics_->getDesiredJointPositions();
-        des_joint_velocities_ = legs_kinematics_->getDesiredJointVelocities();
-
         //id_prob_->postural_->setReference(des_joint_positions_,des_joint_velocities_);
 
         // Get the solver solution
@@ -653,13 +653,13 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     for (unsigned int i = 0; i < joint_states_.size(); i++)
     {
 
-        pids_[i].setGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i],0,0);
+        //pids_[i].setGains(des_joint_p_gain_[i],des_joint_i_gain_[i],des_joint_d_gain_[i],0,0);
+        //
+        //des_joint_efforts_pids_(i) = pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
+        //                                                     -joint_velocities_(i+FLOATING_BASE_DOFS),
+        //                                                     period);
 
-        des_joint_efforts_pids_(i) = pids_[i].computeCommand(des_joint_positions_(i+FLOATING_BASE_DOFS)-joint_positions_(i+FLOATING_BASE_DOFS),
-                                                             -joint_velocities_(i+FLOATING_BASE_DOFS),
-                                                             period);
-
-        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) +  des_joint_efforts_pids_(i);
+        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) +  des_joint_efforts_pids_(i+FLOATING_BASE_DOFS);
 
         joint_states_[i].setCommand(des_joint_efforts_(i));
     }

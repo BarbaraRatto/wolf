@@ -40,8 +40,6 @@ public:
 
 private:
 
-  const Eigen::VectorXd& computeIk(const unsigned int& idx, const std::string& foot_name, const Eigen::VectorXd& q0, const Eigen::Vector3d& ref);
-
   QuadrupedRobot::Ptr robot_model_;
 
   GaitGenerator::Ptr gait_generator_;
