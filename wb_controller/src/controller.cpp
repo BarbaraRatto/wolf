@@ -150,15 +150,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_velocities_filt_.fill(0.0);
     joint_accellerations_.fill(0.0);
     joint_efforts_.fill(0.0);
-    des_joint_positions_ = robot_model_->getStandUpJointPostion();
+    des_joint_positions_.fill(0.0);
     des_joint_velocities_.fill(0.0);
     des_joint_efforts_.fill(0.0);
+    des_joint_efforts_impedance_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
     imu_orientation_.normalize();
 
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
     state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
+
     legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
     legs_impedance_->startInertiaCompensation(true);
 
@@ -169,9 +171,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     terrain_estimator_->setMinPitch(-M_PI);
 
     legs_kinematics_ = std::make_shared<LegsKinematics>(gait_generator_,robot_model_,terrain_estimator_);
-
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
-
     id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
     std::string input_device = "ps3";
@@ -512,8 +512,8 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     legs_impedance_->update();
     legs_kinematics_->update(joint_positions_);
-    des_joint_positions_    = legs_kinematics_->getDesiredJointPositions();
-    des_joint_velocities_   = legs_kinematics_->getDesiredJointVelocities();
+    des_joint_positions_         = legs_kinematics_->getDesiredJointPositions();
+    des_joint_velocities_        = legs_kinematics_->getDesiredJointVelocities();
     des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
 
     if(solver_active_) // Use the ID solver to calculate the torques
@@ -530,7 +530,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
             foot_holds_planner_->initializeFeetPosition();
-            //legs_kinematics_->reset();
 
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
@@ -584,7 +583,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     else
         des_joint_efforts_solver_.fill(0.0);
 
-    des_joint_efforts_ = des_joint_efforts_solver_ +  des_joint_efforts_impedance_;
+    des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
 
     // Check if the desired efforts are valid otherwise clamp them
     robot_model_->clampJointEfforts(des_joint_efforts_);

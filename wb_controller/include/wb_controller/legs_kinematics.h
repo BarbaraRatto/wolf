@@ -54,8 +54,6 @@ private:
   Eigen::VectorXd des_joint_positions_;
   /** @brief Desired joint velocities */
   Eigen::VectorXd des_joint_velocities_;
-  /** @brief Homing position */
-  Eigen::VectorXd qhome_;
   /** @brief Joint position */
   Eigen::VectorXd q_;
   /** @brief base in world */
