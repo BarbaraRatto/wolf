@@ -35,7 +35,7 @@ bool LegsKinematics::update(const Eigen::VectorXd& current_joint_positions)
 
         int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx because the leg joints are contiguos
 
-        robot_model_->getPose(foot_names[i],world_T_foot_);
+        robot_model_->getPose(robot_model_->getStandUpJointPostion(),foot_names[i],world_T_foot_);
 
         world_adj_ = world_T_foot_.translation() - world_T_base_.translation();
         base_adj_ =  world_T_base_.linear().transpose() * world_adj_;
@@ -48,7 +48,7 @@ bool LegsKinematics::update(const Eigen::VectorXd& current_joint_positions)
             J_foot_ = J_.block<3,3>(0,idx);
             J_foot_inv_ = J_foot_.inverse();
 
-            tmp_vector3d_ = J_foot_inv_ * (base_adj_ - tmp_affine3d_.translation());
+            tmp_vector3d_ =  J_foot_inv_ * (base_adj_ - tmp_affine3d_.translation());
             q_.segment(idx,3) = tmp_vector3d_ + q_.segment(idx,3);
 
             if(tmp_vector3d_.norm() < EPS)

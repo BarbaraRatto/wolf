@@ -162,7 +162,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
     legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
-    legs_impedance_->startInertiaCompensation(true);
+    legs_impedance_->startInertiaCompensation(false);
 
     terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);

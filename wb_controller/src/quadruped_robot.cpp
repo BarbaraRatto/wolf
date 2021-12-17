@@ -217,21 +217,17 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   // Define default heights
   stand_up_height_ = 0.0;
   Eigen::Affine3d pose;
-  setJointPosition(q_stand_up_);
-  update();
   for(unsigned int i=0;i<foot_names_.size();i++)
   {
-    getPose(foot_names_[i],base_name_,pose);
+    getPose(q_stand_up_,foot_names_[i],base_name_,pose);
     stand_up_height_ = pose.translation().z() + stand_up_height_;
   }
   stand_up_height_ =  -stand_up_height_/N_LEGS;
 
   stand_down_height_ = 0.0;
-  setJointPosition(q_stand_down_);
-  update();
   for(unsigned int i=0;i<foot_names_.size();i++)
   {
-    getPose(foot_names_[i],base_name_,pose);
+    getPose(q_stand_down_,foot_names_[i],base_name_,pose);
     stand_down_height_ = pose.translation().z() + stand_down_height_;
   }
   stand_down_height_ =  -stand_down_height_/N_LEGS;
