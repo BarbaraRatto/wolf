@@ -263,8 +263,8 @@ private:
     Eigen::VectorXd des_joint_efforts_;
     /** @brief Desired joint efforts computed by the solver */
     Eigen::VectorXd des_joint_efforts_solver_;
-    /** @brief Desired joint efforts computed by the PIDs */
-    Eigen::VectorXd des_joint_efforts_pids_;
+    /** @brief Desired joint efforts computed by the impedance control */
+    Eigen::VectorXd des_joint_efforts_impedance_;
     /** @brief Xbot robot model */
     QuadrupedRobot::Ptr robot_model_;
     /** @brief Dynamic problem formulation */

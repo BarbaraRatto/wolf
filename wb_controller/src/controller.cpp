@@ -181,7 +181,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_solver_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
-    des_joint_efforts_pids_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    des_joint_efforts_impedance_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_.resize(static_cast<Eigen::Index>(joint_states_.size()));
     des_contact_forces_.resize(robot_model_->getContactNames().size(),Eigen::Vector6d::Zero());
 
@@ -252,7 +252,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities",joint_velocities_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_pids_);
+    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_pids",des_joint_efforts_impedance_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_efforts",joint_efforts_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
@@ -553,7 +553,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     legs_kinematics_->update(joint_positions_);
     des_joint_positions_    = legs_kinematics_->getDesiredJointPositions();
     des_joint_velocities_   = legs_kinematics_->getDesiredJointVelocities();
-    des_joint_efforts_pids_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
+    des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
 
     if(solver_active_) // Use the ID solver to calculate the torques
     {
@@ -659,7 +659,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         //                                                     -joint_velocities_(i+FLOATING_BASE_DOFS),
         //                                                     period);
 
-        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) +  des_joint_efforts_pids_(i+FLOATING_BASE_DOFS);
+        des_joint_efforts_(i) = des_joint_efforts_solver_(i+FLOATING_BASE_DOFS) +  des_joint_efforts_impedance_(i+FLOATING_BASE_DOFS);
 
         joint_states_[i].setCommand(des_joint_efforts_(i));
     }
