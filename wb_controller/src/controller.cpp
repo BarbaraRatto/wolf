@@ -514,7 +514,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     legs_kinematics_->update(joint_positions_);
     des_joint_positions_         = legs_kinematics_->getDesiredJointPositions();
     des_joint_velocities_        = legs_kinematics_->getDesiredJointVelocities();
-    des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
 
     if(solver_active_) // Use the ID solver to calculate the torques
     {
@@ -579,9 +578,14 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
           solver_active_ = false;
           des_joint_efforts_solver_.fill(0.0);
         }
+
+        des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
     }
     else
+    {
         des_joint_efforts_solver_.fill(0.0);
+        des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
+    }
 
     des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
 

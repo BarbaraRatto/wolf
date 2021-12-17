@@ -79,7 +79,7 @@ void LegsImpedance::update()
 
     for(unsigned int i=0;i<foot_names.size();i++)
     {
-        int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, hopefully the leg joints are contiguos
+        int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, the leg joints are contiguos
 
         if(gait_generator_->isSwinging(foot_names[i]))
         {
@@ -97,8 +97,17 @@ void LegsImpedance::update()
         }
         else
         {
-            Kp_postural_.block<3,3>(idx,idx) = Kp_stance_leg_;
-            Kd_postural_.block<3,3>(idx,idx) = Kd_stance_leg_;
+            if(inertia_compensation_active_)
+            {
+                robot_model_->getLimbInertiaInverse(leg_names[i],Mi_);
+                Kp_postural_.block<3,3>(idx,idx) = Mi_ * Kp_stance_leg_;
+                Kd_postural_.block<3,3>(idx,idx) = Mi_ * Kd_stance_leg_;
+            }
+            else
+            {
+                Kp_postural_.block<3,3>(idx,idx) = Kp_stance_leg_;
+                Kd_postural_.block<3,3>(idx,idx) = Kd_stance_leg_;
+            }
         }
     }
 }
