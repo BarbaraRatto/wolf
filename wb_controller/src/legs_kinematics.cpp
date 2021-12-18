@@ -35,7 +35,7 @@ bool LegsKinematics::update(const Eigen::VectorXd& current_joint_positions)
 
         int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx because the leg joints are contiguos
 
-        robot_model_->getPose(robot_model_->getStandUpJointPostion(),foot_names[i],world_T_foot_);
+        robot_model_->getPose(foot_names[i],world_T_foot_);
 
         world_adj_ = world_T_foot_.translation() - world_T_base_.translation();
         base_adj_ =  world_T_base_.linear().transpose() * world_adj_;
@@ -61,7 +61,7 @@ bool LegsKinematics::update(const Eigen::VectorXd& current_joint_positions)
     des_joint_positions_ = q_;
 
     // Check if the desired positions and velocities are valid and clamp them
-    robot_model_->clampJointPositions(des_joint_positions_);
+    //robot_model_->clampJointPositions(des_joint_positions_);
     //robot_model_->clampJointVelocities(des_joint_velocities_);
 
     return true;
