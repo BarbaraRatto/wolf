@@ -74,6 +74,9 @@ private:
   /** @brief Support temporary Vector6d */
   Eigen::Vector6d tmp_vector6d_;
 
+  long long cnt_;
+  long long max_cnt_;
+
 
 };
 

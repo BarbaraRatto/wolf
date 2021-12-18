@@ -45,8 +45,8 @@ LegsImpedance::LegsImpedance(GaitGenerator::Ptr gait_generator, QuadrupedRobot::
     // Initialize the inertia related matrices
     robot_model_->getInertiaMatrix(M_);
     Mi_.setZero(3,3);
-    Kp_postural_.setIdentity(M_.rows(), M_.cols());
-    Kd_postural_.setIdentity(M_.rows(), M_.cols());
+    Kp_.setIdentity(M_.rows(), M_.cols());
+    Kd_.setIdentity(M_.rows(), M_.cols());
 
     Kp_swing_leg_.setZero();
     Kd_swing_leg_.setZero();
@@ -86,13 +86,13 @@ void LegsImpedance::update()
             if(inertia_compensation_active_)
             {
                 robot_model_->getLimbInertiaInverse(leg_names[i],Mi_);
-                Kp_postural_.block<3,3>(idx,idx) = Mi_ * Kp_swing_leg_;
-                Kd_postural_.block<3,3>(idx,idx) = Mi_ * Kd_swing_leg_;
+                Kp_.block<3,3>(idx,idx) = Mi_ * Kp_swing_leg_;
+                Kd_.block<3,3>(idx,idx) = Mi_ * Kd_swing_leg_;
             }
             else
             {
-                Kp_postural_.block<3,3>(idx,idx) = Kp_swing_leg_;
-                Kd_postural_.block<3,3>(idx,idx) = Kd_swing_leg_;
+                Kp_.block<3,3>(idx,idx) = Kp_swing_leg_;
+                Kd_.block<3,3>(idx,idx) = Kd_swing_leg_;
             }
         }
         else
@@ -100,13 +100,13 @@ void LegsImpedance::update()
             if(inertia_compensation_active_)
             {
                 robot_model_->getLimbInertiaInverse(leg_names[i],Mi_);
-                Kp_postural_.block<3,3>(idx,idx) = Mi_ * Kp_stance_leg_;
-                Kd_postural_.block<3,3>(idx,idx) = Mi_ * Kd_stance_leg_;
+                Kp_.block<3,3>(idx,idx) = Mi_ * Kp_stance_leg_;
+                Kd_.block<3,3>(idx,idx) = Mi_ * Kd_stance_leg_;
             }
             else
             {
-                Kp_postural_.block<3,3>(idx,idx) = Kp_stance_leg_;
-                Kd_postural_.block<3,3>(idx,idx) = Kd_stance_leg_;
+                Kp_.block<3,3>(idx,idx) = Kp_stance_leg_;
+                Kd_.block<3,3>(idx,idx) = Kd_stance_leg_;
             }
         }
     }
@@ -198,12 +198,12 @@ void LegsImpedance::setKdStanceLegKFE(const double &value)
 
 const Eigen::MatrixXd& LegsImpedance::getKp() const
 {
-    return Kp_postural_;
+    return Kp_;
 }
 
 const Eigen::MatrixXd& LegsImpedance::getKd() const
 {
-    return Kd_postural_;
+    return Kd_;
 }
 
 } // namespace

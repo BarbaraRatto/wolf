@@ -15,6 +15,9 @@ LegsKinematics::LegsKinematics(GaitGenerator::Ptr gait_generator, QuadrupedRobot
     des_joint_positions_.resize(robot_model_->getStandUpJointPostion().size());
     des_joint_velocities_.resize(robot_model_->getStandUpJointPostion().size());
 
+    cnt_ = 0;
+    max_cnt_ = 100;
+
     reset();
 }
 
@@ -51,8 +54,9 @@ bool LegsKinematics::update(const Eigen::VectorXd& current_joint_positions)
             tmp_vector3d_ =  J_foot_inv_ * (base_adj_ - tmp_affine3d_.translation());
             q_.segment(idx,3) = tmp_vector3d_ + q_.segment(idx,3);
 
-            if(tmp_vector3d_.norm() < EPS)
+            if(tmp_vector3d_.norm() < EPS || cnt_++ > max_cnt_)
             {
+                cnt_ = 0;
                 break;
             }
         }

@@ -53,7 +53,7 @@ public:
   void startInertiaCompensation(const bool& start);
 
   std::atomic<bool> inertia_compensation_active_;
-  Eigen::MatrixXd M_, Mi_, Kp_postural_, Kd_postural_;
+  Eigen::MatrixXd M_, Mi_, Kp_, Kd_;
   Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
 
   void setSwingStanceGains(const Eigen::Vector3d &Kp_swing_leg, const Eigen::Vector3d &Kd_swing_leg, const Eigen::Vector3d &Kp_stance_leg, const Eigen::Vector3d &Kd_stance_leg);

@@ -115,19 +115,19 @@ public:
     bool isSolverActive() const;
 
     /**
-         * @brief Start/Stop the inertia compensation at the leg level, useful if the robot has very low inertia at the knee joints
+         * @brief Start/Stop the kinematic adjustment
          */
-    void toggleInertiaCompensation();
+    void toggleKinematicAdjustment();
 
     /**
-         * @brief Start/Stop the inertia compensation at the leg level, useful if the robot has very low inertia at the knee joints
+         * @brief Start/Stop the kinematic adjustment
          */
-    void startInertiaCompensation(const bool& start);
+    void startKinematicAdjustment(const bool& start);
 
     /**
-         * @brief get the flag value for the inertia compensation
+         * @brief get the flag value for the kinematic adjustment
          */
-    bool isInertiaCompensationActive() const;
+    bool isKinematicAdjustmentActive() const;
 
     /**
          * @brief Set the duty factor for the feet
@@ -313,10 +313,10 @@ private:
     bool use_contact_sensors_;
     /** @brief True if the solver is started */
     std::atomic<bool> solver_active_;
+    /** @brief True if the kinematic adjustment is active */
+    std::atomic<bool> kin_adjustment_active_;
     /** @brief True if the initialization phase is done */
     std::atomic<bool> init_done_;
-    /** @brief True if the inertia compensation is active */
-    std::atomic<bool> inertia_compensation_active_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
 

@@ -30,8 +30,8 @@ double _period = 0.001;
 
 Controller::Controller()
     :solver_active_(false)
+    ,kin_adjustment_active_(true)
     ,init_done_(false)
-    ,inertia_compensation_active_(true)
     ,stopping_(false)
 {
 }
@@ -162,7 +162,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
     legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
-    legs_impedance_->startInertiaCompensation(false);
+    legs_impedance_->startInertiaCompensation(true);
 
     terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
@@ -389,29 +389,29 @@ void Controller::toggleSolver()
         ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
 }
 
-void Controller::startInertiaCompensation(const bool& start)
+void Controller::startKinematicAdjustment(const bool& start)
 {
-    inertia_compensation_active_=start;
+    kin_adjustment_active_=start;
 
-    if(inertia_compensation_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is ON");
+    if(kin_adjustment_active_)
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
     else
-        ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is OFF");
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
 }
 
-bool Controller::isInertiaCompensationActive() const
+bool Controller::isKinematicAdjustmentActive() const
 {
-    return inertia_compensation_active_;
+    return kin_adjustment_active_;
 }
 
-void Controller::toggleInertiaCompensation()
+void Controller::toggleKinematicAdjustment()
 {
-    inertia_compensation_active_=!inertia_compensation_active_;
+    kin_adjustment_active_=!kin_adjustment_active_;
 
-    if(inertia_compensation_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is ON");
+    if(kin_adjustment_active_)
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
     else
-        ROS_INFO_NAMED(CLASS_NAME,"Inertia compensation is OFF");
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
 }
 
 void Controller::readJoints()
@@ -587,7 +587,11 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
     }
 
-    des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
+    if(kin_adjustment_active_)
+      des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
+    else {
+      des_joint_efforts_ = des_joint_efforts_solver_;
+    }
 
     // Check if the desired efforts are valid otherwise clamp them
     robot_model_->clampJointEfforts(des_joint_efforts_);
