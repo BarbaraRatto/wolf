@@ -115,21 +115,6 @@ public:
     bool isSolverActive() const;
 
     /**
-         * @brief Start/Stop the kinematic adjustment
-         */
-    void toggleKinematicAdjustment();
-
-    /**
-         * @brief Start/Stop the kinematic adjustment
-         */
-    void startKinematicAdjustment(const bool& start);
-
-    /**
-         * @brief get the flag value for the kinematic adjustment
-         */
-    bool isKinematicAdjustmentActive() const;
-
-    /**
          * @brief Set the duty factor for the feet
          * @param const double duty_factor
          */
@@ -156,7 +141,6 @@ public:
          * @brief set cutoff frequency for the gyroscope filter
          */
     void setCutoffFreqGyro(const double& hz);
-
 
     /**
          * @brief Select the control mode to use [WALKING|MANIPULATION]
@@ -313,8 +297,6 @@ private:
     bool use_contact_sensors_;
     /** @brief True if the solver is started */
     std::atomic<bool> solver_active_;
-    /** @brief True if the kinematic adjustment is active */
-    std::atomic<bool> kin_adjustment_active_;
     /** @brief True if the initialization phase is done */
     std::atomic<bool> init_done_;
     /** @brief True if the controller is stopping */

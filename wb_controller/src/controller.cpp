@@ -30,7 +30,6 @@ double _period = 0.001;
 
 Controller::Controller()
     :solver_active_(false)
-    ,kin_adjustment_active_(true)
     ,init_done_(false)
     ,stopping_(false)
 {
@@ -389,31 +388,6 @@ void Controller::toggleSolver()
         ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
 }
 
-void Controller::startKinematicAdjustment(const bool& start)
-{
-    kin_adjustment_active_=start;
-
-    if(kin_adjustment_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
-    else
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
-}
-
-bool Controller::isKinematicAdjustmentActive() const
-{
-    return kin_adjustment_active_;
-}
-
-void Controller::toggleKinematicAdjustment()
-{
-    kin_adjustment_active_=!kin_adjustment_active_;
-
-    if(kin_adjustment_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
-    else
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
-}
-
 void Controller::readJoints()
 {
     joint_positions_.setZero(joint_positions_.size());
@@ -587,11 +561,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
     }
 
-    if(kin_adjustment_active_)
-      des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
-    else {
-      des_joint_efforts_ = des_joint_efforts_solver_;
-    }
+    des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
 
     // Check if the desired efforts are valid otherwise clamp them
     robot_model_->clampJointEfforts(des_joint_efforts_);
