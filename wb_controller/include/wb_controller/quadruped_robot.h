@@ -261,14 +261,17 @@ private:
 
   std::atomic<robot_states_t> robot_state_;
 
+  mutable RigidBodyDynamics::Model virtual_model_;
+
   Eigen::MatrixXd tmp_Mi_;
   Eigen::MatrixXd tmp_M_;
-
   Eigen::MatrixXd tmp_jacobian_;
   Eigen::Matrix3d tmp_matrix3d_;
   Eigen::Vector3d tmp_vector3d_;
   Eigen::Affine3d tmp_affine3d_;
   Eigen::Affine3d tmp_affine3d_1_;
+  mutable KDL::Jacobian tmp_kdl_jacobian_;
+  mutable KDL::Rotation tmp_kdl_rotation_;
 
 };
 
