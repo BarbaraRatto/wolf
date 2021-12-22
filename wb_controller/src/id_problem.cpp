@@ -223,8 +223,9 @@ void IDProblem::setFootReference(const std::string& foot_name, const Eigen::Affi
     tmp_affine3d_ = model_->getBasePoseInWorld().inverse(); // base_T_world
     tmp_vector6d_.setZero();
     tmp_vector3d_ = vel_ref.head(3);
-    tmp_vector6d_.head(3) = tmp_affine3d_ * tmp_vector3d_;
-    feet_[foot_name]->setReference(tmp_affine3d_*pose_ref,tmp_vector6d_);
+    tmp_vector6d_.head(3) = tmp_affine3d_.linear() * tmp_vector3d_;
+    tmp_affine3d_ = tmp_affine3d_*pose_ref;
+    feet_[foot_name]->setReference(tmp_affine3d_,tmp_vector6d_);
   }
   else
     throw std::runtime_error("Wrong reference frame, can not set the foot references!");
