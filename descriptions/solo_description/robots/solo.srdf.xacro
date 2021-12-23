@@ -48,7 +48,7 @@
       <group name="lh_leg"/>
       <group name="rh_leg"/>
     </group>
-    <group_state group="chains" name="home">
+    <group_state group="chains" name="standup">
     <joint name="lf_haa_joint" value="0."       />
     <joint name="lf_hfe_joint" value="0.78539816" />
     <joint name="lf_kfe_joint" value="-1.57079633"/>
