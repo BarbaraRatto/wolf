@@ -114,7 +114,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   //model_->getJointLimits(q_min,q_max);
   //q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
   //q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
-  //model_->getRobotState("home",q_home);
+  //model_->getRobotState("standup",q_home);
   ////model_->getInertiaInverseTimesVector(tau_max,qddot_max);
   //model_->setJointPosition(q_home);
   //model_->update();
@@ -150,7 +150,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_);
+  stack_ /= (feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_);
 
   if(ee_names_.size() > 0)
   {
@@ -223,8 +223,9 @@ void IDProblem::setFootReference(const std::string& foot_name, const Eigen::Affi
     tmp_affine3d_ = model_->getBasePoseInWorld().inverse(); // base_T_world
     tmp_vector6d_.setZero();
     tmp_vector3d_ = vel_ref.head(3);
-    tmp_vector6d_.head(3) = tmp_affine3d_ * tmp_vector3d_;
-    feet_[foot_name]->setReference(tmp_affine3d_*pose_ref,tmp_vector6d_);
+    tmp_vector6d_.head(3) = tmp_affine3d_.linear() * tmp_vector3d_;
+    tmp_affine3d_ = tmp_affine3d_*pose_ref;
+    feet_[foot_name]->setReference(tmp_affine3d_,tmp_vector6d_);
   }
   else
     throw std::runtime_error("Wrong reference frame, can not set the foot references!");

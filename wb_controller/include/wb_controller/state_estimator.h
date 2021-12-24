@@ -67,8 +67,6 @@ public:
 
     void setContactThreshold(const double& th);
 
-    const Eigen::Vector3d& getComPosition() const;
-
     const Eigen::Affine3d& getFloatingBasePose() const;
 
     const Eigen::Vector3d& getFloatingBasePosition() const;

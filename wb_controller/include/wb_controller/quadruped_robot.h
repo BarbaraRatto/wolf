@@ -186,7 +186,6 @@ public:
    */
   bool getJacobian(const Eigen::VectorXd& q, const std::string& link_name, const std::string& target_frame, Eigen::MatrixXd& J);
 
-
   /**
    * @brief Gets the inertia matrix in joint position q
    *

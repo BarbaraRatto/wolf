@@ -561,7 +561,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
     }
 
-    des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
+    des_joint_efforts_ = des_joint_efforts_solver_ + 0.0 * des_joint_efforts_impedance_;
 
     // Check if the desired efforts are valid otherwise clamp them
     robot_model_->clampJointEfforts(des_joint_efforts_);
