@@ -68,6 +68,11 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No max_step_length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
         }
+        double max_base_height = 0.5; // [m]
+        if (!controller_nh.getParam("max_base_height", max_base_height))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
+        }
         double default_base_linear_velocity = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
         {
@@ -153,6 +158,7 @@ public:
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
+        controller_->getFootholdsPlanner()->setMaxBaseHeight(max_base_height);
 
         controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 

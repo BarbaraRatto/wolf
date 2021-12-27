@@ -19,5 +19,4 @@
 - experiments on the real robot
 - tests and profiling
 - check the FIXME around the code clean up
-- clamp base height command using max_height parameter
-
+- Fix filters, use only one class

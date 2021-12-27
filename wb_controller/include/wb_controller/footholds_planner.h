@@ -164,6 +164,7 @@ public:
     void setStepHeight(const double& height);
     void setMaxStepHeight(const double& max);
     void setMaxStepLength(const double& max);
+    void setMaxBaseHeight(const double& max);
     void increaseStepHeight();
     void decreaseStepHeight();
     void increaseSwingFrequency();
@@ -241,6 +242,7 @@ private:
     std::atomic<double>  base_angular_velocity_cmd_;
     std::atomic<double>  step_height_max_;
     std::atomic<double>  step_length_max_;
+    std::atomic<double>  base_height_max_;
     std::atomic<double>  step_height_;
     std::atomic<bool>    push_detected_;
     std::atomic<bool>    push_recovery_active_;
