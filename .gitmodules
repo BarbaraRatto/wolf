@@ -4,9 +4,6 @@
 [submodule "setup"]
 	path = setup
 	url = git@github.com:graiola/wbc-setup.git
-[submodule "rt_gui"]
-	path = rt_gui
-	url = https://github.com/graiola/rt_gui
 [submodule "wolf_descriptions"]
 	path = wolf_descriptions
 	url = git@github.com:graiola/wolf_descriptions.git
