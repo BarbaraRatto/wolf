@@ -1,20 +1,20 @@
-#include <wb_hardware_interface/wb_robot_hw.h>
+#include <wolf_hardware_interface/wolf_robot_hw.h>
 #include <srdfdom/model.h>
 #include <urdf_parser/urdf_parser.h>
 #include <srdfdom/srdf_writer.h>
 
 using namespace hardware_interface;
 
-WbRobotHwInterface::WbRobotHwInterface()
+WolfRobotHwInterface::WolfRobotHwInterface()
 {
     initialized_ = false;
 }
 
-WbRobotHwInterface::~WbRobotHwInterface()
+WolfRobotHwInterface::~WolfRobotHwInterface()
 {
 }
 
-std::vector<std::string> WbRobotHwInterface::loadJointNamesFromSRDF()
+std::vector<std::string> WolfRobotHwInterface::loadJointNamesFromSRDF()
 {
     std::vector<std::string> joint_names;
     ros::NodeHandle nh;
@@ -44,7 +44,7 @@ std::vector<std::string> WbRobotHwInterface::loadJointNamesFromSRDF()
     return joint_names;
 }
 
-bool WbRobotHwInterface::initializeInterfaces(const std::vector<std::string>& joint_names)
+bool WolfRobotHwInterface::initializeInterfaces(const std::vector<std::string>& joint_names)
 {
     // We want to use only the motor/joints.
     if(joint_names.size()<=0)

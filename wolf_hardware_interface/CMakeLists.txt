@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(wb_hardware_interface)
+project(wolf_hardware_interface)
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++17" COMPILER_SUPPORTS_CXX17)
@@ -33,13 +33,13 @@ catkin_package(
   INCLUDE_DIRS
     include
   LIBRARIES
-    wb_robot_hw
+    wolf_robot_hw
 )
 
-add_library(wb_robot_hw src/wb_robot_hw.cpp)
-target_link_libraries(wb_robot_hw ${catkin_LIBRARIES})
+add_library(wolf_robot_hw src/wolf_robot_hw.cpp)
+target_link_libraries(wolf_robot_hw ${catkin_LIBRARIES})
 
-install(TARGETS wb_robot_hw
+install(TARGETS wolf_robot_hw
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

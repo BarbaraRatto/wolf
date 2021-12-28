@@ -1,16 +1,16 @@
-#include <wb_gazebo_interface/wb_hw_sim.h>
+#include <wolf_gazebo_interface/wolf_hw_sim.h>
 
 #include <gazebo/sensors/SensorManager.hh>
 #include <ignition/math/Vector3.hh>
 
-PLUGINLIB_EXPORT_CLASS(wb_gazebo_interface::WbRobotHwSim, gazebo_ros_control::RobotHWSim)
+PLUGINLIB_EXPORT_CLASS(wolf_gazebo_interface::WolfRobotHwSim, gazebo_ros_control::RobotHWSim)
 
-namespace wb_gazebo_interface
+namespace wolf_gazebo_interface
 {
 
   using namespace hardware_interface;
 
-  bool WbRobotHwSim::initSim(const std::string& robot_namespace,
+  bool WolfRobotHwSim::initSim(const std::string& robot_namespace,
                               ros::NodeHandle model_nh,
                               gazebo::physics::ModelPtr parent_model,
                               const urdf::Model *const urdf_model,
@@ -54,9 +54,9 @@ namespace wb_gazebo_interface
       joint_names[j] = transmissions[j].joints_[0].name_;
     }
 
-    if(!WbRobotHwInterface::initializeInterfaces(joint_names))
+    if(!WolfRobotHwInterface::initializeInterfaces(joint_names))
     {
-      ROS_ERROR_NAMED(CLASS_NAME,"Initialization of WbRobotHwInterface failed.");
+      ROS_ERROR_NAMED(CLASS_NAME,"Initialization of WolfRobotHwInterface failed.");
       return false;
     }
 
@@ -97,7 +97,7 @@ namespace wb_gazebo_interface
     }
 
     // Freeze base service
-    ss_ = model_nh.advertiseService("freeze_base", &WbRobotHwSim::freezeBase, this); //FIXME it should be moved to a dedicated interface
+    ss_ = model_nh.advertiseService("freeze_base", &WolfRobotHwSim::freezeBase, this); //FIXME it should be moved to a dedicated interface
     freeze_base_sim_ = false;
 
     registerInterfaces();
@@ -105,7 +105,7 @@ namespace wb_gazebo_interface
     return true;
   }
 
-  bool WbRobotHwSim::registerInterfaces()
+  bool WolfRobotHwSim::registerInterfaces()
   {
     if(isInitialized())
     {
@@ -119,7 +119,7 @@ namespace wb_gazebo_interface
     return true;
   }
 
-  bool WbRobotHwSim::freezeBase(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+  bool WolfRobotHwSim::freezeBase(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
   {
     //Freeze_base control
     freeze_base_sim_ = !freeze_base_sim_;
@@ -135,7 +135,7 @@ namespace wb_gazebo_interface
     return true;
   }
 
-  void WbRobotHwSim::readSim(ros::Time /*time*/, ros::Duration period)
+  void WolfRobotHwSim::readSim(ros::Time /*time*/, ros::Duration period)
   {
 
     for (unsigned int j=0; j < n_dof_; j++) {
@@ -298,7 +298,7 @@ namespace wb_gazebo_interface
   }
 
 
-  void WbRobotHwSim::writeSim(ros::Time time, ros::Duration period)
+  void WolfRobotHwSim::writeSim(ros::Time time, ros::Duration period)
   {
 
     if(freeze_base_sim_)

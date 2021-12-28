@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>wb_hardware_interface</name>
+  <name>wolf_hardware_interface</name>
   <version>0.0.1</version>
   <description>Hardware Interface</description>
   <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>

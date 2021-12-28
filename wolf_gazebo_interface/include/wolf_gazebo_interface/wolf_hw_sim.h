@@ -1,5 +1,5 @@
-#ifndef WB_HW_SIM_H
-#define WB_HW_SIM_H
+#ifndef WOLF_HW_SIM_H
+#define WOLF_HW_SIM_H
 
 // ROS includes
 #include <ros/ros.h>
@@ -21,13 +21,13 @@
 #include <urdf/model.h>
 
 // HW interface
-#include <wb_hardware_interface/wb_robot_hw.h>
+#include <wolf_hardware_interface/wolf_robot_hw.h>
 
 // Eigen
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 
-namespace wb_gazebo_interface
+namespace wolf_gazebo_interface
 {
 
 /**
@@ -35,13 +35,13 @@ namespace wb_gazebo_interface
  * @brief This hardware interface is loaded to Gazebo using gazebo_ros_control plugin
  * which required the initSim, readSim and writeSim methods override in this class.
  */
-class WbRobotHwSim : public gazebo_ros_control::RobotHWSim, public hardware_interface::WbRobotHwInterface
+class WolfRobotHwSim : public gazebo_ros_control::RobotHWSim, public hardware_interface::WolfRobotHwInterface
 {
 public:
 
-  typedef std::shared_ptr<WbRobotHwSim> Ptr;
+  typedef std::shared_ptr<WolfRobotHwSim> Ptr;
 
-  const std::string CLASS_NAME = "WbRobotHwSim";
+  const std::string CLASS_NAME = "WolfRobotHwSim";
 
   /**
      * @brief Initializes the hardware interface by reading the urdf file

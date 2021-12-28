@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(wb_gazebo_interface)
+project(wolf_gazebo_interface)
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++17" COMPILER_SUPPORTS_CXX17)
@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   gazebo_ros
   controller_manager
-  wb_hardware_interface
+  wolf_hardware_interface
   transmission_interface
   pluginlib
   gazebo_ros
@@ -34,8 +34,8 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(gazebo REQUIRED)
 
 catkin_package(
-  LIBRARIES wb_hw_sim
-  CATKIN_DEPENDS wb_hardware_interface
+  LIBRARIES wolf_hw_sim
+  CATKIN_DEPENDS wolf_hardware_interface
   INCLUDE_DIRS include)
 
 link_directories(${GAZEBO_LIBRARY_DIRS})
@@ -44,20 +44,20 @@ include_directories(include
   ${GAZEBO_INCLUDE_DIRS})
 
 ## Libraries
-add_library(wb_hw_sim src/wb_hw_sim.cpp)
-target_link_libraries(wb_hw_sim ${catkin_LIBRARIES}
+add_library(wolf_hw_sim src/wolf_hw_sim.cpp)
+target_link_libraries(wolf_hw_sim ${catkin_LIBRARIES}
                                  ${GAZEBO_LIBRARIES}
                       )
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
-install(TARGETS wb_hw_sim
+install(TARGETS wolf_hw_sim
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   )
 
-install(FILES wb_hw_sim_plugins.xml
+install(FILES wolf_hw_sim_plugins.xml
 DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 

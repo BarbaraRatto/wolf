@@ -1,12 +1,12 @@
-#ifndef WB_ROBOT_HW_INTERFACE_H
-#define WB_ROBOT_HW_INTERFACE_H
+#ifndef WOLF_ROBOT_HW_INTERFACE_H
+#define WOLF_ROBOT_HW_INTERFACE_H
 
 #include <ros/ros.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/imu_sensor_interface.h>
-#include <wb_hardware_interface/ground_truth_interface.h>
-#include <wb_hardware_interface/contact_switch_sensor_interface.h>
+#include <wolf_hardware_interface/ground_truth_interface.h>
+#include <wolf_hardware_interface/contact_switch_sensor_interface.h>
 #include <hardware_interface/force_torque_sensor_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <transmission_interface/transmission_info.h>
@@ -16,14 +16,14 @@
 namespace hardware_interface
 {
 
-class WbRobotHwInterface
+class WolfRobotHwInterface
 {
 public:
 
-    const std::string CLASS_NAME = "WbRobotHwInterface";
+    const std::string CLASS_NAME = "WolfRobotHwInterface";
 
-    WbRobotHwInterface();
-    virtual ~WbRobotHwInterface();
+    WolfRobotHwInterface();
+    virtual ~WolfRobotHwInterface();
 
     bool initializeInterfaces(const std::vector<std::string>& joint_names);
 
