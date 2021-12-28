@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(wb_gazebo_resources)
+project(wolf_gazebo_resources)
 
 find_package(catkin REQUIRED)
 
