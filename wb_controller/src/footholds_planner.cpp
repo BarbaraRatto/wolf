@@ -168,17 +168,17 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
   }
   gait_generator_->setTerrainRotation(world_T_terrain_.linear());
 
-    if(cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_)
-    {
-      if(push_detected_ && gait_generator_->getGaitType() == Gait::gait_t::CRAWL)
-        gait_generator_->setGaitType(Gait::gait_t::TROT);
-      //robot_model_->setState(QuadrupedRobot::WALKING);
-      gait_generator_->activateSwing();
-    }
-    else
-    {
-      gait_generator_->deactivateSwing();
-    }
+  if(cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_)
+  {
+    if(push_detected_ && gait_generator_->getGaitType() == Gait::gait_t::CRAWL)
+      gait_generator_->setGaitType(Gait::gait_t::TROT);
+    //robot_model_->setState(QuadrupedRobot::WALKING);
+    gait_generator_->activateSwing();
+  }
+  else
+  {
+    gait_generator_->deactivateSwing();
+  }
 
   // Update the gait_generator
   gait_generator_->update(period);
@@ -225,7 +225,7 @@ void FootholdsPlanner::calculateFootSteps()
       hf_delta_foot_.setZero();
       hf_delta_foot_.head(2) =  hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
 
-      //6) Sum delta com and the delta for the push recovery
+      //6) Sum the delta for the push recovery
       hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + push_recovery_->getDelta(foot_names[i]);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_foot_: "<<hf_delta_foot_.transpose());
 
@@ -240,7 +240,7 @@ void FootholdsPlanner::calculateFootSteps()
       if(step_length_ > step_length_max_)
       {
         step_length_ = step_length_max_;
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Step length is greater than: "<<step_length_max_);
+        ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Step length is greater than: "<<step_length_max_);
       }
 
       //desired_foothold_[foot_names[i]] = base_T_foot_ * hf_delta_foot_; // FIXME
@@ -716,26 +716,27 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   rx_ = base_length_/2.0;
   ry_ = base_width_/2.0;
 
-  // FIXME hardcoded foot names
-  signs_["lf_foot"] = std::make_pair<int,int>(-1,1);
-  signs_["rf_foot"] = std::make_pair<int,int>(1,1);
-  signs_["lh_foot"] = std::make_pair<int,int>(-1,-1);
-  signs_["rh_foot"] = std::make_pair<int,int>(1,-1);
-
-  cutoff_freq_ = 20.0;
-  th_filter_.setOmega(2.0*M_PI*cutoff_freq_);
-
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
   for(unsigned int i=0;i<foot_names.size();i++)
   {
+    // Compute the signs for the feet:
+    //signs_["lf_foot"] = std::make_pair<int,int>(1,1);
+    //signs_["rf_foot"] = std::make_pair<int,int>(1,-1);
+    //signs_["lh_foot"] = std::make_pair<int,int>(-1,1);
+    //signs_["rh_foot"] = std::make_pair<int,int>(-1,-1);
+    Eigen::Affine3d pose;
+    auto qhome = footholds_planner_ptr->robot_model_->getJointHomePositions();
+    auto base_name = footholds_planner_ptr->robot_model_->getBaseLinkName();
+    footholds_planner_ptr->robot_model_->getPose(qhome,foot_names[i],base_name,pose);
+    signs_[foot_names[i]] = std::make_pair<int,int>(sgn(pose.translation().x()),sgn(pose.translation().y()));
+    // Reset the deltas
     deltas_[foot_names[i]].setZero();
-    deltas_filter_[foot_names[i]].setOmega(2.0*M_PI*cutoff_freq_);
   }
 
-  //velocity_filter_.setOmega(2.0*M_PI*cutoff_freq_);
-  //velocity_filter_.setDamping(1.0);
+  cutoff_freq_ = 20.0; // FIXME hardcoded
+  th_filter_.setOmega(2.0*M_PI*cutoff_freq_);
 
-  max_delta_ = 0.1 * footholds_planner_ptr_->step_length_max_;
+  max_delta_ = (footholds_planner_ptr_->step_length_max_) / 1.5; //  x ~ L/sqrt(2)
 
   static_th_dot_(0) = 1000.0; // x [m/s]
   static_th_dot_(1) = 1000.0; // y [m/s]
@@ -757,6 +758,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/cmd_velocity",cmd_velocity_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity",base_velocity_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity_filt",base_velocity_filt_);
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/error_abs",error_abs_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/error",error_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lf",deltas_["lf_foot"]);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rf",deltas_["rf_foot"]);
@@ -800,10 +802,10 @@ bool PushRecovery::update(const double& period)
   I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * I_world_;
   base_inertia_z_ = I_hf_(2,2);
 
-  // Filter the base velocity
-  //base_velocity_filt_ = velocity_filter_.process(base_velocity_);
-
   error_ = base_velocity_ - cmd_velocity_;
+  error_abs_(0) = std::abs(error_(0));
+  error_abs_(1) = std::abs(error_(1));
+  error_abs_(2) = std::abs(error_(2));
 
   if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->getCmd() == FootholdsPlanner::LINEAR_AND_ANGULAR) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
@@ -812,19 +814,18 @@ bool PushRecovery::update(const double& period)
 
   current_th_dot_filt_ = th_filter_.process(current_th_dot_);
 
-  const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
-
-  if(std::abs(error_(0)) < current_th_dot_filt_(0) && std::abs(error_(1)) < current_th_dot_filt_(1) && std::abs(error_(2)) < current_th_dot_filt_(2))
-  {
-    for(unsigned int i=0;i<foot_names.size();i++) // Reset
-      deltas_[foot_names[i]].setZero();
-  }
+  if(error_abs_(0) < current_th_dot_filt_(0) && error_abs_(1) < current_th_dot_filt_(1) && error_(2) < current_th_dot_filt_(2))
+    push_detected = false;
   else
     push_detected = true;
 
-  if (compute_deltas_ && push_detected)
+  const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
+  for(unsigned int i=0;i<foot_names.size();i++)
   {
-    for(unsigned int i=0;i<foot_names.size();i++)
+    if(footholds_planner_ptr_->gait_generator_->isInStance(foot_names[i]))
+      deltas_[foot_names[i]].setZero();
+
+    if(push_detected && footholds_planner_ptr_->gait_generator_->isLiftOff(foot_names[i]))
     {
       Z0h_  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
       st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
@@ -847,8 +848,6 @@ bool PushRecovery::update(const double& period)
         deltas_[foot_names[i]].y() = max_delta_;
       if(deltas_[foot_names[i]].y() < -max_delta_)
         deltas_[foot_names[i]].y() = -max_delta_;
-
-      deltas_[foot_names[i]] = deltas_filter_[foot_names[i]].process(deltas_[foot_names[i]]);
     }
   }
 
