@@ -563,6 +563,14 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
 
+    // Check if we have at least one contact
+    bool contact = false;
+    auto contacts = state_estimator_->getContacts();
+    for (auto& tmp_map : contacts)
+      contact = tmp_map.second || contact;
+    if(!contact)
+      solver_active_ = false;
+
     // Check if the desired efforts are valid otherwise clamp them
     robot_model_->clampJointEfforts(des_joint_efforts_);
 
