@@ -725,7 +725,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
     //signs_["lh_foot"] = std::make_pair<int,int>(-1,1);
     //signs_["rh_foot"] = std::make_pair<int,int>(-1,-1);
     Eigen::Affine3d pose;
-    auto qhome = footholds_planner_ptr->robot_model_->getJointHomePositions();
+    auto qhome = footholds_planner_ptr->robot_model_->getStandUpJointPostion();
     auto base_name = footholds_planner_ptr->robot_model_->getBaseLinkName();
     footholds_planner_ptr->robot_model_->getPose(qhome,foot_names[i],base_name,pose);
     signs_[foot_names[i]] = std::make_pair<int,int>(sgn(pose.translation().x()),sgn(pose.translation().y()));
