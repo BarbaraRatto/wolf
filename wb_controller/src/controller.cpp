@@ -30,6 +30,7 @@ double _period = 0.001;
 
 Controller::Controller()
     :solver_active_(false)
+    ,kin_adj_active_(false)
     ,init_done_(false)
     ,stopping_(false)
 {
@@ -388,6 +389,32 @@ void Controller::toggleSolver()
         ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
 }
 
+void Controller::startKinematicAdjustment(const bool& start)
+{
+
+    kin_adj_active_=start;
+
+    if(kin_adj_active_)
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
+    else
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
+}
+
+bool Controller::isKinematicAdjustmentActive() const
+{
+    return kin_adj_active_;
+}
+
+void Controller::toggleKinematicAdjustment()
+{
+    kin_adj_active_=!kin_adj_active_;
+
+    if(kin_adj_active_)
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
+    else
+        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
+}
+
 void Controller::readJoints()
 {
     joint_positions_.setZero(joint_positions_.size());
@@ -484,13 +511,14 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 3) Update state estimator
     updateStateEstimator(period_);
 
-    legs_impedance_->update();
-    legs_kinematics_->update(joint_positions_);
-    des_joint_positions_         = legs_kinematics_->getDesiredJointPositions();
-    des_joint_velocities_        = legs_kinematics_->getDesiredJointVelocities();
-
     if(solver_active_) // Use the ID solver to calculate the torques
     {
+
+        legs_impedance_->update();
+        legs_kinematics_->update(joint_positions_);
+        des_joint_positions_         = legs_kinematics_->getDesiredJointPositions();
+        des_joint_velocities_        = legs_kinematics_->getDesiredJointVelocities();
+
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
         {
             // We need to set these values here because the robot is starting in the air with the simulation.
@@ -553,7 +581,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
           des_joint_efforts_solver_.fill(0.0);
         }
 
-        des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
+        if(kin_adj_active_)
+          des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
+        else
+          des_joint_efforts_impedance_.fill(0.0);
     }
     else
     {

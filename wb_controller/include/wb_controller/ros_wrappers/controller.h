@@ -212,6 +212,7 @@ public:
         server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
         server_->registerVariable<bool>("activate_solver",controller_->isSolverActive(),boost::bind(&wb_controller::Controller::startSolver,controller_,_1),"activate solver");
         server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wb_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
+        server_->registerVariable<bool>("activate_kinematic_adjustment",controller_->isKinematicAdjustmentActive(),boost::bind(&wb_controller::Controller::startKinematicAdjustment,controller_,_1),"activate kinematic adjustment");
 
         server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wb_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
         server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wb_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);

@@ -115,6 +115,21 @@ public:
     bool isSolverActive() const;
 
     /**
+         * @brief Start/Stop kinematic adjustment
+         */
+    void toggleKinematicAdjustment();
+
+    /**
+         * @brief Start/Stop kinematic adjustment
+         */
+    void startKinematicAdjustment(const bool& start);
+
+    /**
+         * @brief get the flag value for the kinematic adjustment
+         */
+    bool isKinematicAdjustmentActive() const;
+
+    /**
          * @brief Set the duty factor for the feet
          * @param const double duty_factor
          */
@@ -295,8 +310,10 @@ private:
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
     /** @brief True if the controller uses the external contact sensors */
     bool use_contact_sensors_;
-    /** @brief True if the solver is started */
+    /** @brief True if the solver is active */
     std::atomic<bool> solver_active_;
+    /** @brief True if the kinematic adjustment is active */
+    std::atomic<bool> kin_adj_active_;
     /** @brief True if the initialization phase is done */
     std::atomic<bool> init_done_;
     /** @brief True if the controller is stopping */
