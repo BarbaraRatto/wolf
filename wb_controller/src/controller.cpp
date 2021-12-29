@@ -655,22 +655,17 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Get the solver solution
         if(!id_prob_->solve(des_joint_efforts_solver_))
-        {
-            des_joint_positions_ = joint_positions_;
-            pid_active_ = true;
-        }
-        else
-            pid_active_ = false;
+            solver_active_ = false;
+
+        pid_active_ = false;
     }
     else // Use a position PID controller
-    {
         pid_active_ = true;
-    }
 
     if(pid_active_)
     {
-        //des_joint_positions_ = joint_positions_; //legs_kinematics_->getJointHomePositions();
         // Keep the old des joint position
+        des_joint_positions_ = robot_model_->getJointHomePositions();
         des_joint_velocities_.fill(0.0);
         des_joint_efforts_solver_.fill(0.0);
         pid_scale_ = 1.0;
