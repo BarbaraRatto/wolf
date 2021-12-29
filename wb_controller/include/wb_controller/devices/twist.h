@@ -40,7 +40,7 @@ public:
         else
             start_swing_ = false;
 
-        reset_base_      = false; // FIXME
+        reset_base_      = false;
 
         update();
     }

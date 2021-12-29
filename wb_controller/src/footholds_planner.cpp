@@ -349,6 +349,21 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
   // This is the base height reference computed w.r.t terrain ( reference = reference_world - reference_terrain )
   base_position_reference_.head(2) = base_position_.head(2);
   base_position_reference_(2) = base_position_(2) + world_T_terrain_.translation().z();
+
+  // Clamp the z value
+  if(base_position_reference_(2) > base_height_max_)
+  {
+    base_position_reference_(2) = base_position_(2) = base_height_max_;
+    base_linear_velocity_reference_(2) = hf_base_linear_velocity_ref_(2) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base height limit reached: "<<base_height_max_);
+  }
+  else if (base_position_reference_(2) < 0.0)
+  {
+    base_position_reference_(2) = base_position_(2) = 0.0;
+    base_linear_velocity_reference_(2) = hf_base_linear_velocity_ref_(2) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base height limit reached: "<<0.0);
+  }
+
 }
 
 void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
@@ -535,6 +550,16 @@ void FootholdsPlanner::setMaxStepHeight(const double& max)
   }
   else
     ROS_WARN_NAMED(CLASS_NAME,"Max step height is less equal than: 0.0");
+}
+
+void FootholdsPlanner::setMaxBaseHeight(const double& max)
+{
+  if(max >= 0.0) // Check if it is ok
+  {
+    base_height_max_ = max;
+  }
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Max base height is less equal than: 0.0");
 }
 
 void FootholdsPlanner::setMaxStepLength(const double& max)

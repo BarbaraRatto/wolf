@@ -13,7 +13,7 @@
   <depend>roscpp</depend>
   <depend>tf</depend>
   <depend>controller_interface</depend>
-  <depend>wb_hardware_interface</depend>
+  <depend>wolf_hardware_interface</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
@@ -27,7 +27,7 @@
   <test_depend>controller_manager</test_depend>
   <test_depend>hardware_interface</test_depend>
   <test_depend>rostest</test_depend>
-  <test_depend>wb_hardware_interface</test_depend>
+  <test_depend>wolf_hardware_interface</test_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

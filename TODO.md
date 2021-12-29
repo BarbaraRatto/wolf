@@ -6,7 +6,7 @@
 - robustness tests with push recovery
 - startup procedure and solver reset (state machine?)
 - relative tasks between the feet
-- port the robots to the new stack
+- port the robots to the new stack 
 - change name to WOLF
 - move headers code in cpp
 - remove ground truth and contact sensors
@@ -19,4 +19,4 @@
 - experiments on the real robot
 - tests and profiling
 - check the FIXME around the code clean up
-
+- Fix filters, use only one class

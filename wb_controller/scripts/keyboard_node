@@ -8,6 +8,7 @@ import rospy
 import numpy as np
 
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 
 import rospkg
 
@@ -28,6 +29,7 @@ h  j  k
 
 o : up (+z)
 l : down (-z)
+r: reset base
 """
 
 
@@ -51,7 +53,8 @@ if __name__=="__main__":
     rospy.init_node('keyboard_node')
 
     robot_name = rospy.get_param('/robot_name')
-    pub = rospy.Publisher('%s/wb_controller/twist'%(robot_name), Twist, queue_size = 1)
+    twist_pub = rospy.Publisher('%s/wb_controller/twist' % (robot_name), Twist, queue_size = 1)
+    reset_pub = rospy.Publisher('%s/wb_controller/reset_base' % (robot_name), Bool, queue_size=1)
 
     pygame.init()
 
@@ -73,21 +76,27 @@ if __name__=="__main__":
         keys = pygame.key.get_pressed()
 
         command = np.array([0, 0, 0, 0, 0, 0])
-        for key in moveBindings:
-            if keys[ord(key)]:
-                command += moveBindings[key]
+        if keys[ord("r")]:
+            reset_base = Bool()
+            reset_base.data = True
+            reset_pub.publish(reset_base)
+        else:
+            for key in moveBindings:
+                if keys[ord(key)]:
+                    command += moveBindings[key]
+
+                twist = Twist()
+                twist.linear.x = command[0]
+                twist.linear.y = command[1]
+                twist.linear.z = command[2]
+                twist.angular.x = command[3]
+                twist.angular.y = command[4]
+                twist.angular.z = command[5]
+                twist_pub.publish(twist)
 
         if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
             exit()
 
-        twist = Twist()
-        twist.linear.x = command[0]
-        twist.linear.y = command[1]
-        twist.linear.z = command[2]
-        twist.angular.x = command[3]
-        twist.angular.y = command[4]
-        twist.angular.z = command[5]
-        pub.publish(twist)
 
         pygame.display.update()
 
