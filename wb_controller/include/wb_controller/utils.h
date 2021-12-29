@@ -160,6 +160,36 @@ private:
 
 };
 
+class Counter
+{
+public:
+
+    Counter(unsigned int limit)
+    {
+      cnt_ = 0;
+      limit_ = limit;
+    }
+
+    void count()
+    {
+      cnt_++;
+    }
+
+    void reset()
+    {
+      cnt_ = 0;
+    }
+
+    bool limitReached()
+    {
+      return (cnt_ >= limit_ ? true : false);
+    }
+
+private:
+    long long cnt_;
+    unsigned int limit_;
+};
+
 class Trigger
 {
 public:
@@ -176,7 +206,6 @@ public:
 private:
     bool old_value;
 };
-
 
 class AxisToTrigger
 {
