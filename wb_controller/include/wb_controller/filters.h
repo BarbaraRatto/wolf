@@ -57,7 +57,12 @@ public:
   MovingAvgFilter(unsigned int n)
   {
     window_.resize(n);
-    for(unsigned int i=0; i<n; i++)
+    reset();
+  }
+
+  void reset()
+  {
+    for(unsigned int i=0; i<window_.size(); i++)
       window_[i] = 0.0;
     window_idx_ = 0;
     sum_ = 0.0;
