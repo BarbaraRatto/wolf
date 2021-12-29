@@ -53,7 +53,7 @@ public:
     task_name_ = task_name;
     nh_ = nh;
     rt_pub_.reset(new realtime_tools::RealtimePublisher<Msg_type>(nh_,task_name_, 4));
-    ros::NodeHandle task_nh(task_name_);
+    ros::NodeHandle task_nh(nh_.getNamespace()+"/"+task_name_);
     server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(task_nh));
   }
 
