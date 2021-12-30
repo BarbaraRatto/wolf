@@ -217,8 +217,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     double cnt_sec = 0.5; // sec counter
     int cnt_size = static_cast<int>(std::ceil(cnt_sec / period_));
-    solver_failures_cnt_  = std::make_shared<Counter>(cnt_size);
-    contact_failures_cnt_ = std::make_shared<Counter>(cnt_size);
+    solver_failures_cnt_        = std::make_shared<Counter>(cnt_size);
+    contact_failures_cnt_       = std::make_shared<Counter>(cnt_size);
+    velocity_lims_failures_cnt_ = std::make_shared<Counter>(cnt_size);
 
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
@@ -576,7 +577,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // 3) Update state estimator
     updateStateEstimator(period_);
 
-    if(solver_active_) // Use the ID solver to calculate the torques
+    if(solver_active_) // Use the ID solver to calculate the torques otherwise use a damping controller
     {
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
         {
@@ -597,6 +598,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
+
+            contact_failures_cnt_->reset();
+            velocity_lims_failures_cnt_->reset();
+            solver_failures_cnt_->reset();
 
             robot_model_->setState(QuadrupedRobot::WALKING);
 
@@ -660,14 +665,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Get the solver solution
         if(!id_prob_->solve(des_joint_efforts_solver_))
-            solver_failures_cnt_->count();
+            solver_failures_cnt_->increase();
         else
             solver_failures_cnt_->reset();
 
-        if(solver_failures_cnt_->limitReached())
+        if(solver_failures_cnt_->upperLimitReached())
         {
-          ROS_WARN_NAMED(CLASS_NAME,"Solver failure!");
-          solver_active_ = false;
+          ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Failed to solve!");
+          des_joint_efforts_solver_.fill(0.0);
+          robot_model_->setState(QuadrupedRobot::ANOMALY);
         }
 
         pid_active_ = false;
@@ -694,15 +700,38 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     }
 
     // Check if we have at least one contact
-    bool contact = false;
     auto contacts = state_estimator_->getContacts();
+    bool contact = false;
     for (auto& tmp_map : contacts)
-      contact = tmp_map.second || contact;
-    if(!contact)
-      solver_active_ = false;
+      contact = contact || tmp_map.second;
+    if(!contact) // && state_estimator_->getFloatingBasePosition().z() > 0.3 * robot_model_->getStandUpHeight()
+      contact_failures_cnt_->increase();
+    else
+      contact_failures_cnt_->reset();
+    if(contact_failures_cnt_->upperLimitReached())
+    {
+      robot_model_->setState(QuadrupedRobot::ANOMALY);
+      ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Lost contacts!");
+    }
 
     // Check if the desired efforts are valid otherwise clamp them
     robot_model_->clampJointEfforts(des_joint_efforts_solver_);
+
+    // Check if the current joint velocities are valid otherwise set robot state to anomaly
+    // FIXME Perform the check for each separated JOINT!
+    if(!robot_model_->checkVelocityLimits(joint_velocities_))
+      velocity_lims_failures_cnt_->increase();
+    else
+      velocity_lims_failures_cnt_->reset();
+    if(velocity_lims_failures_cnt_->upperLimitReached())
+    {
+      robot_model_->setState(QuadrupedRobot::ANOMALY);
+      ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Reached joint velocities limit!");
+    }
+
+    // If anomaly, deactivate the solver and activate the impedance
+    if(robot_model_->getState() == QuadrupedRobot::ANOMALY)
+      solver_active_ = false;
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)

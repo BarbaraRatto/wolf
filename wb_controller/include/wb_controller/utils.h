@@ -169,15 +169,21 @@ public:
 
     typedef std::shared_ptr<Counter> Ptr;
 
-    Counter(unsigned int limit)
+    Counter(unsigned int upper_limit)
     {
       cnt_ = 0;
-      limit_ = limit;
+      upper_limit_ = upper_limit;
     }
 
-    void count()
+    void increase()
     {
       cnt_++;
+    }
+
+    void decrease()
+    {
+      if(cnt_>0)
+        cnt_--;
     }
 
     void reset()
@@ -185,14 +191,14 @@ public:
       cnt_ = 0;
     }
 
-    bool limitReached()
+    bool upperLimitReached()
     {
-      return (cnt_ >= limit_ ? true : false);
+      return (cnt_ >= upper_limit_ ? true : false);
     }
 
 private:
     long long cnt_;
-    unsigned int limit_;
+    unsigned int upper_limit_;
 };
 
 class Trigger
@@ -252,7 +258,6 @@ private:
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
-
 
 } // namespace
 

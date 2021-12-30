@@ -351,9 +351,10 @@ private:
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
 
-    /** @brief A simple counter */
+    /** @brief Counters used for checks */
     Counter::Ptr solver_failures_cnt_;
     Counter::Ptr contact_failures_cnt_;
+    Counter::Ptr velocity_lims_failures_cnt_;
 
     /**
          * @brief thread body for the odometry publisher
