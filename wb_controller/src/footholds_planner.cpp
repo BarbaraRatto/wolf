@@ -814,7 +814,7 @@ bool PushRecovery::update(const double& period)
 
   current_th_dot_filt_ = th_filter_.process(current_th_dot_);
 
-  if(error_abs_(0) < current_th_dot_filt_(0) && error_abs_(1) < current_th_dot_filt_(1) && error_(2) < current_th_dot_filt_(2))
+  if(error_abs_(0) < current_th_dot_filt_(0) && error_abs_(1) < current_th_dot_filt_(1) && error_abs_(2) < current_th_dot_filt_(2))
     push_detected = false;
   else
     push_detected = true;
