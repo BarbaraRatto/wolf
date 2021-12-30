@@ -44,10 +44,12 @@ private:
   QuadrupedRobot::Ptr robot_model_;
   FootholdsPlanner::Ptr foothold_planner_;
   TerrainEstimator::Ptr terrain_estimator_;
+  Eigen::Vector3d com_;
   Eigen::Vector3d com_velocity_ref_;
   Eigen::Vector3d com_position_ref_;
   Eigen::Vector3d base_velocity_;
   Eigen::Vector3d support_polygon_center_;
+  std::vector<Eigen::Vector3d> support_polygon_edges_;
   bool update_;
 
 };

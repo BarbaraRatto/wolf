@@ -326,6 +326,10 @@ private:
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
 
+    /** @brief Counters used for checks */
+    std::shared_ptr<Counter> velocity_lims_check_cnt_;
+    std::shared_ptr<Counter> contacts_check_cnt_;
+
     /**
          * @brief thread body for the odometry publisher
          */
