@@ -733,7 +733,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
     deltas_[foot_names[i]].setZero();
   }
 
-  cutoff_freq_ = 20.0; // FIXME hardcoded
+  cutoff_freq_ = 1.0; // FIXME hardcoded
   th_filter_.setOmega(2.0*M_PI*cutoff_freq_);
 
   max_delta_ = (footholds_planner_ptr_->step_length_max_) / 1.5; //  x ~ L/sqrt(2)
@@ -807,7 +807,7 @@ bool PushRecovery::update(const double& period)
   error_abs_(1) = std::abs(error_(1));
   error_abs_(2) = std::abs(error_(2));
 
-  if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->getCmd() == FootholdsPlanner::LINEAR_AND_ANGULAR) // Check if the robot is moving
+  if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->gait_generator_->isAnyFootInSwing()) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
   else
     current_th_dot_ = static_th_dot_; // Apply the 'static' threshold  i.e. lower bounds
