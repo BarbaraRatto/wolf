@@ -112,6 +112,11 @@ public:
     return next_feet_to_move_;
   }
 
+  bool isCycleEnded()
+  {
+    return (current_priority_ == 0 ? true : false);
+  }
+
 private:
 
   typedef std::pair<std::string,unsigned int> foot_priority_t;
@@ -466,7 +471,8 @@ public:
         scheduled_feet_are_ready = false;
         break;
       }
-    if(scheduled_feet_are_ready && activate_swing_)
+    bool trigger_gait_cycle_ended = gait_cycle_ended_.update(gait_buffer_[current_gait_idx_]->isCycleEnded());
+    if(scheduled_feet_are_ready && (activate_swing_ || !trigger_gait_cycle_ended))
       for(unsigned int i=0; i<scheduled_feet_.size(); i++)
         feet_[scheduled_feet_[i]].state_machine->triggerSwing();
 
@@ -507,7 +513,14 @@ public:
     for(unsigned int i=0; i<scheduled_feet_.size(); i++)
       if(feet_[scheduled_feet_[i]].state_machine->isCycleEnded())
         cnt++;
+
+    bool trigger_next_schedule = false;
     if(cnt == scheduled_feet_.size())
+      trigger_next_schedule = next_schedule_.update(true);
+    else
+      trigger_next_schedule = next_schedule_.update(false);
+
+    if(trigger_next_schedule)
     {
       if(change_gait_)
         changeGait();
@@ -561,6 +574,8 @@ private:
   std::atomic<unsigned int> next_gait_idx_;
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
+  Trigger next_schedule_;
+  Trigger gait_cycle_ended_;
 
   Gait::gait_t gait_type_;
 
