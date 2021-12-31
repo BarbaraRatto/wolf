@@ -96,25 +96,38 @@ public:
     }
 
     current_priority_ = 0;
-  }
-
-  const std::vector<std::string>& getNextSchedule()
-  {
+    cycle_ended_ = true;
 
     unsigned int idx = 0;
     for(unsigned int i=0;i < schedule_.size(); i++)
       if(schedule_[i].second == current_priority_)
         next_feet_to_move_[idx++] = schedule_[i].first;
+  }
+
+  void update()
+  {
+    unsigned int idx = 0;
+    for(unsigned int i=0;i < schedule_.size(); i++)
+      if(schedule_[i].second == current_priority_)
+        next_feet_to_move_[idx++] = schedule_[i].first;
+
+    if(current_priority_ == 0)
+      cycle_ended_ = true;
+    else
+      cycle_ended_ = false;
 
     current_priority_++;
     current_priority_ %= max_priority_+1;
+  }
 
+  const std::vector<std::string>& getNextSchedule()
+  {
     return next_feet_to_move_;
   }
 
   bool isCycleEnded()
   {
-    return (current_priority_ == 0 ? true : false);
+    return cycle_ended_;
   }
 
 private:
@@ -125,6 +138,7 @@ private:
 
   unsigned int current_priority_;
   unsigned int max_priority_;
+  bool cycle_ended_;
 
   std::vector<std::string> next_feet_to_move_;
 };
@@ -471,10 +485,13 @@ public:
         scheduled_feet_are_ready = false;
         break;
       }
-    bool trigger_gait_cycle_ended = gait_cycle_ended_.update(gait_buffer_[current_gait_idx_]->isCycleEnded());
-    if(scheduled_feet_are_ready && (activate_swing_ || !trigger_gait_cycle_ended))
-      for(unsigned int i=0; i<scheduled_feet_.size(); i++)
-        feet_[scheduled_feet_[i]].state_machine->triggerSwing();
+
+    if(activate_swing_ || !gait_buffer_[current_gait_idx_]->isCycleEnded())
+      if(scheduled_feet_are_ready)
+      {
+        for(unsigned int i=0; i<scheduled_feet_.size(); i++)
+          feet_[scheduled_feet_[i]].state_machine->triggerSwing();
+      }
 
     // 2) Update the trajectories for each foot depending on the state machine status
     for(feet_t::iterator it = feet_.begin(); it != feet_.end(); it++)
@@ -524,6 +541,8 @@ public:
     {
       if(change_gait_)
         changeGait();
+
+      gait_buffer_[current_gait_idx_]->update();
       scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
     }
   }
@@ -575,7 +594,6 @@ private:
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
   Trigger next_schedule_;
-  Trigger gait_cycle_ended_;
 
   Gait::gait_t gait_type_;
 
