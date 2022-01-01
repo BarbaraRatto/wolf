@@ -82,29 +82,6 @@ void ComPlanner::update()
 {
   computeComVelocityReference();
   computeComPositionReference();
-
-  // Check if we are out of the bounding box
-  double max_x = 0.0;
-  double max_y = 0.0;
-  double min_x = 0.0;
-  double min_y = 0.0;
-  for(unsigned int i=0;i<N_LEGS;i++)
-  {
-    if (support_polygon_edges_[i].x() >= max_x)
-      max_x = support_polygon_edges_[i].x();
-    if (support_polygon_edges_[i].y() >= max_y)
-      max_y = support_polygon_edges_[i].y();
-    if (support_polygon_edges_[i].x() <= min_x)
-      min_x = support_polygon_edges_[i].x();
-    if (support_polygon_edges_[i].y() <= min_y)
-      min_y = support_polygon_edges_[i].y();
-  }
-  robot_model_->getCOM(com_);
-  if(com_.x() > max_x || com_.y() > max_y || com_.x() < min_x || com_.y() < min_y)
-  {
-    robot_model_->setState(QuadrupedRobot::ANOMALY);
-    ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"CoM is outside bounding box!");
-  }
 }
 
 const Eigen::Vector3d &ComPlanner::getComVelocity() const
