@@ -490,8 +490,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     if(solver_active_) // Use the ID solver to calculate the torques otherwise use a damping controller
     {
 
-        legs_impedance_->update();
-
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
         {
             // We need to set these values here because the robot is starting in the air with the simulation.
@@ -562,6 +560,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     else
     {
         des_joint_efforts_solver_.fill(0.0);
+        legs_impedance_->update();
         des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
     }
 
