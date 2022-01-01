@@ -170,7 +170,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     terrain_estimator_->setMaxPitch(M_PI);
     terrain_estimator_->setMinPitch(-M_PI);
 
-    legs_kinematics_ = std::make_shared<LegsKinematics>(gait_generator_,robot_model_,terrain_estimator_);
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
     id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
@@ -392,32 +391,6 @@ void Controller::toggleSolver()
         ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
 }
 
-void Controller::startKinematicAdjustment(const bool& start)
-{
-
-    kin_adj_active_=start;
-
-    if(kin_adj_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
-    else
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
-}
-
-bool Controller::isKinematicAdjustmentActive() const
-{
-    return kin_adj_active_;
-}
-
-void Controller::toggleKinematicAdjustment()
-{
-    kin_adj_active_=!kin_adj_active_;
-
-    if(kin_adj_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is ON");
-    else
-        ROS_INFO_NAMED(CLASS_NAME,"Kinematic adjustment is OFF");
-}
-
 void Controller::readJoints()
 {
     joint_positions_.setZero(joint_positions_.size());
@@ -518,9 +491,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     {
 
         legs_impedance_->update();
-        legs_kinematics_->update(joint_positions_);
-        des_joint_positions_         = legs_kinematics_->getDesiredJointPositions();
-        des_joint_velocities_        = legs_kinematics_->getDesiredJointVelocities();
 
         if(!init_done_) // FIXME Prepare a proper start up and rest procedure
         {
@@ -587,10 +557,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
           robot_model_->setState(QuadrupedRobot::ANOMALY);
         }
 
-        if(kin_adj_active_)
-          des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions_ - joint_positions_) - legs_impedance_->getKd() * joint_velocities_;
-        else
-          des_joint_efforts_impedance_.fill(0.0);
+        des_joint_efforts_impedance_.fill(0.0);
     }
     else
     {
@@ -724,11 +691,6 @@ FootholdsPlanner* Controller::getFootholdsPlanner() const
 TerrainEstimator* Controller::getTerrainEstimator() const
 {
     return terrain_estimator_.get();
-}
-
-LegsKinematics* Controller::getLegsKinematics() const
-{
-    return legs_kinematics_.get();
 }
 
 LegsImpedance* Controller::getLegsImpedance() const

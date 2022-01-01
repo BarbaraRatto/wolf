@@ -115,21 +115,6 @@ public:
     bool isSolverActive() const;
 
     /**
-         * @brief Start/Stop kinematic adjustment
-         */
-    void toggleKinematicAdjustment();
-
-    /**
-         * @brief Start/Stop kinematic adjustment
-         */
-    void startKinematicAdjustment(const bool& start);
-
-    /**
-         * @brief get the flag value for the kinematic adjustment
-         */
-    bool isKinematicAdjustmentActive() const;
-
-    /**
          * @brief Set the duty factor for the feet
          * @param const double duty_factor
          */
@@ -288,8 +273,6 @@ private:
     GaitGenerator::Ptr gait_generator_;
     /** @brief Terrain Estimator */
     TerrainEstimator::Ptr terrain_estimator_;
-    /** @brief Legs Kinematics */
-    LegsKinematics::Ptr legs_kinematics_;
     /** @brief LegsImpedance */
     LegsImpedance::Ptr legs_impedance_;
     /** @brief Ros node handle */
