@@ -507,9 +507,10 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
-    floating_base_position_.head(2) << gt_position_.head(2);
-     // Note: this is the z calculated wrt the base not the one wrt world!
-    floating_base_position_(2) = -estimateZ();
+    //floating_base_position_.head(2) << gt_position_.head(2);
+    // Note: this is the z calculated wrt the base not the one wrt world!
+    //floating_base_position_(2) = -estimateZ();
+    floating_base_position_ = gt_position_;
     break;
   default:
     // The base does not move
