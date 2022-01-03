@@ -727,7 +727,7 @@ void Controller::odomPublisher()
     while(!stopping_)
     {
         // Get floating base
-        base_pose = state_estimator_->getFloatingBasePose(); //FIXME Is it thread safe?
+        base_pose = state_estimator_->getFloatingBasePose();
 
         // Do the inverse of it
         world_pose = base_pose.inverse();
@@ -743,7 +743,7 @@ void Controller::odomPublisher()
         q.setZ(quaternion.z());
         q.setW(quaternion.w());
         transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName() , "/world" ));
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName() , "/" WORLD_FRAME_NAME ));
 
         // Create the tf transform between /ci/base_link and /base_link
         transform.setOrigin(tf::Vector3(0,0,0));
