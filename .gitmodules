@@ -7,3 +7,6 @@
 [submodule "wolf_descriptions"]
 	path = wolf_descriptions
 	url = git@github.com:graiola/wolf_descriptions.git
+[submodule "wolf_gazebo_resources"]
+	path = wolf_gazebo_resources
+	url = https://github.com/graiola/wolf_gazebo_resources
