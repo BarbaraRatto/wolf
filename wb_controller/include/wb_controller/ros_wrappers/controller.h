@@ -204,7 +204,7 @@ public:
 
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
-        contact_forces_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
+        contact_forces_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         contact_forces_pub_->msg_.name.resize(n_contacts);
         contact_forces_pub_->msg_.contact.resize(n_contacts);
         contact_forces_pub_->msg_.contact_positions.resize(n_contacts);
@@ -222,7 +222,7 @@ public:
         terrain_estimation_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
 
         friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::FrictionCones>(controller_nh, "friction_cones", 4));
-        friction_cones_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
+        friction_cones_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
@@ -286,9 +286,9 @@ public:
               current_contact_name = contact_names[i];
               contact_forces_pub_->msg_.name[i] = current_contact_name;
               contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(current_contact_name);
-              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(0);
-              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(1);
-              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(2);
+              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(0);
+              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(1);
+              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(2);
 
               contact_forces_pub_->msg_.contact_forces[i].force.x = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(0);
               contact_forces_pub_->msg_.contact_forces[i].force.y = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(1);
@@ -341,9 +341,9 @@ public:
       {
           for(unsigned int i=0; i <foot_names.size(); i++)
           {
-              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).x();
-              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).y();
-              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).z();
+              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getRobotModel()->getFeetPositionInBase().at(foot_names[i]).x();
+              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getRobotModel()->getFeetPositionInBase().at(foot_names[i]).y();
+              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getRobotModel()->getFeetPositionInBase().at(foot_names[i]).z();
 
               friction_cones_pub_->msg_.cone_axis[i].x = controller_->getTerrainEstimator()->getTerrainNormal().x();
               friction_cones_pub_->msg_.cone_axis[i].y = controller_->getTerrainEstimator()->getTerrainNormal().y();
