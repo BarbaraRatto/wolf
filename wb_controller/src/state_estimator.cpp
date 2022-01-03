@@ -32,6 +32,10 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   floating_base_position_ = Eigen::Vector3d::Zero();
   floating_base_velocity_ = Eigen::Vector6d::Zero();
   floating_base_pose_ = Eigen::Affine3d::Identity();
+  gt_position_ = Eigen::Vector3d::Zero();
+  gt_orientation_ = Eigen::Quaterniond::Identity();
+  gt_linear_velocity_ = Eigen::Vector3d::Zero();
+  gt_angular_velocity_= Eigen::Vector3d::Zero();
   terrain_normal_ << 0,0,1;
   imu_orientation_.normalize();
   floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
@@ -40,8 +44,9 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   for(unsigned int i=0;i<contact_names.size();i++)
   {
     contacts_[contact_names[i]] = true;
-    contact_forces_[contact_names[i]] = Eigen::Vector3d::Zero();
+    contact_forces_[contact_names[i]]  = Eigen::Vector3d::Zero();
     world_X_contact_[contact_names[i]] = Eigen::Vector3d::Zero();
+    base_X_contact_[contact_names[i]]  = Eigen::Vector3d::Zero();
   }
 
   mapRPYderivativesToOmega_ = Eigen::Matrix3d::Identity();
@@ -245,6 +250,31 @@ const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionI
   return world_X_contact_;
 }
 
+const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionInBase() const
+{
+  return base_X_contact_;
+}
+
+const Eigen::Vector3d &StateEstimator::getGroundTruthBasePosition() const
+{
+  return gt_position_;
+}
+
+const Eigen::Quaterniond &StateEstimator::getGroundTruthBaseOrientation() const
+{
+  return gt_orientation_;
+}
+
+const Eigen::Vector3d &StateEstimator::getGroundTruthBaseLinearVelocity() const
+{
+  return gt_linear_velocity_;
+}
+
+const Eigen::Vector3d &StateEstimator::getGroundTruthBaseAngularVelocity() const
+{
+  return gt_angular_velocity_;
+}
+
 void StateEstimator::toggleHapticContactLoop()
 {
   haptic_contact_loop_active_=!haptic_contact_loop_active_;
@@ -285,10 +315,16 @@ void StateEstimator::update(const double& period)
   const std::vector<std::string>& ee_names = robot_model_->getEndEffectorNames();
 
   for(unsigned int i=0; i<foot_names.size(); i++)
+  {
     world_X_contact_[foot_names[i]] = robot_model_->getFootPositionInWorld(foot_names[i]);
+    base_X_contact_[foot_names[i]] = robot_model_->getFootPositionInBase(foot_names[i]);
+  }
 
   for(unsigned int i=0; i<ee_names.size(); i++)
+  {
     world_X_contact_[ee_names[i]] = robot_model_->getEndEffectorPositionInWorld(ee_names[i]);
+    base_X_contact_[ee_names[i]] = robot_model_->getEndEffectorPositionInBase(ee_names[i]);
+  }
 
   updateContactState();
 
