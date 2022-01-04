@@ -492,27 +492,33 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     if(solver_active_) // Use the ID solver to calculate the torques otherwise use a damping controller
     {
 
-        if(!init_done_) // FIXME Prepare a proper start up and rest procedure
+        if(!init_done_)
         {
-            // We need to set these values here because the robot is starting in the air with the simulation.
+            // State estimator
             // Be sure to start the solver and the contact estimation when the robot is grounded.
             state_estimator_->resetGyroscopeIntegration();
             state_estimator_->startContactComputation();
             state_estimator_->startHapticContactLoop();
+            // Footholds planner with gait generator
+            foot_holds_planner_->reset();
             foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
             foot_holds_planner_->setDefaultBasePosition(Eigen::Vector3d(0.0,0.0,robot_model_->getStandUpHeight()));
             foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
             foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
             foot_holds_planner_->initializeFeetPosition();
-
+            // Filters
             imu_gyroscope_filter_.setTimeStep(period_);
             qdot_filter_.setTimeStep(period_);
-
+            // Counters for safety checks
             contact_failures_cnt_->reset();
             solver_failures_cnt_->reset();
             for(unsigned int i=0;i<velocity_lims_failures_cnt_.size();i++)
               velocity_lims_failures_cnt_[i]->reset();
-
+            // Control torques
+            des_joint_efforts_.fill(0.0);
+            des_joint_efforts_solver_.fill(0.0);
+            des_joint_efforts_impedance_.fill(0.0);
+            // Robot's state
             robot_model_->setState(QuadrupedRobot::WALKING);
 
             init_done_ = true;

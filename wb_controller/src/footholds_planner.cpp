@@ -68,8 +68,9 @@ void FootholdsPlanner::reset()
   rotTorpy(base_rotation_reference_,base_orientation_);
   base_position_ = tmp_affine3d_.translation();
 
-  cmd_ = cmd_t::HOLD;
+  gait_generator_->reset();
 
+  cmd_ = cmd_t::HOLD;
 }
 
 void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_position) // OpenLoop Orientation

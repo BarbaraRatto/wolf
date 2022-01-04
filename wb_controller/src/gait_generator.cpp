@@ -55,6 +55,11 @@ Gait::Gait(const std::vector<std::string>& foot_names, const gait_t& gait_type)
     throw std::runtime_error("Wrong gait type!");
   }
 
+  reset();
+}
+
+void Gait::reset()
+{
   current_priority_ = 0;
   cycle_ended_ = true;
 
@@ -90,36 +95,44 @@ bool Gait::isCycleEnded()
   return cycle_ended_;
 }
 
-
-
 GaitGenerator::GaitGenerator(const std::vector<std::string>& foot_names, const Gait::gait_t& gait_type, const Gait::trajectory_t& trajectory_type)
 {
   assert(foot_names.size()==N_LEGS);// We assume we are working with a dog
   foot_names_ = foot_names;
-  for(unsigned int i = 0; i<foot_names.size(); i++)
+  gait_type_ = gait_type;
+
+  for(unsigned int i = 0; i<foot_names_.size(); i++)
   {
-    feet_[foot_names[i]].state_machine.reset(new FootStateMachine());
-    feet_[foot_names[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
-    feet_[foot_names[i]].contact_state = false;
-    feet_[foot_names[i]].trigger_stance = false;
-    feet_[foot_names[i]].initial_pose = Eigen::Affine3d::Identity();
+    feet_[foot_names_[i]].state_machine.reset(new FootStateMachine());
+    feet_[foot_names_[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
+    feet_[foot_names_[i]].contact_state  = false;
+    feet_[foot_names_[i]].trigger_stance = false;
+    feet_[foot_names_[i]].initial_pose = Eigen::Affine3d::Identity();
   }
 
   setSwingFrequency(0.0);
 
   gait_buffer_.resize(2);
-
   for(unsigned int i=0; i<gait_buffer_.size(); i++)
-    gait_buffer_[i].reset(new Gait(foot_names,gait_type));
+    gait_buffer_[i].reset(new Gait(foot_names_,gait_type_));
 
   current_gait_idx_ = 0;
   next_gait_idx_ = 1;
   scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
 
+  reset();
+}
+
+void GaitGenerator::reset()
+{
+  for(unsigned int i = 0; i<foot_names_.size(); i++)
+    feet_[foot_names_[i]].state_machine->reset();
+
+  for(unsigned int i=0; i<gait_buffer_.size(); i++)
+    gait_buffer_[i]->reset();
+
   change_gait_ = false;
   activate_swing_ = false;
-
-  gait_type_ = gait_type;
 }
 
 const std::vector<std::string>& GaitGenerator::getFootNames()

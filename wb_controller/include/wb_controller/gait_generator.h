@@ -26,6 +26,8 @@ public:
 
   Gait(const std::vector<std::string>& foot_names, const gait_t& gait_type);
 
+  void reset();
+
   void update();
 
   const std::vector<std::string>& getNextSchedule();
@@ -60,6 +62,8 @@ public:
   typedef std::shared_ptr<const GaitGenerator> ConstPtr;
 
   GaitGenerator(const std::vector<std::string>& foot_names, const Gait::gait_t& gait_type, const Gait::trajectory_t& trajectory_type = Gait::ELLIPSE);
+
+  void reset();
 
   const std::vector<std::string>& getFootNames();
 

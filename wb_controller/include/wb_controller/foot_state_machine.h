@@ -16,6 +16,11 @@ public:
     duty_factor_ = 0.8; // It is defined as T_stance / T_cycle
     swing_frequency_ = 0.3;
     reset();
+  }
+
+  void reset()
+  {
+    init();
     cycle_ended_ = true; // We set true so that the swing can be triggered
     updatePeriods();
     state_ = prev_state_ = states::STANCE;
@@ -137,7 +142,7 @@ public:
       if(contact && swing_time_>=T_swing_/2.0)
       {
         state_ = states::STANCE;
-        reset();
+        init();
       }
 
       break;
@@ -150,7 +155,7 @@ public:
 
 private:
 
-  void reset()
+  void init()
   {
     stance_time_ = 0.0;
     swing_time_ = 0.0;
