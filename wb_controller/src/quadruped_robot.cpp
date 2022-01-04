@@ -373,6 +373,20 @@ bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
     return violated_limits;
 }
 
+std::vector<bool> QuadrupedRobot::checkJointVelocities(Eigen::VectorXd &qdot)
+{
+    assert(qdot.size() == qdot_max_.size());
+    std::vector<bool> violated_limits(qdot.size());
+    for(unsigned int i=0;i<qdot_max_.size();i++)
+    {
+        if(std::abs(qdot(i))>qdot_max_(i))
+            violated_limits[i] = true;
+        else
+          violated_limits[i] = false;
+    }
+    return violated_limits;
+}
+
 bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool update_desired_acceleration)
 {
   ROS_DEBUG_NAMED(CLASS_NAME,"update");

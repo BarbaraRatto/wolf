@@ -93,24 +93,31 @@ public:
   const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
 
   /**
-   * @brief check if the joint velocities are above a max value, saturate the value if the limits are violated
-   * @param qdot input vector to check
-   * @return true is the limits are violated
-   */
+       * @brief check if the joint velocities are above a max value
+       * @param qdot input vector to check
+       * @return true is the limits are violated
+       */
+  std::vector<bool> checkJointVelocities(Eigen::VectorXd &qdot);
+
+  /**
+       * @brief check if the joint velocities are above a max value, saturate the value if the limits are violated
+       * @param qdot input vector to clamp
+       * @return true if the limits are violated
+       */
   bool clampJointVelocities(Eigen::VectorXd &qdot);
 
   /**
-   * @brief check if the joint positions are between a max and min value, saturate the value if the limits are violated
-   * @param q input vector to check
-   * @return true is the limits are violated
-   */
+       * @brief check if the joint positions are between a max and min value, saturate the value if the limits are violated
+       * @param q input vector to clamp
+       * @return true if the limits are violated
+       */
   bool clampJointPositions(Eigen::VectorXd &q);
 
   /**
-   * @brief check if the joint efforts are above a max value, saturate the value if the limits are violated
-   * @param tau input vector to check
-   * @return true is the limits are violated
-   */
+       * @brief check if the joint efforts are above a max value, saturate the value if the limits are violated
+       * @param tau input vector to clamp
+       * @return true if the limits are violated
+       */
   bool clampJointEfforts(Eigen::VectorXd &tau);
 
   /**
