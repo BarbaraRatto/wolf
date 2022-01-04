@@ -252,7 +252,7 @@ private:
     /** @brief Xbot robot model */
     QuadrupedRobot::Ptr robot_model_;
     /** @brief Dynamic problem formulation */
-    std::unique_ptr<IDProblem> id_prob_;
+    IDProblem::UniquePtr id_prob_;
     /** @brief Desired contact forces */
     std::vector<Eigen::Vector6d> des_contact_forces_;
     /** @brief IMU Accelerometer */

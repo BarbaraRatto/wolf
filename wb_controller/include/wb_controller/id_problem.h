@@ -46,6 +46,8 @@ public:
 
     typedef std::shared_ptr<IDProblem> Ptr;
 
+    typedef std::unique_ptr<IDProblem> UniquePtr;
+
     /**
      * @brief IDProblem constructor
      * @param ros node handle
