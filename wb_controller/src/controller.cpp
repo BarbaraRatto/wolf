@@ -215,6 +215,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
+    double cnt_sec = 0.5; // sec counter
+    int cnt_size = static_cast<int>(std::ceil(cnt_sec / period_));
+    solver_failures_cnt_  = std::make_shared<Counter>(cnt_size);
+    contact_failures_cnt_ = std::make_shared<Counter>(cnt_size);
+
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
@@ -655,7 +660,15 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
         // Get the solver solution
         if(!id_prob_->solve(des_joint_efforts_solver_))
-            solver_active_ = false;
+            solver_failures_cnt_->count();
+        else
+            solver_failures_cnt_->reset();
+
+        if(solver_failures_cnt_->limitReached())
+        {
+          ROS_WARN_NAMED(CLASS_NAME,"Solver failure!");
+          solver_active_ = false;
+        }
 
         pid_active_ = false;
     }
