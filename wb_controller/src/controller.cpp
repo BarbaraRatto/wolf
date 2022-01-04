@@ -215,11 +215,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
-    double cnt_sec = 0.5; // sec counter
-    int cnt_size = static_cast<int>(std::ceil(cnt_sec / period_));
-    solver_failures_cnt_        = std::make_shared<Counter>(cnt_size);
-    contact_failures_cnt_       = std::make_shared<Counter>(cnt_size);
-    velocity_lims_failures_cnt_ = std::make_shared<Counter>(cnt_size);
+
+    solver_failures_cnt_   = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
+    contact_failures_cnt_  = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
+    for(unsigned int i=0;i<joint_velocities_.size();i++)
+      velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.1 / period_))));
 
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
@@ -600,8 +600,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
             qdot_filter_.setTimeStep(period_);
 
             contact_failures_cnt_->reset();
-            velocity_lims_failures_cnt_->reset();
             solver_failures_cnt_->reset();
+            for(unsigned int i=0;i<velocity_lims_failures_cnt_.size();i++)
+              velocity_lims_failures_cnt_[i]->reset();
 
             robot_model_->setState(QuadrupedRobot::WALKING);
 
@@ -672,7 +673,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
         if(solver_failures_cnt_->upperLimitReached())
         {
           ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Failed to solve!");
-          des_joint_efforts_solver_.fill(0.0);
           robot_model_->setState(QuadrupedRobot::ANOMALY);
         }
 
@@ -718,15 +718,19 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     robot_model_->clampJointEfforts(des_joint_efforts_solver_);
 
     // Check if the current joint velocities are valid otherwise set robot state to anomaly
-    // FIXME Perform the check for each separated JOINT!
-    if(!robot_model_->checkVelocityLimits(joint_velocities_))
-      velocity_lims_failures_cnt_->increase();
-    else
-      velocity_lims_failures_cnt_->reset();
-    if(velocity_lims_failures_cnt_->upperLimitReached())
+    std::vector<bool>&& checks = robot_model_->checkJointVelocities(joint_velocities_);
+    for(unsigned int i=0;i<checks.size();i++)
     {
-      robot_model_->setState(QuadrupedRobot::ANOMALY);
-      ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Reached joint velocities limit!");
+      if(checks[i])
+        velocity_lims_failures_cnt_[i]->increase();
+      else
+        velocity_lims_failures_cnt_[i]->reset();
+      if(velocity_lims_failures_cnt_[i]->upperLimitReached())
+      {
+        robot_model_->setState(QuadrupedRobot::ANOMALY);
+        auto names = robot_model_->getEnabledJointNames();
+        ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Reached joint velocity limit "<<names[i]);
+      }
     }
 
     // If anomaly, deactivate the solver and activate the impedance
