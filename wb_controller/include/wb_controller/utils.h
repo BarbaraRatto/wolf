@@ -118,6 +118,9 @@ inline QuadrupedRobot* createRobotModel(ros::NodeHandle& root_nh)
 class Ramp
 {
 public:
+
+  typedef std::shared_ptr<Ramp> Ptr;
+
   enum type_t {DOWN=0,UP};
 
   Ramp(const double& T, type_t type = DOWN)
@@ -164,6 +167,8 @@ class Counter
 {
 public:
 
+    typedef std::shared_ptr<Counter> Ptr;
+
     Counter(unsigned int upper_limit)
     {
       cnt_ = 0;
@@ -199,6 +204,7 @@ private:
 class Trigger
 {
 public:
+
     Trigger()
     {
         old_value = false;

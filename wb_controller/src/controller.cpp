@@ -575,10 +575,10 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     for (auto& tmp_map : contacts)
       contact = contact || tmp_map.second;
     if(!contact) // && state_estimator_->getFloatingBasePosition().z() > 0.3 * robot_model_->getStandUpHeight()
-      contacts_check_cnt_->increase();
+      contact_failures_cnt_->increase();
     else
-      contacts_check_cnt_->reset();
-    if(contacts_check_cnt_->upperLimitReached())
+      contact_failures_cnt_->reset();
+    if(contact_failures_cnt_->upperLimitReached())
     {
       robot_model_->setState(QuadrupedRobot::ANOMALY);
       ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Lost contacts!");
@@ -609,7 +609,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
-        joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
+      joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
 
     // Publish
     ros_wrapper_->publish(time);
