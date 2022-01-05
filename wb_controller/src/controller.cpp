@@ -485,25 +485,25 @@ void Controller::updateStateMachine(const double &dt)
     switch(current_state)
     {
       case(QuadrupedRobot::IDLE):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"IDLE");
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: IDLE");
         if(posture_ == Controller::posture_t::UP)
           robot_model_->setState(QuadrupedRobot::INIT);
         break;
 
       case(QuadrupedRobot::INIT):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"INIT");
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: INIT");
         init();
         robot_model_->setState(QuadrupedRobot::STANDING_UP);
         break;
 
       case(QuadrupedRobot::STANDING_UP):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"STANDING_UP");
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: STANDING_UP");
         updateComponents(dt);
         desired_height = ramp_up_->update(dt) * robot_model_->getStandUpHeight();
         tmp_matrix3d_.setIdentity();
-        tmp_vector3d_.setZero();
-        tmp_vector3d_.z() = desired_height;
-        tmp_vector3d_1_.setZero();
+        tmp_vector3d_.setZero(); // com position
+        tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height;
+        tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmd();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt) || !performSafetyChecks())
@@ -525,7 +525,7 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::WALKING):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"WALKING");
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: WALKING");
         updateComponents(dt);
         updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
         if(!updateSolver(dt) || !performSafetyChecks())
@@ -543,7 +543,7 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::MANIPULATION):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"MANIPULATION");
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: MANIPULATION");
         updateComponents(dt);
         updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
         if(!updateSolver(dt) || !performSafetyChecks())
@@ -561,13 +561,13 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"STANDING_DOWN");
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: STANDING_DOWN");
         updateComponents(dt);
         desired_height = ramp_down_->update(dt) * stand_down_starting_height_;
         tmp_matrix3d_.setIdentity();
-        tmp_vector3d_.setZero();
-        tmp_vector3d_.z() = desired_height;
-        tmp_vector3d_1_.setZero();
+        tmp_vector3d_.setZero(); // com position
+        tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height;
+        tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmd();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt) || !performSafetyChecks())
@@ -583,7 +583,7 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::IMPEDANCE):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"IMPEDANCE");
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: IMPEDANCE");
         updateImpedance(dt);
         if(current_height <= robot_model_->getStandDownHeight())
         {

@@ -264,7 +264,7 @@ void StateEstimator::startContactComputation()
 {
   contact_computation_active_ = true;
 
-  ROS_INFO_NAMED(CLASS_NAME,"Start contact computation");
+  ROS_DEBUG_NAMED(CLASS_NAME,"Start contact computation");
 }
 
 void StateEstimator::resetGyroscopeIntegration()
@@ -276,7 +276,7 @@ void StateEstimator::stopContactComputation()
 {
   contact_computation_active_ = false;
 
-  ROS_INFO_NAMED(CLASS_NAME,"Stop contact computation: the contact states are forced to TRUE");
+  ROS_DEBUG_NAMED(CLASS_NAME,"Stop contact computation: the contact states are forced to TRUE");
 }
 
 void StateEstimator::update(const double& period)

@@ -71,10 +71,6 @@ void Gait::reset()
 
 void Gait::update()
 {
-  unsigned int idx = 0;
-  for(unsigned int i=0;i < schedule_.size(); i++)
-    if(schedule_[i].second == current_priority_)
-      next_feet_to_move_[idx++] = schedule_[i].first;
 
   if(current_priority_ == 0)
     cycle_ended_ = true;
@@ -83,6 +79,11 @@ void Gait::update()
 
   current_priority_++;
   current_priority_ %= max_priority_+1;
+
+  unsigned int idx = 0;
+  for(unsigned int i=0;i < schedule_.size(); i++)
+    if(schedule_[i].second == current_priority_)
+      next_feet_to_move_[idx++] = schedule_[i].first;
 }
 
 const std::vector<std::string>& Gait::getNextSchedule()
@@ -128,8 +129,8 @@ void GaitGenerator::reset()
   for(unsigned int i = 0; i<foot_names_.size(); i++)
     feet_[foot_names_[i]].state_machine->reset();
 
-  for(unsigned int i=0; i<gait_buffer_.size(); i++)
-    gait_buffer_[i]->reset();
+  //for(unsigned int i=0; i<gait_buffer_.size(); i++)
+  //  gait_buffer_[i]->reset();
 
   change_gait_ = false;
   activate_swing_ = false;
