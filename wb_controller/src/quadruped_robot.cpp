@@ -16,7 +16,7 @@ using namespace XBot;
 namespace wb_controller {
 
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
-  :ModelInterfaceRBDL(), robot_state_(robot_states_t::INIT)
+  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE)
 {
 
   // Create the ModelInterface from XBot
@@ -642,6 +642,12 @@ bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
 {
   robot_state_ = state;
   return true;
+}
+
+double QuadrupedRobot::getCurrentHeight()
+{
+  getFloatingBasePose(tmp_affine3d_);
+  return tmp_affine3d_.translation().z();
 }
 
 const Eigen::VectorXd& QuadrupedRobot::getStandUpJointPostion()

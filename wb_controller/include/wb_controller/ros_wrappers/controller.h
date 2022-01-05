@@ -210,7 +210,7 @@ public:
         friction_cones_pub_->msg_.mus.resize(n_feet);
 
         server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
-        server_->registerVariable<bool>("activate_solver",controller_->isSolverActive(),boost::bind(&wb_controller::Controller::startSolver,controller_,_1),"activate solver");
+        server_->registerVariable<bool>("stand_up",false,boost::bind(&wb_controller::Controller::standUp,controller_,_1),"stand up");
         server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wb_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
 
         server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wb_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);

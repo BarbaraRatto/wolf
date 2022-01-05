@@ -29,10 +29,9 @@ std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
 
 Controller::Controller()
-    :solver_active_(false)
-    ,kin_adj_active_(false)
-    ,init_done_(false)
-    ,stopping_(false)
+    :stopping_(false)
+    ,mode_(WALKING)
+    ,posture_(DOWN)
 {
 }
 
@@ -178,6 +177,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     for(unsigned int i=0;i<joint_velocities_.size();i++)
       velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.1 / period_))));
 
+    ramp_up_   = std::make_shared<Ramp>(5.0,Ramp::UP);
+    ramp_down_ = std::make_shared<Ramp>(5.0,Ramp::DOWN);
+
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
@@ -292,105 +294,102 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
 
 bool Controller::selectControlMode(const std::string& mode)
 {
-    if(robot_model_)
-    {
-        if(mode == "WALKING")
-            robot_model_->setState(QuadrupedRobot::WALKING);
-        else if(mode == "MANIPULATION")
-            robot_model_->setState(QuadrupedRobot::MANIPULATION);
-        else
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
-            return false;
-        }
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
-    }
-    return true;
+  if(mode == "WALKING")
+    mode_ = Controller::mode_t::WALKING;
+  else if(mode == "MANIPULATION")
+    mode_ = Controller::mode_t::MANIPULATION;
+  else
+  {
+    ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
+    return false;
+  }
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
+
+  return true;
 }
 
 void Controller::switchControlMode()
 {
-   if(robot_model_)
-   {
-     if(robot_model_->getState() == QuadrupedRobot::WALKING)
-       robot_model_->setState(QuadrupedRobot::MANIPULATION);
-     else
-       robot_model_->setState(QuadrupedRobot::WALKING);
-   }
+  if(mode_ == Controller::mode_t::WALKING)
+    mode_ = Controller::mode_t::MANIPULATION;
+  else
+    mode_ = Controller::mode_t::WALKING;
+}
+
+bool Controller::selectPosture(const std::string& posture)
+{
+  if(posture == "UP")
+  {
+    mode_ = Controller::posture_t::UP;
+  }
+  else if(posture == "DOWN")
+    mode_ = Controller::posture_t::DOWN;
+  else
+  {
+    ROS_ERROR_NAMED(CLASS_NAME,"Wrong posture!");
+    return false;
+  }
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected posture "<< posture);
+  return true;
+}
+
+void Controller::switchPosture()
+{
+  if(posture_ == Controller::posture_t::UP)
+    posture_ = Controller::posture_t::DOWN;
+  else
+    posture_ = Controller::posture_t::UP;
+}
+
+void Controller::standUp(bool stand_up)
+{
+  if(stand_up)
+    posture_ = Controller::posture_t::UP;
+  else
+    posture_ = Controller::posture_t::DOWN;
 }
 
 bool Controller::selectGait(const string& gait)
 {
-    if(gait_generator_)
+  if(gait_generator_)
+  {
+    if(gait == "TROT")
+      gait_generator_->setGaitType(Gait::gait_t::TROT);
+    else if(gait == "CRAWL")
+      gait_generator_->setGaitType(Gait::gait_t::CRAWL);
+    else
     {
-        if(gait == "TROT")
-            gait_generator_->setGaitType(Gait::gait_t::TROT);
-        else if(gait == "CRAWL")
-            gait_generator_->setGaitType(Gait::gait_t::CRAWL);
-        else
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"Wrong gait!");
-            return false;
-        }
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected gait "<< gait);
+      ROS_ERROR_NAMED(CLASS_NAME,"Wrong gait!");
+      return false;
     }
-    return true;
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected gait "<< gait);
+  }
+  return true;
 }
 
 void Controller::switchGait()
 {
-    if(gait_generator_)
-    {
-        gait_generator_->switchGait();
-    }
-    else
-        ROS_WARN_NAMED(CLASS_NAME,"GaitGenerator not ready yet!");
+  if(gait_generator_)
+  {
+    gait_generator_->switchGait();
+  }
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"GaitGenerator not ready yet!");
 }
 
 bool Controller::setDutyFactor(const double& duty_factor)
 {
-    if(duty_factor>=0.0 && duty_factor<=1.0 && gait_generator_)
-    {
-        gait_generator_->setDutyFactor(duty_factor);
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"setDutyFactor: set the duty factor to "<<duty_factor);
-        return true;
-    }
-    else
-    {
-        ROS_WARN_NAMED(CLASS_NAME,"setDutyFactor: duty factor has to be between 0 and 1!");
-        return false;
-    }
-}
-
-void Controller::startSolver(const bool& start)
-{
-    // Perform the init procedure
-    init_done_ = false;
-
-    solver_active_=start;
-
-    if(solver_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Solver integration is ON");
-    else
-        ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
-}
-
-bool Controller::isSolverActive() const
-{
-    return solver_active_;
-}
-
-void Controller::toggleSolver()
-{
-    // Perform the init procedure
-    init_done_ = false;
-
-    solver_active_=!solver_active_;
-
-    if(solver_active_)
-        ROS_INFO_NAMED(CLASS_NAME,"Solver integration is ON");
-    else
-        ROS_INFO_NAMED(CLASS_NAME,"Solver integration is OFF");
+  if(duty_factor>=0.0 && duty_factor<=1.0 && gait_generator_)
+  {
+    gait_generator_->setDutyFactor(duty_factor);
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"setDutyFactor: set the duty factor to "<<duty_factor);
+    return true;
+  }
+  else
+  {
+    ROS_WARN_NAMED(CLASS_NAME,"setDutyFactor: duty factor has to be between 0 and 1!");
+    return false;
+  }
 }
 
 void Controller::readJoints()
@@ -478,140 +477,273 @@ void Controller::updateStateEstimator(const double &dt)
 
 }
 
+void Controller::updateStateMachine(const double &dt)
+{
+    double desired_height;
+    double current_height = robot_model_->getCurrentHeight();
+    unsigned int current_state = robot_model_->getState();
+    switch(current_state)
+    {
+      case(QuadrupedRobot::IDLE):
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"IDLE");
+        if(posture_ == Controller::posture_t::UP)
+          robot_model_->setState(QuadrupedRobot::INIT);
+        break;
+
+      case(QuadrupedRobot::INIT):
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"INIT");
+        init();
+        robot_model_->setState(QuadrupedRobot::STANDING_UP);
+        break;
+
+      case(QuadrupedRobot::STANDING_UP):
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"STANDING_UP");
+        updateComponents(dt);
+        desired_height = ramp_up_->update(dt) * robot_model_->getStandUpHeight();
+        tmp_matrix3d_.setIdentity();
+        tmp_vector3d_.setZero();
+        tmp_vector3d_.z() = desired_height;
+        tmp_vector3d_1_.setZero();
+        tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmd();
+        updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
+        if(!updateSolver(dt) || !performSafetyChecks())
+        {
+          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          break;
+        }
+        if(current_height >= robot_model_->getStandUpHeight())
+        {
+          ramp_up_->reset();
+          if(mode_ == Controller::mode_t::WALKING)
+            robot_model_->setState(QuadrupedRobot::WALKING);
+          else if (mode_ == Controller::mode_t::MANIPULATION)
+            robot_model_->setState(QuadrupedRobot::MANIPULATION);
+          else
+            robot_model_->setState(QuadrupedRobot::WALKING);
+          foot_holds_planner_->reset();
+        }
+        break;
+
+      case(QuadrupedRobot::WALKING):
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"WALKING");
+        updateComponents(dt);
+        updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+        if(!updateSolver(dt) || !performSafetyChecks())
+        {
+          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          break;
+        }
+        if(mode_ == Controller::mode_t::MANIPULATION)
+          robot_model_->setState(QuadrupedRobot::MANIPULATION);
+        if(posture_ == Controller::posture_t::DOWN)
+        {
+          stand_down_starting_height_ = current_height;
+          robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
+        }
+        break;
+
+      case(QuadrupedRobot::MANIPULATION):
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"MANIPULATION");
+        updateComponents(dt);
+        updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+        if(!updateSolver(dt) || !performSafetyChecks())
+        {
+          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          break;
+        }
+        if(mode_ == Controller::mode_t::WALKING)
+          robot_model_->setState(QuadrupedRobot::WALKING);
+        if(posture_ == Controller::posture_t::DOWN)
+        {
+          stand_down_starting_height_ = current_height;
+          robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
+        }
+        break;
+
+      case(QuadrupedRobot::STANDING_DOWN):
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"STANDING_DOWN");
+        updateComponents(dt);
+        desired_height = ramp_down_->update(dt) * stand_down_starting_height_;
+        tmp_matrix3d_.setIdentity();
+        tmp_vector3d_.setZero();
+        tmp_vector3d_.z() = desired_height;
+        tmp_vector3d_1_.setZero();
+        tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmd();
+        updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
+        if(!updateSolver(dt) || !performSafetyChecks())
+        {
+          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          break;
+        }
+        if(current_height <= robot_model_->getStandDownHeight())
+        {
+          ramp_down_->reset();
+          robot_model_->setState(QuadrupedRobot::IDLE);
+        }
+        break;
+
+      case(QuadrupedRobot::IMPEDANCE):
+        ROS_INFO_ONCE_NAMED(CLASS_NAME,"IMPEDANCE");
+        updateImpedance(dt);
+        if(current_height <= robot_model_->getStandDownHeight())
+        {
+          posture_ = Controller::posture_t::DOWN;
+          robot_model_->setState(QuadrupedRobot::IDLE);
+        }
+        break;
+    };
+}
+void Controller::init()
+{
+    // State estimator
+    // Be sure to start the solver and the contact estimation when the robot is grounded.
+    state_estimator_->resetGyroscopeIntegration();
+    state_estimator_->startContactComputation();
+    state_estimator_->startHapticContactLoop();
+    // Footholds planner with gait generator
+    foot_holds_planner_->reset();
+    foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
+    foot_holds_planner_->setDefaultBasePosition(Eigen::Vector3d(0.0,0.0,robot_model_->getStandUpHeight()));
+    foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
+    foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
+    foot_holds_planner_->initializeFeetPosition();
+    // Filters
+    imu_gyroscope_filter_.setTimeStep(period_);
+    qdot_filter_.setTimeStep(period_);
+    // Counters for safety checks
+    contact_failures_cnt_->reset();
+    solver_failures_cnt_->reset();
+    for(unsigned int i=0;i<velocity_lims_failures_cnt_.size();i++)
+      velocity_lims_failures_cnt_[i]->reset();
+    // Control torques
+    des_joint_efforts_.fill(0.0);
+    des_joint_efforts_solver_.fill(0.0);
+    des_joint_efforts_impedance_.fill(0.0);
+}
+
+void Controller::updateComponents(const double &dt)
+{
+  // Update the footholds planner
+  foot_holds_planner_->update(dt);
+  // Update the terrain estimator
+  terrain_estimator_->computeTerrainEstimation(dt);
+  // Update the CoM position and velocity reference
+  com_planner_->update();
+  // Transform the desired base rotation into RPY for visualization
+  rotTorpy(foot_holds_planner_->getBaseRotationReference().transpose(),des_base_rpy_);
+}
+
+void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
+{
+  // Set the pose reference for the waist
+  id_prob_->setWaistReference(orientation_ref,com_pos_ref.z());
+  // Set the velocity and position reference for the CoM in the solver
+  id_prob_->setComReference(com_pos_ref,com_vel_ref);
+}
+
+bool Controller::performSafetyChecks()
+{
+
+  bool ok = true;
+
+  // Check if we have at least one contact
+  auto contacts = state_estimator_->getContacts();
+  bool contact = false;
+  for (auto& tmp_map : contacts)
+    contact = contact || tmp_map.second;
+  if(!contact) // && state_estimator_->getFloatingBasePosition().z() > 0.3 * robot_model_->getStandUpHeight()
+    contact_failures_cnt_->increase();
+  else
+    contact_failures_cnt_->reset();
+  if(contact_failures_cnt_->upperLimitReached())
+  {
+    ok = false;
+    ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Lost contacts!");
+  }
+
+  // Check if the current joint velocities are valid otherwise set robot state to anomaly
+  std::vector<bool>&& checks = robot_model_->checkJointVelocities(joint_velocities_);
+  for(unsigned int i=0;i<checks.size();i++)
+  {
+    if(checks[i])
+      velocity_lims_failures_cnt_[i]->increase();
+    else
+      velocity_lims_failures_cnt_[i]->reset();
+    if(velocity_lims_failures_cnt_[i]->upperLimitReached())
+    {
+      ok = false;
+      auto names = robot_model_->getEnabledJointNames();
+      ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Reached joint velocity limit "<<names[i]);
+    }
+  }
+
+  return ok;
+}
+
+void Controller::updateImpedance(const double& /*dt*/)
+{
+  legs_impedance_->update();
+  des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
+}
+
+bool Controller::updateSolver(const double &/*dt*/)
+{
+  // Rotate the friction cones based on the terrain orientation
+  id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
+
+  // Set the references to the feet based on their current state: Stance/Swing
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+  {
+      id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
+                                 WORLD_FRAME_NAME);
+      if(gait_generator_->isSwinging(foot_names[i]))
+      {
+          id_prob_->swingWithFoot(foot_names[i]);
+          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
+      }
+      else
+      {
+          id_prob_->stanceWithFoot(foot_names[i]);
+          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
+      }
+  }
+  // Get the solver solution
+  if(!id_prob_->solve(des_joint_efforts_solver_))
+  {
+    ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Failed to solve!");
+    return false;
+  }
+  else
+    return true;
+}
+
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
-    // Read from the hardware interfaces:
+    // Reset control values
+    des_joint_efforts_impedance_.fill(0.0);
+    des_joint_efforts_solver_.fill(0.0);
+    des_joint_efforts_.fill(0.0);
+
     period_ = period.toSec();
-    // 1) Joints
+
+    // Read joint values from the hardware interface
     readJoints();
-    // 2) IMU
+
+    // Read IMU values from the hardware interface
     readImu();
-    // 3) Update state estimator
+
+    // Update state estimator
     updateStateEstimator(period_);
 
-    if(solver_active_) // Use the ID solver to calculate the torques otherwise use a damping controller
-    {
+    // Update state machine
+    updateStateMachine(period_);
 
-        if(!init_done_)
-        {
-            // State estimator
-            // Be sure to start the solver and the contact estimation when the robot is grounded.
-            state_estimator_->resetGyroscopeIntegration();
-            state_estimator_->startContactComputation();
-            state_estimator_->startHapticContactLoop();
-            // Footholds planner with gait generator
-            foot_holds_planner_->reset();
-            foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
-            foot_holds_planner_->setDefaultBasePosition(Eigen::Vector3d(0.0,0.0,robot_model_->getStandUpHeight()));
-            foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
-            foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
-            foot_holds_planner_->initializeFeetPosition();
-            // Filters
-            imu_gyroscope_filter_.setTimeStep(period_);
-            qdot_filter_.setTimeStep(period_);
-            // Counters for safety checks
-            contact_failures_cnt_->reset();
-            solver_failures_cnt_->reset();
-            for(unsigned int i=0;i<velocity_lims_failures_cnt_.size();i++)
-              velocity_lims_failures_cnt_[i]->reset();
-            // Control torques
-            des_joint_efforts_.fill(0.0);
-            des_joint_efforts_solver_.fill(0.0);
-            des_joint_efforts_impedance_.fill(0.0);
-            // Robot's state
-            robot_model_->setState(QuadrupedRobot::WALKING);
-
-            init_done_ = true;
-        }
-
-        foot_holds_planner_->update(period.toSec());
-
-        terrain_estimator_->computeTerrainEstimation(period.toSec());
-
-        rotTorpy(foot_holds_planner_->getBaseRotationReference().transpose(),des_base_rpy_);
-        // Set the pose reference for the waist
-        id_prob_->setWaistReference(foot_holds_planner_->getBaseRotationReference(),foot_holds_planner_->getBaseHeight());
-
-        // Set the velocity and position reference for the Com
-        com_planner_->update();
-        id_prob_->setComReference(com_planner_->getComPosition(),com_planner_->getComVelocity());
-
-        id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
-
-        const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-        for(unsigned int i = 0; i<foot_names.size(); i++)
-        {
-            id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
-                                       WORLD_FRAME_NAME);
-            // FIXME I should spline the wrench limits to load correctly the legs in stance and unload the swinging leg
-            // Set the wrench limits to enstablish the contacts
-            if(gait_generator_->isSwinging(foot_names[i]))
-            {
-                id_prob_->swingWithFoot(foot_names[i]);
-                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
-            }
-            else
-            {
-                id_prob_->stanceWithFoot(foot_names[i]);
-                ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
-            }
-        }
-
-        // Get the solver solution
-        if(!id_prob_->solve(des_joint_efforts_solver_))
-        {
-          ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Failed to solve!");
-          robot_model_->setState(QuadrupedRobot::ANOMALY);
-        }
-
-        des_joint_efforts_impedance_.fill(0.0);
-    }
-    else
-    {
-        des_joint_efforts_solver_.fill(0.0);
-        legs_impedance_->update();
-        des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
-    }
-
+    // Desired joint efforts
     des_joint_efforts_ = des_joint_efforts_solver_ + des_joint_efforts_impedance_;
 
-    // Check if we have at least one contact
-    auto contacts = state_estimator_->getContacts();
-    bool contact = false;
-    for (auto& tmp_map : contacts)
-      contact = contact || tmp_map.second;
-    if(!contact) // && state_estimator_->getFloatingBasePosition().z() > 0.3 * robot_model_->getStandUpHeight()
-      contact_failures_cnt_->increase();
-    else
-      contact_failures_cnt_->reset();
-    if(contact_failures_cnt_->upperLimitReached())
-    {
-      robot_model_->setState(QuadrupedRobot::ANOMALY);
-      ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Lost contacts!");
-    }
-
-    // Check if the desired efforts are valid otherwise clamp them
+    // Saturate desired joint efforts
     robot_model_->clampJointEfforts(des_joint_efforts_);
-
-    // Check if the current joint velocities are valid otherwise set robot state to anomaly
-    std::vector<bool>&& checks = robot_model_->checkJointVelocities(joint_velocities_);
-    for(unsigned int i=0;i<checks.size();i++)
-    {
-      if(checks[i])
-        velocity_lims_failures_cnt_[i]->increase();
-      else
-        velocity_lims_failures_cnt_[i]->reset();
-      if(velocity_lims_failures_cnt_[i]->upperLimitReached())
-      {
-        robot_model_->setState(QuadrupedRobot::ANOMALY);
-        auto names = robot_model_->getEnabledJointNames();
-        ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Reached joint velocity limit "<<names[i]);
-      }
-    }
-
-    // If anomaly, deactivate the solver and activate the impedance
-    if(robot_model_->getState() == QuadrupedRobot::ANOMALY)
-      solver_active_ = false;
 
     // Write to the hardware interface
     for (unsigned int i = 0; i < joint_states_.size(); i++)
@@ -619,7 +751,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Publish
     ros_wrapper_->publish(time);
-
     RtLogger::getLogger().publish(time);
 }
 

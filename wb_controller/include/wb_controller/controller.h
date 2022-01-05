@@ -47,6 +47,9 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 {
 public:
 
+     enum posture_t {UP=0,DOWN};
+     enum mode_t {WALKING=0,MANIPULATION};
+
      const std::string CLASS_NAME = "Controller";
 
     /**
@@ -100,21 +103,6 @@ public:
     void stopping(const ros::Time& time);
 
     /**
-         * @brief Start/Stop solver integration
-         */
-    void toggleSolver();
-
-    /**
-         * @brief Start/Stop solver integration
-         */
-    void startSolver(const bool& start);
-
-    /**
-         * @brief get the flag value for the solver
-         */
-    bool isSolverActive() const;
-
-    /**
          * @brief Set the duty factor for the feet
          * @param const double duty_factor
          */
@@ -151,6 +139,21 @@ public:
          * @brief Switch between WALKING and MANIPULATION
          */
     void switchControlMode();
+
+    /**
+         * @brief select the posture [UP|DOWN]
+         */
+    bool selectPosture(const std::string& posture);
+
+    /**
+         * @brief switch posture between UP and DOWN
+         */
+    void switchPosture();
+
+    /**
+         * @brief stand up
+         */
+    void standUp(bool stand_up);
 
     /**
          * @brief Select the gait to use
@@ -293,19 +296,17 @@ private:
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
     /** @brief True if the controller uses the external contact sensors */
     bool use_contact_sensors_;
-    /** @brief True if the solver is active */
-    std::atomic<bool> solver_active_;
-    /** @brief True if the kinematic adjustment is active */
-    std::atomic<bool> kin_adj_active_;
-    /** @brief True if the initialization phase is done */
-    std::atomic<bool> init_done_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
+    /** @brief True if the controller is stopping */
+    double stand_down_starting_height_;
 
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */
     Eigen::Vector3d tmp_vector3d_;
+    /** @brief Support temporary Vector3d */
+    Eigen::Vector3d tmp_vector3d_1_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
 
@@ -313,6 +314,13 @@ private:
     Counter::Ptr solver_failures_cnt_;
     Counter::Ptr contact_failures_cnt_;
     std::vector<Counter::Ptr> velocity_lims_failures_cnt_;
+
+    /** @brief Ramps */
+    Ramp::Ptr ramp_up_;
+    Ramp::Ptr ramp_down_;
+
+    unsigned int mode_;
+    unsigned int posture_;
 
     /**
          * @brief thread body for the odometry publisher
@@ -331,8 +339,53 @@ private:
 
     /**
          * @brief update the state estimator
+         * @param dt control period
          */
     void updateStateEstimator(const double& dt);
+
+    /**
+         * @brief update the state machine
+         * @param dt control period
+         */
+    void updateStateMachine(const double &dt);
+
+    /**
+         * @brief initialize the controller's components
+         */
+    void init();
+
+    /**
+         * @brief perform an execution step with the solver
+         * @param dt control period
+         * @return false if the solver failed
+         */
+    bool updateSolver(const double &dt);
+
+    /**
+         * @brief perform an execution step with the impedance
+         * @param dt control period
+         */
+    void updateImpedance(const double &dt);
+
+    /**
+         * @brief perform an execution step with the controller's components
+         * such as foot holds planner, com planner and terrain estimator
+         * @param dt control period
+         */
+    void updateComponents(const double &dt);
+
+    /**
+         * @brief update base references
+         */
+    void updateBaseReferences(const Eigen::Vector3d& com_pos_ref,
+                              const Eigen::Vector3d& com_vel_ref,
+                              const Eigen::Matrix3d& orientation_ref);
+
+    /**
+         * @brief perform various safety checks
+         * @return false if something failed
+         */
+    bool performSafetyChecks();
 
 };
 

@@ -29,7 +29,7 @@ public:
         // Set handlers
         if(controller_ptr!=nullptr)
         {
-            addButtonHandler(boost::bind(&wb_controller::Controller::toggleSolver,controller_ptr),JoyHandler::START);
+            addButtonHandler(boost::bind(&wb_controller::Controller::switchPosture,controller_ptr),JoyHandler::START);
             addButtonHandler(boost::bind(&wb_controller::Controller::switchControlMode,controller_ptr),JoyHandler::ONE);
         }
         else
