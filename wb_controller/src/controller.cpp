@@ -500,7 +500,9 @@ void Controller::updateStateMachine(const double &dt)
         ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: STANDING_UP");
         updateComponents(dt);
         desired_height = ramp_up_->update(dt) * robot_model_->getStandUpHeight();
-        tmp_matrix3d_.setIdentity();
+        tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
+        rpyToRot(tmp_vector3d_,tmp_matrix3d_);
+        tmp_matrix3d_.transposeInPlace();
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height;
         tmp_vector3d_1_.setZero(); // com velocity
@@ -564,7 +566,9 @@ void Controller::updateStateMachine(const double &dt)
         ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: STANDING_DOWN");
         updateComponents(dt);
         desired_height = ramp_down_->update(dt) * stand_down_starting_height_;
-        tmp_matrix3d_.setIdentity();
+        tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
+        rpyToRot(tmp_vector3d_,tmp_matrix3d_);
+        tmp_matrix3d_.transposeInPlace();
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height;
         tmp_vector3d_1_.setZero(); // com velocity
