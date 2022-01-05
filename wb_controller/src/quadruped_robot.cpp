@@ -16,6 +16,44 @@ using namespace XBot;
 
 namespace wb_controller {
 
+std::string enumToString(QuadrupedRobot::robot_states_t state)
+{
+  std::string ret = "NONE";
+  switch (state)
+  {
+
+  case QuadrupedRobot::robot_states_t::IDLE:
+    ret = "IDLE";
+    break;
+
+  case QuadrupedRobot::robot_states_t::INIT:
+    ret = "INIT";
+    break;
+
+  case QuadrupedRobot::robot_states_t::WALKING:
+    ret = "WALKING";
+    break;
+
+  case QuadrupedRobot::robot_states_t::MANIPULATION:
+    ret = "MANIPULATION";
+    break;
+
+  case QuadrupedRobot::robot_states_t::IMPEDANCE:
+    ret = "IMPEDANCE";
+    break;
+
+  case QuadrupedRobot::robot_states_t::STANDING_UP:
+    ret = "STANDING_UP";
+    break;
+
+  case QuadrupedRobot::robot_states_t::STANDING_DOWN:
+    ret = "STANDING_DOWN";
+    break;
+  };
+
+  return ret;
+}
+
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE)
 {
@@ -647,6 +685,8 @@ QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
 
 bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
 {
+  if(state != robot_state_)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Change state to "<<enumToString(state));
   robot_state_ = state;
   return true;
 }

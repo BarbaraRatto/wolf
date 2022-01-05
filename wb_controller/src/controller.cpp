@@ -485,19 +485,16 @@ void Controller::updateStateMachine(const double &dt)
     switch(current_state)
     {
       case(QuadrupedRobot::IDLE):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: IDLE");
         if(posture_ == Controller::posture_t::UP)
           robot_model_->setState(QuadrupedRobot::INIT);
         break;
 
       case(QuadrupedRobot::INIT):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: INIT");
         init();
         robot_model_->setState(QuadrupedRobot::STANDING_UP);
         break;
 
       case(QuadrupedRobot::STANDING_UP):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: STANDING_UP");
         updateComponents(dt);
         desired_height = ramp_up_->update(dt) * robot_model_->getStandUpHeight();
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
@@ -527,7 +524,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::WALKING):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: WALKING");
         updateComponents(dt);
         updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
         if(!updateSolver(dt) || !performSafetyChecks())
@@ -545,7 +541,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::MANIPULATION):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: MANIPULATION");
         updateComponents(dt);
         updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
         if(!updateSolver(dt) || !performSafetyChecks())
@@ -563,7 +558,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: STANDING_DOWN");
         updateComponents(dt);
         desired_height = ramp_down_->update(dt) * stand_down_starting_height_;
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
@@ -587,7 +581,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::IMPEDANCE):
-        ROS_INFO_ONCE_NAMED(CLASS_NAME,"State: IMPEDANCE");
         updateImpedance(dt);
         if(current_height <= robot_model_->getStandDownHeight())
         {
