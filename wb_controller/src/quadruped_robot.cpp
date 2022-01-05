@@ -9,6 +9,7 @@
 
 #include <wb_controller/quadruped_robot.h>
 #include <wb_controller/utils.h>
+#include <wb_controller/geometry.h>
 #include <stdexcept>
 
 using namespace XBot;
@@ -404,6 +405,7 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base" << yaw_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf" << world_R_hf_);
   world_R_base_ = world_T_base_.linear();
+  rotTorpy(world_R_base_.transpose(),world_RPY_base_);
   hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base" << world_R_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base" << hf_R_base_);
@@ -525,6 +527,11 @@ const double& QuadrupedRobot::getHfYawInWorld() const
 const Eigen::Matrix3d& QuadrupedRobot::getBaseRotationInWorld() const
 {
   return world_R_base_;
+}
+
+const Eigen::Vector3d &QuadrupedRobot::getBaseRotationInWorldRPY() const
+{
+  return world_RPY_base_;
 }
 
 const Eigen::Matrix3d& QuadrupedRobot::getBaseRotationInHf() const
