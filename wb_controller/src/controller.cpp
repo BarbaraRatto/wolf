@@ -480,13 +480,16 @@ void Controller::updateStateEstimator(const double &dt)
 void Controller::updateStateMachine(const double &dt)
 {
     double desired_height;
-    double current_height = robot_model_->getCurrentHeight();
+    double current_height = desired_height = robot_model_->getCurrentHeight();
     unsigned int current_state = robot_model_->getState();
     switch(current_state)
     {
       case(QuadrupedRobot::IDLE):
         if(posture_ == Controller::posture_t::UP)
+        {
           robot_model_->setState(QuadrupedRobot::INIT);
+          break;
+        }
         break;
 
       case(QuadrupedRobot::INIT):
@@ -512,14 +515,23 @@ void Controller::updateStateMachine(const double &dt)
         }
         if(current_height >= robot_model_->getStandUpHeight())
         {
+          foot_holds_planner_->reset();
           ramp_up_->reset();
           if(mode_ == Controller::mode_t::WALKING)
+          {
             robot_model_->setState(QuadrupedRobot::WALKING);
+            break;
+          }
           else if (mode_ == Controller::mode_t::MANIPULATION)
+          {
             robot_model_->setState(QuadrupedRobot::MANIPULATION);
+            break;
+          }
           else
+          {
             robot_model_->setState(QuadrupedRobot::WALKING);
-          foot_holds_planner_->reset();
+            break;
+          }
         }
         break;
 
@@ -532,11 +544,15 @@ void Controller::updateStateMachine(const double &dt)
           break;
         }
         if(mode_ == Controller::mode_t::MANIPULATION)
+        {
           robot_model_->setState(QuadrupedRobot::MANIPULATION);
+          break;
+        }
         if(posture_ == Controller::posture_t::DOWN)
         {
           stand_down_starting_height_ = current_height;
           robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
+          break;
         }
         break;
 
@@ -549,11 +565,15 @@ void Controller::updateStateMachine(const double &dt)
           break;
         }
         if(mode_ == Controller::mode_t::WALKING)
+        {
           robot_model_->setState(QuadrupedRobot::WALKING);
+          break;
+        }
         if(posture_ == Controller::posture_t::DOWN)
         {
           stand_down_starting_height_ = current_height;
           robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
+          break;
         }
         break;
 
@@ -573,19 +593,22 @@ void Controller::updateStateMachine(const double &dt)
           robot_model_->setState(QuadrupedRobot::IMPEDANCE);
           break;
         }
-        if(current_height <= robot_model_->getStandDownHeight())
+        if(current_height <= robot_model_->getStandDownHeight() + 0.025)
         {
           ramp_down_->reset();
+          //posture_ = Controller::posture_t::DOWN;
           robot_model_->setState(QuadrupedRobot::IDLE);
+          break;
         }
         break;
 
       case(QuadrupedRobot::IMPEDANCE):
         updateImpedance(dt);
-        if(current_height <= robot_model_->getStandDownHeight())
+        if(current_height <= robot_model_->getStandDownHeight() + 0.025)
         {
           posture_ = Controller::posture_t::DOWN;
           robot_model_->setState(QuadrupedRobot::IDLE);
+          break;
         }
         break;
     };
