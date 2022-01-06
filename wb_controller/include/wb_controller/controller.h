@@ -298,8 +298,6 @@ private:
     bool use_contact_sensors_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
-    /** @brief True if the controller is stopping */
-    double stand_down_starting_height_;
 
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
@@ -319,8 +317,13 @@ private:
     Ramp::Ptr ramp_up_;
     Ramp::Ptr ramp_down_;
 
+    /** @brief state machine support variables */
     unsigned int mode_;
     unsigned int posture_;
+    double stand_down_starting_height_;
+    double desired_height_;
+    double current_height_;
+    double previous_height_;
 
     /**
          * @brief thread body for the odometry publisher

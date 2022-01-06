@@ -180,6 +180,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ramp_up_   = std::make_shared<Ramp>(5.0,Ramp::UP);
     ramp_down_ = std::make_shared<Ramp>(5.0,Ramp::DOWN);
 
+    previous_height_ = robot_model_->getStandUpHeight();
+
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
@@ -479,8 +481,8 @@ void Controller::updateStateEstimator(const double &dt)
 
 void Controller::updateStateMachine(const double &dt)
 {
-    double desired_height;
-    double current_height = desired_height = robot_model_->getCurrentHeight();
+    desired_height_ = 0.0;
+    current_height_ = robot_model_->getCurrentHeight();
     unsigned int current_state = robot_model_->getState();
     switch(current_state)
     {
@@ -499,12 +501,12 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::STANDING_UP):
         updateComponents(dt);
-        desired_height = ramp_up_->update(dt) * robot_model_->getStandUpHeight();
+        desired_height_ = ramp_up_->update(dt) * robot_model_->getStandUpHeight();
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_matrix3d_.transposeInPlace();
         tmp_vector3d_.setZero(); // com position
-        tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height;
+        tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmd();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
@@ -513,7 +515,7 @@ void Controller::updateStateMachine(const double &dt)
           robot_model_->setState(QuadrupedRobot::IMPEDANCE);
           break;
         }
-        if(current_height >= robot_model_->getStandUpHeight())
+        if(current_height_ >= robot_model_->getStandUpHeight())
         {
           foot_holds_planner_->reset();
           ramp_up_->reset();
@@ -550,7 +552,7 @@ void Controller::updateStateMachine(const double &dt)
         }
         if(posture_ == Controller::posture_t::DOWN)
         {
-          stand_down_starting_height_ = current_height;
+          stand_down_starting_height_ = current_height_;
           robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
           break;
         }
@@ -571,7 +573,7 @@ void Controller::updateStateMachine(const double &dt)
         }
         if(posture_ == Controller::posture_t::DOWN)
         {
-          stand_down_starting_height_ = current_height;
+          stand_down_starting_height_ = current_height_;
           robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
           break;
         }
@@ -579,21 +581,22 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::STANDING_DOWN):
         updateComponents(dt);
-        desired_height = ramp_down_->update(dt) * stand_down_starting_height_;
+        desired_height_ = ramp_down_->update(dt) * stand_down_starting_height_;
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_matrix3d_.transposeInPlace();
         tmp_vector3d_.setZero(); // com position
-        tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height;
+        tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmd();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt) || !performSafetyChecks())
         {
+          ramp_down_->reset();
           robot_model_->setState(QuadrupedRobot::IMPEDANCE);
           break;
         }
-        if(current_height <= robot_model_->getStandDownHeight() + 0.025)
+        if(desired_height_ <= EPS)
         {
           ramp_down_->reset();
           //posture_ = Controller::posture_t::DOWN;
@@ -603,8 +606,9 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::IMPEDANCE):
+        updateComponents(dt);
         updateImpedance(dt);
-        if(current_height <= robot_model_->getStandDownHeight() + 0.025)
+        if((current_height_ - previous_height_)/dt <= EPS)
         {
           posture_ = Controller::posture_t::DOWN;
           robot_model_->setState(QuadrupedRobot::IDLE);
@@ -612,6 +616,8 @@ void Controller::updateStateMachine(const double &dt)
         }
         break;
     };
+
+    previous_height_ = current_height_;
 }
 void Controller::init()
 {
