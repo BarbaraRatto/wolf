@@ -97,6 +97,8 @@ public:
 
     const Eigen::Vector3d& getGroundTruthBaseAngularVelocity() const;
 
+    const double& getEstimatedBaseHeight() const;
+
     void startContactComputation();
 
     void stopContactComputation();
@@ -135,15 +137,14 @@ private:
     Eigen::Vector3d imu_gyroscope_;
     /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
-
+    /** @brief Ground Truth position */
     Eigen::Vector3d gt_position_;
-
+    /** @brief Ground Truth orientation */
     Eigen::Quaterniond gt_orientation_;
-
+    /** @brief Ground Truth linear velocity */
     Eigen::Vector3d gt_linear_velocity_;
-
+    /** @brief IMU Ground Truth angular velocity */
     Eigen::Vector3d gt_angular_velocity_;
-
     /** @brief Floating base pose w.r.t world */
     Eigen::Affine3d floating_base_pose_;
     /** @brief Floating base position (x,y,z) w.r.t world */
@@ -207,6 +208,9 @@ private:
 
     /** @brief Base estimation */
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
+
+    /** @brief Base estimated height wrt the feet */
+    double estimated_z_;
 
 };
 

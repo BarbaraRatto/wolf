@@ -40,6 +40,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   imu_orientation_.normalize();
   floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
   contact_computation_active_ = false;
+  estimated_z_ = 0.0;
 
   for(unsigned int i=0;i<contact_names.size();i++)
   {
@@ -275,6 +276,11 @@ const Eigen::Vector3d &StateEstimator::getGroundTruthBaseAngularVelocity() const
   return gt_angular_velocity_;
 }
 
+const double &StateEstimator::getEstimatedBaseHeight() const
+{
+  return estimated_z_;
+}
+
 void StateEstimator::toggleHapticContactLoop()
 {
   haptic_contact_loop_active_=!haptic_contact_loop_active_;
@@ -488,6 +494,8 @@ void StateEstimator::updateFloatingBase(const double& period)
   robot_model_->setFloatingBaseAngularVelocity(floating_base_velocity_.segment(3,3));
   robot_model_->update();
 
+  estimated_z_ = -estimateZ();
+
   switch(estimation_position)
   {
   case estimation_t::NONE:
@@ -503,13 +511,13 @@ void StateEstimator::updateFloatingBase(const double& period)
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    floating_base_position_ << 0.0,0.0, -estimateZ(); // Remove x and y from the state estimation
+    floating_base_position_ << 0.0,0.0, estimated_z_; // Remove x and y from the state estimation
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
     //floating_base_position_.head(2) << gt_position_.head(2);
     // Note: this is the z calculated wrt the base not the one wrt world!
-    //floating_base_position_(2) = -estimateZ();
+    //floating_base_position_(2) = estimated_z_;
     floating_base_position_ = gt_position_;
     break;
   default:
