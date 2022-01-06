@@ -16,7 +16,6 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
 
   support_polygon_edges_.resize(N_LEGS);
 
-  //update_ = true;
   computeComPositionReference();
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/com_velocity_ref",com_velocity_ref_);

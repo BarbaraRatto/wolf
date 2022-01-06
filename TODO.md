@@ -1,5 +1,6 @@
 # TODO list
 
+- move the hardware interface as submodule 
 - q_lims subconstraint
 - add script in description_utils to create model.config and model.sdf for gazebo
 - add safety checks so that the controller doesn't get crazy
@@ -7,7 +8,7 @@
 - startup procedure and solver reset (state machine?)
 - relative tasks between the feet
 - port the robots to the new stack 
-- change name to WOLF
+- change name to WOLF for wb_controller
 - move headers code in cpp
 - remove ground truth and contact sensors
 - step reflexes

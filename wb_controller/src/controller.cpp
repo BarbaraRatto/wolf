@@ -172,13 +172,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
     id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
 
+
     solver_failures_cnt_   = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     contact_failures_cnt_  = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     for(unsigned int i=0;i<joint_velocities_.size();i++)
       velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.1 / period_))));
 
-    ramp_up_   = std::make_shared<Ramp>(5.0,Ramp::UP);
-    ramp_down_ = std::make_shared<Ramp>(5.0,Ramp::DOWN);
+    ramp_up_   = std::make_shared<Ramp>(RAMPS_SEC,Ramp::UP);
+    ramp_down_ = std::make_shared<Ramp>(RAMPS_SEC,Ramp::DOWN);
 
     previous_height_ = robot_model_->getStandUpHeight();
 
@@ -481,6 +482,7 @@ void Controller::updateStateEstimator(const double &dt)
 
 void Controller::updateStateMachine(const double &dt)
 {
+
     desired_height_ = 0.0;
     current_height_ = robot_model_->getCurrentHeight();
     unsigned int current_state = robot_model_->getState();
@@ -501,7 +503,7 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::STANDING_UP):
         updateComponents(dt);
-        desired_height_ = ramp_up_->update(dt) * robot_model_->getStandUpHeight();
+        desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp_up_->update(dt) * robot_model_->getStandUpHeight();
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_matrix3d_.transposeInPlace();
@@ -510,12 +512,12 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmd();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-        if(!updateSolver(dt) || !performSafetyChecks())
+        if(!updateSolver(dt))
         {
           robot_model_->setState(QuadrupedRobot::IMPEDANCE);
           break;
         }
-        if(current_height_ >= robot_model_->getStandUpHeight())
+        if(current_height_ >= terrain_estimator_->getTerrainPositionWorld().z() + robot_model_->getStandUpHeight())
         {
           foot_holds_planner_->reset();
           ramp_up_->reset();
@@ -590,7 +592,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmd();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-        if(!updateSolver(dt) || !performSafetyChecks())
+        if(!updateSolver(dt))
         {
           ramp_down_->reset();
           robot_model_->setState(QuadrupedRobot::IMPEDANCE);
@@ -626,6 +628,8 @@ void Controller::init()
     state_estimator_->resetGyroscopeIntegration();
     state_estimator_->startContactComputation();
     state_estimator_->startHapticContactLoop();
+    // Terrain Estimator
+    //terrain_estimator_->reset();
     // Footholds planner with gait generator
     foot_holds_planner_->reset();
     foot_holds_planner_->setBasePosition(state_estimator_->getFloatingBasePosition());
@@ -756,6 +760,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Read joint values from the hardware interface
     readJoints();
 
+
     // Read IMU values from the hardware interface
     readImu();
 
@@ -795,7 +800,7 @@ void Controller::odomPublisher()
     while(!stopping_)
     {
         // Get floating base
-        base_pose = state_estimator_->getFloatingBasePose(); //FIXME Is it thread safe?
+        base_pose = state_estimator_->getFloatingBasePose();
 
         // Do the inverse of it
         world_pose = base_pose.inverse();
@@ -811,7 +816,7 @@ void Controller::odomPublisher()
         q.setZ(quaternion.z());
         q.setW(quaternion.w());
         transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName() , "/world" ));
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName() , "/" WORLD_FRAME_NAME ));
 
         // Create the tf transform between /ci/base_link and /base_link
         transform.setOrigin(tf::Vector3(0,0,0));
