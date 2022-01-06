@@ -43,6 +43,10 @@ public:
     {
       avg_ = 0.0;
     }
+    double getAvg()
+    {
+      return avg_;
+    }
 
 private:
     unsigned int n_;
@@ -54,7 +58,7 @@ class MovingAvgFilter
 public:
   typedef std::shared_ptr<MovingAvgFilter> Ptr;
 
-  MovingAvgFilter(unsigned int n)
+  MovingAvgFilter(unsigned int n=10)
   {
     window_.resize(n);
     reset();
@@ -72,7 +76,7 @@ public:
   double update(double value)
   {
       unsigned int n = window_.size();
-      double res = 0.0;
+      avg_ = 0.0;
       sum_ -= window_[window_idx_];
       sum_ += value;
       window_[window_idx_] = value;
@@ -80,15 +84,21 @@ public:
           filter_complete_ = true;
         }
         if (filter_complete_) {
-          res = sum_ / n;
+          avg_ = sum_ / n;
         } else {
-          res = sum_ / (window_idx_+1);
+          avg_ = sum_ / (window_idx_+1);
         }
       window_idx_ = (window_idx_+1) % n;
-      return res;
+      return avg_;
+  }
+
+  double getAvg()
+  {
+    return avg_;
   }
 
 private:
+  double avg_;
   double sum_;
   std::vector<double> window_;
   unsigned int window_idx_;
