@@ -38,8 +38,8 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
     ret = "MANIPULATION";
     break;
 
-  case QuadrupedRobot::robot_states_t::IMPEDANCE:
-    ret = "IMPEDANCE";
+  case QuadrupedRobot::robot_states_t::ANOMALY:
+    ret = "ANOMALY";
     break;
 
   case QuadrupedRobot::robot_states_t::STANDING_UP:

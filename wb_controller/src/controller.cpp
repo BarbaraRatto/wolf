@@ -161,7 +161,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
     legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
-    legs_impedance_->startInertiaCompensation(true);
+    legs_impedance_->startInertiaCompensation(false);
 
     terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
@@ -178,8 +178,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     for(unsigned int i=0;i<joint_velocities_.size();i++)
       velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.1 / period_))));
 
-    ramp_up_   = std::make_shared<Ramp>(RAMPS_SEC,Ramp::UP);
-    ramp_down_ = std::make_shared<Ramp>(RAMPS_SEC,Ramp::DOWN);
+    ramp_stand_up_    = std::make_shared<Ramp>(5.0,Ramp::UP);
+    ramp_stand_down_  = std::make_shared<Ramp>(5.0,Ramp::DOWN);
+    ramp_impedance_   = std::make_shared<Ramp>(2.5,Ramp::UP);
 
     previous_height_ = robot_model_->getStandUpHeight();
 
@@ -482,10 +483,10 @@ void Controller::updateStateEstimator(const double &dt)
 
 void Controller::updateStateMachine(const double &dt)
 {
-
     desired_height_ = 0.0;
     current_height_ = robot_model_->getCurrentHeight();
     unsigned int current_state = robot_model_->getState();
+    double ramp;
     switch(current_state)
     {
       case(QuadrupedRobot::IDLE):
@@ -498,12 +499,22 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::INIT):
         init();
-        robot_model_->setState(QuadrupedRobot::STANDING_UP);
+        des_joint_positions_ = robot_model_->getStandDownJointPostion();
+        des_joint_velocities_.fill(0.0);
+        updateImpedance(des_joint_positions_,des_joint_velocities_);
+        ramp = ramp_impedance_->update(dt);
+        des_joint_efforts_impedance_ = ramp * des_joint_efforts_impedance_;
+        if(ramp >= 1.0)
+        {
+          ramp_impedance_->reset();
+          robot_model_->setState(QuadrupedRobot::STANDING_UP);
+        }
         break;
 
       case(QuadrupedRobot::STANDING_UP):
         updateComponents(dt);
-        desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp_up_->update(dt) * robot_model_->getStandUpHeight();
+        ramp = ramp_stand_up_->update(dt);
+        desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_matrix3d_.transposeInPlace();
@@ -514,13 +525,13 @@ void Controller::updateStateMachine(const double &dt)
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {
-          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
         }
         if(current_height_ >= terrain_estimator_->getTerrainPositionWorld().z() + robot_model_->getStandUpHeight())
         {
           foot_holds_planner_->reset();
-          ramp_up_->reset();
+          ramp_stand_up_->reset();
           if(mode_ == Controller::mode_t::WALKING)
           {
             robot_model_->setState(QuadrupedRobot::WALKING);
@@ -544,7 +555,7 @@ void Controller::updateStateMachine(const double &dt)
         updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
         if(!updateSolver(dt) || !performSafetyChecks())
         {
-          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
         }
         if(mode_ == Controller::mode_t::MANIPULATION)
@@ -565,7 +576,7 @@ void Controller::updateStateMachine(const double &dt)
         updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
         if(!updateSolver(dt) || !performSafetyChecks())
         {
-          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
         }
         if(mode_ == Controller::mode_t::WALKING)
@@ -583,7 +594,8 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::STANDING_DOWN):
         updateComponents(dt);
-        desired_height_ = ramp_down_->update(dt) * stand_down_starting_height_;
+        ramp = ramp_stand_down_->update(dt);
+        desired_height_ = ramp * stand_down_starting_height_;
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_matrix3d_.transposeInPlace();
@@ -594,22 +606,24 @@ void Controller::updateStateMachine(const double &dt)
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {
-          ramp_down_->reset();
-          robot_model_->setState(QuadrupedRobot::IMPEDANCE);
+          ramp_stand_down_->reset();
+          robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
         }
         if(desired_height_ <= EPS)
         {
-          ramp_down_->reset();
+          ramp_stand_down_->reset();
           //posture_ = Controller::posture_t::DOWN;
           robot_model_->setState(QuadrupedRobot::IDLE);
           break;
         }
         break;
 
-      case(QuadrupedRobot::IMPEDANCE):
+      case(QuadrupedRobot::ANOMALY):
         updateComponents(dt);
-        updateImpedance(dt);
+        des_joint_positions_.fill(0.0);
+        des_joint_velocities_.fill(0.0);
+        updateImpedance(des_joint_positions_,des_joint_velocities_);
         if((current_height_ - previous_height_)/dt <= EPS)
         {
           posture_ = Controller::posture_t::DOWN;
@@ -710,10 +724,10 @@ bool Controller::performSafetyChecks()
   return ok;
 }
 
-void Controller::updateImpedance(const double& /*dt*/)
+void Controller::updateImpedance(const Eigen::VectorXd& des_joint_positions, const Eigen::VectorXd& des_joint_velocities)
 {
   legs_impedance_->update();
-  des_joint_efforts_impedance_ = - legs_impedance_->getKd() * joint_velocities_;
+  des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions - joint_positions_) + legs_impedance_->getKd() * ( des_joint_velocities - joint_velocities_);
 }
 
 bool Controller::updateSolver(const double &/*dt*/)

@@ -314,8 +314,9 @@ private:
     std::vector<Counter::Ptr> velocity_lims_failures_cnt_;
 
     /** @brief Ramps */
-    Ramp::Ptr ramp_up_;
-    Ramp::Ptr ramp_down_;
+    Ramp::Ptr ramp_stand_up_;
+    Ramp::Ptr ramp_stand_down_;
+    Ramp::Ptr ramp_impedance_;
 
     /** @brief state machine support variables */
     unsigned int mode_;
@@ -366,9 +367,10 @@ private:
 
     /**
          * @brief perform an execution step with the impedance
-         * @param dt control period
+         * @param des_joint_positions
+         * @param des_joint_velocities
          */
-    void updateImpedance(const double &dt);
+    void updateImpedance(const Eigen::VectorXd& des_joint_positions, const Eigen::VectorXd& des_joint_velocities);
 
     /**
          * @brief perform an execution step with the controller's components
