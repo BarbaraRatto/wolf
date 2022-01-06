@@ -38,6 +38,8 @@ public:
 
     bool computeTerrainEstimation(const double& dt);
 
+    void reset();
+
     void setMinRoll(const double min);
     void setMinPitch(const double min);
     void setMaxRoll(const double max);

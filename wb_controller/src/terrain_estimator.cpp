@@ -18,22 +18,11 @@ TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
   assert(robot_model);
   robot_model_ = robot_model;
 
-  update_ = false;
-
   A_.resize(N_LEGS,3);
   Ai_.resize(3,N_LEGS);
   b_.resize(N_LEGS);
 
-  roll_ = roll_filt_ = roll_out_world_ = roll_out_hf_ = estimated_roll_ = 0.0;
-  pitch_ = pitch_filt_ = pitch_out_world_ = pitch_out_hf_ = estimated_pitch_ = 0.0;
-
-  terrain_normal_ << 0.0, 0.0, 1.0;
-  world_X_terrain_ = hf_X_terrain_ = Eigen::Vector3d::Zero();
-  world_T_terrain_ = hf_T_terrain_ = Eigen::Affine3d::Identity();
-  world_R_terrain_ = hf_R_terrain_ = Eigen::Matrix3d::Identity();
-
-  posture_adjustment_ = posture_adjustment_prev_ = posture_adjustment_dot_ = 0.0;
-  posture_adjustment_dot_world_ = Eigen::Vector3d::Zero();
+  reset();
 
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/terrain_normal",terrain_normal_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/roll_world",roll_out_world_);
@@ -143,6 +132,22 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   foot_holds_planner_->setTerrainTransform(world_T_terrain_);
 
   return true;
+}
+
+void TerrainEstimator::reset()
+{
+  update_ = false;
+
+  roll_ = roll_filt_ = roll_out_world_ = roll_out_hf_ = estimated_roll_ = 0.0;
+  pitch_ = pitch_filt_ = pitch_out_world_ = pitch_out_hf_ = estimated_pitch_ = 0.0;
+
+  terrain_normal_ << 0.0, 0.0, 1.0;
+  world_X_terrain_ = hf_X_terrain_ = Eigen::Vector3d::Zero();
+  world_T_terrain_ = hf_T_terrain_ = Eigen::Affine3d::Identity();
+  world_R_terrain_ = hf_R_terrain_ = Eigen::Matrix3d::Identity();
+
+  posture_adjustment_ = posture_adjustment_prev_ = posture_adjustment_dot_ = 0.0;
+  posture_adjustment_dot_world_ = Eigen::Vector3d::Zero();
 }
 
 void TerrainEstimator::update()
