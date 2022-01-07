@@ -695,11 +695,12 @@ bool Controller::performSafetyChecks()
 
   bool ok = true;
 
-  // Check if we have at least one contact
+  // Check if we have at least one contact with the feet
   auto contacts = state_estimator_->getContacts();
   bool contact = false;
-  for (auto& tmp_map : contacts)
-    contact = contact || tmp_map.second;
+  auto foot_names = robot_model_->getFootNames();
+  for(unsigned int i=0;i<foot_names.size();i++)
+    contact = contact || contacts[foot_names[i]];
   if(!contact) // && state_estimator_->getFloatingBasePosition().z() > 0.3 * robot_model_->getStandUpHeight()
     contact_failures_cnt_->increase();
   else
@@ -710,19 +711,24 @@ bool Controller::performSafetyChecks()
     ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Lost contacts!");
   }
 
-  // Check if the current joint velocities are valid otherwise set robot state to anomaly
+  // Check if the current joint velocities (only legs for the moment) are valid otherwise set robot state to anomaly
   std::vector<bool>&& checks = robot_model_->checkJointVelocities(joint_velocities_);
-  for(unsigned int i=0;i<checks.size();i++)
+  auto leg_names = robot_model_->getLegNames();
+  for(unsigned int j=0;j<leg_names.size();j++)
   {
-    if(checks[i])
-      velocity_lims_failures_cnt_[i]->increase();
-    else
-      velocity_lims_failures_cnt_[i]->reset();
-    if(velocity_lims_failures_cnt_[i]->upperLimitReached())
+    auto joints_idx = robot_model_->getLimbJointsIds(leg_names[j]);
+    for(unsigned int i=0;i<joints_idx.size();i++)
     {
-      ok = false;
-      auto names = robot_model_->getEnabledJointNames();
-      ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Reached joint velocity limit "<<names[i]);
+      if(checks[joints_idx[i]])
+        velocity_lims_failures_cnt_[joints_idx[i]]->increase();
+      else
+        velocity_lims_failures_cnt_[joints_idx[i]]->reset();
+      if(velocity_lims_failures_cnt_[joints_idx[i]]->upperLimitReached())
+      {
+        ok = false;
+        auto names = robot_model_->getEnabledJointNames();
+        ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Reached joint velocity limit "<<names[joints_idx[i]]);
+      }
     }
   }
 
