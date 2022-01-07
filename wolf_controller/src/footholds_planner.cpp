@@ -316,7 +316,6 @@ void FootholdsPlanner::resetBaseOrientation()
     base_orientation_(i) = secondOrderFilter(base_orientation_(i),base_orientation_filt_(i),default_base_orientation_(i),1.0); //FIXME hardcoded gain, it should be based on the sampling time
 
   rpyToRot(base_orientation_,base_rotation_reference_);
-  base_rotation_reference_.transposeInPlace();
 }
 
 void FootholdsPlanner::resetVelocyScales()
@@ -385,7 +384,7 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   rpyToRot(base_orientation_,base_rotation_reference_);
   // This is the base rotation reference computed w.r.t terrain
-  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_.transpose();
+  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_;
 }
 
 void FootholdsPlanner::setInitialOffsets()

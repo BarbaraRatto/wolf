@@ -34,15 +34,7 @@ inline void quatToRotMat(const Eigen::Quaterniond& q, Eigen::Matrix3d& R)
     R(2, 1) = 2.0 * (q.y() * q.z() - q.w() * q.x());
 }
 
-/**
- * @brief the dual of rpyToRot()
- * @param R matrix \f$ {}_B R_A\f$ which maps a vector\f${}_A\mathbf{v}\f$
- *  (expressed in a fixed frame A) to a vector \f${}_B\mathbf{v}\f$ expressed
- *  in a (rotated) frame B such that \f${}_A\mathbf{v} = {}_B R_A {}_B\mathbf{v} \f$
- * @return a set of Euler angles (according to ZYX convention) representing the
- * orientation of frame B
- * @sa rpyToRot()
- */
+
 inline void rotTorpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
 {
     rpy(0) = std::atan2(R(1,2),R(2,2));
@@ -50,68 +42,40 @@ inline void rotTorpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
     rpy(2) = std::atan2(R(0,1),R(0,0));
 }
 
-/**
- * @brief Function to compute the rotation matrix which expresses a vector of
- * the fixed frame A into the rotated frame B according to the ZYX convention
- * (subsequent rotation) considering right hand coordinate systems (counter
- * clockwise convention)
- * \f[
- * {}_B R_A = \begin{bmatrix}
- * \cos(\psi)\cos(\theta) & \cos(\theta)\sin(\psi) & -\sin(\theta) \\
- * \cos(\psi)\sin(\phi)\sin(\theta) - \cos(\phi)\sin(\psi) & \cos(\phi)\cos(\psi) + \sin(\phi)\sin(\psi)\sin(\theta) & \cos(\theta)\sin(\phi) \\
- * \sin(\phi)\sin(\psi) + \cos(\phi)\cos(\psi)\sin(\theta) & \cos(\phi)\sin(\psi)\sin(\theta) - \cos(\psi)\sin(\phi) & \cos(\phi)\cos(\theta)
- * \end{bmatrix}
- * \f]
- * the transpose of this matrix has as director cosines (columns) the axis of
- * the rotated frame expressed in the fixed frame which will be multiplied for
- * the component of the vector in the rotated frame B to get the components in
- * the fixed frame A
- * @param[in] rpy vector containing roll \f$ \phi\f$, pitch \f$ \theta \f$ and yaw \f$\psi\f$
- * @return the matrix \f${}_B R_A\f$
- *
-*/
-inline void rpyToRot(const double& roll, const double& pitch, const double& yaw, Eigen::Matrix3d& R){
+inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R)
+{
+  R.setZero();
 
-    R.setZero();
+  double c_y = std::cos(rpy(2));
+  double s_y = std::sin(rpy(2));
 
-    /*Rx <<	1   ,    0     	  ,  	  0,
-            0   ,    cos(roll) ,  sin(roll),
-            0   ,    -sin(roll),  cos(roll);
+  double c_r = std::cos(rpy(0));
+  double s_r = std::sin(rpy(0));
 
+  double c_p = std::cos(rpy(1));
+  double s_p = std::sin(rpy(1));
 
-    Ry << cos(pitch) 	,	 0  ,   -sin(pitch),
-            0       ,    1  ,   0,
-            sin(pitch) 	,	0   ,  cos(pitch);
-
-    Rz << cos(yaw)  ,  sin(yaw) ,		0,
-            -sin(yaw) ,  cos(yaw) ,  		0,
-            0      ,     0     ,       1;
-
-
-    std::cout << "Rx * Ry * Rz" << std::endl;
-    std::cout << Rx * Ry * Rz << std::endl;*/
-
-    double c_y = std::cos(yaw);
-    double s_y = std::sin(yaw);
-
-    double c_r = std::cos(roll);
-    double s_r = std::sin(roll);
-
-    double c_p = std::cos(pitch);
-    double s_p = std::sin(pitch);
-
-    R << c_p*c_y               ,  c_p*s_y                ,  -s_p,
-         s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*c_y  ,  s_r*c_p,
-         c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*c_y  ,  c_r*c_p;
-
+  R << c_p*c_y ,  s_r*s_p*c_y - c_r*s_y                 ,  c_r*s_p*c_y + s_r*s_y  ,
+       c_p*s_y ,  s_r*s_p*s_y + c_r*c_y                 ,  s_y*s_p*c_r - c_y*s_r,
+       -s_p    ,  c_p*s_r                               ,  c_r*c_p;
 }
 
-inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R){
+inline void rpyToRotTranspose(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R)
+{
+  R.setZero();
 
-    const double& roll = rpy(0);
-    const double& pitch = rpy(1);
-    const double& yaw = rpy(2);
-    rpyToRot(roll,pitch,yaw,R);
+  double c_y = std::cos(rpy(2));
+  double s_y = std::sin(rpy(2));
+
+  double c_r = std::cos(rpy(0));
+  double s_r = std::sin(rpy(0));
+
+  double c_p = std::cos(rpy(1));
+  double s_p = std::sin(rpy(1));
+
+  R << c_p*c_y               ,  c_p*s_y                ,  -s_p,
+       s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*c_y  ,  s_r*c_p,
+       c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*c_y  ,  c_r*c_p;
 }
 
 inline void yawToRot(const double& yaw, Eigen::Matrix3d& R)

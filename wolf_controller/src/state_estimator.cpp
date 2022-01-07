@@ -461,7 +461,7 @@ void StateEstimator::updateFloatingBase(const double& period)
     //rotTorpy(raw_base_R_world_,raw_base_rpy_);
     //base_rpy_.head(2) = raw_base_rpy_.head(2);
     //set the affine transformation for angular position
-    rpyToRot(base_rpy_, base_R_world_);
+    rpyToRotTranspose(base_rpy_, base_R_world_);
     floating_base_pose_.linear() = base_R_world_.transpose();
     // Set the affine transformation for angular velocity
 #ifdef ANGULAR_VELOCITIES_WRT_BASE

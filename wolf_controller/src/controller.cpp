@@ -517,7 +517,6 @@ void Controller::updateStateMachine(const double &dt)
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
-        tmp_matrix3d_.transposeInPlace();
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
@@ -598,7 +597,6 @@ void Controller::updateStateMachine(const double &dt)
         desired_height_ = ramp * stand_down_starting_height_;
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
-        tmp_matrix3d_.transposeInPlace();
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
