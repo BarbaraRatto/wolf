@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+
+# WOLF Keyboard controller
+
+import pygame
+
+import rospy
+import numpy as np
+
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
+
+import rospkg
+
+rospack = rospkg.RosPack()
+rospack.list()
+img_path = rospack.get_path('wolf_controller') + "/resources/keyboard_controls.png"
+
+msg = """
+Reading from the keyboard  and Publishing to Twist!
+---------------------------
+Moving around:
+  q   w   e
+  a   s   d
+
+Orientation:
+   u    
+h  j  k  
+
+o : up (+z)
+l : down (-z)
+r: reset base
+"""
+
+
+moveBindings = { #     x y z r p y
+        "w": np.array([1,0,0,0,0,0]),
+        "s": np.array([-1,0,0,0,0,0]),
+        "a": np.array([0,0,0,0,0,1]),
+        "d": np.array([0,0,0,0,0,-1]),
+        "q": np.array([0,1,0,0,0,0]),
+        "e": np.array([0,-1,0,0,0,0]),
+        "o": np.array([0,0,1,0,0,0]),
+        "l": np.array([0,0,-1,0,0,0]),
+        "u": np.array([0,0,0,0,1,0]),
+        "j": np.array([0,0,0,0,-1,0]),
+        "h": np.array([0,0,0,1,0,0]),
+        "k": np.array([0,0,0,-1,0,0])
+    }
+
+
+if __name__=="__main__":
+    rospy.init_node('keyboard_node')
+
+    robot_name = rospy.get_param('/robot_name')
+    twist_pub = rospy.Publisher('%s/wolf_controller/twist' % (robot_name), Twist, queue_size = 1)
+    reset_pub = rospy.Publisher('%s/wolf_controller/reset_base' % (robot_name), Bool, queue_size=1)
+
+    pygame.init()
+
+    white = (255, 255, 255)
+    X = 710
+    Y = 440
+    display_surface = pygame.display.set_mode((X, Y))
+
+    pygame.display.set_caption('Keyboard controls')
+
+    # create a surface object, image is drawn on it.
+    image = pygame.image.load(img_path)
+
+    while not rospy.is_shutdown():
+        display_surface.fill(white)
+        display_surface.blit(image, (-125, -50))
+
+        pygame.event.pump()
+        keys = pygame.key.get_pressed()
+
+        command = np.array([0, 0, 0, 0, 0, 0])
+        if keys[ord("r")]:
+            reset_base = Bool()
+            reset_base.data = True
+            reset_pub.publish(reset_base)
+        else:
+            for key in moveBindings:
+                if keys[ord(key)]:
+                    command += moveBindings[key]
+
+                twist = Twist()
+                twist.linear.x = command[0]
+                twist.linear.y = command[1]
+                twist.linear.z = command[2]
+                twist.angular.x = command[3]
+                twist.angular.y = command[4]
+                twist.angular.z = command[5]
+                twist_pub.publish(twist)
+
+        if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
+            exit()
+
+
+        pygame.display.update()
+
+        rospy.sleep(0.01)
+
+
+
+
