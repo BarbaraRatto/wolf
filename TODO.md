@@ -1,21 +1,21 @@
 # TODO list
 
-- sometimes when stepping down the robot kind of fall
-- add ANOMALY button
-- move the hardware interface as submodule 
+- ROS services
+- add trajectory for arm
+- dedicated state machine code
+- sometimes when standing down the robot kind of fall
+- move the hardware interface to submodule 
 - q_lims subconstraint
 - add script in description_utils to create model.config and model.sdf for gazebo
 - robustness tests with push recovery
-- relative tasks between the feet
+- relative tasks between the feet / kin adjustment
 - port the robots to the new stack 
 - move headers code in cpp
 - step reflexes
 - collision avoidance for the arm
 - clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
-- add trajectory for arm
-- web app (AWS?)
 - state estimation
 - experiments on the real robot
 - tests and profiling
 - check the FIXME around the code clean up
-- Fix filters, use only one class
+- fix filters, use only one class
