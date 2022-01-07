@@ -353,6 +353,11 @@ void Controller::standUp(bool stand_up)
     posture_ = Controller::posture_t::DOWN;
 }
 
+void Controller::activateEmergencyStop()
+{
+    robot_model_->setState(QuadrupedRobot::ANOMALY);
+}
+
 bool Controller::selectGait(const string& gait)
 {
   if(gait_generator_)

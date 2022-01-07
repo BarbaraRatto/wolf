@@ -31,6 +31,7 @@ public:
         {
             addButtonHandler(boost::bind(&wolf_controller::Controller::switchPosture,controller_ptr),JoyHandler::START);
             addButtonHandler(boost::bind(&wolf_controller::Controller::switchControlMode,controller_ptr),JoyHandler::ONE);
+            addButtonHandler(boost::bind(&wolf_controller::Controller::activateEmergencyStop,controller_ptr),JoyHandler::TWO);
         }
         else
             throw std::runtime_error("Controller not initialized yet!");
