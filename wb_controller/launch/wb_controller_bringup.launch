@@ -115,7 +115,7 @@
    </group>
 
    <group if="$(eval input_device == 'keyboard')">
-	<node pkg="wb_controller" type="keyboard_node" name="keyboard_node" output="screen"/>
+	<node pkg="wb_controller" type="keyboard_node" name="keyboard_node" output="screen" respawn="true"/>
    </group>
 
 </launch>
