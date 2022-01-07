@@ -156,6 +156,11 @@ public:
     void standUp(bool stand_up);
 
     /**
+         * @brief emergency stop
+         */
+    void activateEmergencyStop();
+
+    /**
          * @brief Select the gait to use
          */
     bool selectGait(const std::string& gait);
