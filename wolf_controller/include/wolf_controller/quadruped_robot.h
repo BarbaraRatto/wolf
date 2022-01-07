@@ -39,6 +39,7 @@ public:
   const std::vector<std::string>& getLegNames() const;
   const std::vector<std::string>& getHipNames() const;
   const std::vector<std::string>& getJointNames() const;
+  const std::vector<std::string>& getArmNames() const;
   const std::vector<std::string>& getEndEffectorNames() const;
   const std::vector<std::string>& getContactNames() const;
   const std::vector<std::string>& getLimbNames() const;

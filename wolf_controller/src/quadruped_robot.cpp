@@ -587,7 +587,7 @@ const std::vector<std::string>& QuadrupedRobot::getFootNames() const
   return foot_names_;
 }
 
-const std::vector<std::string> &QuadrupedRobot::getLegNames() const
+const std::vector<std::string>& QuadrupedRobot::getLegNames() const
 {
   return leg_names_;
 }
@@ -600,6 +600,11 @@ const std::vector<std::string>& QuadrupedRobot::getHipNames() const
 const std::vector<std::string>& QuadrupedRobot::getJointNames() const
 {
   return joint_names_;
+}
+
+const std::vector<std::string>& QuadrupedRobot::getArmNames() const
+{
+  return arm_names_;
 }
 
 const std::vector<std::string>& QuadrupedRobot::getEndEffectorNames() const
