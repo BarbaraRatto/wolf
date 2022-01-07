@@ -1,5 +1,7 @@
 # TODO list
 
+- sometimes when stepping down the robot kind of fall
+- add ANOMALY button
 - move the hardware interface as submodule 
 - q_lims subconstraint
 - add script in description_utils to create model.config and model.sdf for gazebo
