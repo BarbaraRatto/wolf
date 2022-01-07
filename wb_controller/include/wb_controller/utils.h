@@ -13,7 +13,7 @@
 
 namespace wb_controller
 {
-//#define ROBOT_REAL
+#define ANGULAR_VELOCITIES_WRT_BASE // Comment it if the IMU's velocities are defined wrt world
 #define GRAVITY 9.81
 //#define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6
@@ -115,9 +115,96 @@ inline QuadrupedRobot* createRobotModel(ros::NodeHandle& root_nh)
   return new wb_controller::QuadrupedRobot(urdf,srdf);
 }
 
+class Ramp
+{
+public:
+
+  typedef std::shared_ptr<Ramp> Ptr;
+
+  enum type_t {DOWN=0,UP};
+
+  Ramp(const double& T, type_t type = DOWN)
+  {
+    assert(T>0.0);
+    T_ = T;
+    type_ = type;
+    reset();
+  }
+
+  void reset()
+  {
+    t_ = 0.0;
+  }
+
+  double update(const double& dt)
+  {
+    double out;
+    if(type_ == DOWN)
+    {
+      out = 1.0 - t_/T_;
+    }
+    else
+    {
+      out = t_/T_;
+    }
+
+    if(t_>=T_)
+      t_ = T_;
+    else
+      t_ += dt;
+
+    return out;
+  }
+
+private:
+  double t_;
+  double T_;
+  type_t type_;
+
+};
+
+class Counter
+{
+public:
+
+    typedef std::shared_ptr<Counter> Ptr;
+
+    Counter(unsigned int upper_limit)
+    {
+      cnt_ = 0;
+      upper_limit_ = upper_limit;
+    }
+
+    void increase()
+    {
+      cnt_++;
+    }
+
+    void decrease()
+    {
+      if(cnt_>0)
+        cnt_--;
+    }
+
+    void reset()
+    {
+      cnt_ = 0;
+    }
+
+    bool upperLimitReached()
+    {
+      return (cnt_ >= upper_limit_ ? true : false);
+    }
+
+private:
+    long long cnt_;
+    unsigned int upper_limit_;
+};
+
 class Trigger
 {
 public:
+
     Trigger()
     {
         old_value = false;
@@ -131,7 +218,6 @@ public:
 private:
     bool old_value;
 };
-
 
 class AxisToTrigger
 {
@@ -172,7 +258,6 @@ private:
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
-
 
 } // namespace
 

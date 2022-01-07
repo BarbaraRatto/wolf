@@ -30,7 +30,7 @@ public:
         if(controller_ptr!=nullptr)
         {
             addButtonHandler(boost::bind(&wb_controller::Controller::toggleSolver,controller_ptr),JoyHandler::START);
-            addButtonHandler(boost::bind(&wb_controller::Controller::switchStack,controller_ptr),JoyHandler::ONE);
+            addButtonHandler(boost::bind(&wb_controller::Controller::switchControlMode,controller_ptr),JoyHandler::ONE);
         }
         else
             throw std::runtime_error("Controller not initialized yet!");

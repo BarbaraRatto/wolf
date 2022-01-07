@@ -1,14 +1,17 @@
 # TODO list
 
-- relative tasks between the feet
-- image with XBOX controller
-- merge arm branch
-- port the robots to the new stack
-- change name to WOLF
-- remove ground truth and contact sensors
+- move the hardware interface as submodule 
+- q_lims subconstraint
+- add script in description_utils to create model.config and model.sdf for gazebo
+- add safety checks so that the controller doesn't get crazy
 - robustness tests with push recovery
+- startup procedure and solver reset (state machine?)
+- relative tasks between the feet
+- port the robots to the new stack 
+- change name to WOLF for wb_controller
+- move headers code in cpp
+- remove ground truth and contact sensors
 - step reflexes
-- add IMU and remove ROBOT_REAL
 - collision avoidance for the arm
 - clean wb_robot_hw, parse hardcoded info from urdf/srdf using srdfdom
 - add trajectory for arm
@@ -17,4 +20,4 @@
 - experiments on the real robot
 - tests and profiling
 - check the FIXME around the code clean up
-- startup procedure and solver reset (state machine?)
+- Fix filters, use only one class

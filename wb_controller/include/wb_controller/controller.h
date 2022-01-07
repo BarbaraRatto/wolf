@@ -14,8 +14,8 @@
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
-#include <wb_hardware_interface/ground_truth_interface.h>
-#include <wb_hardware_interface/contact_switch_sensor_interface.h>
+#include <wolf_hardware_interface/ground_truth_interface.h>
+#include <wolf_hardware_interface/contact_switch_sensor_interface.h>
 // STD
 #include <atomic>
 #include <thread>
@@ -164,14 +164,14 @@ public:
 
 
     /**
-         * @brief Select the stack to use
+         * @brief Select the control mode to use [WALKING|MANIPULATION]
          */
-    bool selectStack(const std::string& stack);
+    bool selectControlMode(const std::string& mode);
 
     /**
-         * @brief Switch between WALKING and MANIPULATION stack
+         * @brief Switch between WALKING and MANIPULATION
          */
-    void switchStack();
+    void switchControlMode();
 
     /**
          * @brief Select the gait to use
@@ -273,7 +273,7 @@ private:
     /** @brief Xbot robot model */
     QuadrupedRobot::Ptr robot_model_;
     /** @brief Dynamic problem formulation */
-    std::unique_ptr<IDProblem> id_prob_;
+    IDProblem::UniquePtr id_prob_;
     /** @brief Desired P value for the joints PID controller */
     std::vector<double> des_joint_p_gain_;
     /** @brief Desired I value for the joints PID controller */
@@ -298,6 +298,8 @@ private:
     Eigen::Vector3d imu_gyroscope_filt_;
     /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
+    /** @brief Ground Truth Orientation */
+    Eigen::Quaterniond ground_truth_orientation_;
     /** @brief Reference for the waist RPY */
     Eigen::Vector3d des_base_rpy_;
     /** @brief Thread for the odometry publisher */
@@ -328,8 +330,6 @@ private:
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
     /** @brief imu_gyroscope_filter */
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
-    /** @brief True if the solver istance has been created */
-    bool solver_created_;
     /** @brief True if the controller uses the external contact sensors */
     bool use_contact_sensors_;
 
@@ -351,6 +351,11 @@ private:
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
 
+    /** @brief Counters used for checks */
+    Counter::Ptr solver_failures_cnt_;
+    Counter::Ptr contact_failures_cnt_;
+    std::vector<Counter::Ptr> velocity_lims_failures_cnt_;
+
     /**
          * @brief thread body for the odometry publisher
          */
@@ -365,6 +370,11 @@ private:
          * @brief update the imu reading from the imu interface
          */
     void readImu();
+
+    /**
+         * @brief update the state estimator
+         */
+    void updateStateEstimator(const double& dt);
 
 };
 

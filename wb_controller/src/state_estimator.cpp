@@ -32,6 +32,10 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   floating_base_position_ = Eigen::Vector3d::Zero();
   floating_base_velocity_ = Eigen::Vector6d::Zero();
   floating_base_pose_ = Eigen::Affine3d::Identity();
+  gt_position_ = Eigen::Vector3d::Zero();
+  gt_orientation_ = Eigen::Quaterniond::Identity();
+  gt_linear_velocity_ = Eigen::Vector3d::Zero();
+  gt_angular_velocity_= Eigen::Vector3d::Zero();
   terrain_normal_ << 0,0,1;
   imu_orientation_.normalize();
   floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
@@ -40,8 +44,9 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   for(unsigned int i=0;i<contact_names.size();i++)
   {
     contacts_[contact_names[i]] = true;
-    contact_forces_[contact_names[i]] = Eigen::Vector3d::Zero();
+    contact_forces_[contact_names[i]]  = Eigen::Vector3d::Zero();
     world_X_contact_[contact_names[i]] = Eigen::Vector3d::Zero();
+    base_X_contact_[contact_names[i]]  = Eigen::Vector3d::Zero();
   }
 
   mapRPYderivativesToOmega_ = Eigen::Matrix3d::Identity();
@@ -245,6 +250,31 @@ const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionI
   return world_X_contact_;
 }
 
+const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionInBase() const
+{
+  return base_X_contact_;
+}
+
+const Eigen::Vector3d &StateEstimator::getGroundTruthBasePosition() const
+{
+  return gt_position_;
+}
+
+const Eigen::Quaterniond &StateEstimator::getGroundTruthBaseOrientation() const
+{
+  return gt_orientation_;
+}
+
+const Eigen::Vector3d &StateEstimator::getGroundTruthBaseLinearVelocity() const
+{
+  return gt_linear_velocity_;
+}
+
+const Eigen::Vector3d &StateEstimator::getGroundTruthBaseAngularVelocity() const
+{
+  return gt_angular_velocity_;
+}
+
 void StateEstimator::toggleHapticContactLoop()
 {
   haptic_contact_loop_active_=!haptic_contact_loop_active_;
@@ -285,10 +315,16 @@ void StateEstimator::update(const double& period)
   const std::vector<std::string>& ee_names = robot_model_->getEndEffectorNames();
 
   for(unsigned int i=0; i<foot_names.size(); i++)
+  {
     world_X_contact_[foot_names[i]] = robot_model_->getFootPositionInWorld(foot_names[i]);
+    base_X_contact_[foot_names[i]] = robot_model_->getFootPositionInBase(foot_names[i]);
+  }
 
   for(unsigned int i=0; i<ee_names.size(); i++)
+  {
     world_X_contact_[ee_names[i]] = robot_model_->getEndEffectorPositionInWorld(ee_names[i]);
+    base_X_contact_[ee_names[i]] = robot_model_->getEndEffectorPositionInBase(ee_names[i]);
+  }
 
   updateContactState();
 
@@ -379,7 +415,7 @@ void StateEstimator::updateFloatingBase(const double& period)
 
   // Note: we assume that the IMU is orientated as the base/waist of the robot
   // if this is not the case, it is necessary to add a transfomation from the IMU frame to the
-  // base/waist frame
+  // base/trunk frame
 
   switch(estimation_orientation)
   {
@@ -393,8 +429,7 @@ void StateEstimator::updateFloatingBase(const double& period)
     quatToRotMat(imu_orientation_.normalized(),base_R_world_);
     rotTorpy(base_R_world_,base_rpy_);
     floating_base_pose_.linear() = base_R_world_.transpose();
-    //IMU is in base frame in the real robot while in gazebo is in the world frame
-#ifdef ROBOT_REAL
+#ifdef ANGULAR_VELOCITIES_WRT_BASE
     floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
 #else
     floating_base_velocity_.segment(3,3) = imu_gyroscope_;
@@ -408,33 +443,24 @@ void StateEstimator::updateFloatingBase(const double& period)
       rotTorpy(base_R_world_,base_rpy_);
       reset_gyro_integration_done_ = true;
     }
-#ifdef ROBOT_REAL
-    //IMU is in base frame in the real robot
+#ifdef ANGULAR_VELOCITIES_WRT_BASE
     rpyToEarBase(base_rpy_,mapRPYderivativesToOmega_);
 #else
-    //IMU in gazebo is in the world frame
     rpyToEarWorld(base_rpy_,mapRPYderivativesToOmega_);
 #endif
     // Map the omegas in the base into rpy derivatives and integrate
     base_rpy_ += (mapRPYderivativesToOmega_.inverse() * imu_gyroscope_) * period;
-
-#ifdef ROBOT_REAL
     // Overwrite measures if one of them is more noisy (e.g. only yaw is noisy)
-    quatToRotMat(imu_orientation_.normalized(),raw_base_R_world_);
-    rotTorpy(raw_base_R_world_,raw_base_rpy_);
-    base_rpy_.head(2) = raw_base_rpy_.head(2);
-#endif
-
+    //quatToRotMat(imu_orientation_.normalized(),raw_base_R_world_);
+    //rotTorpy(raw_base_R_world_,raw_base_rpy_);
+    //base_rpy_.head(2) = raw_base_rpy_.head(2);
     //set the affine transformation for angular position
     rpyToRot(base_rpy_, base_R_world_);
     floating_base_pose_.linear() = base_R_world_.transpose();
-
-    //set the affine transformation for angular velocity
-#ifdef ROBOT_REAL
-    //IMU is in base frame in the real robot
+    // Set the affine transformation for angular velocity
+#ifdef ANGULAR_VELOCITIES_WRT_BASE
     floating_base_velocity_.segment(3,3) = base_R_world_.transpose() * imu_gyroscope_;
 #else
-    //IMU in gazebo is in the world frame
     floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 #endif
 
@@ -481,9 +507,10 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
-    floating_base_position_.head(2) << gt_position_.head(2);
-     // Note: this is the z calculated wrt the base not the one wrt world!
-    floating_base_position_(2) = -estimateZ();
+    //floating_base_position_.head(2) << gt_position_.head(2);
+    // Note: this is the z calculated wrt the base not the one wrt world!
+    //floating_base_position_(2) = -estimateZ();
+    floating_base_position_ = gt_position_;
     break;
   default:
     // The base does not move

@@ -56,6 +56,10 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     }
   }
 
+  // Initialize the virtual model
+  if(!RigidBodyDynamics::Addons::URDFReadFromString(getUrdfString().c_str(), &virtual_model_, isFloatingBase(), false))
+      throw std::runtime_error("Can not initialize virtual model");
+
   const srdf_advr::Model& srdf_model = getSrdf();
 
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
@@ -164,10 +168,10 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   // Calculate approx base length and width based on the hip positions
   // Hips order: "lf","lh","rf","rh"
   Eigen::Affine3d pose_lf, pose_lh, pose_rf, pose_rh;
-  ModelInterface::getPose(hip_names_[0],base_name_,pose_lf);
-  ModelInterface::getPose(hip_names_[1],base_name_,pose_lh);
-  ModelInterface::getPose(hip_names_[2],base_name_,pose_rf);
-  ModelInterface::getPose(hip_names_[3],base_name_,pose_rh);
+  getPose(hip_names_[0],base_name_,pose_lf);
+  getPose(hip_names_[1],base_name_,pose_lh);
+  getPose(hip_names_[2],base_name_,pose_rf);
+  getPose(hip_names_[3],base_name_,pose_rh);
   base_width_  = std::abs(pose_lf.translation().y() - pose_rf.translation().y());
   base_length_ = std::abs(pose_lf.translation().x() - pose_lh.translation().x());
 
@@ -190,7 +194,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   }
 
   // Get home position
-  getRobotState("home", qhome_);
+  getRobotState("standup", qhome_);
   if(!checkJointLimits(qhome_))
     throw std::runtime_error("home joint positions are out of the limits! Check the SRDF file!");
 
@@ -209,6 +213,85 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: "<< std::endl <<"-max:" <<qdot_max_.transpose());
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: "  << std::endl <<"-max:" <<tau_max_.transpose());
 
+  tmp_jacobian_.setZero(6, virtual_model_.dof_count);
+}
+
+bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)
+{
+
+    int body_id = linkId(source_frame);
+    if( body_id == -1 ){
+        Logger::error() << "in " << __func__ << ": link " << source_frame << " not defined in RBDL model!" << Logger::endl();
+        return false;
+    }
+
+    tmp_vector3d_.setZero();
+
+    tmp_matrix3d_ = RigidBodyDynamics::CalcBodyWorldOrientation(virtual_model_,
+                                                                q,
+                                                                body_id,
+                                                                true);
+
+    tmp_vector3d_ = RigidBodyDynamics::CalcBodyToBaseCoordinates(virtual_model_,
+                                                                 q,
+                                                                 body_id,
+                                                                 tmp_vector3d_,
+                                                                 true);
+
+    tmp_matrix3d_.transposeInPlace();
+
+    pose.linear() = tmp_matrix3d_;
+    pose.translation() = tmp_vector3d_;
+
+    return true;
+}
+
+bool QuadrupedRobot::getJacobian(const Eigen::VectorXd &q, const std::string &link_name, Eigen::MatrixXd &J)
+{
+    int body_id = linkId(link_name);
+    if( body_id == -1 ){
+        Logger::error() << "in " << __func__ << ": link " << link_name << " not defined in RBDL model!" << Logger::endl();
+        return false;
+    }
+
+    tmp_jacobian_.setZero();
+    tmp_vector3d_.setZero();
+
+    RigidBodyDynamics::CalcPointJacobian6D(virtual_model_, q, body_id, tmp_vector3d_, tmp_jacobian_, true);
+
+    J.resize(6, virtual_model_.dof_count);
+
+    J.topRows(3) = tmp_jacobian_.bottomRows(3);
+    J.bottomRows(3) = tmp_jacobian_.topRows(3);
+
+    return true;
+
+}
+
+bool QuadrupedRobot::getJacobian(const Eigen::VectorXd &q, const std::string &link_name, const std::string &target_frame, Eigen::MatrixXd &J)
+{
+    bool success = getJacobian(q,link_name, J);
+    success = getOrientation(target_frame, tmp_kdl_rotation_) && success;
+    tmp_kdl_jacobian_.data = J;
+    tmp_kdl_jacobian_.changeBase(tmp_kdl_rotation_.Inverse());
+    J = tmp_kdl_jacobian_.data;
+    return success;
+}
+
+bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, const std::string& target_frame, Eigen::Affine3d& pose)
+{
+    bool ret = true;
+    ret = getPose(q, source_frame, tmp_affine3d_) && ret;
+    ret = getPose(q, target_frame, tmp_affine3d_1_) && ret;
+
+    if(!ret)
+    {
+        return false;
+    }
+
+    pose = tmp_affine3d_1_.inverse() * tmp_affine3d_;
+
+    return true;
 }
 
 bool QuadrupedRobot::clampJointPositions(Eigen::VectorXd &q)
@@ -259,6 +342,20 @@ bool QuadrupedRobot::clampJointVelocities(Eigen::VectorXd &qdot)
             ROS_DEBUG_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Joint("<<wb_controller::_dof_names[i]<<") violates the maximum VELOCITY limit of "<<qdot_max_(i));
             violated_limits = true;
         }
+    }
+    return violated_limits;
+}
+
+std::vector<bool> QuadrupedRobot::checkJointVelocities(Eigen::VectorXd &qdot)
+{
+    assert(qdot.size() == qdot_max_.size());
+    std::vector<bool> violated_limits(qdot.size());
+    for(unsigned int i=0;i<qdot_max_.size();i++)
+    {
+        if(std::abs(qdot(i))>qdot_max_(i))
+            violated_limits[i] = true;
+        else
+          violated_limits[i] = false;
     }
     return violated_limits;
 }

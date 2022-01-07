@@ -27,7 +27,7 @@ public:
   typedef std::map<std::string,std::vector<int> >         limb_joint_idxs_map_t;
   typedef std::map<std::string,int >                      joint_idxs_map_t;
 
-  enum robot_states_t {INIT,WALKING,MANIPULATION};
+  enum robot_states_t {INIT,WALKING,MANIPULATION,ANOMALY};
 
   QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
@@ -93,23 +93,30 @@ public:
   const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
 
   /**
-       * @brief check if the joint velocities are above a max value, saturate the value if the limits are violated
+       * @brief check if the joint velocities are above a max value
        * @param qdot input vector to check
        * @return true is the limits are violated
+       */
+  std::vector<bool> checkJointVelocities(Eigen::VectorXd &qdot);
+
+  /**
+       * @brief check if the joint velocities are above a max value, saturate the value if the limits are violated
+       * @param qdot input vector to clamp
+       * @return true if the limits are violated
        */
   bool clampJointVelocities(Eigen::VectorXd &qdot);
 
   /**
        * @brief check if the joint positions are between a max and min value, saturate the value if the limits are violated
-       * @param q input vector to check
-       * @return true is the limits are violated
+       * @param q input vector to clamp
+       * @return true if the limits are violated
        */
   bool clampJointPositions(Eigen::VectorXd &q);
 
   /**
        * @brief check if the joint efforts are above a max value, saturate the value if the limits are violated
-       * @param tau input vector to check
-       * @return true is the limits are violated
+       * @param tau input vector to clamp
+       * @return true if the limits are violated
        */
   bool clampJointEfforts(Eigen::VectorXd &tau);
 
@@ -118,6 +125,55 @@ public:
        * @return qhome
        */
   const Eigen::VectorXd& getJointHomePositions();
+
+  /**
+  * @brief Computes the pose of the source_frame w.r.t. the target_frame
+  *
+  * @param q The joint positions.
+  * @param source_frame The source link name.
+  * @param target_frame The target link name.
+  * @param pose A homogeneous transformation which transforms a point from source frame to target frame
+  *       P_target = T * P_source
+  * @return True if both source_frame and target_frame are valid. False otherwise.
+  */
+  bool getPose(const Eigen::VectorXd& q, const std::string& source_frame, const std::string& target_frame, Eigen::Affine3d& pose);
+
+  /**
+  * @brief Computes the pose of the source_frame w.r.t. the world frame
+  *
+  * @param q The joint positions.
+  * @param source_frame The source link name.
+  * @param pose A homogeneous transformation which transforms a point from source frame to world frame
+  *       P_world = T * P_source
+  * @return True if source_frame is valid. False otherwise.
+  */
+  bool getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose);
+
+
+  /**
+   * @brief Gets the Jacobian of link_name expressed in the world frame, i.e a matrix such that its product with
+   * the derivative of the configuration vector gives the velocity twist of link_name (i.e. first linear then angular velocity). The reference point is the origin of the link with link_name name.
+   *
+   * @param q The joint positions.
+   * @param link_name The link name
+   * @param J  The Jacobian expressed in the world frame
+   * @return True if the link_name and target_frame are valid link names. False otherwise.
+   */
+  bool getJacobian(const Eigen::VectorXd& q, const std::string& link_name, Eigen::MatrixXd& J);
+
+  /**
+   * @brief Gets the Jacobian of link_name expressed in the target_frame, i.e a matrix such that its product with
+   * the derivative of the configuration vector gives the velocity twist of link_name according to target_frame
+   * (i.e. first linear then angular velocity).
+   * The reference point is the origin of the link with link_name name.
+   *
+   * @param q The joint positions.
+   * @param link_name The link name
+   * @param target_frame The target frame name
+   * @param J  The Jacobian expressed in the world frame
+   * @return True if the link_name is a valid link name. False otherwise.
+   */
+  bool getJacobian(const Eigen::VectorXd& q, const std::string& link_name, const std::string& target_frame, Eigen::MatrixXd& J);
 
 
 private:
@@ -180,8 +236,17 @@ private:
 
   std::atomic<robot_states_t> robot_state_;
 
+  mutable RigidBodyDynamics::Model virtual_model_;
+
   Eigen::MatrixXd tmp_Mi_;
   Eigen::MatrixXd tmp_M_;
+  Eigen::MatrixXd tmp_jacobian_;
+  Eigen::Matrix3d tmp_matrix3d_;
+  Eigen::Vector3d tmp_vector3d_;
+  Eigen::Affine3d tmp_affine3d_;
+  Eigen::Affine3d tmp_affine3d_1_;
+  mutable KDL::Jacobian tmp_kdl_jacobian_;
+  mutable KDL::Rotation tmp_kdl_rotation_;
 
 };
 

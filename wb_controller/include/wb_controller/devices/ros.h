@@ -8,6 +8,7 @@
 #include <wb_controller/gait_generator.h>
 #include <wb_controller/footholds_planner.h>
 #include <wb_controller/id_problem.h>
+#include <std_msgs/Bool.h>
 
 
 template <typename msg_t>
@@ -23,6 +24,7 @@ public:
         controller_ptr_ = controller_ptr;
 
         sub_ = node.subscribe(topic, 1, &DeviceHandlerRosInterface::callback, this);
+        reset_sub_ = node.subscribe("reset_base", 1, &DeviceHandlerRosInterface::resetCallback, this);
     }
 
     virtual ~DeviceHandlerRosInterface() {}
@@ -41,11 +43,9 @@ protected:
         if(base_pitch_scale_>1.0) base_pitch_scale_ = 1.0; if(base_pitch_scale_<-1.0) base_pitch_scale_ = -1.0;
         if(base_yaw_scale_>1.0) base_yaw_scale_ = 1.0; if(base_yaw_scale_<-1.0) base_yaw_scale_ = -1.0;
 
-        unsigned int current_stack = wb_controller::IDProblem::stacks_t::NONE;
-        if(controller_ptr_->getIDProblem()!=nullptr)
-            current_stack = controller_ptr_->getIDProblem()->getCurrentStack();
+        unsigned int current_robot_state = controller_ptr_->getRobotModel()->getState();
 
-        if(start_swing_ && current_stack == wb_controller::IDProblem::stacks_t::WALKING)
+        if(start_swing_ && current_robot_state == wb_controller::QuadrupedRobot::WALKING)
         {
             controller_ptr_->getFootholdsPlanner()->setCmd(wb_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
@@ -58,6 +58,7 @@ protected:
         else if(reset_base_)
         {
             controller_ptr_->getFootholdsPlanner()->setCmd(wb_controller::FootholdsPlanner::RESET_BASE); // Reset the base orientation and position (height)
+            reset_base_ = false;
         }
         else if(std::abs(base_velocity_z_scale_)>0 ||
                 std::abs(base_yaw_scale_)       >0 ||
@@ -78,9 +79,26 @@ protected:
         }
     }
 
+    void resetCallback(const std_msgs::Bool::ConstPtr& msg)
+    {
+        base_velocity_x_scale_     = 0.;
+        base_velocity_y_scale_     = 0.;
+        base_velocity_z_scale_     = 0.;
+
+        base_roll_scale_        = 0.;
+        base_pitch_scale_       = 0.;
+        base_yaw_scale_         = 0.;
+
+        start_swing_ = false;
+
+        reset_base_      = true;
+
+        update();
+    }
+
     wb_controller::Controller* controller_ptr_;
     /** @brief Ros subscriber for the device */
-    ros::Subscriber sub_;
+    ros::Subscriber sub_, reset_sub_;
 
 };
 

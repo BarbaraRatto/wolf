@@ -20,30 +20,6 @@ TEST(IDProblem, Solve)
     ASSERT_TRUE(_id_problem->solve(x));
 }
 
-TEST(IDProblem, SwitchStack)
-{
-    Eigen::VectorXd x;
-    ASSERT_TRUE(_id_problem->solve(x));
-    _id_problem->switchStack();
-    ASSERT_TRUE(_id_problem->solve(x));
-}
-
-TEST(IDProblem, SelectStackWalking)
-{
-    _id_problem->selectStack(wb_controller::IDProblem::stacks_t::WALKING);
-    Eigen::VectorXd x;
-    ASSERT_TRUE(_id_problem->solve(x));
-}
-
-TEST(IDProblem, SelectStackManipulation)
-{
-    _id_problem->selectStack(wb_controller::IDProblem::stacks_t::MANIPULATION);
-    Eigen::VectorXd x;
-    ASSERT_TRUE(_id_problem->solve(x));
-}
-
-
-
 int main(int argc, char** argv)
 {
 

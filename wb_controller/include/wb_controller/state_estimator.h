@@ -67,8 +67,6 @@ public:
 
     void setContactThreshold(const double& th);
 
-    const Eigen::Vector3d& getComPosition() const;
-
     const Eigen::Affine3d& getFloatingBasePose() const;
 
     const Eigen::Vector3d& getFloatingBasePosition() const;
@@ -88,6 +86,16 @@ public:
     const std::map<std::string,bool>& getContacts() const;
 
     const std::map<std::string, Eigen::Vector3d>& getContactPositionInWorld() const;
+
+    const std::map<std::string, Eigen::Vector3d>& getContactPositionInBase() const;
+
+    const Eigen::Vector3d& getGroundTruthBasePosition() const;
+
+    const Eigen::Quaterniond& getGroundTruthBaseOrientation() const;
+
+    const Eigen::Vector3d& getGroundTruthBaseLinearVelocity() const;
+
+    const Eigen::Vector3d& getGroundTruthBaseAngularVelocity() const;
 
     void startContactComputation();
 
@@ -152,6 +160,8 @@ private:
     std::map<std::string,XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Contact positions w.r.t world */
     std::map<std::string,Eigen::Vector3d> world_X_contact_;
+    /** @brief Contact positions w.r.t base */
+    std::map<std::string,Eigen::Vector3d> base_X_contact_;
     /** @brief GRF contacts */
     std::map<std::string,bool> contacts_;
     /** @brief GRF contact forces */

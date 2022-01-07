@@ -14,6 +14,8 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
   com_velocity_ref_.setZero();
   com_position_ref_.setZero();
 
+  support_polygon_edges_.resize(N_LEGS);
+
   update_ = true;
   computeComPositionReference();
 
@@ -29,7 +31,10 @@ void ComPlanner::computeSupportPolygonCenter()
   auto foot_names = foothold_planner_->getFootNames();
   support_polygon_center_.setZero();
   for(unsigned int i = 0; i<foot_names.size(); i++)
+  {
     support_polygon_center_ = support_polygon_center_ + foot_positions[foot_names[i]];
+    support_polygon_edges_[i] = foot_positions[foot_names[i]];
+  }
 
   support_polygon_center_ = support_polygon_center_/N_LEGS;
 }

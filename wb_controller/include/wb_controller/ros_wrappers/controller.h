@@ -41,57 +41,62 @@ public:
         double default_duty_factor = 0.3;
         if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default duty factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_duty_factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
         }
         double default_swing_frequency = 3.0; // [Hz]
         if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default swing frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_swing_frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
         }
         double default_contact_threshold = 50.0; // [N]
         if (!controller_nh.getParam("default_contact_threshold", default_contact_threshold))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default contact threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
         }
         double default_step_height = 0.05; // [m]
         if (!controller_nh.getParam("default_step_height", default_step_height))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default step height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_step_height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
         }
         double max_step_height = 0.15; // [m]
         if (!controller_nh.getParam("max_step_height", max_step_height))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No max step height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
+            ROS_WARN_NAMED(CLASS_NAME,"No max_step_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
         }
         double max_step_length = 0.5; // [m]
         if (!controller_nh.getParam("max_step_length", max_step_length))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No max step length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
+            ROS_WARN_NAMED(CLASS_NAME,"No max_step_length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
+        }
+        double max_base_height = 0.5; // [m]
+        if (!controller_nh.getParam("max_base_height", max_base_height))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
         }
         double default_base_linear_velocity = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default base linear velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
         }
         double default_base_angular_velocity = 0.5; // [rad/s]
         if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default base angular velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
         } 
         double default_friction_cones_mu = 0.7;
         if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default friction cones mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
         }
         double default_cutoff_freq_gyroscope = 300.;
         if (!controller_nh.getParam("default_cutoff_freq_gyroscope", default_cutoff_freq_gyroscope))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default cutoff freq gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
         }
         double default_cutoff_freq_qdot = 300.;
         if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default cutoff freq gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
         double damp_max = 0.001;
         if (!controller_nh.getParam("damp_max", damp_max))
@@ -133,13 +138,13 @@ public:
 
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
-            ROS_WARN_NAMED(CLASS_NAME,"No default estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
         else
             controller_->getStateEstimator()->setPositionEstimationType(estimation_position_type);
 
         std::string estimation_orientation_type;
         if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
-            ROS_WARN_NAMED(CLASS_NAME,"No default estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
         else
             controller_->getStateEstimator()->setOrientationEstimationType(estimation_orientation_type);
 
@@ -153,6 +158,7 @@ public:
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
+        controller_->getFootholdsPlanner()->setMaxBaseHeight(max_base_height);
 
         controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 
@@ -198,7 +204,7 @@ public:
 
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::ContactForces>(controller_nh, "contact_forces", 4));
-        contact_forces_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
+        contact_forces_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         contact_forces_pub_->msg_.name.resize(n_contacts);
         contact_forces_pub_->msg_.contact.resize(n_contacts);
         contact_forces_pub_->msg_.contact_positions.resize(n_contacts);
@@ -216,7 +222,7 @@ public:
         terrain_estimation_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
 
         friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wb_controller::FrictionCones>(controller_nh, "friction_cones", 4));
-        friction_cones_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
+        friction_cones_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
@@ -238,9 +244,9 @@ public:
                                                    boost::bind(&wb_controller::Controller::selectGait,controller_,_1),
                                                    "select gait", {{"TROT","TROT"},{"CRAWL","CRAWL"}});
 
-        server_->registerEnumVariable<std::string>("select_stack","WALKING",
-                                                   boost::bind(&wb_controller::Controller::selectStack,controller_,_1),
-                                                   "select stack", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
+        server_->registerEnumVariable<std::string>("select_control_mode","WALKING",
+                                                   boost::bind(&wb_controller::Controller::selectControlMode,controller_,_1),
+                                                   "select mode", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
 
         server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
         server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wb_controller::LegsImpedance::setKpSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
@@ -280,9 +286,9 @@ public:
               current_contact_name = contact_names[i];
               contact_forces_pub_->msg_.name[i] = current_contact_name;
               contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(current_contact_name);
-              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(0);
-              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(1);
-              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getContactPositionInWorld().at(current_contact_name)(2);
+              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(0);
+              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(1);
+              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(2);
 
               contact_forces_pub_->msg_.contact_forces[i].force.x = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(0);
               contact_forces_pub_->msg_.contact_forces[i].force.y = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(1);
@@ -335,9 +341,9 @@ public:
       {
           for(unsigned int i=0; i <foot_names.size(); i++)
           {
-              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).x();
-              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).y();
-              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getRobotModel()->getFeetPositionInWorld().at(foot_names[i]).z();
+              friction_cones_pub_->msg_.foot_positions[i].x = controller_->getRobotModel()->getFeetPositionInBase().at(foot_names[i]).x();
+              friction_cones_pub_->msg_.foot_positions[i].y = controller_->getRobotModel()->getFeetPositionInBase().at(foot_names[i]).y();
+              friction_cones_pub_->msg_.foot_positions[i].z = controller_->getRobotModel()->getFeetPositionInBase().at(foot_names[i]).z();
 
               friction_cones_pub_->msg_.cone_axis[i].x = controller_->getTerrainEstimator()->getTerrainNormal().x();
               friction_cones_pub_->msg_.cone_axis[i].y = controller_->getTerrainEstimator()->getTerrainNormal().y();
