@@ -1,5 +1,5 @@
-#ifndef wolf_controller_H
-#define wolf_controller_H
+#ifndef WOLF_CONTROLLER_H
+#define WOLF_CONTROLLER_H
 
 // ROS
 #include <ros/ros.h>
