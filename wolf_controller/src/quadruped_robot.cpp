@@ -443,7 +443,7 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base" << yaw_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf" << world_R_hf_);
   world_R_base_ = world_T_base_.linear();
-  rotTorpy(world_R_base_.transpose(),world_RPY_base_);
+  rotToRpy(world_R_base_,world_RPY_base_);
   hf_R_base_ = world_R_hf_.transpose() * world_R_base_;
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_base" << world_R_base_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_R_base" << hf_R_base_);

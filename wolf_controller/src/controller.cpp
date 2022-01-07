@@ -672,7 +672,7 @@ void Controller::updateComponents(const double &dt)
   // Update the CoM position and velocity reference
   com_planner_->update();
   // Transform the desired base rotation into RPY for visualization
-  rotTorpy(foot_holds_planner_->getBaseRotationReference().transpose(),des_base_rpy_);
+  rotToRpy(foot_holds_planner_->getBaseRotationReference(),des_base_rpy_);
 }
 
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)

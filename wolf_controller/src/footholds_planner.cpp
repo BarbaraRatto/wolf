@@ -64,8 +64,8 @@ void FootholdsPlanner::reset()
   resetVelocyScales();
 
   robot_model_->getFloatingBasePose(tmp_affine3d_);
-  base_rotation_reference_ = tmp_affine3d_.linear().transpose();
-  rotTorpy(base_rotation_reference_,base_orientation_);
+  base_rotation_reference_ = tmp_affine3d_.linear();
+  rotToRpy(base_rotation_reference_,base_orientation_);
   base_position_ = tmp_affine3d_.translation();
 
   gait_generator_->reset();
