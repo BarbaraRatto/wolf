@@ -622,7 +622,7 @@ const std::string &QuadrupedRobot::getBaseLinkName() const
   return base_name_;
 }
 
-const std::vector<int>& QuadrupedRobot::getLimbJointsIds(const std::string& limb_name)
+const std::vector<unsigned int>& QuadrupedRobot::getLimbJointsIds(const std::string& limb_name)
 {
   return joint_limb_idx_[limb_name];
 }
