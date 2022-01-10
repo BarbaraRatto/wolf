@@ -38,8 +38,6 @@
                 <arg name="debug" value="$(arg gazebo_debug)"/>
                 <arg name="engine" value="$(arg engine)"/>
             </include>
-            <!-- Set the robot to the home position loaded from the SRDF file -->
-            <node name="goto0" pkg="wolf_description_utils" type="go0"/>
     </group>
 
     <group unless="$(arg gazebo)">
