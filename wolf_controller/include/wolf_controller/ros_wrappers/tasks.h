@@ -58,19 +58,19 @@ public:
     server_->registerVariable<double>("set_lambda_2",    lambda2,     boost::bind(&TaskRosWrapperInterface::setLambda2,this,_1)    ,"set lambda 2"   ,0.0,1000.0);
     server_->registerVariable<double>("set_weight_diag", weight,      boost::bind(&TaskRosWrapperInterface::setWeightDiag,this,_1) ,"set weight diag",0.0,1000.0);
     Eigen::Matrix6d Kp = getKp();
-    server_->registerVariable<double>("kp_x",            Kp(0,0), boost::bind(&TaskRosWrapperInterface::setKpX,this,_1)            ,"Kp(0,0)", 0.0, 1000.0);
-    server_->registerVariable<double>("kp_y",            Kp(1,1), boost::bind(&TaskRosWrapperInterface::setKpY,this,_1)            ,"Kp(1,1)", 0.0, 1000.0);
-    server_->registerVariable<double>("kp_z",            Kp(2,2), boost::bind(&TaskRosWrapperInterface::setKpZ,this,_1)            ,"Kp(2,2)", 0.0, 1000.0);
-    server_->registerVariable<double>("kp_roll",         Kp(3,3), boost::bind(&TaskRosWrapperInterface::setKpRoll,this,_1)         ,"Kp(3,3)", 0.0, 1000.0);
-    server_->registerVariable<double>("kp_pitch",        Kp(4,4), boost::bind(&TaskRosWrapperInterface::setKpPitch,this,_1)        ,"Kp(4,4)", 0.0, 1000.0);
-    server_->registerVariable<double>("kp_yaw",          Kp(5,5), boost::bind(&TaskRosWrapperInterface::setKpYaw,this,_1)          ,"Kp(5,5)", 0.0, 1000.0);
+    server_->registerVariable<double>("kp_x",            Kp(0,0), boost::bind(&TaskRosWrapperInterface::setKpX,this,_1)            ,"Kp(0,0)", 0.0, 10000.0);
+    server_->registerVariable<double>("kp_y",            Kp(1,1), boost::bind(&TaskRosWrapperInterface::setKpY,this,_1)            ,"Kp(1,1)", 0.0, 10000.0);
+    server_->registerVariable<double>("kp_z",            Kp(2,2), boost::bind(&TaskRosWrapperInterface::setKpZ,this,_1)            ,"Kp(2,2)", 0.0, 10000.0);
+    server_->registerVariable<double>("kp_roll",         Kp(3,3), boost::bind(&TaskRosWrapperInterface::setKpRoll,this,_1)         ,"Kp(3,3)", 0.0, 10000.0);
+    server_->registerVariable<double>("kp_pitch",        Kp(4,4), boost::bind(&TaskRosWrapperInterface::setKpPitch,this,_1)        ,"Kp(4,4)", 0.0, 10000.0);
+    server_->registerVariable<double>("kp_yaw",          Kp(5,5), boost::bind(&TaskRosWrapperInterface::setKpYaw,this,_1)          ,"Kp(5,5)", 0.0, 10000.0);
     Eigen::Matrix6d Kd = getKd();
-    server_->registerVariable<double>("kd_x",            Kd(0,0), boost::bind(&TaskRosWrapperInterface::setKdX,this,_1)            ,"Kd(0,0)", 0.0, 1000.0);
-    server_->registerVariable<double>("kd_y",            Kd(1,1), boost::bind(&TaskRosWrapperInterface::setKdY,this,_1)            ,"Kd(1,1)", 0.0, 1000.0);
-    server_->registerVariable<double>("kd_z",            Kd(2,2), boost::bind(&TaskRosWrapperInterface::setKdZ,this,_1)            ,"Kd(2,2)", 0.0, 1000.0);
-    server_->registerVariable<double>("kd_roll",         Kd(3,3), boost::bind(&TaskRosWrapperInterface::setKdRoll,this,_1)         ,"Kd(3,3)", 0.0, 1000.0);
-    server_->registerVariable<double>("kd_pitch",        Kd(4,4), boost::bind(&TaskRosWrapperInterface::setKdPitch,this,_1)        ,"Kd(4,4)", 0.0, 1000.0);
-    server_->registerVariable<double>("kd_yaw",          Kd(5,5), boost::bind(&TaskRosWrapperInterface::setKdYaw,this,_1)          ,"Kd(5,5)", 0.0, 1000.0);
+    server_->registerVariable<double>("kd_x",            Kd(0,0), boost::bind(&TaskRosWrapperInterface::setKdX,this,_1)            ,"Kd(0,0)", 0.0, 10000.0);
+    server_->registerVariable<double>("kd_y",            Kd(1,1), boost::bind(&TaskRosWrapperInterface::setKdY,this,_1)            ,"Kd(1,1)", 0.0, 10000.0);
+    server_->registerVariable<double>("kd_z",            Kd(2,2), boost::bind(&TaskRosWrapperInterface::setKdZ,this,_1)            ,"Kd(2,2)", 0.0, 10000.0);
+    server_->registerVariable<double>("kd_roll",         Kd(3,3), boost::bind(&TaskRosWrapperInterface::setKdRoll,this,_1)         ,"Kd(3,3)", 0.0, 10000.0);
+    server_->registerVariable<double>("kd_pitch",        Kd(4,4), boost::bind(&TaskRosWrapperInterface::setKdPitch,this,_1)        ,"Kd(4,4)", 0.0, 10000.0);
+    server_->registerVariable<double>("kd_yaw",          Kd(5,5), boost::bind(&TaskRosWrapperInterface::setKdYaw,this,_1)          ,"Kd(5,5)", 0.0, 10000.0);
     server_->publishServicesTopics();
   }
 
@@ -366,13 +366,13 @@ public:
     server_->registerVariable<double>("set_lambda_2",    lambda2,     boost::bind(&TaskRosWrapperInterface::setLambda2,this,_1)    ,"set lambda 2"   ,0.0,1000.0);
     server_->registerVariable<double>("set_weight_diag", weight,      boost::bind(&TaskRosWrapperInterface::setWeightDiag,this,_1) ,"set weight diag",0.0,1000.0);
     Eigen::Matrix3d Kp = getKp();
-    server_->registerVariable<double>("kp_x",            Kp(0,0), boost::bind(&TaskRosWrapperInterface::setKpX,this,_1)            ,"Kp(0,0)", 0.0, 1000.0);
-    server_->registerVariable<double>("kp_y",            Kp(1,1), boost::bind(&TaskRosWrapperInterface::setKpY,this,_1)            ,"Kp(1,1)", 0.0, 1000.0);
-    server_->registerVariable<double>("kp_z",            Kp(2,2), boost::bind(&TaskRosWrapperInterface::setKpZ,this,_1)            ,"Kp(2,2)", 0.0, 1000.0);
+    server_->registerVariable<double>("kp_x",            Kp(0,0), boost::bind(&TaskRosWrapperInterface::setKpX,this,_1)            ,"Kp(0,0)", 0.0, 10000.0);
+    server_->registerVariable<double>("kp_y",            Kp(1,1), boost::bind(&TaskRosWrapperInterface::setKpY,this,_1)            ,"Kp(1,1)", 0.0, 10000.0);
+    server_->registerVariable<double>("kp_z",            Kp(2,2), boost::bind(&TaskRosWrapperInterface::setKpZ,this,_1)            ,"Kp(2,2)", 0.0, 10000.0);
     Eigen::Matrix3d Kd = getKd();
-    server_->registerVariable<double>("kd_x",            Kd(0,0), boost::bind(&TaskRosWrapperInterface::setKdX,this,_1)            ,"Kd(0,0)", 0.0, 1000.0);
-    server_->registerVariable<double>("kd_y",            Kd(1,1), boost::bind(&TaskRosWrapperInterface::setKdY,this,_1)            ,"Kd(1,1)", 0.0, 1000.0);
-    server_->registerVariable<double>("kd_z",            Kd(2,2), boost::bind(&TaskRosWrapperInterface::setKdZ,this,_1)            ,"Kd(2,2)", 0.0, 1000.0);
+    server_->registerVariable<double>("kd_x",            Kd(0,0), boost::bind(&TaskRosWrapperInterface::setKdX,this,_1)            ,"Kd(0,0)", 0.0, 10000.0);
+    server_->registerVariable<double>("kd_y",            Kd(1,1), boost::bind(&TaskRosWrapperInterface::setKdY,this,_1)            ,"Kd(1,1)", 0.0, 10000.0);
+    server_->registerVariable<double>("kd_z",            Kd(2,2), boost::bind(&TaskRosWrapperInterface::setKdZ,this,_1)            ,"Kd(2,2)", 0.0, 10000.0);
     server_->publishServicesTopics();
   }
 
