@@ -125,7 +125,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     _period = period_;
 
-    if(!root_nh.getParam("/internal_wrench",use_contact_sensors_)) // Use the contact sensors
+    use_contact_sensors_ = false;
+    root_nh.getParam("/internal_wrench",use_contact_sensors_);
+    if(!use_contact_sensors_) // Use the contact sensors
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
     else
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
