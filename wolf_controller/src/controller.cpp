@@ -634,6 +634,7 @@ void Controller::updateStateMachine(const double &dt)
         if((current_height_ - previous_height_)/dt <= EPS)
         {
           posture_ = Controller::posture_t::DOWN;
+          terrain_estimator_->reset();
           robot_model_->setState(QuadrupedRobot::IDLE);
           break;
         }
