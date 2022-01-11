@@ -74,7 +74,6 @@ if __name__=="__main__":
 
         pygame.event.pump()
         keys = pygame.key.get_pressed()
-
         command = np.array([0, 0, 0, 0, 0, 0])
         if keys[ord("r")]:
             reset_base = Bool()
@@ -85,14 +84,14 @@ if __name__=="__main__":
                 if keys[ord(key)]:
                     command += moveBindings[key]
 
-                twist = Twist()
-                twist.linear.x = command[0]
-                twist.linear.y = command[1]
-                twist.linear.z = command[2]
-                twist.angular.x = command[3]
-                twist.angular.y = command[4]
-                twist.angular.z = command[5]
-                twist_pub.publish(twist)
+            twist = Twist()
+            twist.linear.x = command[0]
+            twist.linear.y = command[1]
+            twist.linear.z = command[2]
+            twist.angular.x = command[3]
+            twist.angular.y = command[4]
+            twist.angular.z = command[5]
+            twist_pub.publish(twist)
 
         if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
             exit()
