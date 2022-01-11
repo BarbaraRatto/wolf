@@ -162,8 +162,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
     state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
-    legs_impedance_     = std::make_shared<LegsImpedance>(gait_generator_,robot_model_);
-    legs_impedance_->startInertiaCompensation(false);
+    impedance_     = std::make_shared<Impedance>(gait_generator_,robot_model_);
+    impedance_->startInertiaCompensation(false);
 
     terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
@@ -182,7 +182,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     ramp_stand_up_    = std::make_shared<Ramp>(5.0,Ramp::UP);
     ramp_stand_down_  = std::make_shared<Ramp>(5.0,Ramp::DOWN);
-    ramp_impedance_   = std::make_shared<Ramp>(2.5,Ramp::UP);
+    ramp_impedance_   = std::make_shared<Ramp>(3.0,Ramp::UP);
 
     previous_height_ = robot_model_->getStandUpHeight();
 
@@ -738,8 +738,8 @@ bool Controller::performSafetyChecks()
 
 void Controller::updateImpedance(const Eigen::VectorXd& des_joint_positions, const Eigen::VectorXd& des_joint_velocities)
 {
-  legs_impedance_->update();
-  des_joint_efforts_impedance_ = legs_impedance_->getKp() * (des_joint_positions - joint_positions_) + legs_impedance_->getKd() * ( des_joint_velocities - joint_velocities_);
+  impedance_->update();
+  des_joint_efforts_impedance_ = impedance_->getKp() * (des_joint_positions - joint_positions_) + impedance_->getKd() * ( des_joint_velocities - joint_velocities_);
 }
 
 bool Controller::updateSolver(const double &/*dt*/)
@@ -893,9 +893,9 @@ TerrainEstimator* Controller::getTerrainEstimator() const
     return terrain_estimator_.get();
 }
 
-LegsImpedance* Controller::getLegsImpedance() const
+Impedance* Controller::getImpedance() const
 {
-    return legs_impedance_.get();
+    return impedance_.get();
 }
 
 QuadrupedRobot* Controller::getRobotModel() const
