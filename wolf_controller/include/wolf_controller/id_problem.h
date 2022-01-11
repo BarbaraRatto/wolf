@@ -155,10 +155,7 @@ public:
      */
     double getFrictionConesMu() const;
 
-    /**
-     * @brief postural_ a postural task
-     */
-    Postural::Ptr postural_;
+private:
 
     /**
      * @brief torque_lims_ some bounds
@@ -180,8 +177,6 @@ public:
      */
     QuadrupedRobot::Ptr model_;
 
-private:
-
     /**
      * @brief Tasks
      */
@@ -192,6 +187,11 @@ private:
     CoM::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
+
+    /**
+     * @brief postural_ a postural task
+     */
+    Postural::Ptr postural_;
 
     /**
      * @brief update call after the model.update() to update the autostack
