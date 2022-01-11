@@ -33,7 +33,7 @@ public:
 
     typedef std::shared_ptr<ControllerRosWrapper> Ptr;
 
-    ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh, wolf_controller::Controller* controller_ptr)
+    ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh, wolf_controller::Controller* const controller_ptr)
     {
         controller_ = controller_ptr;
 
