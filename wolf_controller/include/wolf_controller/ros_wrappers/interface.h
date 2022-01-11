@@ -16,6 +16,9 @@
 // STD
 #include <atomic>
 
+// WoLF
+#include <wolf_controller/cartesian_trajectory.h>
+
 class RosWrapperInterface
 {
 
@@ -118,6 +121,7 @@ protected:
   std::atomic<double> buffer_kd_yaw_;
 
   std::shared_ptr<realtime_tools::RealtimePublisher<Msg_type>> rt_pub_;
+  wolf_controller::CartesianTrajectory::Ptr trj_;
 
   double cost_;
 

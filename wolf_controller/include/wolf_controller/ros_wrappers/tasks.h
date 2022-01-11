@@ -47,6 +47,9 @@ public:
     // Setup the filters
     position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff FIXME hardcoded
     position_reference_filter_.setTimeStep(wolf_controller::_period);
+
+    // Setup the interpolator
+    trj_ = std::make_shared<wolf_controller::CartesianTrajectory>(this);
   }
 
   virtual void registerReconfigurableVariables() override
@@ -227,7 +230,11 @@ public:
       tmp_affine3d_ = *buffer_pose_reference_.readFromRT();
       // Filter
       tmp_affine3d_.translation() = position_reference_filter_.process(tmp_affine3d_.translation());
-      setReference(tmp_affine3d_);
+      // Interpolation
+      trj_->setWayPoint(tmp_affine3d_,ros::Time::now().toSec());
+      trj_->update(ros::Time::now().toSec(),wolf_controller::_period);
+      trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
+      setReference(tmp_affine3d_,tmp_vector6d_);
     }
     OpenSoT::tasks::acceleration::Cartesian::_update(x);
   }
