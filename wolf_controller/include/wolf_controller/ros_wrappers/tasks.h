@@ -229,10 +229,10 @@ public:
       tmp_affine3d_.setIdentity();
       tmp_affine3d_ = *buffer_pose_reference_.readFromRT();
       // Filter
-      tmp_affine3d_.translation() = position_reference_filter_.process(tmp_affine3d_.translation());
+      //tmp_affine3d_.translation() = position_reference_filter_.process(tmp_affine3d_.translation());
       // Interpolation
-      trj_->setWayPoint(tmp_affine3d_,ros::Time::now().toSec());
-      trj_->update(ros::Time::now().toSec(),wolf_controller::_period);
+      trj_->setWayPoint(tmp_affine3d_,1.0);
+      trj_->update(wolf_controller::_period);
       trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
       setReference(tmp_affine3d_,tmp_vector6d_);
     }

@@ -31,7 +31,7 @@ public:
 
   CartesianTrajectory(OpenSoT::tasks::acceleration::Cartesian* const task_ptr = nullptr);
 
-  void update(double time, double period);
+  void update(double period);
 
   void reset();
 
@@ -39,7 +39,7 @@ public:
                     Eigen::Vector6d* vel_ref = nullptr,
                     Eigen::Vector6d* acc_ref = nullptr) const;
 
-  bool setWayPoint(const Eigen::Affine3d& T_ref, double time);
+  bool setWayPoint(const Eigen::Affine3d& T_ref, double duration);
 
 private:
 

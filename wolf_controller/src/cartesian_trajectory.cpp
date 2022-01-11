@@ -12,6 +12,7 @@ namespace wolf_controller {
 
 CartesianTrajectory::CartesianTrajectory(OpenSoT::tasks::acceleration::Cartesian* const task_ptr)
   :type_(type_t::INTERACTIVE)
+  ,state_(state_t::ONLINE)
   ,task_ptr_(task_ptr)
 {
   trajectory_ = std::make_shared<Trajectory>();
@@ -31,15 +32,13 @@ void CartesianTrajectory::reset()
   trajectory_->clear();
 }
 
-void CartesianTrajectory::update(double time, double period)
+void CartesianTrajectory::update(double period)
 {
-    time_ = time;
-
     switch(state_)
     {
         case state_t::REACHING:
-          T_ = trajectory_->evaluate(time, &vel_, &acc_);
-          if(trajectory_->isTrajectoryEnded(time) && check_reach())
+          T_ = trajectory_->evaluate(time_, &vel_, &acc_);
+          if(trajectory_->isTrajectoryEnded(time_) && check_reach())
             state_ = state_t::ONLINE;
         break;
 
@@ -48,6 +47,8 @@ void CartesianTrajectory::update(double time, double period)
           acc_.setZero();
         break;
     };
+
+    time_+=period;
 }
 
 bool CartesianTrajectory::getReference(Eigen::Affine3d& T_ref,
@@ -62,20 +63,21 @@ bool CartesianTrajectory::getReference(Eigen::Affine3d& T_ref,
     return true;
 }
 
-bool CartesianTrajectory::setWayPoint(const Eigen::Affine3d& T_ref, double time)
+bool CartesianTrajectory::setWayPoint(const Eigen::Affine3d& T_ref, double duration)
 {
   if(state_ == state_t::REACHING)
     return false;
 
   state_ = state_t::REACHING;
 
-  if(type_ == type_t::INTERACTIVE)
-  {
-    trajectory_->clear();
-    trajectory_->addWayPoint(time_, T_);
-    trajectory_->addWayPoint(time_ + time, T_ref);
-    trajectory_->compute();
-  }
+  //if(type_ == type_t::INTERACTIVE)
+  //{
+  trajectory_->clear();
+  trajectory_->addWayPoint(0.0, T_);
+  trajectory_->addWayPoint(duration, T_ref);
+  trajectory_->compute();
+  time_ = 0.0;
+  //}
   return true;
 }
 

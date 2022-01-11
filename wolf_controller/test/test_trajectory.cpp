@@ -23,7 +23,7 @@ TEST(CartesianTrajectory, Evaluate)
   double time = 0.0;
   while(time < _tot_time)
   {
-    _cartesian_trajectory->update(time,_period);
+    _cartesian_trajectory->update(_period);
     time+=_period;
   }
   _cartesian_trajectory->getReference(T_ref);
