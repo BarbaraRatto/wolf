@@ -155,8 +155,9 @@ public:
         controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
 
         // Getting Kp and Kd gains
+        // Feet
         Eigen::Vector3d Kp_swing_leg, Kd_swing_leg, Kp_stance_leg, Kd_stance_leg;
-        Kp_swing_leg = Kd_swing_leg = Kp_stance_leg = Kd_stance_leg = Eigen::Vector3d::Identity();
+        Kp_swing_leg = Kd_swing_leg = Kp_stance_leg = Kd_stance_leg = Eigen::Vector3d::Ones();
         for(unsigned int i=0; i<wolf_controller::_joints_prefix.size(); i++)
         {
           if (!controller_nh.getParam("gains/kp_swing/" + wolf_controller::_joints_prefix[i] , Kp_swing_leg(i)))
@@ -182,7 +183,38 @@ public:
             Kp_swing_leg(i) = Kd_swing_leg(i) = Kp_stance_leg(i) = Kd_stance_leg(i) = 1.0;
           }
         }
-        controller_ptr->getLegsImpedance()->setSwingStanceGains(Kp_swing_leg,Kd_swing_leg,Kp_stance_leg,Kd_stance_leg);
+        controller_ptr->getImpedance()->setLegsGains(Kp_swing_leg,Kd_swing_leg,Kp_stance_leg,Kd_stance_leg);
+        // Arms
+        if(controller_->getRobotModel()->getNumberArms() > 0)
+        {
+          unsigned int n_joint_arms = controller_->getRobotModel()->getLimbJointsIds(controller_->getRobotModel()->getArmNames()[0]).size();
+          if(n_joint_arms>0)
+          {
+            Eigen::VectorXd Kp_arm, Kd_arm;
+            Kp_arm.resize(n_joint_arms);
+            Kd_arm.resize(n_joint_arms);
+            Kp_arm.setOnes();
+            Kd_arm.setOnes();
+            for(unsigned int i=0; i<n_joint_arms; i++)
+            {
+              if (!controller_nh.getParam("gains/kp_arm/j" + std::to_string(i) , Kp_arm(i)))
+              {
+                ROS_WARN_NAMED(CLASS_NAME,"No default kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+              }
+              if (!controller_nh.getParam("gains/kd_arm/j"  + std::to_string(i) , Kd_arm(i)))
+              {
+                ROS_WARN_NAMED(CLASS_NAME,"No default kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+              }
+              // Check if the values are positive
+              if(Kp_arm(i)<0.0 || Kd_arm(i)<0.0)
+              {
+                ROS_WARN_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
+                Kp_arm(i) = Kd_arm(i) = 1.0;
+              }
+            }
+            controller_ptr->getImpedance()->setArmsGains(Kp_arm,Kd_arm);
+          }
+        }
 
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::ContactForces>(controller_nh, "contact_forces", 4));
@@ -228,19 +260,18 @@ public:
                                                    boost::bind(&wolf_controller::Controller::selectControlMode,controller_,_1),
                                                    "select mode", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
 
-        server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wolf_controller::LegsImpedance::setKpSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wolf_controller::LegsImpedance::setKpSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kp_swing_kfe",Kp_swing_leg(2),boost::bind(&wolf_controller::LegsImpedance::setKpSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kp swing KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kd_swing_haa",Kd_swing_leg(0),boost::bind(&wolf_controller::LegsImpedance::setKdSwingLegHAA,controller_->getLegsImpedance(),_1),"set Kd swing HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kd_swing_hfe",Kd_swing_leg(1),boost::bind(&wolf_controller::LegsImpedance::setKdSwingLegHFE,controller_->getLegsImpedance(),_1),"set Kd swing HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kd_swing_kfe",Kd_swing_leg(2),boost::bind(&wolf_controller::LegsImpedance::setKdSwingLegKFE,controller_->getLegsImpedance(),_1),"set Kd swing KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-
-        server_->registerVariable<double>("set_kp_stance_haa",Kp_stance_leg(0),boost::bind(&wolf_controller::LegsImpedance::setKpStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kp stance HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kp_stance_hfe",Kp_stance_leg(1),boost::bind(&wolf_controller::LegsImpedance::setKpStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kp stance HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kp_stance_kfe",Kp_stance_leg(2),boost::bind(&wolf_controller::LegsImpedance::setKpStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kp stance KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kd_stance_haa",Kd_stance_leg(0),boost::bind(&wolf_controller::LegsImpedance::setKdStanceLegHAA,controller_->getLegsImpedance(),_1),"set Kd stance HAA gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kd_stance_hfe",Kd_stance_leg(1),boost::bind(&wolf_controller::LegsImpedance::setKdStanceLegHFE,controller_->getLegsImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
-        server_->registerVariable<double>("set_kd_stance_kfe",Kd_stance_leg(2),boost::bind(&wolf_controller::LegsImpedance::setKdStanceLegKFE,controller_->getLegsImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,controller_->getLegsImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wolf_controller::Impedance::setKpSwingLegHAA,controller_->getImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wolf_controller::Impedance::setKpSwingLegHFE,controller_->getImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kp_swing_kfe",Kp_swing_leg(2),boost::bind(&wolf_controller::Impedance::setKpSwingLegKFE,controller_->getImpedance(),_1),"set Kp swing KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kd_swing_haa",Kd_swing_leg(0),boost::bind(&wolf_controller::Impedance::setKdSwingLegHAA,controller_->getImpedance(),_1),"set Kd swing HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kd_swing_hfe",Kd_swing_leg(1),boost::bind(&wolf_controller::Impedance::setKdSwingLegHFE,controller_->getImpedance(),_1),"set Kd swing HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kd_swing_kfe",Kd_swing_leg(2),boost::bind(&wolf_controller::Impedance::setKdSwingLegKFE,controller_->getImpedance(),_1),"set Kd swing KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kp_stance_haa",Kp_stance_leg(0),boost::bind(&wolf_controller::Impedance::setKpStanceLegHAA,controller_->getImpedance(),_1),"set Kp stance HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kp_stance_hfe",Kp_stance_leg(1),boost::bind(&wolf_controller::Impedance::setKpStanceLegHFE,controller_->getImpedance(),_1),"set Kp stance HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kp_stance_kfe",Kp_stance_leg(2),boost::bind(&wolf_controller::Impedance::setKpStanceLegKFE,controller_->getImpedance(),_1),"set Kp stance KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kd_stance_haa",Kd_stance_leg(0),boost::bind(&wolf_controller::Impedance::setKdStanceLegHAA,controller_->getImpedance(),_1),"set Kd stance HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kd_stance_hfe",Kd_stance_leg(1),boost::bind(&wolf_controller::Impedance::setKdStanceLegHFE,controller_->getImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
+        //server_->registerVariable<double>("set_kd_stance_kfe",Kd_stance_leg(2),boost::bind(&wolf_controller::Impedance::setKdStanceLegKFE,controller_->getImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
 
         server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wolf_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
 

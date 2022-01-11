@@ -1,5 +1,5 @@
-#ifndef LEGS_IMPEDANCE_H
-#define LEGS_IMPEDANCE_H
+#ifndef IMPEDANCE_H
+#define IMPEDANCE_H
 
 #include <memory>
 #include <atomic>
@@ -9,24 +9,24 @@
 namespace wolf_controller
 {
 
-class LegsImpedance
+class Impedance
 {
 
 public:
 
-  const std::string CLASS_NAME = "LegsImpedance";
+  const std::string CLASS_NAME = "Impedance";
 
   /**
-   * @brief Shared pointer to LegsImpedance
+   * @brief Shared pointer to Impedance
    */
-  typedef std::shared_ptr<LegsImpedance> Ptr;
+  typedef std::shared_ptr<Impedance> Ptr;
 
   /**
-   * @brief Shared pointer to const LegsImpedance
+   * @brief Shared pointer to const Impedance
    */
-  typedef std::shared_ptr<const LegsImpedance> ConstPtr;
+  typedef std::shared_ptr<const Impedance> ConstPtr;
 
-  LegsImpedance(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
+  Impedance(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
 
   void update();
 
@@ -52,11 +52,8 @@ public:
 
   void startInertiaCompensation(const bool& start);
 
-  std::atomic<bool> inertia_compensation_active_;
-  Eigen::MatrixXd M_, Mi_, Kp_, Kd_;
-  Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
-
-  void setSwingStanceGains(const Eigen::Vector3d &Kp_swing_leg, const Eigen::Vector3d &Kd_swing_leg, const Eigen::Vector3d &Kp_stance_leg, const Eigen::Vector3d &Kd_stance_leg);
+  void setLegsGains(const Eigen::Vector3d &Kp_swing_leg, const Eigen::Vector3d &Kd_swing_leg, const Eigen::Vector3d &Kp_stance_leg, const Eigen::Vector3d &Kd_stance_leg);
+  void setArmsGains(const Eigen::VectorXd &Kp_arm, const Eigen::VectorXd &Kd_arm);
 
 private:
 
@@ -79,6 +76,11 @@ private:
   std::atomic<double> kd_stance_haa_;
   std::atomic<double> kd_stance_hfe_;
   std::atomic<double> kd_stance_kfe_;
+
+  std::atomic<bool> inertia_compensation_active_;
+  Eigen::MatrixXd M_, Mi_arms_, Mi_legs_, Kp_, Kd_;
+  Eigen::Matrix3d Kp_swing_leg_, Kd_swing_leg_, Kp_stance_leg_, Kd_stance_leg_;
+  Eigen::MatrixXd Kp_arm_, Kd_arm_;
 
 };
 

@@ -24,8 +24,7 @@
 // Controller
 #include <wolf_controller/quadruped_robot.h>
 #include <wolf_controller/gait_generator.h>
-#include <wolf_controller/legs_kinematics.h>
-#include <wolf_controller/legs_impedance.h>
+#include <wolf_controller/impedance.h>
 #include <wolf_controller/footholds_planner.h>
 #include <wolf_controller/com_planner.h>
 #include <wolf_controller/state_estimator.h>
@@ -201,14 +200,9 @@ public:
     StateEstimator* getStateEstimator() const;
 
     /**
-         * @brief Get the legs kinematics pointer
+         * @brief Get the impedance pointer
          */
-    LegsKinematics* getLegsKinematics() const;
-
-    /**
-         * @brief Get the legs impedance pointer
-         */
-    LegsImpedance* getLegsImpedance() const;
+    Impedance* getImpedance() const;
 
     /**
          * @brief Get the terrain estimator pointer
@@ -259,6 +253,8 @@ private:
     Eigen::VectorXd des_joint_efforts_;
     /** @brief Xbot robot model */
     QuadrupedRobot::Ptr robot_model_;
+    /** @brief Impedance pointer */
+    Impedance::Ptr impedance_;
     /** @brief Dynamic problem formulation */
     IDProblem::UniquePtr id_prob_;
     /** @brief Desired contact forces */
@@ -281,8 +277,6 @@ private:
     GaitGenerator::Ptr gait_generator_;
     /** @brief Terrain Estimator */
     TerrainEstimator::Ptr terrain_estimator_;
-    /** @brief LegsImpedance */
-    LegsImpedance::Ptr legs_impedance_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
     /** @brief Device handler */
