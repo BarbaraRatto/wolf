@@ -175,7 +175,7 @@ public:
       // ACTUAL VALUES
       getActualPose(tmp_affine3d_);
       getActualTwist(tmp_vector6d_);
-      wolf_controller::rotTorpy(tmp_affine3d_.linear(),tmp_vector3d_);
+      wolf_controller::rotToRpy(tmp_affine3d_.linear(),tmp_vector3d_);
       wolf_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_actual);
       wolf_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_actual);
       wolf_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_actual);
@@ -183,7 +183,7 @@ public:
       // REFERENCE VALUES
       getReference(tmp_affine3d_);
       tmp_vector6d_ = getCachedVelocityReference();
-      wolf_controller::rotTorpy(tmp_affine3d_.linear(),tmp_vector3d_);
+      wolf_controller::rotToRpy(tmp_affine3d_.linear(),tmp_vector3d_);
       wolf_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_reference);
       wolf_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_reference);
       wolf_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_reference);
@@ -256,10 +256,10 @@ public:
     Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
     Eigen::Matrix3d R;
 
-    wolf_controller::quatToRotMat(orientation_reference,R);
+    wolf_controller::quatToRot(orientation_reference,R);
 
     pose_reference.translation() = translation_reference;
-    pose_reference.linear() = R.transpose();
+    pose_reference.linear() = R;
 
     buffer_pose_reference_.writeFromNonRT(pose_reference);
   }

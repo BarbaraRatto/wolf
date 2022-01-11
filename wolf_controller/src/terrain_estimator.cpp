@@ -102,14 +102,15 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 
   // 7 - Update the resulting Transformation
   // 7.1 World transformations
-  rpyToRot(roll_out_world_,pitch_out_world_,0.0,world_R_terrain_);
+  tmp_vector3d_ << roll_out_world_,pitch_out_world_,0.0;
+  rpyToRotTranspose(tmp_vector3d_,world_R_terrain_);
   world_T_terrain_.translation() = world_X_terrain_;
   world_T_terrain_.linear() = world_R_terrain_;
   // 7.2 Horizontal frame transformations
   hf_T_terrain_ = robot_model_->getHfRotationInWorld().transpose() * world_T_terrain_;
   hf_X_terrain_ = hf_T_terrain_.translation();
   hf_R_terrain_ = hf_T_terrain_.linear();
-  rotTorpy(hf_R_terrain_,tmp_vector3d_);
+  rotTransposeToRpy(hf_R_terrain_,tmp_vector3d_);
   roll_out_hf_ = tmp_vector3d_(0);
   pitch_out_hf_ = tmp_vector3d_(1);
 

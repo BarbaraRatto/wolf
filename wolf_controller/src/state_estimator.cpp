@@ -51,8 +51,8 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   }
 
   mapRPYderivativesToOmega_ = Eigen::Matrix3d::Identity();
-  base_R_world_ = Eigen::Matrix3d::Identity();
-  raw_base_R_world_ = Eigen::Matrix3d::Identity();
+  world_R_base_ = Eigen::Matrix3d::Identity();
+  raw_world_R_base_ = Eigen::Matrix3d::Identity();
   raw_base_rpy_ = Eigen::Vector3d::Zero();
 
   estimation_orientation_ = estimation_t::IMU_MAGNETOMETER;
@@ -432,9 +432,9 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::IMU_MAGNETOMETER: // Use directly the orientation information from the IMU
     //use this with the real robot only if the magnetometer is not drifting
-    quatToRotMat(imu_orientation_.normalized(),base_R_world_);
-    rotTorpy(base_R_world_,base_rpy_);
-    floating_base_pose_.linear() = base_R_world_.transpose();
+    quatToRot(imu_orientation_.normalized(),world_R_base_);
+    rotToRpy(world_R_base_,base_rpy_);
+    floating_base_pose_.linear() = world_R_base_;
 #ifdef ANGULAR_VELOCITIES_WRT_BASE
     floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
 #else
@@ -445,8 +445,8 @@ void StateEstimator::updateFloatingBase(const double& period)
     if(!reset_gyro_integration_done_) // Initialize the integration with the measured orientation
     {
       // Initialization for the integration
-      quatToRotMat(imu_orientation_.normalized(),base_R_world_);
-      rotTorpy(base_R_world_,base_rpy_);
+      quatToRot(imu_orientation_.normalized(),world_R_base_);
+      rotToRpy(world_R_base_,base_rpy_);
       reset_gyro_integration_done_ = true;
     }
 #ifdef ANGULAR_VELOCITIES_WRT_BASE
@@ -461,20 +461,20 @@ void StateEstimator::updateFloatingBase(const double& period)
     //rotTorpy(raw_base_R_world_,raw_base_rpy_);
     //base_rpy_.head(2) = raw_base_rpy_.head(2);
     //set the affine transformation for angular position
-    rpyToRot(base_rpy_, base_R_world_);
-    floating_base_pose_.linear() = base_R_world_.transpose();
+    rpyToRot(base_rpy_, world_R_base_);
+    floating_base_pose_.linear() = world_R_base_;
     // Set the affine transformation for angular velocity
 #ifdef ANGULAR_VELOCITIES_WRT_BASE
-    floating_base_velocity_.segment(3,3) = base_R_world_.transpose() * imu_gyroscope_;
+    floating_base_velocity_.segment(3,3) = world_R_base_ * imu_gyroscope_;
 #else
     floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 #endif
 
     break;
   case estimation_t::GROUND_TRUTH:
-    quatToRotMat(gt_orientation_.normalized(),base_R_world_);
-    rotTorpy(base_R_world_,base_rpy_);
-    floating_base_pose_.linear() = base_R_world_.transpose();
+    quatToRot(gt_orientation_.normalized(),world_R_base_);
+    rotToRpy(world_R_base_,base_rpy_);
+    floating_base_pose_.linear() = world_R_base_;
     floating_base_velocity_.segment(3,3) = gt_angular_velocity_;
     break;
   default:

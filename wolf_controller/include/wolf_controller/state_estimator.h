@@ -181,9 +181,9 @@ private:
 
     Eigen::Matrix3d mapRPYderivativesToOmega_;
 
-    Eigen::Matrix3d base_R_world_;
+    Eigen::Matrix3d world_R_base_;
 
-    Eigen::Matrix3d raw_base_R_world_;
+    Eigen::Matrix3d raw_world_R_base_;
 
     Eigen::Vector3d raw_base_rpy_;
 
