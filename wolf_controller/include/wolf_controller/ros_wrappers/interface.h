@@ -100,7 +100,7 @@ protected:
   Eigen::Matrix3d       tmp_matrix3d_;
   Eigen::Quaterniond    tmp_quaterniond_;
 
-  realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_pose_reference_;
+  //realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_pose_reference_;
 
   std::atomic<double> buffer_lambda1_;
   std::atomic<double> buffer_lambda2_;

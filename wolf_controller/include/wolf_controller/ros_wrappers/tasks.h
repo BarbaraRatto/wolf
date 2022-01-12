@@ -37,16 +37,13 @@ public:
   {
     Eigen::Affine3d actual_pose;
     getActualPose(actual_pose);
-    buffer_pose_reference_.initRT(actual_pose);
+    //buffer_pose_reference_.initRT(actual_pose);
+
     // Create the interactive marker
     marker_server_.reset(new interactive_markers::InteractiveMarkerServer(_task_id));
     visualization_msgs::InteractiveMarker&& marker = createInteractiveMarker(actual_pose,getBaseLink());
     marker_server_->insert(marker,boost::bind(&Cartesian::processFeedback, this, _1));
     marker_server_->applyChanges();
-
-    // Setup the filters
-    position_reference_filter_.setOmega(2.0*M_PI*20.0); // 20Hz cutoff FIXME hardcoded
-    position_reference_filter_.setTimeStep(wolf_controller::_period);
 
     // Setup the interpolator
     trj_ = std::make_shared<wolf_controller::CartesianTrajectory>(this);
@@ -226,12 +223,10 @@ public:
     }
     if(OPTIONS.set_ext_reference)
     {
-      tmp_affine3d_.setIdentity();
-      tmp_affine3d_ = *buffer_pose_reference_.readFromRT();
-      // Filter
-      //tmp_affine3d_.translation() = position_reference_filter_.process(tmp_affine3d_.translation());
+      //tmp_vector6d_.setZero();
+      //tmp_affine3d_.setIdentity();
+      //tmp_affine3d_ = *buffer_pose_reference_.readFromRT();
       // Interpolation
-      trj_->setWayPoint(tmp_affine3d_,1.0);
       trj_->update(wolf_controller::_period);
       trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
       setReference(tmp_affine3d_,tmp_vector6d_);
@@ -243,12 +238,13 @@ public:
   {
     bool res = OpenSoT::tasks::acceleration::Cartesian::reset();
     getActualPose(tmp_affine3d_);
-    buffer_pose_reference_.writeFromNonRT(tmp_affine3d_);
+    //buffer_pose_reference_.writeFromNonRT(tmp_affine3d_);
     marker_server_->clear();
     marker_server_->applyChanges();
     visualization_msgs::InteractiveMarker&& marker = createInteractiveMarker(tmp_affine3d_,getBaseLink());
     marker_server_->insert(marker,boost::bind(&Cartesian::processFeedback, this, _1));
     marker_server_->applyChanges();
+    trj_->reset();
     return res;
   }
 
@@ -268,7 +264,9 @@ public:
     pose_reference.translation() = translation_reference;
     pose_reference.linear() = R;
 
-    buffer_pose_reference_.writeFromNonRT(pose_reference);
+    //buffer_pose_reference_.writeFromNonRT(pose_reference);
+
+    trj_->setWayPoint(pose_reference,0.1);
   }
 
 private:
@@ -346,8 +344,6 @@ private:
 
   std::shared_ptr<interactive_markers::InteractiveMarkerServer> marker_server_;
   visualization_msgs::InteractiveMarker marker_;
-  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> position_reference_filter_;
-
 };
 
 // CoM
