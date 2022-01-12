@@ -16,7 +16,7 @@ bool isControllerAlive()
 }
 
 // TEST CASES
-TEST(DlsControllerTest, test)
+TEST(ControllerTest, test)
 {
   // wait for the controller to be alive
   while(!isControllerAlive() && cnt++<cnt_limit)
