@@ -826,16 +826,20 @@ void Controller::odomPublisher()
 
     while(!stopping_)
     {
-        // Get floating base
+        // Get floating base wrt the internal world estimation
         base_pose = state_estimator_->getFloatingBasePose();
 
         // Do the inverse of it
-        world_pose = base_pose.inverse();
-        position = world_pose.translation();
-        quaternion = world_pose.linear();
+        //world_pose = base_pose.inverse();
+        //position = world_pose.translation();
+        //quaternion = world_pose.linear();
+        //quaternion.normalize();
+
+        position = base_pose.translation();
+        quaternion = base_pose.linear();
         quaternion.normalize();
 
-        // Create the tf transform between /ci/base_link and /ci/world_odom (world)
+        // Create the tf transform between /base and /world
         transform.setOrigin(tf::Vector3(position(0),position(1),position(2)));
 
         q.setX(quaternion.x());
@@ -843,16 +847,17 @@ void Controller::odomPublisher()
         q.setZ(quaternion.z());
         q.setW(quaternion.w());
         transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName() , "/" WORLD_FRAME_NAME ));
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),  "/"  WORLD_FRAME_NAME, "/" + robot_model_->getBaseLinkName()));
+        //br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName() , "/" WORLD_FRAME_NAME ));
 
         // Create the tf transform between /ci/base_link and /base_link
-        transform.setOrigin(tf::Vector3(0,0,0));
-        q.setX(0);
-        q.setY(0);
-        q.setZ(0);
-        q.setW(1);
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName(), "/"+robot_model_->getBaseLinkName()));
+        //transform.setOrigin(tf::Vector3(0,0,0));
+        //q.setX(0);
+        //q.setY(0);
+        //q.setZ(0);
+        //q.setW(1);
+        //transform.setRotation(q);
+        //br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/ci/"+robot_model_->getBaseLinkName(), "/"+robot_model_->getBaseLinkName()));
 
         std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
     }
