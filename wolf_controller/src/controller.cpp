@@ -326,16 +326,17 @@ bool Controller::selectPosture(const std::string& posture)
 {
   if(posture == "UP")
   {
-    mode_ = Controller::posture_t::UP;
+    posture_ = Controller::posture_t::UP;
   }
   else if(posture == "DOWN")
-    mode_ = Controller::posture_t::DOWN;
+    posture_ = Controller::posture_t::DOWN;
   else
   {
     ROS_ERROR_NAMED(CLASS_NAME,"Wrong posture!");
     return false;
   }
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected posture "<< posture);
+
   return true;
 }
 

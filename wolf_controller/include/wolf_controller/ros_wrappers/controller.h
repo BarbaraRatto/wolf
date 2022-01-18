@@ -6,23 +6,25 @@
 #include <interactive_markers/interactive_marker_server.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <realtime_tools/realtime_buffer.h>
+#include <std_srvs/Trigger.h>
 
 // Eigen
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <wolf_controller/utils.h>
 
-// ROS
+// Generated
 #include <wolf_controller/ContactForces.h>
 #include <wolf_controller/FootHolds.h>
 #include <wolf_controller/TerrainEstimation.h>
 #include <wolf_controller/FrictionCones.h>
 
-// WBC
+// WoLF
 #include <wolf_controller/controller.h>
 #include <wolf_controller/ros_wrappers/interface.h>
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
+
 
 class ControllerRosWrapper : public RosWrapperInterface
 {
@@ -260,25 +262,54 @@ public:
                                                    boost::bind(&wolf_controller::Controller::selectControlMode,controller_,_1),
                                                    "select mode", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
 
-        //server_->registerVariable<double>("set_kp_swing_haa",Kp_swing_leg(0),boost::bind(&wolf_controller::Impedance::setKpSwingLegHAA,controller_->getImpedance(),_1),"set Kp swing HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kp_swing_hfe",Kp_swing_leg(1),boost::bind(&wolf_controller::Impedance::setKpSwingLegHFE,controller_->getImpedance(),_1),"set Kp swing HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kp_swing_kfe",Kp_swing_leg(2),boost::bind(&wolf_controller::Impedance::setKpSwingLegKFE,controller_->getImpedance(),_1),"set Kp swing KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kd_swing_haa",Kd_swing_leg(0),boost::bind(&wolf_controller::Impedance::setKdSwingLegHAA,controller_->getImpedance(),_1),"set Kd swing HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kd_swing_hfe",Kd_swing_leg(1),boost::bind(&wolf_controller::Impedance::setKdSwingLegHFE,controller_->getImpedance(),_1),"set Kd swing HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kd_swing_kfe",Kd_swing_leg(2),boost::bind(&wolf_controller::Impedance::setKdSwingLegKFE,controller_->getImpedance(),_1),"set Kd swing KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kp_stance_haa",Kp_stance_leg(0),boost::bind(&wolf_controller::Impedance::setKpStanceLegHAA,controller_->getImpedance(),_1),"set Kp stance HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kp_stance_hfe",Kp_stance_leg(1),boost::bind(&wolf_controller::Impedance::setKpStanceLegHFE,controller_->getImpedance(),_1),"set Kp stance HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kp_stance_kfe",Kp_stance_leg(2),boost::bind(&wolf_controller::Impedance::setKpStanceLegKFE,controller_->getImpedance(),_1),"set Kp stance KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kd_stance_haa",Kd_stance_leg(0),boost::bind(&wolf_controller::Impedance::setKdStanceLegHAA,controller_->getImpedance(),_1),"set Kd stance HAA gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kd_stance_hfe",Kd_stance_leg(1),boost::bind(&wolf_controller::Impedance::setKdStanceLegHFE,controller_->getImpedance(),_1),"set Kd stance HFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-        //server_->registerVariable<double>("set_kd_stance_kfe",Kd_stance_leg(2),boost::bind(&wolf_controller::Impedance::setKdStanceLegKFE,controller_->getImpedance(),_1),"set Kd stance KFE gain",0.0,1000.0,controller_->getImpedance()->CLASS_NAME);
-
         server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wolf_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
-
         server_->registerVariable<double>("set_cutoff_freq_qdot",default_cutoff_freq_qdot,boost::bind(&wolf_controller::Controller::setCutoffFreqQdot,controller_,_1),"set cutoff frequency for the joint velocities",0,1000.0);
         server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
-
         server_->publishServicesTopics();
+
+        //get_robot_state_srv_ = nh.advertiseService("get_robot_state", &ControllerRosWrapper::getRobotStateCB, this);
+        //get_gait_srv_        = nh.advertiseService("get_gait", &ControllerRosWrapper::getGaitCB, this);
+        stand_up_srv_        = controller_nh.advertiseService("stand_up", &ControllerRosWrapper::standUpCB, this);
+        stand_down_srv_      = controller_nh.advertiseService("stand_down", &ControllerRosWrapper::standDownCB, this);
+        //set_control_srv_     = nh.advertiseService("set_control", &ControllerRosWrapper::setControlCB, this);
+        //set_gait_srv_        = nh.advertiseService("set_gait", &ControllerRosWrapper::setGaitCB, this);
+    }
+
+    bool standUpCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->selectPosture("UP");
+        unsigned int current_state = controller_->getRobotModel()->getState();
+        while(current_state != wolf_controller::QuadrupedRobot::WALKING      &&
+              current_state != wolf_controller::QuadrupedRobot::MANIPULATION  )
+        {
+            if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
+            {
+                res.success = false;
+                break;
+            }
+            current_state = controller_->getRobotModel()->getState();
+            std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+        }
+        return res.success;
+    }
+
+    bool standDownCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->selectPosture("DOWN");
+        unsigned int current_state = controller_->getRobotModel()->getState();
+        while(current_state != wolf_controller::QuadrupedRobot::IDLE)
+        {
+            if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
+            {
+                res.success = false;
+                break;
+            }
+            current_state = controller_->getRobotModel()->getState();
+            std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+        }
+        return res.success;
     }
 
     virtual void publish(const ros::Time& time)
@@ -377,8 +408,16 @@ protected:
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>> terrain_estimation_pub_;
     /** @brief Real time publisher - friction cones */
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>> friction_cones_pub_;
-
+    /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
+    /** @brief ROS services */
+    ros::ServiceServer get_robot_state_srv_;
+    ros::ServiceServer get_gait_srv_;
+    ros::ServiceServer set_posture_srv_;
+    ros::ServiceServer set_control_srv_;
+    ros::ServiceServer set_gait_srv_;
+    ros::ServiceServer stand_up_srv_;
+    ros::ServiceServer stand_down_srv_;
 
 };
 
