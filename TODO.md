@@ -1,5 +1,6 @@
 # TODO list
 
+- change name IDProblem -> WBC
 - ROS services
 - add trajectory for arm
 - dedicated state machine code
