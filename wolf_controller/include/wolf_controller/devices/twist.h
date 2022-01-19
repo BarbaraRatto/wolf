@@ -35,7 +35,7 @@ public:
         base_pitch_scale_       = static_cast<double>(msg.angular.y);
         base_yaw_scale_         = static_cast<double>(msg.angular.z);
 
-        if(std::abs(base_velocity_x_scale_) > 0.0 || std::abs(base_velocity_y_scale_) > 0.0)
+        if(std::abs(base_velocity_x_scale_) > 0.0 || std::abs(base_velocity_y_scale_) > 0.0 || std::abs(base_yaw_scale_) > 0.0)
             start_swing_ = true;
         else
             start_swing_ = false;
