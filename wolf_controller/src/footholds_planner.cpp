@@ -35,8 +35,12 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
   step_height_ = 0.0; // [m]
   step_length_ = 0.0; // [m]
 
-  base_linear_velocity_cmd_ = 0.0; // [m/s]
-  base_angular_velocity_cmd_ = 0.0; // [rad/s]
+  base_linear_velocity_cmd_x_ = 0.0; // [m/s]
+  base_linear_velocity_cmd_y_ = 0.0; // [m/s]
+  base_linear_velocity_cmd_z_ = 0.0; // [m/s]
+  base_angular_velocity_cmd_roll_  = 0.0; // [rad/s]
+  base_angular_velocity_cmd_pitch_ = 0.0; // [rad/s]
+  base_angular_velocity_cmd_yaw_   = 0.0; // [rad/s]
 
   reset();
 
@@ -218,8 +222,6 @@ void FootholdsPlanner::calculateFootSteps()
       robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),base_T_foot_);
       // current foot position in the horizontal frame
       hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
-      //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
-      //world_X_virtual_foothold_offset_(2) = 0;
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_X_current_foothold_: "<<hf_X_current_foothold_.transpose());
 
       // 5) Sum everything to obtain the new foothold displacement w.r.t hf
@@ -333,9 +335,9 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
 {
   base_position_ = base_position;
 
-  hf_base_linear_velocity_ref_(0) = base_linear_velocity_cmd_ * base_linear_velocity_scale_x_;
-  hf_base_linear_velocity_ref_(1) = base_linear_velocity_cmd_ * base_linear_velocity_scale_y_;
-  hf_base_linear_velocity_ref_(2) = base_linear_velocity_cmd_ * base_linear_velocity_scale_z_;
+  hf_base_linear_velocity_ref_(0) = base_linear_velocity_cmd_x_ * base_linear_velocity_scale_x_;
+  hf_base_linear_velocity_ref_(1) = base_linear_velocity_cmd_y_ * base_linear_velocity_scale_y_;
+  hf_base_linear_velocity_ref_(2) = base_linear_velocity_cmd_z_ * base_linear_velocity_scale_z_;
 
   for(unsigned int i=0;i<3;i++)
     hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
@@ -371,9 +373,9 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 {
   base_orientation_ = base_orientation;
 
-  hf_base_angular_velocity_ref_(0) = base_angular_velocity_cmd_ * base_angular_velocity_scale_roll_;
-  hf_base_angular_velocity_ref_(1) = base_angular_velocity_cmd_ * base_angular_velocity_scale_pitch_;
-  hf_base_angular_velocity_ref_(2) = base_angular_velocity_cmd_ * base_angular_velocity_scale_yaw_;
+  hf_base_angular_velocity_ref_(0) = base_angular_velocity_cmd_roll_ * base_angular_velocity_scale_roll_;
+  hf_base_angular_velocity_ref_(1) = base_angular_velocity_cmd_pitch_ * base_angular_velocity_scale_pitch_;
+  hf_base_angular_velocity_ref_(2) = base_angular_velocity_cmd_yaw_ * base_angular_velocity_scale_yaw_;
 
   for(unsigned int i=0;i<3;i++)
     hf_base_angular_velocity_(i) = secondOrderFilter(hf_base_angular_velocity_(i),hf_base_angular_velocity_filt_(i),hf_base_angular_velocity_ref_(i),0.5);
@@ -515,14 +517,34 @@ void FootholdsPlanner::setPushRecoveryGains(const double &k_x, const double &k_y
 
 void FootholdsPlanner::setLinearVelocityCmd(const double& linear)
 {
-  base_linear_velocity_cmd_ = linear;
+  base_linear_velocity_cmd_x_ = linear;
+  base_linear_velocity_cmd_y_ = linear;
+  base_linear_velocity_cmd_z_ = linear;
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< linear);
 }
 
 void FootholdsPlanner::setAngularVelocityCmd(const double& angular)
 {
-  base_angular_velocity_cmd_ = angular;
+  base_linear_velocity_cmd_x_ = angular;
+  base_linear_velocity_cmd_y_ = angular;
+  base_linear_velocity_cmd_z_ = angular;
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< angular);
+}
+
+void FootholdsPlanner::setLinearVelocityCmd(const double& x, const double& y, const double& z)
+{
+  base_linear_velocity_cmd_x_ = x;
+  base_linear_velocity_cmd_y_ = y;
+  base_linear_velocity_cmd_z_ = z;
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<<" "<<x<<" "<<y<<" "<<z);
+}
+
+void FootholdsPlanner::setAngularVelocityCmd(const double& roll, const double& pitch, const double& yaw)
+{
+  base_angular_velocity_cmd_roll_  = roll;
+  base_angular_velocity_cmd_pitch_ = pitch;
+  base_angular_velocity_cmd_yaw_   = yaw;
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<<" "<<roll<<" "<<pitch<<" "<<yaw);
 }
 
 void FootholdsPlanner::setStepHeight(const double& height)
@@ -637,14 +659,35 @@ const double& FootholdsPlanner::getBaseHeight() const
   return base_position_reference_(2);
 }
 
-double FootholdsPlanner::getLinearVelocityCmd() const
+double FootholdsPlanner::getLinearVelocityCmdX() const
 {
-  return base_linear_velocity_cmd_;
+  return base_linear_velocity_cmd_x_;
 }
 
-double FootholdsPlanner::getAngularVelocityCmd() const
+double FootholdsPlanner::getLinearVelocityCmdY() const
 {
-  return base_angular_velocity_cmd_;
+  return base_linear_velocity_cmd_y_;
+}
+
+double FootholdsPlanner::getLinearVelocityCmdZ() const
+{
+  return base_linear_velocity_cmd_z_;
+}
+
+
+double FootholdsPlanner::getAngularVelocityCmdRoll() const
+{
+  return base_angular_velocity_cmd_roll_;
+}
+
+double FootholdsPlanner::getAngularVelocityCmdPitch() const
+{
+  return base_angular_velocity_cmd_pitch_;
+}
+
+double FootholdsPlanner::getAngularVelocityCmdYaw() const
+{
+  return base_angular_velocity_cmd_yaw_;
 }
 
 double FootholdsPlanner::getStepHeight() const

@@ -13,6 +13,7 @@
 #include <wolf_controller/ros_wrappers/controller.h>
 #include <wolf_controller/devices/joy.h>
 #include <wolf_controller/devices/twist.h>
+#include <wolf_controller/devices/keyboard.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -191,22 +192,22 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     if(input_device == "ps3")
     {
         device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller device");
+        ROS_INFO_NAMED(CLASS_NAME,"Use Ps3JoyHandler input device");
     }
     else if(input_device == "xbox")
     {
         device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller device");
+        ROS_INFO_NAMED(CLASS_NAME,"Use XboxJoyHandler input device");
     }
     else if(input_device == "twist")
     {
         device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+        ROS_INFO_NAMED(CLASS_NAME,"Use TwistHandler input device");
     }
     else if(input_device == "keyboard")
     {
-        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+        device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
+        ROS_INFO_NAMED(CLASS_NAME,"Use KeyboardHandler input device");
     }
     else
     {
@@ -528,7 +529,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
-        tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmd();
+        tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {
@@ -608,7 +609,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
-        tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmd();
+        tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {

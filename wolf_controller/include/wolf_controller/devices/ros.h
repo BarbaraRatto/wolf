@@ -39,9 +39,9 @@ protected:
         if(base_velocity_x_scale_>1.0) base_velocity_x_scale_ = 1.0; if(base_velocity_x_scale_<-1.0) base_velocity_x_scale_ = -1.0;
         if(base_velocity_y_scale_>1.0) base_velocity_y_scale_ = 1.0; if(base_velocity_y_scale_<-1.0) base_velocity_y_scale_ = -1.0;
         if(base_velocity_z_scale_>1.0) base_velocity_z_scale_ = 1.0; if(base_velocity_z_scale_<-1.0) base_velocity_z_scale_ = -1.0;
-        if(base_roll_scale_>1.0) base_roll_scale_ = 1.0; if(base_roll_scale_<-1.0) base_roll_scale_ = -1.0;
-        if(base_pitch_scale_>1.0) base_pitch_scale_ = 1.0; if(base_pitch_scale_<-1.0) base_pitch_scale_ = -1.0;
-        if(base_yaw_scale_>1.0) base_yaw_scale_ = 1.0; if(base_yaw_scale_<-1.0) base_yaw_scale_ = -1.0;
+        if(base_velocity_roll_scale_>1.0) base_velocity_roll_scale_ = 1.0; if(base_velocity_roll_scale_<-1.0) base_velocity_roll_scale_ = -1.0;
+        if(base_velocity_pitch_scale_>1.0) base_velocity_pitch_scale_ = 1.0; if(base_velocity_pitch_scale_<-1.0) base_velocity_pitch_scale_ = -1.0;
+        if(base_velocity_yaw_scale_>1.0) base_velocity_yaw_scale_ = 1.0; if(base_velocity_yaw_scale_<-1.0) base_velocity_yaw_scale_ = -1.0;
 
         unsigned int current_robot_state = controller_ptr_->getRobotModel()->getState();
 
@@ -51,9 +51,9 @@ protected:
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(base_velocity_y_scale_);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_yaw_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_pitch_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_roll_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
         }
         else if(reset_base_)
         {
@@ -61,17 +61,17 @@ protected:
             reset_base_ = false;
         }
         else if(std::abs(base_velocity_z_scale_)>0 ||
-                std::abs(base_yaw_scale_)       >0 ||
-                std::abs(base_pitch_scale_)     >0 ||
-                std::abs(base_roll_scale_)      >0  )
+                std::abs(base_velocity_yaw_scale_)       >0 ||
+                std::abs(base_velocity_pitch_scale_)     >0 ||
+                std::abs(base_velocity_roll_scale_)      >0  )
         {
             controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::BASE_ONLY); // Move the base orientation and Z
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(0.0);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(0.0);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_yaw_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_pitch_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_roll_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
         }
         else
         {
@@ -85,9 +85,9 @@ protected:
         base_velocity_y_scale_     = 0.;
         base_velocity_z_scale_     = 0.;
 
-        base_roll_scale_        = 0.;
-        base_pitch_scale_       = 0.;
-        base_yaw_scale_         = 0.;
+        base_velocity_roll_scale_        = 0.;
+        base_velocity_pitch_scale_       = 0.;
+        base_velocity_yaw_scale_         = 0.;
 
         start_swing_ = false;
 

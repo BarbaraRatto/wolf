@@ -23,9 +23,15 @@ public:
         base_velocity_x_scale_     = 0.0;
         base_velocity_y_scale_     = 0.0;
         base_velocity_z_scale_     = 0.0;
-        base_yaw_scale_            = 0.0;
-        base_pitch_scale_          = 0.0;
-        base_roll_scale_           = 0.0;
+        base_velocity_yaw_scale_   = 0.0;
+        base_velocity_pitch_scale_ = 0.0;
+        base_velocity_roll_scale_  = 0.0;
+        base_velocity_x_cmd_       = 0.0;
+        base_velocity_y_cmd_       = 0.0;
+        base_velocity_z_cmd_       = 0.0;
+        base_velocity_yaw_cmd_     = 0.0;
+        base_velocity_pitch_cmd_   = 0.0;
+        base_velocity_roll_cmd_    = 0.0;
         start_swing_               = false;
         reset_base_                = false;
     }
@@ -39,9 +45,15 @@ protected:
     double base_velocity_x_scale_;
     double base_velocity_y_scale_;
     double base_velocity_z_scale_;
-    double base_yaw_scale_;
-    double base_pitch_scale_;
-    double base_roll_scale_;
+    double base_velocity_yaw_scale_;
+    double base_velocity_pitch_scale_;
+    double base_velocity_roll_scale_;
+    double base_velocity_x_cmd_;
+    double base_velocity_y_cmd_;
+    double base_velocity_z_cmd_;
+    double base_velocity_yaw_cmd_;
+    double base_velocity_pitch_cmd_;
+    double base_velocity_roll_cmd_;
     bool   start_swing_;
     bool   reset_base_;
 

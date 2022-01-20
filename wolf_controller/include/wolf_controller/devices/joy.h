@@ -122,9 +122,9 @@ public:
             base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
             base_velocity_z_scale_     = (static_cast<double>(msg->buttons[5])-static_cast<double>(msg->buttons[7])); //R1 and R2
 
-            base_yaw_scale_         = static_cast<double>(msg->axes[2]);
-            base_pitch_scale_       = static_cast<double>(msg->axes[3]);
-            base_roll_scale_        = -static_cast<double>(msg->axes[4]);
+            base_velocity_yaw_scale_         = static_cast<double>(msg->axes[2]);
+            base_velocity_pitch_scale_       = static_cast<double>(msg->axes[3]);
+            base_velocity_roll_scale_        = -static_cast<double>(msg->axes[4]);
 
             start_swing_     = static_cast<bool>(msg->buttons[4]); // L1 button
             reset_base_      = static_cast<bool>(msg->buttons[6]); // L2 button
@@ -174,9 +174,9 @@ public:
             base_velocity_x_scale_     = static_cast<double>(msg->axes[1]);
             base_velocity_z_scale_     = static_cast<double>(msg->axes[7]); //R1 and R2
 
-            base_yaw_scale_         = static_cast<double>(msg->axes[3]);
-            base_pitch_scale_       = static_cast<double>(msg->axes[4]);
-            base_roll_scale_        = -static_cast<double>(msg->axes[6]);
+            base_velocity_yaw_scale_         = static_cast<double>(msg->axes[3]);
+            base_velocity_pitch_scale_       = static_cast<double>(msg->axes[4]);
+            base_velocity_roll_scale_        = -static_cast<double>(msg->axes[6]);
 
             start_swing_     = static_cast<bool>(msg->buttons[4]); // L1 button
             reset_base_      = static_cast<bool>(msg->buttons[5]); // R1 button

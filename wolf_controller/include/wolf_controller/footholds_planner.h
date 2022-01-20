@@ -158,6 +158,8 @@ public:
     void setBaseVelocityScaleYaw(const double& scale);
     void setLinearVelocityCmd(const double& linear);
     void setAngularVelocityCmd(const double& angular);
+    void setLinearVelocityCmd(const double& x, const double& y, const double& z);
+    void setAngularVelocityCmd(const double& roll, const double& pitch, const double& yaw);
     void setStepHeight(const double& height);
     void setMaxStepHeight(const double& max);
     void setMaxStepLength(const double& max);
@@ -183,8 +185,12 @@ public:
     const double& getStepHeight(const std::string& foot_name);
     const double& getStepHeadingRate(const std::string& foot_name);
     const double& getBaseHeight() const;
-    double getLinearVelocityCmd() const;
-    double getAngularVelocityCmd() const ;
+    double getLinearVelocityCmdX() const;
+    double getLinearVelocityCmdY() const;
+    double getLinearVelocityCmdZ() const;
+    double getAngularVelocityCmdRoll() const;
+    double getAngularVelocityCmdPitch() const;
+    double getAngularVelocityCmdYaw() const;
     double getStepHeight() const ;
     double getStepLength() const ;
     Gait::gait_t getGaitType() const;
@@ -235,8 +241,12 @@ private:
     std::atomic<double>  base_angular_velocity_scale_roll_;
     std::atomic<double>  base_angular_velocity_scale_pitch_;
     std::atomic<double>  base_angular_velocity_scale_yaw_;
-    std::atomic<double>  base_linear_velocity_cmd_;
-    std::atomic<double>  base_angular_velocity_cmd_;
+    std::atomic<double>  base_linear_velocity_cmd_x_;
+    std::atomic<double>  base_linear_velocity_cmd_y_;
+    std::atomic<double>  base_linear_velocity_cmd_z_;
+    std::atomic<double>  base_angular_velocity_cmd_roll_;
+    std::atomic<double>  base_angular_velocity_cmd_pitch_;
+    std::atomic<double>  base_angular_velocity_cmd_yaw_;
     std::atomic<double>  step_height_max_;
     std::atomic<double>  step_length_max_;
     std::atomic<double>  base_height_max_;
@@ -270,7 +280,6 @@ private:
     Eigen::Vector3d hf_X_current_foothold_;
     Eigen::Vector3d world_delta_hip_;
     Eigen::Vector3d world_delta_foot_;
-    Eigen::Vector3d world_X_virtual_foothold_offset_;
 
     Eigen::Matrix3d world_R_hf_;
     Eigen::Matrix3d hf_R_base_;
@@ -288,7 +297,6 @@ private:
     Eigen::Vector3d base_position_reference_;
     Eigen::Vector3d base_linear_velocity_reference_;
     Eigen::Vector3d base_angular_velocity_reference_;
-
 
     GaitGenerator::Ptr gait_generator_;
     QuadrupedRobot::Ptr robot_model_;
