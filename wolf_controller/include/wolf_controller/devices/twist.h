@@ -51,13 +51,6 @@ public:
 
         reset_base_      = false;
 
-        base_velocity_x_scale_           = static_cast<double>(msg.linear.x);
-        base_velocity_y_scale_           = static_cast<double>(msg.linear.y);
-        base_velocity_z_scale_           = static_cast<double>(msg.linear.z);
-        base_velocity_roll_scale_        = static_cast<double>(msg.angular.x);
-        base_velocity_pitch_scale_       = static_cast<double>(msg.angular.y);
-        base_velocity_yaw_scale_         = static_cast<double>(msg.angular.z);
-
         update();
     }
 };
