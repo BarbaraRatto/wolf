@@ -21,7 +21,7 @@
 // ROS
 #include <ros/ros.h>
 
-// WB
+// WoLF
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
 #include <wolf_controller/ros_wrappers/tasks.h>
