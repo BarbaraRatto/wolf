@@ -150,7 +150,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_);
+  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_);
 
   if(ee_names_.size() > 0)
   {
@@ -307,9 +307,9 @@ void IDProblem::publish(const ros::Time& time)
   for (auto& tmp_map : arms_)
     tmp_map.second->publish(time);
   waistRPY_->publish(time);
-  waistZ_->publish(time);
+  //waistZ_->publish(time);
   com_->publish(time);
-  postural_->publish(time);
+  //postural_->publish(time);
   angular_momentum_->publish(time);
 }
 
