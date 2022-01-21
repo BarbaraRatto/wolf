@@ -269,8 +269,6 @@ private:
     Eigen::Quaterniond imu_orientation_;
     /** @brief Ground Truth Orientation */
     Eigen::Quaterniond ground_truth_orientation_;
-    /** @brief Reference for the waist RPY */
-    Eigen::Vector3d des_base_rpy_;
     /** @brief Thread for the odometry publisher */
     std::shared_ptr<std::thread> odom_publisher_thread_;
     /** @brief Gait generator */

@@ -218,6 +218,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
+#ifdef DEBUG
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities",des_joint_velocities_);
@@ -227,7 +228,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_impedance",des_joint_efforts_impedance_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_efforts",joint_efforts_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
+#endif
     RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
@@ -681,8 +682,6 @@ void Controller::updateComponents(const double &dt)
   terrain_estimator_->computeTerrainEstimation(dt);
   // Update the CoM position and velocity reference
   com_planner_->update();
-  // Transform the desired base rotation into RPY for visualization
-  rotToRpy(foot_holds_planner_->getBaseRotationReference(),des_base_rpy_);
 }
 
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
@@ -787,7 +786,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Read joint values from the hardware interface
     readJoints();
-
 
     // Read IMU values from the hardware interface
     readImu();

@@ -44,7 +44,8 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   reset();
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/desired_height",base_position_(2));
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_height",base_position_(2));
+  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",base_orientation_);
 }
 
 void FootholdsPlanner::reset()
@@ -802,6 +803,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
   compute_deltas_ = true;
 
+#ifdef DEBUG
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/current_th_dot_filt",current_th_dot_filt_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/cmd_velocity",cmd_velocity_);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity",base_velocity_);
@@ -812,6 +814,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rf",deltas_["rf_foot"]);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lh",deltas_["lh_foot"]);
   RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rh",deltas_["rh_foot"]);
+#endif
 }
 
 bool PushRecovery::update(const double& period)
