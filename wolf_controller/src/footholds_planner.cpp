@@ -525,9 +525,9 @@ void FootholdsPlanner::setBaseLinearVelocityCmd(const double& linear)
 
 void FootholdsPlanner::setBaseAngularVelocityCmd(const double& angular)
 {
-  base_linear_velocity_cmd_x_ = angular;
-  base_linear_velocity_cmd_y_ = angular;
-  base_linear_velocity_cmd_z_ = angular;
+  base_angular_velocity_cmd_roll_  = angular;
+  base_angular_velocity_cmd_pitch_ = angular;
+  base_angular_velocity_cmd_yaw_   = angular;
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< angular);
 }
 
