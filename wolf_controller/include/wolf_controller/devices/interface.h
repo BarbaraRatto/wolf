@@ -34,6 +34,7 @@ public:
         base_velocity_roll_cmd_    = 0.0;
         start_swing_               = false;
         reset_base_                = false;
+        set_velocities_cmd_        = false;
     }
 
     virtual ~DeviceHandlerInterface() {}
@@ -56,6 +57,7 @@ protected:
     double base_velocity_roll_cmd_;
     bool   start_swing_;
     bool   reset_base_;
+    bool   set_velocities_cmd_;
 
 };
 

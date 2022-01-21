@@ -529,7 +529,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
-        tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmdZ();
+        tmp_vector3d_1_.z() = foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {
@@ -609,7 +609,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
-        tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmdZ();
+        tmp_vector3d_1_.z() = -foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {

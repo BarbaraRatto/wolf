@@ -34,17 +34,20 @@ public:
         base_velocity_pitch_cmd_ = static_cast<double>(msg.angular.y);
         base_velocity_yaw_cmd_   = static_cast<double>(msg.angular.z);
 
+        base_velocity_x_scale_ = base_velocity_y_scale_ = base_velocity_z_scale_ = 1.0;
+        base_velocity_roll_scale_ = base_velocity_pitch_scale_ = base_velocity_yaw_scale_ = 1.0;
+
         if(std::abs(base_velocity_x_cmd_) > 0.0 || std::abs(base_velocity_y_cmd_) > 0.0 || std::abs(base_velocity_yaw_cmd_) > 0.0)
         {
             start_swing_ = true;
+            set_velocities_cmd_ = true;
 
-            if(std::abs(base_velocity_x_cmd_) > 0.0) base_velocity_x_scale_ = 1.0; else base_velocity_x_scale_ = 0.0;
-            if(std::abs(base_velocity_y_cmd_) > 0.0) base_velocity_y_scale_ = 1.0; else base_velocity_y_scale_ = 0.0;
-            if(std::abs(base_velocity_z_cmd_) > 0.0) base_velocity_z_scale_ = 1.0; else base_velocity_z_scale_ = 0.0;
-
-            if(std::abs(base_velocity_roll_cmd_) > 0.0)  base_velocity_roll_scale_ = 1.0; else base_velocity_roll_scale_ = 0.0;
-            if(std::abs(base_velocity_pitch_cmd_) > 0.0) base_velocity_pitch_scale_ = 1.0; else base_velocity_pitch_scale_ = 0.0;
-            if(std::abs(base_velocity_yaw_cmd_) > 0.0)   base_velocity_yaw_scale_ = 1.0; else base_velocity_yaw_scale_ = 0.0;
+            //if(std::abs(base_velocity_x_cmd_) > 0.0) base_velocity_x_scale_ = 1.0; else base_velocity_x_scale_ = 0.0;
+            //if(std::abs(base_velocity_y_cmd_) > 0.0) base_velocity_y_scale_ = 1.0; else base_velocity_y_scale_ = 0.0;
+            //if(std::abs(base_velocity_z_cmd_) > 0.0) base_velocity_z_scale_ = 1.0; else base_velocity_z_scale_ = 0.0;
+            //if(std::abs(base_velocity_roll_cmd_) > 0.0)  base_velocity_roll_scale_ = 1.0; else base_velocity_roll_scale_ = 0.0;
+            //if(std::abs(base_velocity_pitch_cmd_) > 0.0) base_velocity_pitch_scale_ = 1.0; else base_velocity_pitch_scale_ = 0.0;
+            //if(std::abs(base_velocity_yaw_cmd_) > 0.0)   base_velocity_yaw_scale_ = 1.0; else base_velocity_yaw_scale_ = 0.0;
         }
         else
             start_swing_ = false;

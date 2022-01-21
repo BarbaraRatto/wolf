@@ -515,7 +515,7 @@ void FootholdsPlanner::setPushRecoveryGains(const double &k_x, const double &k_y
   push_recovery_->setGains(k_x,k_y,k_r);
 }
 
-void FootholdsPlanner::setLinearVelocityCmd(const double& linear)
+void FootholdsPlanner::setBaseLinearVelocityCmd(const double& linear)
 {
   base_linear_velocity_cmd_x_ = linear;
   base_linear_velocity_cmd_y_ = linear;
@@ -523,7 +523,7 @@ void FootholdsPlanner::setLinearVelocityCmd(const double& linear)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< linear);
 }
 
-void FootholdsPlanner::setAngularVelocityCmd(const double& angular)
+void FootholdsPlanner::setBaseAngularVelocityCmd(const double& angular)
 {
   base_linear_velocity_cmd_x_ = angular;
   base_linear_velocity_cmd_y_ = angular;
@@ -531,20 +531,22 @@ void FootholdsPlanner::setAngularVelocityCmd(const double& angular)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< angular);
 }
 
-void FootholdsPlanner::setLinearVelocityCmd(const double& x, const double& y, const double& z)
+void FootholdsPlanner::setBaseLinearVelocityCmd(const double& x, const double& y, const double& z, bool verbose)
 {
   base_linear_velocity_cmd_x_ = x;
   base_linear_velocity_cmd_y_ = y;
   base_linear_velocity_cmd_z_ = z;
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<<" "<<x<<" "<<y<<" "<<z);
+  if(verbose)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<<" "<<x<<" "<<y<<" "<<z);
 }
 
-void FootholdsPlanner::setAngularVelocityCmd(const double& roll, const double& pitch, const double& yaw)
+void FootholdsPlanner::setBaseAngularVelocityCmd(const double& roll, const double& pitch, const double& yaw, bool verbose)
 {
   base_angular_velocity_cmd_roll_  = roll;
   base_angular_velocity_cmd_pitch_ = pitch;
   base_angular_velocity_cmd_yaw_   = yaw;
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<<" "<<roll<<" "<<pitch<<" "<<yaw);
+  if(verbose)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<<" "<<roll<<" "<<pitch<<" "<<yaw);
 }
 
 void FootholdsPlanner::setStepHeight(const double& height)
@@ -659,33 +661,33 @@ const double& FootholdsPlanner::getBaseHeight() const
   return base_position_reference_(2);
 }
 
-double FootholdsPlanner::getLinearVelocityCmdX() const
+double FootholdsPlanner::getBaseLinearVelocityCmdX() const
 {
   return base_linear_velocity_cmd_x_;
 }
 
-double FootholdsPlanner::getLinearVelocityCmdY() const
+double FootholdsPlanner::getBaseLinearVelocityCmdY() const
 {
   return base_linear_velocity_cmd_y_;
 }
 
-double FootholdsPlanner::getLinearVelocityCmdZ() const
+double FootholdsPlanner::getBaseLinearVelocityCmdZ() const
 {
   return base_linear_velocity_cmd_z_;
 }
 
 
-double FootholdsPlanner::getAngularVelocityCmdRoll() const
+double FootholdsPlanner::getBaseAngularVelocityCmdRoll() const
 {
   return base_angular_velocity_cmd_roll_;
 }
 
-double FootholdsPlanner::getAngularVelocityCmdPitch() const
+double FootholdsPlanner::getBaseAngularVelocityCmdPitch() const
 {
   return base_angular_velocity_cmd_pitch_;
 }
 
-double FootholdsPlanner::getAngularVelocityCmdYaw() const
+double FootholdsPlanner::getBaseAngularVelocityCmdYaw() const
 {
   return base_angular_velocity_cmd_yaw_;
 }
