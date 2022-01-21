@@ -15,9 +15,6 @@
     <arg name="input_device" default="keyboard" /> <!--Supported: ps3/xbox/twist/keyboard -->
     <arg name="engine" default="ode" />
 
-    <arg name="full_world_name" default="$(eval find('wolf_gazebo_resources') + '/worlds/' + arg('world_name') + '.world')"/>
-    <param name="/full_world_name" value="$(arg full_world_name)" />
-
     <!-- export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
     <param name="internal_wrench" value="$(arg internal_wrench)"/>
@@ -26,18 +23,18 @@
 
     <!-- Load the robot description -->
     <group if="$(arg gazebo)">
-            <include file="$(find wolf_description_utils)/launch/world.launch">
-                <arg name="sensors" value="$(arg sensors)" />
-                <arg name="robot_name" value="$(arg robot_name)" />
-                <arg name="internal_wrench" value="$(arg internal_wrench)" />
-                <arg name="full_world_name" value="$(arg full_world_name)" />
-                <arg name="task_period" value="$(arg task_period)" />
-                <arg name="gui" value="$(arg gazebo_gui)"/>
-                <arg name="arm_enabled" value="$(arg arm_enabled)"/>
-                <arg name="arm_name" value="$(arg arm_name)"/>
-                <arg name="debug" value="$(arg gazebo_debug)"/>
-                <arg name="engine" value="$(arg engine)"/>
-            </include>
+        <include file="$(find wolf_description_utils)/launch/world.launch">
+            <arg name="sensors" value="$(arg sensors)" />
+            <arg name="robot_name" value="$(arg robot_name)" />
+            <arg name="internal_wrench" value="$(arg internal_wrench)" />
+            <arg name="world_name" value="$(eval find('wolf_gazebo_resources') + '/worlds/' + arg('world_name') + '.world')" />
+            <arg name="task_period" value="$(arg task_period)" />
+            <arg name="gui" value="$(arg gazebo_gui)"/>
+            <arg name="arm_enabled" value="$(arg arm_enabled)"/>
+            <arg name="arm_name" value="$(arg arm_name)"/>
+            <arg name="debug" value="$(arg gazebo_debug)"/>
+            <arg name="engine" value="$(arg engine)"/>
+        </include>
     </group>
 
     <group unless="$(arg gazebo)">
@@ -61,10 +58,10 @@
           <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_params.yaml')" ns="$(arg robot_name)"/>
     </group>
 
-    <!-- Spawn our controller and its friends -->
+    <!-- Spawn wolf controller and joint state publisher -->
     <include file="$(find wolf_controller)/launch/wolf_controller_spawn.launch">
-            <arg name="robot_name" value="$(arg robot_name)" />
-            <arg name="extra_controllers" value="joint_state_publisher" />
+          <arg name="robot_name" value="$(arg robot_name)" />
+          <arg name="extra_controllers" value="joint_state_publisher" />
     </include>
 
     <!-- rqt_reconfigure gui -->
