@@ -67,10 +67,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         return false;
     }
     if(!gt_hw)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::GroundTruthInterface not found");
-        return false;
-    }
+        ROS_WARN_NAMED(CLASS_NAME,"hardware_interface::GroundTruthInterface not found");
     else
         ground_truth_ = gt_hw->getHandle("ground_truth");
 
@@ -78,16 +75,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     joint_names_ = robot_model_->getJointNames();
 
     if(!cs_hw)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
-        return false;
-    }
+        ROS_WARN_NAMED(CLASS_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
     else
     {
-        contact_sensors_["lf_foot"] = cs_hw->getHandle("lf_foot_contact_sensor"); // FIXME Hardcoded
-        contact_sensors_["rf_foot"] = cs_hw->getHandle("rf_foot_contact_sensor"); // FIXME Hardcoded
-        contact_sensors_["lh_foot"] = cs_hw->getHandle("lh_foot_contact_sensor"); // FIXME Hardcoded
-        contact_sensors_["rh_foot"] = cs_hw->getHandle("rh_foot_contact_sensor"); // FIXME Hardcoded
+        const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+        for(unsigned int i=0;i<foot_names.size();i++)
+          contact_sensors_[foot_names[i]] = cs_hw->getHandle(foot_names[i]); // FIXME Hardcoded
+        //contact_sensors_["rf_foot"] = cs_hw->getHandle("rf_foot_contact_sensor"); // FIXME Hardcoded
+        //contact_sensors_["lh_foot"] = cs_hw->getHandle("lh_foot_contact_sensor"); // FIXME Hardcoded
+        //contact_sensors_["rh_foot"] = cs_hw->getHandle("rh_foot_contact_sensor"); // FIXME Hardcoded
     }
 
     // Setting up joint handles:
@@ -101,7 +97,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         }
         catch(...)
         {
-            ROS_ERROR_NAMED(CLASS_NAME,"Error loading joint_states_");
+            ROS_ERROR_NAMED(CLASS_NAME,"Error loading the joint handles");
             return false;
         }
     }
@@ -127,7 +123,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     _period = period_;
 
     use_contact_sensors_ = false;
-    root_nh.getParam("/internal_wrench",use_contact_sensors_);
+    root_nh.getParam("/contact_sensors",use_contact_sensors_);
     if(!use_contact_sensors_) // Use the contact sensors
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
     else
@@ -457,12 +453,12 @@ void Controller::updateStateEstimator(const double &dt)
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
-    if(state_estimator_->getPositionEstimationType() == "ground_truth")
+    if(!ground_truth_.getName().empty() && state_estimator_->getPositionEstimationType() == "ground_truth")
     {
         state_estimator_->setGroundTruthBasePosition(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearPosition()));
         state_estimator_->setGroundTruthBaseLinearVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearVelocity()));
     }
-    if(state_estimator_->getOrientationEstimationType() == "ground_truth")
+    if(!ground_truth_.getName().empty() && state_estimator_->getOrientationEstimationType() == "ground_truth")
     {
         ground_truth_orientation_.w() = ground_truth_.getOrientation()[0];
         ground_truth_orientation_.x() = ground_truth_.getOrientation()[1];
@@ -477,18 +473,16 @@ void Controller::updateStateEstimator(const double &dt)
         state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
     }
 
-    const std::vector<std::string>& foot_names = robot_model_->getFootNames();
     if(use_contact_sensors_)
-        for(unsigned int i = 0; i<foot_names.size(); i++)
+        for(const auto& tmp : contact_sensors_)
         {
-            tmp_vector3d_[0] = contact_sensors_[foot_names[i]].getForce()[0];
-            tmp_vector3d_[1] = contact_sensors_[foot_names[i]].getForce()[1];
-            tmp_vector3d_[2] = contact_sensors_[foot_names[i]].getForce()[2];
-            state_estimator_->setContactForces(foot_names[i],tmp_vector3d_);
+            tmp_vector3d_[0] = tmp.second.getForce()[0];
+            tmp_vector3d_[1] = tmp.second.getForce()[1];
+            tmp_vector3d_[2] = tmp.second.getForce()[2];
+            state_estimator_->setContactForces(tmp.first,tmp_vector3d_);
         }
 
     state_estimator_->update(dt);
-
 }
 
 void Controller::updateStateMachine(const double &dt)
