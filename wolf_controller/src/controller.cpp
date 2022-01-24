@@ -30,7 +30,11 @@ std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
 
 Controller::Controller()
-    :stopping_(false)
+    :MultiInterfaceController<hardware_interface::EffortJointInterface,
+                              hardware_interface::ImuSensorInterface,
+                              hardware_interface::GroundTruthInterface,
+                              hardware_interface::ContactSwitchSensorInterface> (true) // allow_optional_interfaces = true
+    ,stopping_(false)
     ,mode_(WALKING)
     ,posture_(DOWN)
 {
