@@ -76,8 +76,6 @@ public:
      */
   bool freezeBase(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 
-  virtual bool registerInterfaces();
-
 private:
 
   std::shared_ptr<gazebo::sensors::ImuSensor> imu_sensor_;

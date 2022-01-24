@@ -10,60 +10,77 @@ namespace wolf_gazebo_interface
 
   using namespace hardware_interface;
 
-  bool WolfRobotHwSim::initSim(const std::string& robot_namespace,
+  bool WolfRobotHwSim::initSim(const std::string& /*robot_namespace*/,
                               ros::NodeHandle model_nh,
                               gazebo::physics::ModelPtr parent_model,
-                              const urdf::Model *const urdf_model,
-                              std::vector<transmission_interface::TransmissionInfo> transmissions)
+                              const urdf::Model *const /*urdf_model*/,
+                              std::vector<transmission_interface::TransmissionInfo> /*transmissions*/)
   {
 
     const auto& sensor_manager  = gazebo::sensors::SensorManager::Instance();
-
-    std::vector<std::string> joint_names(transmissions.size());
-    // Initialize values from the transmission interface i.e. by using actuated joints (no floating base).
-    for (unsigned int j=0; j < transmissions.size(); j++)
-    {
-      // Check that this transmission has one joint
-      if (transmissions[j].joints_.size() == 0)
-      {
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-                              << " has no associated joints.");
-        continue;
-      }
-      else if (transmissions[j].joints_.size() > 1)
-      {
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-                              << " has more than one joint. Currently the default robot hardware simulation "
-                              << " interface only supports one.");
-        continue;
-      }
-      // Check that this transmission has one actuator
-      if (transmissions[j].actuators_.size() == 0)
-      {
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-                              << " has no associated actuators.");
-        continue;
-      }
-      else if (transmissions[j].actuators_.size() > 1)
-      {
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-                              << " has more than one actuator. Currently the default robot hardware simulation "
-                              << " interface only supports one.");
-        continue;
-      }
-      joint_names[j] = transmissions[j].joints_[0].name_;
-    }
-
-    if(!WolfRobotHwInterface::initializeInterfaces(joint_names))
-    {
-      ROS_ERROR_NAMED(CLASS_NAME,"Initialization of WolfRobotHwInterface failed.");
-      return false;
-    }
-
     sim_model_ = parent_model;
+    inital_pose = sim_model_->WorldPose();
+    robot_name_ = sim_model_->GetName();
 
-    for (unsigned int j=0; j < n_dof_; j++) {
+    //std::vector<std::string> joint_names(transmissions.size());
+    //// Initialize values from the transmission interface i.e. by using actuated joints (no floating base).
+    //for (unsigned int j=0; j < transmissions.size(); j++)
+    //{
+    //  // Check that this transmission has one joint
+    //  if (transmissions[j].joints_.size() == 0)
+    //  {
+    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
+    //                          << " has no associated joints.");
+    //    continue;
+    //  }
+    //  else if (transmissions[j].joints_.size() > 1)
+    //  {
+    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
+    //                          << " has more than one joint. Currently the default robot hardware simulation "
+    //                          << " interface only supports one.");
+    //    continue;
+    //  }
+    //  // Check that this transmission has one actuator
+    //  if (transmissions[j].actuators_.size() == 0)
+    //  {
+    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
+    //                          << " has no associated actuators.");
+    //    continue;
+    //  }
+    //  else if (transmissions[j].actuators_.size() > 1)
+    //  {
+    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
+    //                          << " has more than one actuator. Currently the default robot hardware simulation "
+    //                          << " interface only supports one.");
+    //    continue;
+    //  }
+    //  joint_names[j] = transmissions[j].joints_[0].name_;
+    //}
+    //
+    //// Load the joint names from the SRDF
+    //auto joint_names_srdf = loadJointNamesFromSRDF();
+    //
+    //// Check that the joints with transmission are the same as the joints loaded from the SRDF
+    //if(joint_names_srdf.size() != joint_names.size())
+    //{
+    //  ROS_ERROR_NAMED(CLASS_NAME,"Joints in the SRDF don't have a transmission.");
+    //  return false;
+    //}
+    //for(unsigned int i=0;i<joint_names_srdf.size();i++)
+    //    if(joint_names_srdf[i] != joint_names[i])
+    //    {
+    //      ROS_ERROR_NAMED(CLASS_NAME,"Joints in the SRDF don't have a transmission.");
+    //      return false;
+    //    }
 
+    // Hardware interfaces: Joints
+    if(WolfRobotHwInterface::initializeJointsInterface()) // Note: this is mandatory
+        registerInterface(&joint_state_interface_);
+    else
+        return false;
+
+    for(unsigned int j=0;j<n_dof_;j++)
+    {
       gazebo::physics::JointPtr joint = parent_model->GetJoint(joint_names_[j]);
       if (!joint)
       {
@@ -77,49 +94,39 @@ namespace wolf_gazebo_interface
       joint_effort_limits_[j] = joint->GetEffortLimit(0);
       // TODO this set is useless:
       // joint->SetEffortLimit(0,joint_effort_limits_[j]);
-
     }
 
-    inital_pose = sim_model_->WorldPose();
-    robot_name_ = sim_model_->GetName();
-
-    // Hardware interfaces: Base IMU sensors
-    imu_sensor_ = std::dynamic_pointer_cast<gazebo::sensors::ImuSensor>(sensor_manager->GetSensor("trunk_imu"));
+    // Hardware interfaces: IMU sensor
+    if(WolfRobotHwInterface::initializeImuInterface()) // Note: this is NOT mandatory because we can use the robot's pose in gazebo
+        registerInterface(&imu_sensor_interface_);
+    imu_sensor_ = std::dynamic_pointer_cast<gazebo::sensors::ImuSensor>(sensor_manager->GetSensor(imu_data_.name));
     if (!this->imu_sensor_)
-      ROS_WARN_NAMED(CLASS_NAME,"Could not find base IMU sensor, using the ground truth to fill the IMU data instead.");
+      ROS_WARN_NAMED(CLASS_NAME,"Could not find base IMU sensor, using gazebo ground truth to fill the IMU data instead.");
+
+    // Hardware interfaces: Ground Truth
+    if(WolfRobotHwInterface::initializeGroundTruthInterface()) // Note: this is mandatory because we need the robot's pose
+         registerInterface(&ground_truth_interface_);
+    else
+        return false;
 
     // Hardware interfaces: Contact sensors
+    if(WolfRobotHwInterface::initializeContactSensorsInterface()) // Note: this is NOT mandatory
+        registerInterface(&contact_sensor_interface_);
     for(unsigned int i=0; i < contact_sensor_names_.size(); i++)
     {
       contact_sensors_.push_back(std::dynamic_pointer_cast<gazebo::sensors::ContactSensor>(sensor_manager->GetSensor(contact_sensor_names_[i])));
       if(!this->contact_sensors_.back())
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Could not find "<< contact_sensor_names_[i] <<" .");
+        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Could not find contact sensor"<< contact_sensor_names_[i] <<".");
     }
 
     // Freeze base service
-    ss_ = model_nh.advertiseService("freeze_base", &WolfRobotHwSim::freezeBase, this); //FIXME it should be moved to a dedicated interface
+    ss_ = model_nh.advertiseService("freeze_base", &WolfRobotHwSim::freezeBase, this);
     freeze_base_sim_ = false;
 
-    registerInterfaces();
-
     return true;
   }
 
-  bool WolfRobotHwSim::registerInterfaces()
-  {
-    if(isInitialized())
-    {
-      // Register interfaces
-      registerInterface(&joint_state_interface_);
-      registerInterface(&imu_sensor_interface_);
-      registerInterface(&ground_truth_interface_);
-      registerInterface(&contact_sensor_interface_);
-      registerInterface(&joint_effort_interface_);
-    }
-    return true;
-  }
-
-  bool WolfRobotHwSim::freezeBase(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+  bool WolfRobotHwSim::freezeBase(std_srvs::Empty::Request& /*req*/, std_srvs::Empty::Response& /*res*/)
   {
     //Freeze_base control
     freeze_base_sim_ = !freeze_base_sim_;
@@ -138,16 +145,18 @@ namespace wolf_gazebo_interface
   void WolfRobotHwSim::readSim(ros::Time /*time*/, ros::Duration period)
   {
 
-    for (unsigned int j=0; j < n_dof_; j++) {
+    for (unsigned int j=0; j < n_dof_; j++)
+    {
       // Gazebo has an interesting API...
-      if (joint_types_[j] == urdf::Joint::PRISMATIC) {
+      if (joint_types_[j] == urdf::Joint::PRISMATIC)
         joint_position_[j] = sim_joints_[j]->Position(0);
-      } else {
+
+      else
         joint_position_[j] += angles::shortest_angular_distance(joint_position_[j],
                                                                 sim_joints_[j]->Position(0));
-      }
+
       joint_velocity_[j] = sim_joints_[j]->GetVelocity(0);
-      joint_effort_[j] = sim_joints_[j]->GetForce((unsigned int)(0));
+      joint_effort_[j] = sim_joints_[j]->GetForce(static_cast<unsigned int>(0));
     }
 
     //Ground truth:
@@ -157,12 +166,12 @@ namespace wolf_gazebo_interface
     base_lin_vel_[2] = gzLinearVel.Z();
 
     //gazebo::math::Vector3  gzLinearAcc = sim_model_->GetLink("base_link")->GetLinearAccel(); //not working
-    base_lin_acc_[0] = (base_lin_vel_[0] - base_lin_vel_old_[0])/period.toSec();
-    base_lin_acc_[1] = (base_lin_vel_[1] - base_lin_vel_old_[1])/period.toSec();
-    base_lin_acc_[2] = (base_lin_vel_[2] - base_lin_vel_old_[2])/period.toSec();
-    base_lin_vel_old_[0] = base_lin_vel_[0];
-    base_lin_vel_old_[1] = base_lin_vel_[1];
-    base_lin_vel_old_[2] = base_lin_vel_[2];
+    base_lin_acc_[0] = (base_lin_vel_[0] - base_lin_vel_prev_[0])/period.toSec();
+    base_lin_acc_[1] = (base_lin_vel_[1] - base_lin_vel_prev_[1])/period.toSec();
+    base_lin_acc_[2] = (base_lin_vel_[2] - base_lin_vel_prev_[2])/period.toSec();
+    base_lin_vel_prev_[0] = base_lin_vel_[0];
+    base_lin_vel_prev_[1] = base_lin_vel_[1];
+    base_lin_vel_prev_[2] = base_lin_vel_[2];
 
     ignition::math::Vector3d  gzAngularVel = sim_model_->WorldAngularVel();
     base_ang_vel_[0] = gzAngularVel.X();
@@ -170,12 +179,12 @@ namespace wolf_gazebo_interface
     base_ang_vel_[2] = gzAngularVel.Z();
 
     //gazebo::math::Vector3  gzAngularAcc = sim_model_->GetWorldAngularAccel(); //not working
-    base_ang_acc_[0] = (base_ang_vel_[0] - base_ang_vel_old_[0])/period.toSec();
-    base_ang_acc_[1] = (base_ang_vel_[1] - base_ang_vel_old_[1])/period.toSec();
-    base_ang_acc_[2] = (base_ang_vel_[2] - base_ang_vel_old_[2])/period.toSec();
-    base_ang_vel_old_[0] = base_lin_vel_[0];
-    base_ang_vel_old_[1] = base_lin_vel_[1];
-    base_ang_vel_old_[2] = base_lin_vel_[2];
+    base_ang_acc_[0] = (base_ang_vel_[0] - base_ang_vel_prev_[0])/period.toSec();
+    base_ang_acc_[1] = (base_ang_vel_[1] - base_ang_vel_prev_[1])/period.toSec();
+    base_ang_acc_[2] = (base_ang_vel_[2] - base_ang_vel_prev_[2])/period.toSec();
+    base_ang_vel_prev_[0] = base_lin_vel_[0];
+    base_ang_vel_prev_[1] = base_lin_vel_[1];
+    base_ang_vel_prev_[2] = base_lin_vel_[2];
 
     ignition::math::Pose3d gzPose = sim_model_->WorldPose();
     base_lin_pos_[0] = gzPose.Pos().X();
@@ -298,14 +307,15 @@ namespace wolf_gazebo_interface
   }
 
 
-  void WolfRobotHwSim::writeSim(ros::Time time, ros::Duration period)
+  void WolfRobotHwSim::writeSim(ros::Time /*time*/, ros::Duration /*period*/)
   {
 
     if(freeze_base_sim_)
     {
       sim_model_->SetWorldPose(inital_pose);
-      gazebo::physics::LinkPtr base_link = sim_model_->GetLink("base_link");
-      if(base_link != nullptr){
+      gazebo::physics::LinkPtr base_link = sim_model_->GetLink(gt_data_.frame_id);
+      if(base_link != nullptr)
+      {
         //Set velocities and accelerations only for the base link:
         base_link->SetLinearVel(ignition::math::Vector3d::Zero);
         //base_link->SetLinearAccel(ignition::math::Vector3d::Zero); // Deprecated in gazebo9
@@ -314,19 +324,8 @@ namespace wolf_gazebo_interface
       }
     }
 
-    //PDFF
-    std::vector<double> ufb(n_dof_,0.0);
-    std::vector<double> upd(n_dof_,0.0);
-    std::vector<double> u_des(n_dof_,0.0);
-    for (unsigned int i=0; i < n_dof_; i++) {
-      ufb[i] += (joint_position_command_[i] - joint_position_[i]) * joint_p_gain_command_[i];
-      ufb[i] += (joint_velocity_command_[i] - joint_velocity_[i]) * joint_d_gain_command_[i];
-      u_des[i] = ufb[i] + joint_effort_command_[i];
-    }
-
-    for (unsigned int j=0; j < n_dof_; j++) {
-      sim_joints_[j]->SetForce(0, u_des[j]);
-    }
-
+    for (unsigned int j=0; j < n_dof_; j++)
+      sim_joints_[j]->SetForce(0, joint_effort_command_[j]);
   }
-}
+
+} // namespace

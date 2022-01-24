@@ -11,6 +11,7 @@
 #include <hardware_interface/robot_hw.h>
 #include <transmission_interface/transmission_info.h>
 #include <urdf/model.h>
+#include <srdfdom/model.h>
 #include <deque>
 
 namespace hardware_interface
@@ -25,15 +26,18 @@ public:
     WolfRobotHwInterface();
     virtual ~WolfRobotHwInterface();
 
-    bool initializeInterfaces(const std::vector<std::string>& joint_names);
-
-    virtual bool registerInterfaces() = 0;
+    bool initializeJointsInterface();
+    bool initializeImuInterface();
+    bool initializeGroundTruthInterface();
+    bool initializeContactSensorsInterface();
 
     std::string getRobotName() {return robot_name_;}
     unsigned int getNdof() {return n_dof_;}
-    bool isInitialized() {return initialized_;}
 
     std::vector<std::string> loadJointNamesFromSRDF();
+    std::string loadImuLinkNameFromSRDF();
+    std::string loadBaseLinkNameFromSRDF();
+    std::vector<std::string> loadContactSensorNamesFromSRDF();
 
 protected:
 
@@ -49,33 +53,23 @@ protected:
     std::vector<std::string> joint_names_;
     std::vector<std::string> contact_sensor_names_;
     std::vector<int> joint_types_;
-    std::vector<double> joint_lower_limits_;
-    std::vector<double> joint_upper_limits_;
     std::vector<double> joint_effort_limits_;
     std::vector<double> joint_position_;
     std::vector<double> joint_velocity_;
     std::vector<double> joint_effort_;
-    std::vector<double> joint_p_gain_;
-    std::vector<double> joint_i_gain_;
-    std::vector<double> joint_d_gain_;
     std::vector<double> joint_effort_command_;
-    std::vector<double> joint_position_command_;
-    std::vector<double> joint_velocity_command_;
-    std::vector<double> joint_p_gain_command_;
-    std::vector<double> joint_i_gain_command_;
-    std::vector<double> joint_d_gain_command_;
 
-    hardware_interface::GroundTruthHandle::Data gtData;
+    hardware_interface::GroundTruthHandle::Data gt_data_;
     std::vector<double> base_orientation_;
     std::vector<double>	base_ang_vel_;
-    std::vector<double> base_ang_vel_old_;
+    std::vector<double> base_ang_vel_prev_;
     std::vector<double>	base_ang_acc_;
     std::vector<double>	base_lin_acc_;
     std::vector<double>	base_lin_pos_;
     std::vector<double>	base_lin_vel_;
-    std::vector<double> base_lin_vel_old_;
+    std::vector<double> base_lin_vel_prev_;
 
-    hardware_interface::ImuSensorHandle::Data imuData;
+    hardware_interface::ImuSensorHandle::Data imu_data_;
     std::vector<double> imu_orientation_;
     std::vector<double>	imu_ang_vel_;
     std::vector<double>	imu_lin_acc_;
@@ -86,10 +80,9 @@ protected:
     std::vector<std::vector<double> > normal_;
     std::deque<bool> contact_;
 
-
 private:
 
-    bool initialized_;
+    bool parseSRDF(srdf::Model& srdf_model);
 };
 
 } //@namespace hardware_interface
