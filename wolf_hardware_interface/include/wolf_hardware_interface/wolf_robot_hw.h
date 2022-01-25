@@ -26,10 +26,10 @@ public:
     WolfRobotHwInterface();
     virtual ~WolfRobotHwInterface();
 
-    bool initializeJointsInterface();
-    bool initializeImuInterface();
-    bool initializeGroundTruthInterface();
-    bool initializeContactSensorsInterface();
+    void initializeJointsInterface(const std::vector<std::string>& joint_names);
+    void initializeImuInterface(const std::string& imu_link_name);
+    void initializeGroundTruthInterface(const std::string& base_link_name);
+    void initializeContactSensorsInterface(const std::vector<std::string>& contact_names);
 
     std::string getRobotName() {return robot_name_;}
     unsigned int getNdof() {return n_dof_;}
@@ -79,6 +79,7 @@ protected:
     std::vector<std::vector<double> > torque_;
     std::vector<std::vector<double> > normal_;
     std::deque<bool> contact_;
+
 
 private:
 

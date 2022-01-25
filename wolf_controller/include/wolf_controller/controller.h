@@ -14,14 +14,12 @@
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
-#include <wolf_hardware_interface/ground_truth_interface.h>
-#include <wolf_hardware_interface/contact_switch_sensor_interface.h>
 // STD
 #include <atomic>
 #include <thread>
 #include <chrono>
 #include <memory>
-// Controller
+// WoLF
 #include <wolf_controller/quadruped_robot.h>
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/impedance.h>
@@ -32,6 +30,8 @@
 #include <wolf_controller/id_problem.h>
 #include <wolf_controller/ros_wrappers/interface.h>
 #include <wolf_controller/devices/interface.h>
+#include <wolf_hardware_interface/ground_truth_interface.h>
+#include <wolf_hardware_interface/contact_switch_sensor_interface.h>
 
 // Eigen
 #include <Eigen/Geometry>
@@ -39,10 +39,10 @@
 namespace wolf_controller
 {
 
-class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
-                                                                         hardware_interface::ImuSensorInterface,
-                                                                         hardware_interface::GroundTruthInterface,
-                                                                         hardware_interface::ContactSwitchSensorInterface>
+class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface, // Mandatory interface
+                                                                         hardware_interface::ImuSensorInterface, // Mandatory interface
+                                                                         hardware_interface::GroundTruthInterface, // Optional interface
+                                                                         hardware_interface::ContactSwitchSensorInterface> // Optional interface
 {
 public:
 

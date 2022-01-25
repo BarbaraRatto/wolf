@@ -12,13 +12,8 @@ WolfRobotHwInterface::~WolfRobotHwInterface()
 {
 }
 
-bool WolfRobotHwInterface::initializeJointsInterface()
+void WolfRobotHwInterface::initializeJointsInterface(const std::vector<std::string>& joint_names)
 {
-    auto joint_names = loadJointNamesFromSRDF();
-
-    if(joint_names.size()<=0)
-        return false;
-
     // Resize vectors to our DOF
     n_dof_ = static_cast<unsigned int>(joint_names.size());
     joint_names_.resize(n_dof_);
@@ -35,9 +30,9 @@ bool WolfRobotHwInterface::initializeJointsInterface()
         ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Loading joint: "<< joint_names[j]);
 
         joint_names_[j]          = joint_names[j];
-        joint_position_[j]       = 1.0;
+        joint_position_[j]       = 0.0;
         joint_velocity_[j]       = 0.0;
-        joint_effort_[j]         = 1.0;  // N/m for continuous joints
+        joint_effort_[j]         = 0.0;  // N/m for continuous joints
         joint_effort_command_[j] = 0.0;
 
         // Create joint state interface for all joints
@@ -46,17 +41,10 @@ bool WolfRobotHwInterface::initializeJointsInterface()
 
         joint_effort_interface_.registerHandle(JointHandle(joint_state_interface_.getHandle(joint_names_[j]), &joint_effort_command_[j]));
     }
-
-    return true;
 }
 
-bool WolfRobotHwInterface::initializeImuInterface()
+void WolfRobotHwInterface::initializeImuInterface(const std::string& imu_link_name)
 {
-    auto imu_link_name = loadImuLinkNameFromSRDF();
-
-    if(imu_link_name.empty())
-        return false;
-
     imu_orientation_.resize(4);
     imu_ang_vel_.resize(3);
     imu_lin_acc_.resize(3);
@@ -67,17 +55,10 @@ bool WolfRobotHwInterface::initializeImuInterface()
     imu_data_.angular_velocity = &imu_ang_vel_[0];
     imu_data_.linear_acceleration = &imu_lin_acc_[0];
     imu_sensor_interface_.registerHandle(hardware_interface::ImuSensorHandle(imu_data_));
-
-    return true;
 }
 
-bool WolfRobotHwInterface::initializeGroundTruthInterface()
+void WolfRobotHwInterface::initializeGroundTruthInterface(const std::string& base_link_name)
 {
-    auto base_link_name = loadBaseLinkNameFromSRDF();
-
-    if(base_link_name.empty())
-        return false;
-
     base_orientation_.resize(4);
     base_ang_vel_.resize(3);
     base_ang_vel_prev_.resize(3);
@@ -96,17 +77,10 @@ bool WolfRobotHwInterface::initializeGroundTruthInterface()
     gt_data_.linear_position = &base_lin_pos_[0];
     gt_data_.linear_velocity = &base_lin_vel_[0];
     ground_truth_interface_.registerHandle(hardware_interface::GroundTruthHandle(gt_data_));
-
-    return true;
 }
 
-bool WolfRobotHwInterface::initializeContactSensorsInterface()
+void WolfRobotHwInterface::initializeContactSensorsInterface(const std::vector<std::string>& contact_names)
 {
-     auto contact_names = loadContactSensorNamesFromSRDF();
-
-     if(contact_names.size()<=0)
-         return false;
-
      for(unsigned int i=0;i<contact_names.size();i++)
         contact_sensor_names_.push_back(contact_names[i]);
 
@@ -123,8 +97,6 @@ bool WolfRobotHwInterface::initializeContactSensorsInterface()
          normal_[i].resize(3,0);
          contact_sensor_interface_.registerHandle(hardware_interface::ContactSwitchSensorHandle(contact_sensor_names_[i], &contact_[i], &force_[i][0], &torque_[i][0], &normal_[i][0]));
      }
-
-     return true;
 }
 
 std::vector<std::string> WolfRobotHwInterface::loadJointNamesFromSRDF()
@@ -158,7 +130,7 @@ std::string WolfRobotHwInterface::loadImuLinkNameFromSRDF()
                 if(links.size()==1)
                     imu_name = links[0];
                 else
-                    throw std::runtime_error("There can be only one imu defined in the SRDF file!");
+                    throw std::runtime_error("There can be only one imu_sensor defined in the SRDF file!");
             }
         }
     }
@@ -197,7 +169,7 @@ std::vector<std::string> WolfRobotHwInterface::loadContactSensorNamesFromSRDF()
         for(unsigned int i=0;i < groups.size(); i++)
         {
             const auto& links  = groups[i].links_;
-            if(groups[i].name_.find("contacts") != std::string::npos)
+            if(groups[i].name_.find("contact_sensors") != std::string::npos)
                 for(unsigned int j=0;j<links.size();j++)
                     contact_names.push_back(links[j]);
 
@@ -208,25 +180,26 @@ std::vector<std::string> WolfRobotHwInterface::loadContactSensorNamesFromSRDF()
 
 bool WolfRobotHwInterface::parseSRDF(srdf::Model& srdf_model)
 {
-    ros::NodeHandle nh;
-    std::string srdf, urdf;
-    if(!nh.getParam("/robot_description",urdf))
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"robot_description not available in the ros param server");
-        return false;
-    }
-    if(!nh.getParam("/robot_semantic_description",srdf))
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"robot_description_semantic not available in the ros param server");
-        return false;
-    }
+  ros::NodeHandle nh;
+  std::string srdf, urdf;
+  if(!nh.getParam("/robot_description",urdf))
+  {
+      ROS_ERROR_NAMED(CLASS_NAME,"robot_description not available in the ros param server");
+      return false;
+  }
+  if(!nh.getParam("/robot_semantic_description",srdf))
+  {
+      ROS_ERROR_NAMED(CLASS_NAME,"robot_description_semantic not available in the ros param server");
+      return false;
+  }
 
-    urdf::ModelInterfaceSharedPtr u = urdf::parseURDF(urdf);
-    if(!srdf_model.initString(*u,srdf))
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"Can not initialize SRDF model from XML string!");
-        return false;
-    }
+  urdf::ModelInterfaceSharedPtr u = urdf::parseURDF(urdf);
+  if(!srdf_model.initString(*u,srdf))
+  {
+      ROS_ERROR_NAMED(CLASS_NAME,"Can not initialize SRDF model from XML string!");
+      return false;
+  }
 
-    return true;
+  return true;
+
 }

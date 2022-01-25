@@ -72,7 +72,7 @@ public:
   void writeSim(ros::Time time, ros::Duration period);
 
   /**
-     * @brief Freeze!
+     * @brief Freeze Base
      */
   bool freezeBase(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 
@@ -83,19 +83,14 @@ private:
 
   std::vector<gazebo::physics::JointPtr> sim_joints_;
   gazebo::physics::ModelPtr sim_model_;
-  ignition::math::Pose3d inital_pose;
+  ignition::math::Pose3d inital_pose_;
 
   ros::ServiceServer ss_;
   bool freeze_base_sim_;
 
-  std::vector<double> torque_offsets;
-  bool useTorqueOffsets;
-
   Eigen::Quaterniond quaterniond_tmp_;
   Eigen::Matrix3d world_R_base_;
   Eigen::Vector3d vector3d_tmp_;
-
-  bool use_gt_to_fill_imu_;
 };
 
 }

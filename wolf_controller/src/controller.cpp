@@ -54,70 +54,93 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     assert(robot_hw);
 
+    robot_model_.reset(createRobotModel(root_nh));
+    joint_names_ = robot_model_->getJointNames();
+
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
     hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
     hardware_interface::ContactSwitchSensorInterface* cs_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
 
-    // Hardware interfaces checks
+    // Hardware interfaces: Joints
     if(!jt_hw)
     {
         ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::EffortJointInterface not found");
         return false;
     }
+    else
+    {
+      // Setting up joint handles:
+      for (unsigned int i = 0; i < joint_names_.size(); i++)
+      {
+          // Getting joint state handle
+          try
+          {
+              ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Found joint: "<<joint_names_[i]);
+              joint_states_.push_back(jt_hw->getHandle(joint_names_[i])); // FIXME
+          }
+          catch(...)
+          {
+              ROS_ERROR_NAMED(CLASS_NAME,"Error loading the joint handles");
+              return false;
+          }
+      }
+      assert(joint_states_.size()>0);
+    }
+
     if(!imu_hw)
     {
         ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ImuSensorInterface not found");
         return false;
     }
-    if(!gt_hw)
-        ROS_WARN_NAMED(CLASS_NAME,"hardware_interface::GroundTruthInterface not found");
-    else
-        ground_truth_ = gt_hw->getHandle("ground_truth");
-
-    robot_model_.reset(createRobotModel(root_nh));
-    joint_names_ = robot_model_->getJointNames();
-
-    if(!cs_hw)
-        ROS_WARN_NAMED(CLASS_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
     else
     {
-        const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-        for(unsigned int i=0;i<foot_names.size();i++)
-          contact_sensors_[foot_names[i]] = cs_hw->getHandle(foot_names[i]); // FIXME Hardcoded
-        //contact_sensors_["rf_foot"] = cs_hw->getHandle("rf_foot_contact_sensor"); // FIXME Hardcoded
-        //contact_sensors_["lh_foot"] = cs_hw->getHandle("lh_foot_contact_sensor"); // FIXME Hardcoded
-        //contact_sensors_["rh_foot"] = cs_hw->getHandle("rh_foot_contact_sensor"); // FIXME Hardcoded
-    }
-
-    // Setting up joint handles:
-    for (unsigned int i = 0; i < joint_names_.size(); i++)
-    {
-        // Getting joint state handle
         try
         {
-            ROS_DEBUG_STREAM("Found joint: "<<joint_names_[i]);
-            joint_states_.push_back(jt_hw->getHandle(joint_names_[i]));
+            std::string imu_sensor_name;
+            if(controller_nh.getParam("imu_sensor_name",imu_sensor_name))
+              imu_sensor_ = imu_hw->getHandle(imu_sensor_name); // Take the selected imu sensor
+            else
+              imu_sensor_ = imu_hw->getHandle(imu_hw->getNames()[0]); // Take the first imu sensor
         }
         catch(...)
         {
-            ROS_ERROR_NAMED(CLASS_NAME,"Error loading the joint handles");
+            ROS_ERROR_NAMED(CLASS_NAME,"Error loading the imu handler");
             return false;
         }
     }
-    assert(joint_states_.size()>0);
 
-    try
+    if(!gt_hw)
+        ROS_WARN_NAMED(CLASS_NAME,"hardware_interface::GroundTruthInterface not found");
+    else
+        ground_truth_ = gt_hw->getHandle(gt_hw->getNames()[0]);
+
+    use_contact_sensors_ = false;
+    if(controller_nh.getParam("use_contact_sensors",use_contact_sensors_))
     {
-        imu_name_ = "trunk_imu"; //FIXME note the hardcoded name...
-        ROS_DEBUG_STREAM("Found imu sensor: "<<imu_name_);
-        imu_sensor_ = imu_hw->getHandle(imu_name_);
+      if(!cs_hw)
+      {
+          ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
+          return false;
+      }
+      else
+      {
+          auto contact_sensor_names = cs_hw->getNames();
+          if(contact_sensor_names.size() != N_LEGS)
+          {
+            ROS_ERROR_NAMED(CLASS_NAME,"Wrong number of contact sensors! The magic number is 4");
+            return false;
+          }
+          auto foot_names = robot_model_->getFootNames();
+          contact_sensor_names = sortByLegPrefix(contact_sensor_names);
+          for(unsigned int i=0;i<contact_sensor_names.size();i++)
+            contact_sensors_[foot_names[i]] = cs_hw->getHandle(contact_sensor_names[i]);
+      }
     }
-    catch(...)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"Error loading imu_sensor_");
-        return false;
-    }
+    if(!use_contact_sensors_) // Use the contact sensors
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
+    else
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
 
     if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
     {
@@ -125,13 +148,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         return false;
     }
     _period = period_;
-
-    use_contact_sensors_ = false;
-    root_nh.getParam("/contact_sensors",use_contact_sensors_);
-    if(!use_contact_sensors_) // Use the contact sensors
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
-    else
-        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -187,27 +203,28 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     previous_height_ = robot_model_->getStandUpHeight();
 
+    // Device handler selection
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
     {
         device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use Ps3JoyHandler input device");
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using Ps3JoyHandler input device");
     }
     else if(input_device == "xbox")
     {
         device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use XboxJoyHandler input device");
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using XboxJoyHandler input device");
     }
     else if(input_device == "twist")
     {
         device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use TwistHandler input device");
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using TwistHandler input device");
     }
     else if(input_device == "keyboard")
     {
         device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use KeyboardHandler input device");
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using KeyboardHandler input device");
     }
     else
     {
