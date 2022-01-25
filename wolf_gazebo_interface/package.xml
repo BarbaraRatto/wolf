@@ -2,17 +2,12 @@
 <package format="2">
   <name>wolf_gazebo_interface</name>
   <version>0.0.1</version>
-  <description>
-        This package contains the gazebo hardware interface
-  </description>
+  <description>Gazebo hardware interface for WoLF</description>
   <maintainer email="gennaro.raiola@gmail.com">TODO</maintainer>
 
   <license>TODO</license>
 
-  <author>TODO</author>
-
   <buildtool_depend>catkin</buildtool_depend>
-
   <depend>roscpp</depend>
   <depend>gazebo_ros</depend>
   <depend>gazebo_ros_control</depend>

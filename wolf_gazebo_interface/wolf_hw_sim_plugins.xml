@@ -4,7 +4,7 @@
          type="wolf_gazebo_interface::WolfRobotHwSim"
     	 base_class_type="gazebo_ros_control::RobotHWSim">
     <description>
-      The WoLF simulation interface which constructs joint handles from an SDF/URDF.
+      WoLF simulation interface for Gazebo
     </description>
   </class>
 

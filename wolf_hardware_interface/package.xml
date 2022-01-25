@@ -2,7 +2,7 @@
 <package format="2">
   <name>wolf_hardware_interface</name>
   <version>0.0.1</version>
-  <description>Hardware Interface</description>
+  <description>Hardware interface for WoLF</description>
   <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>
 
   <license>TODO</license>

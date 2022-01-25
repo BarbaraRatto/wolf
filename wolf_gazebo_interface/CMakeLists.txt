@@ -30,7 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   realtime_tools
   urdf)
 
-# Depend on system install of Gazebo
+# Depend on system installation of Gazebo
 find_package(gazebo REQUIRED)
 
 catkin_package(
