@@ -22,102 +22,63 @@ namespace wolf_gazebo_interface
     inital_pose = sim_model_->WorldPose();
     robot_name_ = sim_model_->GetName();
 
-    //std::vector<std::string> joint_names(transmissions.size());
-    //// Initialize values from the transmission interface i.e. by using actuated joints (no floating base).
-    //for (unsigned int j=0; j < transmissions.size(); j++)
-    //{
-    //  // Check that this transmission has one joint
-    //  if (transmissions[j].joints_.size() == 0)
-    //  {
-    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-    //                          << " has no associated joints.");
-    //    continue;
-    //  }
-    //  else if (transmissions[j].joints_.size() > 1)
-    //  {
-    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-    //                          << " has more than one joint. Currently the default robot hardware simulation "
-    //                          << " interface only supports one.");
-    //    continue;
-    //  }
-    //  // Check that this transmission has one actuator
-    //  if (transmissions[j].actuators_.size() == 0)
-    //  {
-    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-    //                          << " has no associated actuators.");
-    //    continue;
-    //  }
-    //  else if (transmissions[j].actuators_.size() > 1)
-    //  {
-    //    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Transmission " << transmissions[j].name_
-    //                          << " has more than one actuator. Currently the default robot hardware simulation "
-    //                          << " interface only supports one.");
-    //    continue;
-    //  }
-    //  joint_names[j] = transmissions[j].joints_[0].name_;
-    //}
-    //
-    //// Load the joint names from the SRDF
-    //auto joint_names_srdf = loadJointNamesFromSRDF();
-    //
-    //// Check that the joints with transmission are the same as the joints loaded from the SRDF
-    //if(joint_names_srdf.size() != joint_names.size())
-    //{
-    //  ROS_ERROR_NAMED(CLASS_NAME,"Joints in the SRDF don't have a transmission.");
-    //  return false;
-    //}
-    //for(unsigned int i=0;i<joint_names_srdf.size();i++)
-    //    if(joint_names_srdf[i] != joint_names[i])
-    //    {
-    //      ROS_ERROR_NAMED(CLASS_NAME,"Joints in the SRDF don't have a transmission.");
-    //      return false;
-    //    }
-
     // Hardware interfaces: Joints
-    if(WolfRobotHwInterface::initializeJointsInterface()) // Note: this is mandatory
+    if(WolfRobotHwInterface::initializeJointsInterface())
+    {
         registerInterface(&joint_state_interface_);
+        registerInterface(&joint_effort_interface_);
+        for(unsigned int j=0;j<n_dof_;j++)
+        {
+          gazebo::physics::JointPtr joint = parent_model->GetJoint(joint_names_[j]);
+          if (!joint)
+          {
+            ROS_ERROR_STREAM_NAMED(CLASS_NAME,"This robot has a joint named \"" << joint_names_[j]
+                                   << "\" which is not in the gazebo model.");
+            return false;
+          }
+          // Set limits
+          sim_joints_.push_back(joint);
+          joint_effort_limits_[j] = joint->GetEffortLimit(0);
+          // TODO this set is useless:
+          // joint->SetEffortLimit(0,joint_effort_limits_[j]);
+        }
+    }
     else
         return false;
-
-    for(unsigned int j=0;j<n_dof_;j++)
-    {
-      gazebo::physics::JointPtr joint = parent_model->GetJoint(joint_names_[j]);
-      if (!joint)
-      {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"This robot has a joint named \"" << joint_names_[j]
-                               << "\" which is not in the gazebo model.");
-        return false;
-      }
-
-      // Set limits
-      sim_joints_.push_back(joint);
-      joint_effort_limits_[j] = joint->GetEffortLimit(0);
-      // TODO this set is useless:
-      // joint->SetEffortLimit(0,joint_effort_limits_[j]);
-    }
 
     // Hardware interfaces: IMU sensor
-    if(WolfRobotHwInterface::initializeImuInterface()) // Note: this is NOT mandatory because we can use the robot's pose in gazebo
-        registerInterface(&imu_sensor_interface_);
+    use_gt_to_fill_imu_ = false;
+    WolfRobotHwInterface::initializeImuInterface();
     imu_sensor_ = std::dynamic_pointer_cast<gazebo::sensors::ImuSensor>(sensor_manager->GetSensor(imu_data_.name));
-    if (!this->imu_sensor_)
-      ROS_WARN_NAMED(CLASS_NAME,"Could not find base IMU sensor, using gazebo ground truth to fill the IMU data instead.");
-
-    // Hardware interfaces: Ground Truth
-    if(WolfRobotHwInterface::initializeGroundTruthInterface()) // Note: this is mandatory because we need the robot's pose
-         registerInterface(&ground_truth_interface_);
+    if(!this->imu_sensor_)
+    {
+        ROS_WARN_NAMED(CLASS_NAME,"Could not find base IMU sensor, using gazebo ground truth to fill the IMU data instead.");
+        use_gt_to_fill_imu_ = true;
+    }
     else
-        return false;
+        registerInterface(&imu_sensor_interface_);
 
     // Hardware interfaces: Contact sensors
-    if(WolfRobotHwInterface::initializeContactSensorsInterface()) // Note: this is NOT mandatory
-        registerInterface(&contact_sensor_interface_);
-    for(unsigned int i=0; i < contact_sensor_names_.size(); i++)
+    if(WolfRobotHwInterface::initializeContactSensorsInterface())
     {
-      contact_sensors_.push_back(std::dynamic_pointer_cast<gazebo::sensors::ContactSensor>(sensor_manager->GetSensor(contact_sensor_names_[i])));
-      if(!this->contact_sensors_.back())
-        ROS_WARN_STREAM_NAMED(CLASS_NAME,"Could not find contact sensor"<< contact_sensor_names_[i] <<".");
+        registerInterface(&contact_sensor_interface_);
+        for(unsigned int i=0; i < contact_sensor_names_.size(); i++)
+        {
+          contact_sensors_.push_back(std::dynamic_pointer_cast<gazebo::sensors::ContactSensor>(sensor_manager->GetSensor(contact_sensor_names_[i])));
+          if(!this->contact_sensors_.back())
+            ROS_WARN_STREAM_NAMED(CLASS_NAME,"Could not find contact sensor "<< contact_sensor_names_[i] <<".");
+        }
     }
+
+    // Hardware interfaces: Ground Truth
+    if(WolfRobotHwInterface::initializeGroundTruthInterface())
+    {
+        registerInterface(&ground_truth_interface_);
+        if(use_gt_to_fill_imu_)
+            registerInterface(&imu_sensor_interface_);
+    }
+    else
+        return false;
 
     // Freeze base service
     ss_ = model_nh.advertiseService("freeze_base", &WolfRobotHwSim::freezeBase, this);
@@ -165,7 +126,6 @@ namespace wolf_gazebo_interface
     base_lin_vel_[1] = gzLinearVel.Y();
     base_lin_vel_[2] = gzLinearVel.Z();
 
-    //gazebo::math::Vector3  gzLinearAcc = sim_model_->GetLink("base_link")->GetLinearAccel(); //not working
     base_lin_acc_[0] = (base_lin_vel_[0] - base_lin_vel_prev_[0])/period.toSec();
     base_lin_acc_[1] = (base_lin_vel_[1] - base_lin_vel_prev_[1])/period.toSec();
     base_lin_acc_[2] = (base_lin_vel_[2] - base_lin_vel_prev_[2])/period.toSec();
@@ -178,7 +138,6 @@ namespace wolf_gazebo_interface
     base_ang_vel_[1] = gzAngularVel.Y();
     base_ang_vel_[2] = gzAngularVel.Z();
 
-    //gazebo::math::Vector3  gzAngularAcc = sim_model_->GetWorldAngularAccel(); //not working
     base_ang_acc_[0] = (base_ang_vel_[0] - base_ang_vel_prev_[0])/period.toSec();
     base_ang_acc_[1] = (base_ang_vel_[1] - base_ang_vel_prev_[1])/period.toSec();
     base_ang_acc_[2] = (base_ang_vel_[2] - base_ang_vel_prev_[2])/period.toSec();
@@ -201,7 +160,7 @@ namespace wolf_gazebo_interface
     ignition::math::Vector3d imu_lin_acc(0, 0, 0);
 
     // In this case we are using the IMU sensor which has angular velocities and accelerations defined wrt the trunk/base
-    if(imu_sensor_ != nullptr)
+    if(!use_gt_to_fill_imu_)
     {
       imu_quat    = imu_sensor_->Orientation();
       imu_ang_vel = imu_sensor_->AngularVelocity();

@@ -94,6 +94,8 @@ private:
   Eigen::Quaterniond quaterniond_tmp_;
   Eigen::Matrix3d world_R_base_;
   Eigen::Vector3d vector3d_tmp_;
+
+  bool use_gt_to_fill_imu_;
 };
 
 }

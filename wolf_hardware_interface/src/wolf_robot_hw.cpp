@@ -146,6 +146,7 @@ std::string WolfRobotHwInterface::loadImuLinkNameFromSRDF()
 {
     std::string imu_name;
     srdf::Model srdf_model;
+
     if(parseSRDF(srdf_model))
     {
         auto groups = srdf_model.getGroups();
