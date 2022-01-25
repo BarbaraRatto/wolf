@@ -21,7 +21,7 @@
     <arg name="gazebo_gui" default="true" />
     <arg name="plotjuggler_gui" default="false" />
     <arg name="rviz_gui" default="false" />
-    <arg name="rqt_gui" default="false" />
+    <arg name="rqt_gui" default="true" />
     <arg name="plot_node_gui" default="false" />
     <arg name="full_gui" default="false" />
 
