@@ -236,6 +236,24 @@ bool GaitGenerator::areAllFeetInStance()
   return result;
 }
 
+unsigned int GaitGenerator::getNumberFeetInStance()
+{
+  unsigned int n = 0;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    if(it->second.state_machine->isStance())
+      n++;
+  return n;
+}
+
+unsigned int GaitGenerator::getNumberFeetInSwing()
+{
+  unsigned int n = 0;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    if(it->second.state_machine->isSwing())
+      n++;
+  return n;
+}
+
 void GaitGenerator::setContactState(const std::string& foot_name, const bool& contact)
 {
   feet_[foot_name].contact_state = contact;
