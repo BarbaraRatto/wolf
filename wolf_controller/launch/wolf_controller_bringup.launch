@@ -1,0 +1,110 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <arg name="robot_name" default="spot"/>
+    <arg name="sensors" default="false" />
+    <arg name="internal_wrench" default="false" />
+    <arg name="world_name" default="empty" />
+    <arg name="task_period" default="0.001" />
+    <arg name="gazebo_debug" default="false" />
+    <arg name="gazebo_gui" default="true" />
+    <arg name="full_gui" default="false" />
+    <arg name="gazebo" default="true" />
+    <arg name="arm_enabled" default="false" />
+    <arg name="arm_name" default="kinova" />
+    <arg name="input_device" default="keyboard" /> <!--Supported: ps3/xbox/twist/keyboard -->
+    <arg name="engine" default="ode" />
+
+    <arg name="full_world_name" default="$(eval find('wolf_gazebo_resources') + '/worlds/' + arg('world_name') + '.world')"/>
+    <param name="/full_world_name" value="$(arg full_world_name)" />
+
+    <!-- export some params to the param server -->
+    <param name="task_period" value="$(arg task_period)"/>
+    <param name="internal_wrench" value="$(arg internal_wrench)"/>
+    <param name="robot_name" type="str"  value="$(arg robot_name)" />
+    <param name="input_device" value="$(arg input_device)"/>
+
+    <!-- Load the robot description -->
+    <group if="$(arg gazebo)">
+            <include file="$(find wolf_description_utils)/launch/world.launch">
+                <arg name="sensors" value="$(arg sensors)" />
+                <arg name="robot_name" value="$(arg robot_name)" />
+                <arg name="internal_wrench" value="$(arg internal_wrench)" />
+                <arg name="full_world_name" value="$(arg full_world_name)" />
+                <arg name="task_period" value="$(arg task_period)" />
+                <arg name="gui" value="$(arg gazebo_gui)"/>
+                <arg name="arm_enabled" value="$(arg arm_enabled)"/>
+                <arg name="arm_name" value="$(arg arm_name)"/>
+                <arg name="debug" value="$(arg gazebo_debug)"/>
+                <arg name="engine" value="$(arg engine)"/>
+            </include>
+    </group>
+
+    <group unless="$(arg gazebo)">
+        <include file="$(find wolf_description_utils)/launch/upload.launch">
+           <arg name="sensors" value="$(arg sensors)" />
+           <arg name="robot_name" value="$(arg robot_name)" />
+           <arg name="arm_enabled" value="$(arg arm_enabled)"/>
+           <arg name="arm_name" value="$(arg arm_name)"/>
+           <arg name="task_period" value="$(arg task_period)" />
+        </include>
+    </group>
+
+    <!-- Loading joint states publisher configurations from YAML file to parameter server -->
+    <rosparam file="$(find wolf_controller)/params/joint_state_publisher.yaml" ns="/$(arg robot_name)" command="load"/>
+
+    <!-- Load controller config -->
+    <group if="$(arg arm_enabled)">
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_'+arg('arm_name')+'_params.yaml')" ns="$(arg robot_name)"/>
+    </group>
+    <group unless="$(arg arm_enabled)">
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_params.yaml')" ns="$(arg robot_name)"/>
+    </group>
+
+    <!-- Spawn our controller and its friends -->
+    <include file="$(find wolf_controller)/launch/wolf_controller_spawn.launch">
+            <arg name="robot_name" value="$(arg robot_name)" />
+            <arg name="extra_controllers" value="joint_state_publisher" />
+    </include>
+
+    <!-- rqt_reconfigure gui -->
+    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="gui">
+    </node>
+
+    <!-- joy -->
+    <arg name="joy_deadzone" default="0.1"/>
+    <node pkg="joy" type="joy_node" name="joy_node" ns="/$(arg robot_name)/wolf_controller">
+            <param name="autorepeat_rate " value="500" />
+            <param name="deadzone" value="$(arg joy_deadzone)"/>
+    </node>
+
+    <!-- Convert joint states to TF transforms for rviz, etc -->
+    <node name="$(arg robot_name)_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
+        <remap from="/joint_states" to="/$(arg robot_name)/joint_states"/>
+    </node>
+
+    <group if="$(arg full_gui)">
+
+	    <!-- plot node launch -->
+	    <include  file="$(find wolf_controller)/launch/plot_node.launch">
+		<arg name="robot_name" value="$(arg robot_name)" />
+	    </include>
+
+            <!-- plotJuggler -->
+            <node pkg="plotjuggler" type="plotjuggler" name="plotjuggler" ns="/$(arg robot_name)/wolf_controller"
+                args="$(eval '--layout '+find(arg('robot_name')+'_description')+'/plotjuggler/'+arg('robot_name')+'.xml --nosplash')">
+            </node>
+
+            <!-- Rviz -->
+            <node
+                type="rviz"
+                name="rviz"
+                pkg="rviz"
+                args="$(eval '-d '+find(arg('robot_name')+'_description')+'/rviz/'+arg('robot_name')+'_wbc.rviz')" />
+   </group>
+
+   <group if="$(eval input_device == 'keyboard')">
+	<node pkg="wolf_controller" type="keyboard_node" name="keyboard_node" output="screen" respawn="true"/>
+   </group>
+
+</launch>

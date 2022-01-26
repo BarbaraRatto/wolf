@@ -1,0 +1,10 @@
+<launch>
+  <arg name="robot_name" default="hyq"/>
+  <arg name="extra_controllers" default=""/>
+
+  <!-- Spawn controllers -->
+  <node name="controller_spawner"
+        ns="$(arg robot_name)"
+        pkg="controller_manager" type="spawner" output="screen"
+        args="wolf_controller $(arg extra_controllers)" />
+</launch>

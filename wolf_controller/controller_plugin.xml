@@ -1,0 +1,11 @@
+<library path="libwolf_controller">
+        <class name="wolf_controller/Controller"
+                   type="wolf_controller::Controller"
+		   base_class_type="controller_interface::ControllerBase">
+		<description>
+                        WoLF controller.
+		</description>
+	</class>
+</library>
+
+
