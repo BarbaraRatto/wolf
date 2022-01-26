@@ -130,21 +130,60 @@ public:
 
     enum cmd_t {HOLD=0,LINEAR,ANGULAR,LINEAR_AND_ANGULAR,BASE_ONLY,RESET_BASE};
 
+    /**
+     * @brief FootholdsPlanner constructor
+     * @param gait generator
+     * @param robot model
+     * @param maximum step length
+     * @param maximum step height
+     */
     FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, double step_length_max = 0.3, double step_height_max = 0.3);
 
-    void update(const double& period,const Eigen::Vector3d& base_position); // OpenLoop Orientation
+    /**
+     * @brief update triggers an update step of the footholds planner to compute the next foot holds given a base twist command.
+     * This function performs an update with an open loop base orientation.
+     * @param period
+     * @param base_position current base position xyz
+     */
+    void update(const double& period,const Eigen::Vector3d& base_position);
 
-    void update(const double& period); // OpenLoop
+    /**
+     * @brief update triggers an update step of the footholds planner to compute the next foot holds given a base twist command.
+     * This function performs an update with an open loop base position and orientation.
+     * @param period
+     */
+    void update(const double& period);
 
-    void update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation); // ClosedLoop
+    /**
+     * @brief update triggers an update step of the footholds planner to compute the next foot holds given a base twist command.
+     * This function performs an update with an closed loop base position and orientation.
+     * @param period
+     * @param base_position current base position xyz
+     * @param base_orientation current base orientation roll pitch yaw
+     */
+    void update(const double& period, const Eigen::Vector3d& base_position, const Eigen::Vector3d& base_orientation);
 
+    /**
+     * @brief initialize the feet position in the gait generator given the current robot configuration. The positions
+     * are expressed wrt world
+     */
     void initializeFeetPosition();
 
+    /**
+     * @brief initialize a specific foot position in the gait generator given the current robot configuration. The position
+     * is expressed wrt world
+     * @param foot_name
+     */
     void initializeFootPosition(const std::string& foot_name);
 
+    /**
+     * @brief reset the foot holds planner
+     */
     void reset();
 
-    // Sets
+    /**
+     * @brief Set functions
+     */
     void setCmd(const unsigned int cmd);
     void setBasePosition(const Eigen::Vector3d& position);
     void setBaseOrientation(const Eigen::Vector3d& orientation);
@@ -156,21 +195,21 @@ public:
     void setBaseVelocityScaleRoll(const double& scale);
     void setBaseVelocityScalePitch(const double& scale);
     void setBaseVelocityScaleYaw(const double& scale);
-    void setLinearVelocityCmd(const double& linear);
-    void setAngularVelocityCmd(const double& angular);
+    void setBaseLinearVelocityCmd(const double& linear);
+    void setBaseAngularVelocityCmd(const double& angular);
+    void setBaseLinearVelocityCmd(const double& x, const double& y, const double& z, bool verbose = false);
+    void setBaseAngularVelocityCmd(const double& roll, const double& pitch, const double& yaw, bool verbose = false);
     void setStepHeight(const double& height);
     void setMaxStepHeight(const double& max);
     void setMaxStepLength(const double& max);
     void setMaxBaseHeight(const double& max);
-    void increaseStepHeight();
-    void decreaseStepHeight();
-    void increaseSwingFrequency();
-    void decreaseSwingFrequency();
     void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
     void setPushRecoveryThresholds(const Eigen::Vector3d& static_th, const Eigen::Vector3d& dynamic_th);
     void setPushRecoveryGains(const double& k_x, const double& k_y, const double& k_r);
 
-    // Gets
+    /**
+     * @brief Get functions
+     */
     unsigned int getCmd();
     const Eigen::Vector3d& getBasePositionReference() const;
     const Eigen::Vector3d& getBaseLinearVelocityReference() const;
@@ -183,8 +222,12 @@ public:
     const double& getStepHeight(const std::string& foot_name);
     const double& getStepHeadingRate(const std::string& foot_name);
     const double& getBaseHeight() const;
-    double getLinearVelocityCmd() const;
-    double getAngularVelocityCmd() const ;
+    double getBaseLinearVelocityCmdX() const;
+    double getBaseLinearVelocityCmdY() const;
+    double getBaseLinearVelocityCmdZ() const;
+    double getBaseAngularVelocityCmdRoll() const;
+    double getBaseAngularVelocityCmdPitch() const;
+    double getBaseAngularVelocityCmdYaw() const;
     double getStepHeight() const ;
     double getStepLength() const ;
     Gait::gait_t getGaitType() const;
@@ -192,16 +235,58 @@ public:
     Eigen::Vector3d& getCurrentFootholdHF(const std::string& foot_name) ;
     Eigen::Vector3d& getVirtualFoothold(const std::string& foot_name) ;
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
-    void togglePushRecovery();
-    bool isPushRecoveryActive() const;
-    void startPushRecovery(bool start);
-    bool isAnyFootInTouchDown();
-    bool areAllFeetInStance();
-    bool isAnyFootInSwing();
     const std::vector<std::string>& getFootNames() const;
     double getSwingFrequency();
 
+    /**
+     * @brief Increase step height
+     */
+    void increaseStepHeight();
 
+    /**
+     * @brief Decrease step height
+     */
+    void decreaseStepHeight();
+
+    /**
+     * @brief Increase the swing frequency
+     */
+    void increaseSwingFrequency();
+
+    /**
+     * @brief Decrease the swing frequency
+     */
+    void decreaseSwingFrequency();
+
+    /**
+     * @brief activate/deactivate the push recovery
+     */
+    void togglePushRecovery();
+
+    /**
+     * @brief check if the push recovery is active
+     */
+    bool isPushRecoveryActive() const;
+
+    /**
+     * @brief start the push recovery
+     */
+    void startPushRecovery(bool start);
+
+    /**
+     * @brief check if any of the robot's feet is in touch down i.e. it just hit ground
+     */
+    bool isAnyFootInTouchDown();
+
+    /**
+     * @brief check if all the robot's feet are on the ground
+     */
+    bool areAllFeetInStance();
+
+    /**
+     * @brief check if any of the robot's feet is in the air
+     */
+    bool isAnyFootInSwing();
 
 private:
 
@@ -227,7 +312,9 @@ private:
 
     void calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation);
 
-    // These are modified by the external interface (e.g joypad and dynamic_reconfigure)
+    /**
+     * @brief these attributes are modified by the external interfaces (e.g joypad and dynamic_reconfigure)
+     */
     std::atomic<unsigned int> cmd_;
     std::atomic<double>  base_linear_velocity_scale_x_;
     std::atomic<double>  base_linear_velocity_scale_y_;
@@ -235,8 +322,12 @@ private:
     std::atomic<double>  base_angular_velocity_scale_roll_;
     std::atomic<double>  base_angular_velocity_scale_pitch_;
     std::atomic<double>  base_angular_velocity_scale_yaw_;
-    std::atomic<double>  base_linear_velocity_cmd_;
-    std::atomic<double>  base_angular_velocity_cmd_;
+    std::atomic<double>  base_linear_velocity_cmd_x_;
+    std::atomic<double>  base_linear_velocity_cmd_y_;
+    std::atomic<double>  base_linear_velocity_cmd_z_;
+    std::atomic<double>  base_angular_velocity_cmd_roll_;
+    std::atomic<double>  base_angular_velocity_cmd_pitch_;
+    std::atomic<double>  base_angular_velocity_cmd_yaw_;
     std::atomic<double>  step_height_max_;
     std::atomic<double>  step_length_max_;
     std::atomic<double>  base_height_max_;
@@ -244,10 +335,13 @@ private:
     std::atomic<bool>    push_detected_;
     std::atomic<bool>    push_recovery_active_;
 
-    /** @brief Base linear velocity w.r.t horizontal frame
-     * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base) */
+    /** @brief base linear velocity w.r.t horizontal frame
+     * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base)
+    */
     Eigen::Vector3d hf_base_linear_velocity_;
-    /** @brief Base angular velocity */
+    /** @brief base angular velocity w.r.t horizontal frame
+     * (i.e. a frame that has the same position as the base link but oriented as the world except for the yaw which is the same as the base)
+    */
     Eigen::Vector3d hf_base_angular_velocity_;
 
     Eigen::Vector3d hf_base_linear_velocity_filt_;
@@ -270,7 +364,6 @@ private:
     Eigen::Vector3d hf_X_current_foothold_;
     Eigen::Vector3d world_delta_hip_;
     Eigen::Vector3d world_delta_foot_;
-    Eigen::Vector3d world_X_virtual_foothold_offset_;
 
     Eigen::Matrix3d world_R_hf_;
     Eigen::Matrix3d hf_R_base_;
@@ -288,7 +381,6 @@ private:
     Eigen::Vector3d base_position_reference_;
     Eigen::Vector3d base_linear_velocity_reference_;
     Eigen::Vector3d base_angular_velocity_reference_;
-
 
     GaitGenerator::Ptr gait_generator_;
     QuadrupedRobot::Ptr robot_model_;

@@ -53,7 +53,7 @@ if __name__=="__main__":
     rospy.init_node('keyboard_node')
 
     robot_name = rospy.get_param('/robot_name')
-    twist_pub = rospy.Publisher('%s/wolf_controller/twist' % (robot_name), Twist, queue_size = 1)
+    twist_pub = rospy.Publisher('%s/wolf_controller/keyboard' % (robot_name), Twist, queue_size = 1)
     reset_pub = rospy.Publisher('%s/wolf_controller/reset_base' % (robot_name), Bool, queue_size=1)
 
     pygame.init()

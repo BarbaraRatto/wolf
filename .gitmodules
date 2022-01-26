@@ -10,3 +10,9 @@
 [submodule "wolf_gazebo_resources"]
 	path = wolf_gazebo_resources
 	url = git@github.com:graiola/wolf_gazebo_resources.git
+[submodule "wolf_hardware_interface"]
+	path = wolf_hardware_interface
+	url = git@github.com:graiola/wolf_hardware_interface.git
+[submodule "wolf_gazebo_interface"]
+	path = wolf_gazebo_interface
+	url = git@github.com:graiola/wolf_gazebo_interface.git
