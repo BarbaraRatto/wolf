@@ -72,7 +72,7 @@ public:
         };
     }
 
-    virtual void callback(const sensor_msgs::Joy::ConstPtr& msg) = 0;
+    virtual void cmdCallback(const sensor_msgs::Joy::ConstPtr& msg) = 0;
 
 protected:
 
@@ -112,7 +112,7 @@ public:
    {
    }
 
-    virtual void callback(const sensor_msgs::Joy::ConstPtr& msg)
+    virtual void cmdCallback(const sensor_msgs::Joy::ConstPtr& msg)
     {
 
         if(msg.get() && !msg->axes.empty() && !msg->buttons.empty())
@@ -164,7 +164,7 @@ public:
     {
     }
 
-    virtual void callback(const sensor_msgs::Joy::ConstPtr& msg)
+    virtual void cmdCallback(const sensor_msgs::Joy::ConstPtr& msg)
     {
 
         if(msg.get() && !msg->axes.empty() && !msg->buttons.empty())
