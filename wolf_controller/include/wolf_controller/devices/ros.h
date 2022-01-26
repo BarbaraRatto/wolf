@@ -23,13 +23,13 @@ public:
         assert(controller_ptr);
         controller_ptr_ = controller_ptr;
 
-        sub_ = node.subscribe(topic, 1, &DeviceHandlerRosInterface::callback, this);
+        cmd_sub_ = node.subscribe(topic, 1, &DeviceHandlerRosInterface::cmdCallback, this);
         reset_sub_ = node.subscribe("reset_base", 1, &DeviceHandlerRosInterface::resetCallback, this);
     }
 
     virtual ~DeviceHandlerRosInterface() {}
 
-    virtual void callback(const msg_t& msg) = 0;
+    virtual void cmdCallback(const msg_t& msg) = 0;
 
 protected:
 
@@ -103,7 +103,7 @@ protected:
 
     wolf_controller::Controller* controller_ptr_;
     /** @brief Ros subscriber for the device */
-    ros::Subscriber sub_, reset_sub_;
+    ros::Subscriber cmd_sub_, reset_sub_;
 
 };
 

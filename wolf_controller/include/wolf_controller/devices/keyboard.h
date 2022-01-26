@@ -25,7 +25,7 @@ public:
 
     }
 
-    void callback(const geometry_msgs::Twist& msg)
+    void cmdCallback(const geometry_msgs::Twist& msg)
     {
         base_velocity_x_scale_     = static_cast<double>(msg.linear.x);
         base_velocity_y_scale_     = static_cast<double>(msg.linear.y);
