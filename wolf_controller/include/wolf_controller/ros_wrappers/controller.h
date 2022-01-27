@@ -157,35 +157,27 @@ public:
         controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
 
         // Getting Kp and Kd gains
-        // Feet
-        Eigen::Vector3d Kp_swing_leg, Kd_swing_leg, Kp_stance_leg, Kd_stance_leg;
-        Kp_swing_leg = Kd_swing_leg = Kp_stance_leg = Kd_stance_leg = Eigen::Vector3d::Ones();
+        // Legs
+        Eigen::Vector3d Kp_leg, Kd_leg;
+        Kp_leg = Kd_leg = Eigen::Vector3d::Ones();
         for(unsigned int i=0; i<wolf_controller::_joints_prefix.size(); i++)
         {
-          if (!controller_nh.getParam("gains/kp_swing/" + wolf_controller::_joints_prefix[i] , Kp_swing_leg(i)))
+          if (!controller_nh.getParam("gains/Kp_leg/" + wolf_controller::_joints_prefix[i] , Kp_leg(i)))
           {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kp_swing_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No default Kp_leg_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
           }
-          if (!controller_nh.getParam("gains/kd_swing/" + wolf_controller::_joints_prefix[i] , Kd_swing_leg(i)))
+          if (!controller_nh.getParam("gains/Kd_leg/" + wolf_controller::_joints_prefix[i] , Kd_leg(i)))
           {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kd_swing_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-          }
-          if (!controller_nh.getParam("gains/kp_stance/" + wolf_controller::_joints_prefix[i] , Kp_stance_leg(i)))
-          {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kp_stance_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-          }
-          if (!controller_nh.getParam("gains/kd_stance/" + wolf_controller::_joints_prefix[i] , Kd_stance_leg(i)))
-          {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kd_stance_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No default Kd_leg_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
           }
           // Check if the values are positive
-          if(Kp_swing_leg(i)<0.0 || Kd_swing_leg(i)<0.0 || Kp_stance_leg(i)<0.0 || Kd_stance_leg(i)<0.0)
+          if(Kp_leg(i)<0.0 || Kd_leg(i)<0.0)
           {
-            ROS_WARN_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
-            Kp_swing_leg(i) = Kd_swing_leg(i) = Kp_stance_leg(i) = Kd_stance_leg(i) = 1.0;
+            ROS_WARN_NAMED(CLASS_NAME,"Kp_leg and Kd_leg gains must be positive!");
+            Kp_leg(i) = Kd_leg(i) = 1.0;
           }
         }
-        controller_ptr->getImpedance()->setLegsGains(Kp_swing_leg,Kd_swing_leg,Kp_stance_leg,Kd_stance_leg);
+        controller_ptr->getImpedance()->setLegsGains(Kp_leg,Kd_leg);
         // Arms
         if(controller_->getRobotModel()->getNumberArms() > 0)
         {
@@ -199,18 +191,18 @@ public:
             Kd_arm.setOnes();
             for(unsigned int i=0; i<n_joint_arms; i++)
             {
-              if (!controller_nh.getParam("gains/kp_arm/j" + std::to_string(i) , Kp_arm(i)))
+              if (!controller_nh.getParam("gains/Kp_arm/j" + std::to_string(i) , Kp_arm(i)))
               {
-                ROS_WARN_NAMED(CLASS_NAME,"No default kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+                ROS_WARN_NAMED(CLASS_NAME,"No default Kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
               }
-              if (!controller_nh.getParam("gains/kd_arm/j"  + std::to_string(i) , Kd_arm(i)))
+              if (!controller_nh.getParam("gains/Kd_arm/j"  + std::to_string(i) , Kd_arm(i)))
               {
-                ROS_WARN_NAMED(CLASS_NAME,"No default kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+                ROS_WARN_NAMED(CLASS_NAME,"No default Kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
               }
               // Check if the values are positive
               if(Kp_arm(i)<0.0 || Kd_arm(i)<0.0)
               {
-                ROS_WARN_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
+                ROS_WARN_NAMED(CLASS_NAME,"Kp_arm and Kd_arm gains must be positive!");
                 Kp_arm(i) = Kd_arm(i) = 1.0;
               }
             }

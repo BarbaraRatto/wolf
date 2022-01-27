@@ -52,7 +52,9 @@ public:
 
   void startInertiaCompensation(const bool& start);
 
-  void setLegsGains(const Eigen::Vector3d &Kp_swing_leg, const Eigen::Vector3d &Kd_swing_leg, const Eigen::Vector3d &Kp_stance_leg, const Eigen::Vector3d &Kd_stance_leg);
+  void setLegsGains(const Eigen::Vector3d &Kp_swing_leg, const Eigen::Vector3d &Kd_swing_leg,
+                    const Eigen::Vector3d &Kp_stance_leg, const Eigen::Vector3d &Kd_stance_leg);
+  void setLegsGains(const Eigen::Vector3d &Kp_leg, const Eigen::Vector3d &Kd_leg);
   void setArmsGains(const Eigen::VectorXd &Kp_arm, const Eigen::VectorXd &Kd_arm);
 
 private:
