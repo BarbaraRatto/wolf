@@ -65,19 +65,19 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   waistRPY_->loadParams();
   waistRPY_->registerReconfigurableVariables();
   //   --------------------------
-  waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
-                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  waistZ_->setLambda(1.,1.);
-  waistZ_->setWeightIsDiagonalFlag(true);
-  waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  waistZ_->loadParams();
-  waistZ_->registerReconfigurableVariables();
+  //waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
+  //                                      WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
+  //waistZ_->setLambda(1.,1.);
+  //waistZ_->setWeightIsDiagonalFlag(true);
+  //waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  //waistZ_->loadParams();
+  //waistZ_->registerReconfigurableVariables();
   //   --------------------------
-  postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
-  postural_->setLambda(1.,1.);
-  postural_->setWeightIsDiagonalFlag(true);
-  postural_->loadParams();
-  postural_->registerReconfigurableVariables();
+  //postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
+  //postural_->setLambda(1.,1.);
+  //postural_->setWeightIsDiagonalFlag(true);
+  //postural_->loadParams();
+  //postural_->registerReconfigurableVariables();
   //   --------------------------
   com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
@@ -132,15 +132,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   std::list<unsigned int> id_XY    = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
-  std::list<unsigned int> id_limbs;
-  id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
-  std::list<unsigned int>::iterator it;
-  unsigned int idx = FLOATING_BASE_DOFS;
-  for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
-  {
-      *it = idx;
-      idx++;
-  }
+  //std::list<unsigned int> id_limbs;
+  //id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
+  //std::list<unsigned int>::iterator it;
+  //unsigned int idx = FLOATING_BASE_DOFS;
+  //for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
+  //{
+  //    *it = idx;
+  //    idx++;
+  //}
 
   //
   // Here we create the stack
