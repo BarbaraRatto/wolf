@@ -261,10 +261,18 @@ public:
 
         //get_robot_state_srv_ = nh.advertiseService("get_robot_state", &ControllerRosWrapper::getRobotStateCB, this);
         //get_gait_srv_        = nh.advertiseService("get_gait", &ControllerRosWrapper::getGaitCB, this);
-        stand_up_srv_        = controller_nh.advertiseService("stand_up", &ControllerRosWrapper::standUpCB, this);
-        stand_down_srv_      = controller_nh.advertiseService("stand_down", &ControllerRosWrapper::standDownCB, this);
+        stand_up_srv_        = controller_nh.advertiseService("stand_up",       &ControllerRosWrapper::standUpCB,       this);
+        stand_down_srv_      = controller_nh.advertiseService("stand_down",     &ControllerRosWrapper::standDownCB,     this);
+        emergency_stop_srv_  = controller_nh.advertiseService("emergency_stop", &ControllerRosWrapper::emergencyStopCB, this);
         //set_control_srv_     = nh.advertiseService("set_control", &ControllerRosWrapper::setControlCB, this);
         //set_gait_srv_        = nh.advertiseService("set_gait", &ControllerRosWrapper::setGaitCB, this);
+    }
+
+    bool emergencyStopCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->activateEmergencyStop();
+        return res.success;
     }
 
     bool standUpCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -410,6 +418,7 @@ protected:
     ros::ServiceServer set_gait_srv_;
     ros::ServiceServer stand_up_srv_;
     ros::ServiceServer stand_down_srv_;
+    ros::ServiceServer emergency_stop_srv_;
 
 };
 
