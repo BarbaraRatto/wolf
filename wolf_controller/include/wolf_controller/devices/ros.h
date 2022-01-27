@@ -65,7 +65,7 @@ protected:
             controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::RESET_BASE); // Reset the base orientation and position (height)
             reset_base_ = false;
         }
-        else if(std::abs(base_velocity_z_scale_)>0 ||
+        else if(std::abs(base_velocity_z_scale_)         >0 ||
                 std::abs(base_velocity_yaw_scale_)       >0 ||
                 std::abs(base_velocity_pitch_scale_)     >0 ||
                 std::abs(base_velocity_roll_scale_)      >0  )
@@ -77,6 +77,11 @@ protected:
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
+            if(set_velocities_cmd_)
+            {
+              controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(0.0,0.0,base_velocity_z_cmd_);
+              controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
+            }
         }
         else
         {
@@ -90,9 +95,9 @@ protected:
         base_velocity_y_scale_     = 0.;
         base_velocity_z_scale_     = 0.;
 
-        base_velocity_roll_scale_        = 0.;
-        base_velocity_pitch_scale_       = 0.;
-        base_velocity_yaw_scale_         = 0.;
+        base_velocity_roll_scale_  = 0.;
+        base_velocity_pitch_scale_ = 0.;
+        base_velocity_yaw_scale_   = 0.;
 
         start_swing_ = false;
 

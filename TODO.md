@@ -1,5 +1,6 @@
 # TODO list
 
+- add max pitch and max roll
 - create a unified impedance Kp and Kd
 - prepare a readme about the params
 - world -> base footprint and check if navigation can work with ground truth
