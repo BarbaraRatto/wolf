@@ -25,6 +25,7 @@ namespace wolf_controller
 //#define DEBUG
 #define EPS 0.00001 //std::numeric_limits<double>::epsilon()
 extern double _period;
+extern std::string _robot_name;
 
 // If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
 // stays in the same position because the feet don't move relatively to the base anymore. There is no reset!

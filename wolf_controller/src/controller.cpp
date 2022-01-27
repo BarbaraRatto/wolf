@@ -28,6 +28,7 @@ std::vector<std::string> _rpy = {"roll","pitch","yaw"};
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
+std::string _robot_name = "";
 
 Controller::Controller()
     :MultiInterfaceController<hardware_interface::EffortJointInterface,
@@ -56,6 +57,20 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     robot_model_.reset(createRobotModel(root_nh));
     joint_names_ = robot_model_->getJointNames();
+
+    if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
+    {
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
+        return false;
+    }
+    _period = period_;
+
+    if(!root_nh.getParam("/robot_name",robot_name_)) // Get the robot name
+    {
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot name given in namespace /");
+        return false;
+    }
+    _robot_name = robot_name_;
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
@@ -141,13 +156,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
     else
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact sensors");
-
-    if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
-    {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
-        return false;
-    }
-    _period = period_;
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
