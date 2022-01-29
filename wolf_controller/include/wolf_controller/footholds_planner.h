@@ -203,6 +203,10 @@ public:
     void setMaxStepHeight(const double& max);
     void setMaxStepLength(const double& max);
     void setMaxBaseHeight(const double& max);
+    void setMaxBaseRoll(const double& max);
+    void setMaxBasePitch(const double& max);
+    void setMinBaseRoll(const double& min);
+    void setMinBasePitch(const double& min);
     void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
     void setPushRecoveryThresholds(const Eigen::Vector3d& static_th, const Eigen::Vector3d& dynamic_th);
     void setPushRecoveryGains(const double& k_x, const double& k_y, const double& k_r);
@@ -331,6 +335,10 @@ private:
     std::atomic<double>  step_height_max_;
     std::atomic<double>  step_length_max_;
     std::atomic<double>  base_height_max_;
+    std::atomic<double>  base_roll_max_;
+    std::atomic<double>  base_pitch_max_;
+    std::atomic<double>  base_roll_min_;
+    std::atomic<double>  base_pitch_min_;
     std::atomic<double>  step_height_;
     std::atomic<bool>    push_detected_;
     std::atomic<bool>    push_recovery_active_;

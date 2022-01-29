@@ -385,6 +385,32 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 
   base_orientation_ = base_angular_velocity_reference_ * period + base_orientation_;
 
+  // Clamp the roll and pitch values
+  if(base_orientation_(0) > base_roll_max_)
+  {
+    base_orientation_(0) = base_roll_max_;
+    base_angular_velocity_reference_(0) = hf_base_angular_velocity_ref_(0) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base roll rotation max reached: "<<base_roll_max_);
+  }
+  else if (base_orientation_(0) < base_roll_min_)
+  {
+    base_orientation_(0) = base_roll_min_;
+    base_angular_velocity_reference_(0) = hf_base_angular_velocity_ref_(0) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base roll rotation min reached: "<<base_roll_min_);
+  }
+  if(base_orientation_(1) > base_roll_max_)
+  {
+    base_orientation_(1) = base_pitch_max_;
+    base_angular_velocity_reference_(1) = hf_base_angular_velocity_ref_(1) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base pitch rotation max reached: "<<base_pitch_max_);
+  }
+  else if (base_orientation_(1) < base_pitch_min_)
+  {
+    base_orientation_(1) = base_pitch_min_;
+    base_angular_velocity_reference_(1) = hf_base_angular_velocity_ref_(1) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base pitch rotation min reached: "<<base_pitch_min_);
+  }
+
   rpyToRot(base_orientation_,base_rotation_reference_);
   // This is the base rotation reference computed w.r.t terrain
   base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_;
@@ -588,6 +614,26 @@ void FootholdsPlanner::setMaxBaseHeight(const double& max)
   }
   else
     ROS_WARN_NAMED(CLASS_NAME,"Max base height is less equal than: 0.0");
+}
+
+void FootholdsPlanner::setMaxBaseRoll(const double &max)
+{
+  base_roll_max_ = max;
+}
+
+void FootholdsPlanner::setMaxBasePitch(const double &max)
+{
+  base_pitch_max_ = max;
+}
+
+void FootholdsPlanner::setMinBaseRoll(const double &min)
+{
+  base_roll_min_ = min;
+}
+
+void FootholdsPlanner::setMinBasePitch(const double &min)
+{
+  base_pitch_min_ = min;
 }
 
 void FootholdsPlanner::setMaxStepLength(const double& max)

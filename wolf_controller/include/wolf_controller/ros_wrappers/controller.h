@@ -75,6 +75,26 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
         }
+        double max_base_roll = 2*M_PI; // [rad]
+        if (!controller_nh.getParam("max_base_roll", max_base_roll))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No max_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_roll);
+        }
+        double max_base_pitch = 2*M_PI; // [rad]
+        if (!controller_nh.getParam("max_base_pitch", max_base_pitch))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No max_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_pitch);
+        }
+        double min_base_roll = -2*M_PI; // [rad]
+        if (!controller_nh.getParam("min_base_roll", min_base_roll))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No min_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_roll);
+        }
+        double min_base_pitch = -2*M_PI; // [rad]
+        if (!controller_nh.getParam("min_base_pitch", min_base_pitch))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
+        }
         double default_base_linear_velocity = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
         {
@@ -150,6 +170,10 @@ public:
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
         controller_->getFootholdsPlanner()->setMaxBaseHeight(max_base_height);
+        controller_->getFootholdsPlanner()->setMaxBaseRoll(max_base_roll);
+        controller_->getFootholdsPlanner()->setMaxBasePitch(max_base_pitch);
+        controller_->getFootholdsPlanner()->setMinBaseRoll(min_base_roll);
+        controller_->getFootholdsPlanner()->setMinBasePitch(min_base_pitch);
 
         controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 
