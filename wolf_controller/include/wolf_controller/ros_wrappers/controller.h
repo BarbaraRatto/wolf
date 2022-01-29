@@ -300,14 +300,16 @@ public:
     {
         res.success = true;
         controller_->resetBase();
+        unsigned int current_mode = controller_->getControlMode();
         unsigned int current_state = controller_->getRobotModel()->getState();
-        while(current_state == wolf_controller::QuadrupedRobot::RESET)
+        while(current_mode != wolf_controller::Controller::RESET)
         {
             if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
             {
                 res.success = false;
                 break;
             }
+            current_mode = controller_->getControlMode();
             current_state = controller_->getRobotModel()->getState();
             std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
         }
@@ -319,8 +321,7 @@ public:
         res.success = true;
         controller_->selectPosture("UP");
         unsigned int current_state = controller_->getRobotModel()->getState();
-        while(current_state != wolf_controller::QuadrupedRobot::WALKING      &&
-              current_state != wolf_controller::QuadrupedRobot::MANIPULATION  )
+        while(current_state != wolf_controller::QuadrupedRobot::ACTIVE)
         {
             if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
             {

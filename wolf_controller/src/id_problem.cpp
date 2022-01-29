@@ -7,13 +7,12 @@ using namespace OpenSoT;
 namespace wolf_controller {
 
 IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
-  model_(model)
+  model_(model), control_mode_(WALKING), change_control_mode_(false)
 {
 
   foot_names_          = model_->getFootNames();
   ee_names_            = model_->getEndEffectorNames();
   contact_names_       = model_->getContactNames();
-  current_robot_state_ = model_->getState();
 
   //
   //  This utility internally creates the right variables which later we will use to
@@ -259,19 +258,29 @@ void IDProblem::setLowerForceBoundZ(const double& force)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<force);
 }
 
+void IDProblem::setControlMode(mode_t mode)
+{
+  if(control_mode_!=mode)
+  {
+    control_mode_ = mode;
+    change_control_mode_ = true;
+  }
+  else
+    change_control_mode_ = false;
+}
+
 void IDProblem::update()
 {
-  // Update if the robot's state changed
-  if(current_robot_state_ != model_->getState())
+  // Update if state changed
+  if(change_control_mode_)
   {
-    current_robot_state_ = model_->getState();
 
     if(ee_names_.size()>0)
     {
       std::string frame;
-      if(current_robot_state_ == QuadrupedRobot::WALKING)
+      if(control_mode_ == WALKING)
         frame = model_->getBaseLinkName();
-      else if (current_robot_state_ == QuadrupedRobot::MANIPULATION)
+      else if (change_control_mode_ == MANIPULATION)
         frame = WORLD_FRAME_NAME;
       else
         frame = model_->getBaseLinkName();

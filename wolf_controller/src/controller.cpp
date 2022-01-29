@@ -37,6 +37,7 @@ Controller::Controller()
                               hardware_interface::ContactSwitchSensorInterface> (true) // allow_optional_interfaces = true
     ,stopping_(false)
     ,mode_(WALKING)
+    ,previous_mode_(WALKING)
     ,posture_(DOWN)
 {
     XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
@@ -332,6 +333,8 @@ bool Controller::selectControlMode(const std::string& mode)
     mode_ = Controller::mode_t::WALKING;
   else if(mode == "MANIPULATION")
     mode_ = Controller::mode_t::MANIPULATION;
+  else if(mode == "RESET")
+    mode_ = Controller::mode_t::RESET;
   else
   {
     ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
@@ -340,6 +343,11 @@ bool Controller::selectControlMode(const std::string& mode)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
 
   return true;
+}
+
+unsigned int Controller::getControlMode()
+{
+  return mode_;
 }
 
 void Controller::switchControlMode()
@@ -571,41 +579,51 @@ void Controller::updateStateMachine(const double &dt)
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
-          if(mode_ == Controller::mode_t::WALKING)
+          if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
           {
-            robot_model_->setState(QuadrupedRobot::WALKING);
-            break;
-          }
-          else if (mode_ == Controller::mode_t::MANIPULATION)
-          {
-            robot_model_->setState(QuadrupedRobot::MANIPULATION);
-            break;
-          }
-          else
-          {
-            robot_model_->setState(QuadrupedRobot::WALKING);
+            robot_model_->setState(QuadrupedRobot::ACTIVE);
             break;
           }
         }
         break;
 
-      case(QuadrupedRobot::WALKING):
-        updateComponents(dt);
-        updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+      case(QuadrupedRobot::ACTIVE):
+
+        switch(mode_)
+        {
+        case Controller::mode_t::MANIPULATION:
+          updateComponents(dt);
+          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+          id_prob_->setControlMode(IDProblem::mode_t::MANIPULATION);
+          previous_mode_ = Controller::mode_t::MANIPULATION;
+          break;
+        case Controller::mode_t::WALKING:
+          updateComponents(dt);
+          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+          id_prob_->setControlMode(IDProblem::mode_t::WALKING);
+          previous_mode_ = Controller::mode_t::WALKING;
+          break;
+        case Controller::mode_t::RESET:
+          foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
+          updateComponents(dt);
+          tmp_vector3d_1_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // base position
+          tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference(); // base orientation
+          rotToRpy(tmp_matrix3d_,tmp_vector3d_);
+          tmp_vector3d_2_.setZero(); // com velocity
+          updateBaseReferences(tmp_vector3d_1_,tmp_vector3d_2_,tmp_matrix3d_);
+          if( (current_height_ - previous_height_)/dt        <= EPS  &&
+              std::abs(current_rpy_.x() - tmp_vector3d_.x()) <= 0.01 &&
+              std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01  )
+          {
+            mode_ = previous_mode_;
+            break;
+          }
+          break;
+        };
+
         if(!updateSolver(dt) || !performSafetyChecks())
         {
           robot_model_->setState(QuadrupedRobot::ANOMALY);
-          break;
-        }
-        if(mode_ == Controller::mode_t::MANIPULATION)
-        {
-          robot_model_->setState(QuadrupedRobot::MANIPULATION);
-          break;
-        }
-        if(mode_ == Controller::mode_t::RESET)
-        {
-          robot_model_->setState(QuadrupedRobot::RESET);
-          mode_ = Controller::mode_t::WALKING;
           break;
         }
         if(posture_ == Controller::posture_t::DOWN)
@@ -614,56 +632,8 @@ void Controller::updateStateMachine(const double &dt)
           robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
           break;
         }
-        break;
 
-      case(QuadrupedRobot::MANIPULATION):
-        updateComponents(dt);
-        updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
-        if(!updateSolver(dt) || !performSafetyChecks())
-        {
-          robot_model_->setState(QuadrupedRobot::ANOMALY);
-          break;
-        }
-        if(mode_ == Controller::mode_t::WALKING)
-        {
-          robot_model_->setState(QuadrupedRobot::WALKING);
-          break;
-        }
-        if(mode_ == Controller::mode_t::RESET)
-        {
-          robot_model_->setState(QuadrupedRobot::RESET);
-          mode_ = Controller::mode_t::MANIPULATION;
-          break;
-        }
-        if(posture_ == Controller::posture_t::DOWN)
-        {
-          stand_down_starting_height_ = current_height_;
-          robot_model_->setState(robot_model_->getPreviousState());
-          break;
-        }
         break;
-
-      case(QuadrupedRobot::RESET):
-        foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
-        updateComponents(dt);
-        tmp_vector3d_1_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // base position
-        tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference(); // base orientation
-        rotToRpy(tmp_matrix3d_,tmp_vector3d_);
-        tmp_vector3d_2_.setZero(); // com velocity
-        updateBaseReferences(tmp_vector3d_1_,tmp_vector3d_2_,tmp_matrix3d_);
-        if(!updateSolver(dt)|| !performSafetyChecks())
-        {
-          robot_model_->setState(QuadrupedRobot::ANOMALY);
-          break;
-        }
-        if( (current_height_ - previous_height_)/dt        <= EPS  &&
-            std::abs(current_rpy_.x() - tmp_vector3d_.x()) <= 0.01 &&
-            std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01  )
-        {
-          robot_model_->setState(robot_model_->getPreviousState());
-          break;
-        }
-      break;
 
       case(QuadrupedRobot::STANDING_DOWN):
         updateComponents(dt);

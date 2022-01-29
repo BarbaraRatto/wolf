@@ -30,12 +30,8 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
     ret = "INIT";
     break;
 
-  case QuadrupedRobot::robot_states_t::WALKING:
-    ret = "WALKING";
-    break;
-
-  case QuadrupedRobot::robot_states_t::MANIPULATION:
-    ret = "MANIPULATION";
+  case QuadrupedRobot::robot_states_t::ACTIVE:
+    ret = "ACTIVE";
     break;
 
   case QuadrupedRobot::robot_states_t::ANOMALY:
@@ -48,10 +44,6 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
 
   case QuadrupedRobot::robot_states_t::STANDING_DOWN:
     ret = "STANDING_DOWN";
-    break;
-
-  case QuadrupedRobot::robot_states_t::RESET:
-    ret = "RESET";
     break;
   };
 

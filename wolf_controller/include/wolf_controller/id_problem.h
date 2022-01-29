@@ -42,6 +42,8 @@ class IDProblem
 
 public:
 
+    enum mode_t {WALKING=0,MANIPULATION};
+
     const std::string CLASS_NAME = "IDProblem";
 
     typedef std::shared_ptr<IDProblem> Ptr;
@@ -151,6 +153,11 @@ public:
     void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
 
     /**
+     * @brief set the control mode [WALKING|MANIPULATION]
+     */
+    void setControlMode(mode_t mode);
+
+    /**
      * @brief get the mu parameter for the friction cones
      */
     double getFrictionConesMu() const;
@@ -245,7 +252,9 @@ private:
     Eigen::VectorXd ones_;
     std::atomic<double> joint_acceleration_lim_;
 
-
+    /**
+     * @brief Force lower limits
+     */
     double x_force_lower_lim_;
     double y_force_lower_lim_;
     double z_force_lower_lim_;
@@ -253,7 +262,8 @@ private:
 
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
-    std::atomic<unsigned int> current_robot_state_;
+    std::atomic<unsigned int> control_mode_;
+    bool change_control_mode_;
 
     std::vector<std::string> foot_names_;
     std::vector<std::string> ee_names_;

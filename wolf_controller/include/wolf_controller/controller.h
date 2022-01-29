@@ -135,6 +135,11 @@ public:
     bool selectControlMode(const std::string& mode);
 
     /**
+         * @brief get the current control mode
+         */
+    unsigned int getControlMode();
+
+    /**
          * @brief Switch between WALKING and MANIPULATION
          */
     void switchControlMode();
@@ -328,6 +333,7 @@ private:
 
     /** @brief state machine support variables */
     unsigned int mode_;
+    unsigned int previous_mode_;
     unsigned int posture_;
     double stand_down_starting_height_;
     double desired_height_;
