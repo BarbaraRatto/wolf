@@ -261,6 +261,7 @@ public:
 
         switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",    &ControllerRosWrapper::switchControlModeCB,    this);
         switch_gait_                 = controller_nh.advertiseService("switch_gait",            &ControllerRosWrapper::switchGaitCB,           this);
+        switch_posture_              = controller_nh.advertiseService("switch_posture",         &ControllerRosWrapper::switchPostureCB,        this);
         stand_up_srv_                = controller_nh.advertiseService("stand_up",               &ControllerRosWrapper::standUpCB,              this);
         stand_down_srv_              = controller_nh.advertiseService("stand_down",             &ControllerRosWrapper::standDownCB,            this);
         emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",         &ControllerRosWrapper::emergencyStopCB,        this);
@@ -278,6 +279,13 @@ public:
     {
         res.success = true;
         controller_->switchGait();
+        return res.success;
+    }
+
+    bool switchPostureCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->switchPosture();
         return res.success;
     }
 
@@ -444,6 +452,7 @@ protected:
     /** @brief ROS services */
     ros::ServiceServer switch_control_mode_;
     ros::ServiceServer switch_gait_;
+    ros::ServiceServer switch_posture_;
     ros::ServiceServer stand_up_srv_;
     ros::ServiceServer stand_down_srv_;
     ros::ServiceServer emergency_stop_srv_;
