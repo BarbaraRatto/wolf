@@ -1,14 +1,11 @@
 # TODO list
 
-- add max pitch and max roll
-- create a unified impedance Kp and Kd
+- test controller
 - prepare a readme about the params
 - world -> base footprint and check if navigation can work with ground truth
-- change name IDProblem -> WBC
-- ROS services for step height/reset
 - add trajectory for arm
 - dedicated state machine code
-- sometimes when standing down the robot kind of fall
+- sometimes when standing down the robot kind of fall (only Aliengo)
 - q_lims subconstraint
 - add script in description_utils to create model.config and model.sdf for gazebo
 - robustness tests with push recovery
