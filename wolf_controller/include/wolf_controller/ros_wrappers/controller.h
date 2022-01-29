@@ -259,14 +259,26 @@ public:
         server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
         server_->publishServicesTopics();
 
-        //get_robot_state_srv_ = nh.advertiseService("get_robot_state", &ControllerRosWrapper::getRobotStateCB, this);
-        //get_gait_srv_        = nh.advertiseService("get_gait", &ControllerRosWrapper::getGaitCB, this);
-        stand_up_srv_        = controller_nh.advertiseService("stand_up",       &ControllerRosWrapper::standUpCB,       this);
-        stand_down_srv_      = controller_nh.advertiseService("stand_down",     &ControllerRosWrapper::standDownCB,     this);
-        emergency_stop_srv_  = controller_nh.advertiseService("emergency_stop", &ControllerRosWrapper::emergencyStopCB, this);
-        reset_base_srv_      = controller_nh.advertiseService("reset_base",     &ControllerRosWrapper::resetBaseCB,     this);
-        //set_control_srv_     = nh.advertiseService("set_control", &ControllerRosWrapper::setControlCB, this);
-        //set_gait_srv_        = nh.advertiseService("set_gait", &ControllerRosWrapper::setGaitCB, this);
+        switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",    &ControllerRosWrapper::switchControlModeCB,    this);
+        switch_gait_                 = controller_nh.advertiseService("switch_gait",            &ControllerRosWrapper::switchGaitCB,           this);
+        stand_up_srv_                = controller_nh.advertiseService("stand_up",               &ControllerRosWrapper::standUpCB,              this);
+        stand_down_srv_              = controller_nh.advertiseService("stand_down",             &ControllerRosWrapper::standDownCB,            this);
+        emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",         &ControllerRosWrapper::emergencyStopCB,        this);
+        reset_base_srv_              = controller_nh.advertiseService("reset_base",             &ControllerRosWrapper::resetBaseCB,            this);
+    }
+
+    bool switchControlModeCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->switchControlMode();
+        return res.success;
+    }
+
+    bool switchGaitCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->switchGait();
+        return res.success;
     }
 
     bool emergencyStopCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -430,11 +442,8 @@ protected:
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */
-    ros::ServiceServer get_robot_state_srv_;
-    ros::ServiceServer get_gait_srv_;
-    ros::ServiceServer set_posture_srv_;
-    ros::ServiceServer set_control_srv_;
-    ros::ServiceServer set_gait_srv_;
+    ros::ServiceServer switch_control_mode_;
+    ros::ServiceServer switch_gait_;
     ros::ServiceServer stand_up_srv_;
     ros::ServiceServer stand_down_srv_;
     ros::ServiceServer emergency_stop_srv_;
