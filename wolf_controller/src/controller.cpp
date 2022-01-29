@@ -39,6 +39,7 @@ Controller::Controller()
     ,mode_(WALKING)
     ,posture_(DOWN)
 {
+    XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
 }
 
 Controller::~Controller()
