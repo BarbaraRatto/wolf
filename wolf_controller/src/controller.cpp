@@ -327,6 +327,18 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     return true;
 }
 
+bool Controller::setStepHeight(const double& step_height)
+{
+  if(foot_holds_planner_)
+      foot_holds_planner_->setStepHeight(step_height);
+  else
+  {
+      ROS_WARN_NAMED(CLASS_NAME,"foot_holds_planner not initialized yet.");
+      return false;
+  }
+  return true;
+}
+
 bool Controller::selectControlMode(const std::string& mode)
 {
   if(mode == "WALKING")
@@ -532,7 +544,7 @@ void Controller::updateStateMachine(const double &dt)
 {
     desired_height_ = 0.0;
     current_height_ = robot_model_->getCurrentHeight();
-    current_rpy_    = robot_model_->getBaseRotationInWorldRPY();
+    current_rpy_ = robot_model_->getBaseRotationInWorldRPY();
     unsigned int current_state = robot_model_->getState();
     double ramp;
     switch(current_state)
@@ -613,7 +625,8 @@ void Controller::updateStateMachine(const double &dt)
           updateBaseReferences(tmp_vector3d_1_,tmp_vector3d_2_,tmp_matrix3d_);
           if( (current_height_ - previous_height_)/dt        <= EPS  &&
               std::abs(current_rpy_.x() - tmp_vector3d_.x()) <= 0.01 &&
-              std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01  )
+              std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01
+              )
           {
             mode_ = previous_mode_;
             break;
