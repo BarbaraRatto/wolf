@@ -326,7 +326,7 @@ public:
         controller_->resetBase();
         unsigned int current_mode = controller_->getControlMode();
         unsigned int current_state = controller_->getRobotModel()->getState();
-        while(current_mode != wolf_controller::Controller::RESET)
+        while(current_mode == wolf_controller::Controller::RESET)
         {
             if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
             {
