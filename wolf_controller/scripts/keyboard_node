@@ -58,6 +58,8 @@ class TriggerService:
         self.service(TriggerRequest())
         self.called = True
 
+    def reset(self):
+        self.called = False
 
 if __name__=="__main__":
     rospy.init_node('keyboard_node')
@@ -81,6 +83,7 @@ if __name__=="__main__":
 
     reset_base_service = TriggerService('%s/wolf_controller/reset_base' % (robot_name))
     switch_posture_service = TriggerService('%s/wolf_controller/switch_posture' % (robot_name))
+    emergency_stop_service = TriggerService('%s/wolf_controller/emergency_stop' % (robot_name))
 
     while not rospy.is_shutdown():
         display_surface.fill(white)
@@ -95,6 +98,8 @@ if __name__=="__main__":
             reset_base_service()
         elif keys[pygame.K_RETURN] and not switch_posture_service.called:
             switch_posture_service()
+        elif keys[pygame.K_ESCAPE] and not emergency_stop_service.called:
+            emergency_stop_service()
         else:
             for key in moveBindings:
                 if keys[ord(key)]:
@@ -114,8 +119,9 @@ if __name__=="__main__":
 
         for event in pygame.event.get():
             if event.type == pygame.KEYUP:
-                switch_posture_service.called = False
-                reset_base_service.called = False
+                switch_posture_service.reset()
+                reset_base_service.reset()
+                emergency_stop_service.reset()
 
 
         pygame.display.update()
