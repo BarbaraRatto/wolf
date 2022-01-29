@@ -83,7 +83,6 @@ private:
   std::map<std::string,std::pair<int,int> > signs_;
   Eigen::Vector3d cmd_velocity_;
   Eigen::Vector3d base_velocity_;
-  Eigen::Vector3d base_velocity_filt_;
   Eigen::Vector3d error_;
   Eigen::Vector3d error_abs_;
   double max_delta_;

@@ -245,18 +245,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
-#ifdef DEBUG
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities",des_joint_velocities_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities",joint_velocities_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_impedance",des_joint_efforts_impedance_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_efforts",joint_efforts_);
-#endif
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
+    RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope)               ,imu_gyroscope_);
+    RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope_filt)          ,imu_gyroscope_filt_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_velocities)        ,des_joint_velocities_);
+    RtLogger::getLogger().addPublisher(TOPIC(joint_velocities)            ,joint_velocities_);
+    RtLogger::getLogger().addPublisher(TOPIC(joint_velocities_filt)       ,joint_velocities_filt_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts_solver)    ,des_joint_efforts_solver_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts_impedance) ,des_joint_efforts_impedance_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts)           ,des_joint_efforts_);
+    RtLogger::getLogger().addPublisher(TOPIC(joint_efforts)               ,joint_efforts_);
+    RtLogger::getLogger().addPublisher(TOPIC(period)                      ,period_);
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 

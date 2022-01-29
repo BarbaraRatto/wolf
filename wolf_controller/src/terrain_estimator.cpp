@@ -23,12 +23,6 @@ TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
   b_.resize(N_LEGS);
 
   reset();
-
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/terrain_normal",terrain_normal_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/roll_world",roll_out_world_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/pitch_world",pitch_out_world_);
-  //RtLogger::getLogger().addPublisher(CLASS_NAME+"/roll_hf",roll_out_hf_);
-  //RtLogger::getLogger().addPublisher(CLASS_NAME+"/pitch_hf",pitch_out_hf_);
 }
 
 void TerrainEstimator::setEstimationType() // TODO

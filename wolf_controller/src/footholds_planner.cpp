@@ -44,8 +44,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   reset();
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_height",base_position_(2));
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",base_orientation_);
+  RtLogger::getLogger().addPublisher(TOPIC(des_base_height),base_position_(2));
 }
 
 void FootholdsPlanner::reset()
@@ -852,16 +851,15 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   compute_deltas_ = true;
 
 #ifdef DEBUG
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/current_th_dot_filt",current_th_dot_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/cmd_velocity",cmd_velocity_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity",base_velocity_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity_filt",base_velocity_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/error_abs",error_abs_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/error",error_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lf",deltas_["lf_foot"]);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rf",deltas_["rf_foot"]);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lh",deltas_["lh_foot"]);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rh",deltas_["rh_foot"]);
+  RtLogger::getLogger().addPublisher(TOPIC(current_th_dot_filt) ,current_th_dot_filt_);
+  RtLogger::getLogger().addPublisher(TOPIC(cmd_velocity)        ,cmd_velocity_);
+  RtLogger::getLogger().addPublisher(TOPIC(base_velocity)       ,base_velocity_);
+  RtLogger::getLogger().addPublisher(TOPIC(error_abs)           ,error_abs_);
+  RtLogger::getLogger().addPublisher(TOPIC(error)               ,error_);
+  RtLogger::getLogger().addPublisher(TOPIC(delta_lf)            ,deltas_["lf_foot"]);
+  RtLogger::getLogger().addPublisher(TOPIC(delta_rf)            ,deltas_["rf_foot"]);
+  RtLogger::getLogger().addPublisher(TOPIC(delta_lh)            ,deltas_["lh_foot"]);
+  RtLogger::getLogger().addPublisher(TOPIC(delta_rh)            ,deltas_["rh_foot"]);
 #endif
 }
 

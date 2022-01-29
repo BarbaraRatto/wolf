@@ -26,9 +26,7 @@ namespace wolf_controller
 #define EPS 0.00001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 extern std::string _robot_name;
-
-// If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
-// stays in the same position because the feet don't move relatively to the base anymore. There is no reset!
+#define TOPIC( data ) (_robot_name+"/wolf_controller/"#data)
 //#define OPEN_LOOP_TRAJECTORY
 
 inline void affine3dToPose(const Eigen::Affine3d& affine3d, geometry_msgs::Pose& pose)

@@ -30,8 +30,8 @@ public:
 
     trajectory_finished_ = true;
 #ifdef DEBUG
-    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/position_reference_"+_legs_prefix[trajectory_id],position_reference_);
-    rt_logger::RtLogger::getLogger().addPublisher(CLASS_NAME+"/velocity_reference_"+_legs_prefix[trajectory_id],velocity_reference_);
+    rt_logger::RtLogger::getLogger().addPublisher(TOPIC(position_reference_)+_legs_prefix[trajectory_id],position_reference_);
+    rt_logger::RtLogger::getLogger().addPublisher(TOPIC(velocity_reference_)+_legs_prefix[trajectory_id],velocity_reference_);
 #endif
   }
 
