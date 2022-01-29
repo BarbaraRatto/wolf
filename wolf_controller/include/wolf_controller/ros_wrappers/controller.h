@@ -18,6 +18,7 @@
 #include <wolf_controller/FootHolds.h>
 #include <wolf_controller/TerrainEstimation.h>
 #include <wolf_controller/FrictionCones.h>
+#include <wolf_controller/float32.h>
 
 // WoLF
 #include <wolf_controller/controller.h>
@@ -110,12 +111,12 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
         }
-        double default_cutoff_freq_gyroscope = 300.;
+        double default_cutoff_freq_gyroscope = 300.; // [Hz]
         if (!controller_nh.getParam("default_cutoff_freq_gyroscope", default_cutoff_freq_gyroscope))
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
         }
-        double default_cutoff_freq_qdot = 300.;
+        double default_cutoff_freq_qdot = 300.; // [Hz]
         if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
@@ -290,6 +291,33 @@ public:
         stand_down_srv_              = controller_nh.advertiseService("stand_down",             &ControllerRosWrapper::standDownCB,            this);
         emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",         &ControllerRosWrapper::emergencyStopCB,        this);
         reset_base_srv_              = controller_nh.advertiseService("reset_base",             &ControllerRosWrapper::resetBaseCB,            this);
+        decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",   &ControllerRosWrapper::decreaseStepHeightCB,   this);
+        increase_step_height_        = controller_nh.advertiseService("increase_step_height",   &ControllerRosWrapper::increaseStepHeightCB,   this);
+        set_step_height_             = controller_nh.advertiseService("set_step_height",        &ControllerRosWrapper::setStepHeightCB,        this);
+    }
+
+    bool setStepHeightCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    {
+        res.success = true;
+        if(req.data >= 0)
+          controller_->getFootholdsPlanner()->setStepHeight(req.data);
+        else
+          res.success = false;
+        return res.success;
+    }
+
+    bool increaseStepHeightCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getFootholdsPlanner()->increaseStepHeight();
+        return res.success;
+    }
+
+    bool decreaseStepHeightCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getFootholdsPlanner()->decreaseStepHeight();
+        return res.success;
     }
 
     bool switchControlModeCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -326,7 +354,7 @@ public:
         controller_->resetBase();
         unsigned int current_mode = controller_->getControlMode();
         unsigned int current_state = controller_->getRobotModel()->getState();
-        while(current_mode != wolf_controller::Controller::RESET)
+        while(current_mode == wolf_controller::Controller::RESET)
         {
             if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
             {
@@ -378,8 +406,6 @@ public:
 
     virtual void publish(const ros::Time& time)
     {
-
-      // FIXME it should not be there but for the moment I need it here because of the twist reset in the update of the solver:
       if(controller_->getIDProblem())
           controller_->getIDProblem()->publish(time);
 
@@ -482,6 +508,9 @@ protected:
     ros::ServiceServer stand_down_srv_;
     ros::ServiceServer emergency_stop_srv_;
     ros::ServiceServer reset_base_srv_;
+    ros::ServiceServer increase_step_height_;
+    ros::ServiceServer decrease_step_height_;
+    ros::ServiceServer set_step_height_;
 
 };
 

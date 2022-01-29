@@ -120,6 +120,12 @@ public:
     bool setSwingFrequency(const double& swing_frequency);
 
     /**
+         * @brief Set the step height
+         * @param const double& swing_frequency
+         */
+    bool setStepHeight(const double& step_height);
+
+    /**
          * @brief set cutoff frequency for the qdot filter
          */
     void setCutoffFreqQdot(const double& hz);
