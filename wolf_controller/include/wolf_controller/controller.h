@@ -47,7 +47,7 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 public:
 
      enum posture_t {UP=0,DOWN};
-     enum mode_t {WALKING=0,MANIPULATION};
+     enum mode_t {WALKING=0,MANIPULATION,RESET};
 
      const std::string CLASS_NAME = "Controller";
 
@@ -157,7 +157,12 @@ public:
     /**
          * @brief emergency stop
          */
-    void activateEmergencyStop();
+    void emergencyStop();
+
+    /**
+         * @brief reset base orientation (roll and pitch) and base height
+         */
+    void resetBase();
 
     /**
          * @brief Select the gait to use
@@ -304,8 +309,12 @@ private:
     Eigen::Vector3d tmp_vector3d_;
     /** @brief Support temporary Vector3d */
     Eigen::Vector3d tmp_vector3d_1_;
+    /** @brief Support temporary Vector3d */
+    Eigen::Vector3d tmp_vector3d_2_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
+    /** @brief Support temporary double */
+    double tmp_double_;
 
     /** @brief Counters used for checks */
     Counter::Ptr solver_failures_cnt_;
@@ -324,6 +333,7 @@ private:
     double desired_height_;
     double current_height_;
     double previous_height_;
+    Eigen::Vector3d current_rpy_;
 
     /**
          * @brief thread body for the odometry publisher

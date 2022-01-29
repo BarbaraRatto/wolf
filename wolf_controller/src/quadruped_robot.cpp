@@ -49,13 +49,17 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
   case QuadrupedRobot::robot_states_t::STANDING_DOWN:
     ret = "STANDING_DOWN";
     break;
+
+  case QuadrupedRobot::robot_states_t::RESET:
+    ret = "RESET";
+    break;
   };
 
   return ret;
 }
 
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
-  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE)
+  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE), robot_state_prev_(robot_states_t::IDLE)
 {
 
   // Create the ModelInterface from XBot
@@ -688,10 +692,16 @@ QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
   return robot_state_;
 }
 
+QuadrupedRobot::robot_states_t QuadrupedRobot::getPreviousState()
+{
+  return robot_state_prev_;
+}
+
 bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
 {
   if(state != robot_state_)
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Change state to "<<enumToString(state));
+  robot_state_prev_.store(robot_state_.load());
   robot_state_ = state;
   return true;
 }

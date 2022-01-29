@@ -27,7 +27,7 @@ public:
   typedef std::map<std::string,std::vector<unsigned int>>         limb_joint_idxs_map_t;
   typedef std::map<std::string,unsigned int>                      joint_idxs_map_t;
 
-  enum robot_states_t {IDLE,INIT,WALKING,MANIPULATION,ANOMALY,STANDING_UP,STANDING_DOWN};
+  enum robot_states_t {IDLE,INIT,WALKING,MANIPULATION,ANOMALY,STANDING_UP,STANDING_DOWN,RESET};
 
   QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
@@ -55,6 +55,7 @@ public:
   const double& getBaseWidth() const;
 
   robot_states_t getState();
+  robot_states_t getPreviousState();
   bool setState(robot_states_t robot_state);
 
   void getFloatingBasePositionInertia(Eigen::Matrix3d& M);
@@ -280,6 +281,7 @@ private:
   double stand_down_height_;
 
   std::atomic<robot_states_t> robot_state_;
+  std::atomic<robot_states_t> robot_state_prev_;
 
   mutable RigidBodyDynamics::Model virtual_model_;
 

@@ -28,7 +28,6 @@ public:
     void cmdCallback(const geometry_msgs::Twist& msg)
     {
         start_swing_             = false;
-        reset_base_              = false;
         set_velocities_cmd_      = false;
         base_velocity_x_cmd_     = static_cast<double>(msg.linear.x);
         base_velocity_y_cmd_     = static_cast<double>(msg.linear.y);

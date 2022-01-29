@@ -677,7 +677,6 @@ double FootholdsPlanner::getBaseLinearVelocityCmdZ() const
   return base_linear_velocity_cmd_z_;
 }
 
-
 double FootholdsPlanner::getBaseAngularVelocityCmdRoll() const
 {
   return base_angular_velocity_cmd_roll_;

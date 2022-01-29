@@ -24,7 +24,6 @@ public:
         controller_ptr_ = controller_ptr;
 
         cmd_sub_ = node.subscribe(topic, 1, &DeviceHandlerRosInterface::cmdCallback, this);
-        reset_sub_ = node.subscribe("reset_base", 1, &DeviceHandlerRosInterface::resetCallback, this);
     }
 
     virtual ~DeviceHandlerRosInterface() {}
@@ -59,11 +58,6 @@ protected:
               controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(base_velocity_x_cmd_,base_velocity_y_cmd_,base_velocity_z_cmd_);
               controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
             }
-        }
-        else if(reset_base_)
-        {
-            controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::RESET_BASE); // Reset the base orientation and position (height)
-            reset_base_ = false;
         }
         else if(std::abs(base_velocity_z_scale_)         >0 ||
                 std::abs(base_velocity_yaw_scale_)       >0 ||
@@ -101,14 +95,12 @@ protected:
 
         start_swing_ = false;
 
-        reset_base_      = true;
-
         update();
     }
 
     wolf_controller::Controller* controller_ptr_;
     /** @brief Ros subscriber for the device */
-    ros::Subscriber cmd_sub_, reset_sub_;
+    ros::Subscriber cmd_sub_;
 
 };
 

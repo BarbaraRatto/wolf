@@ -264,6 +264,7 @@ public:
         stand_up_srv_        = controller_nh.advertiseService("stand_up",       &ControllerRosWrapper::standUpCB,       this);
         stand_down_srv_      = controller_nh.advertiseService("stand_down",     &ControllerRosWrapper::standDownCB,     this);
         emergency_stop_srv_  = controller_nh.advertiseService("emergency_stop", &ControllerRosWrapper::emergencyStopCB, this);
+        reset_base_srv_      = controller_nh.advertiseService("reset_base",     &ControllerRosWrapper::resetBaseCB,     this);
         //set_control_srv_     = nh.advertiseService("set_control", &ControllerRosWrapper::setControlCB, this);
         //set_gait_srv_        = nh.advertiseService("set_gait", &ControllerRosWrapper::setGaitCB, this);
     }
@@ -271,7 +272,25 @@ public:
     bool emergencyStopCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
     {
         res.success = true;
-        controller_->activateEmergencyStop();
+        controller_->emergencyStop();
+        return res.success;
+    }
+
+    bool resetBaseCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->resetBase();
+        unsigned int current_state = controller_->getRobotModel()->getState();
+        while(current_state == wolf_controller::QuadrupedRobot::RESET)
+        {
+            if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
+            {
+                res.success = false;
+                break;
+            }
+            current_state = controller_->getRobotModel()->getState();
+            std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+        }
         return res.success;
     }
 
@@ -419,6 +438,7 @@ protected:
     ros::ServiceServer stand_up_srv_;
     ros::ServiceServer stand_down_srv_;
     ros::ServiceServer emergency_stop_srv_;
+    ros::ServiceServer reset_base_srv_;
 
 };
 
