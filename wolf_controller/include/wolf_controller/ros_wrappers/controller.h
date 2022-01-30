@@ -294,6 +294,14 @@ public:
         decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",   &ControllerRosWrapper::decreaseStepHeightCB,   this);
         increase_step_height_        = controller_nh.advertiseService("increase_step_height",   &ControllerRosWrapper::increaseStepHeightCB,   this);
         set_step_height_             = controller_nh.advertiseService("set_step_height",        &ControllerRosWrapper::setStepHeightCB,        this);
+        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recoery",  &ControllerRosWrapper::activatePushRecoveryCB, this);
+    }
+
+    bool activatePushRecoveryCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getFootholdsPlanner()->togglePushRecovery();
+        return res.success;
     }
 
     bool setStepHeightCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
@@ -511,6 +519,7 @@ protected:
     ros::ServiceServer increase_step_height_;
     ros::ServiceServer decrease_step_height_;
     ros::ServiceServer set_step_height_;
+    ros::ServiceServer activate_push_recovery_;
 
 };
 
