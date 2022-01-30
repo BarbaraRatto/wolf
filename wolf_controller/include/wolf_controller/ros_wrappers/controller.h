@@ -235,6 +235,8 @@ public:
           }
         }
 
+        // Real time publishers
+        // Contact forces
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
@@ -243,23 +245,24 @@ public:
         contact_forces_pub_->msg_.contact_positions.resize(n_contacts);
         contact_forces_pub_->msg_.contact_forces.resize(n_contacts);
         contact_forces_pub_->msg_.des_contact_forces.resize(n_contacts);
-
+        // Foot holds
         unsigned int n_feet = controller_->getRobotModel()->getNumberLegs();
         foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FootHolds>(controller_nh, "foot_holds", 4));
         foot_holds_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         foot_holds_pub_->msg_.name.resize(n_feet);
         foot_holds_pub_->msg_.desired_foothold.resize(n_feet);
         foot_holds_pub_->msg_.virtual_foothold.resize(n_feet);
-
+        // Terrain estimation
         terrain_estimation_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>(controller_nh, "terrain_estimation", 4));
         terrain_estimation_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
-
+        // Friciton cones
         friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>(controller_nh, "friction_cones", 4));
         friction_cones_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
 
+        // DDynamic reconfigure
         server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
         server_->registerVariable<bool>("stand_up",false,boost::bind(&wolf_controller::Controller::standUp,controller_,_1),"stand up");
         server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wolf_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
@@ -284,6 +287,7 @@ public:
         server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
         server_->publishServicesTopics();
 
+        // ROS services
         switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",    &ControllerRosWrapper::switchControlModeCB,    this);
         switch_gait_                 = controller_nh.advertiseService("switch_gait",            &ControllerRosWrapper::switchGaitCB,           this);
         switch_posture_              = controller_nh.advertiseService("switch_posture",         &ControllerRosWrapper::switchPostureCB,        this);
@@ -294,7 +298,29 @@ public:
         decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",   &ControllerRosWrapper::decreaseStepHeightCB,   this);
         increase_step_height_        = controller_nh.advertiseService("increase_step_height",   &ControllerRosWrapper::increaseStepHeightCB,   this);
         set_step_height_             = controller_nh.advertiseService("set_step_height",        &ControllerRosWrapper::setStepHeightCB,        this);
-        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery",  &ControllerRosWrapper::activatePushRecoveryCB, this);
+        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery", &ControllerRosWrapper::activatePushRecoveryCB, this);
+        set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",    &ControllerRosWrapper::setSwingFrequencyCB,    this);
+        set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",        &ControllerRosWrapper::setDutyFactorCB,        this);
+    }
+
+    bool setSwingFrequencyCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    {
+        res.success = true;
+        if(req.data >= 0)
+          controller_->setSwingFrequency(req.data);
+        else
+          res.success = false;
+        return res.success;
+    }
+
+    bool setDutyFactorCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    {
+        res.success = true;
+        if(req.data >= 0)
+          controller_->setDutyFactor(req.data);
+        else
+          res.success = false;
+        return res.success;
     }
 
     bool activatePushRecoveryCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -520,6 +546,8 @@ protected:
     ros::ServiceServer decrease_step_height_;
     ros::ServiceServer set_step_height_;
     ros::ServiceServer activate_push_recovery_;
+    ros::ServiceServer set_swing_frequency_;
+    ros::ServiceServer set_duty_factor_;
 
 };
 
