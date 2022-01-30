@@ -52,10 +52,10 @@ class TriggerService:
     def __init__(self, service_name):
         self.called = False
         rospy.wait_for_service(service_name)
-        self.service = rospy.ServiceProxy(service_name, Trigger)
+        self.__service = rospy.ServiceProxy(service_name, Trigger)
 
     def __call__(self):
-        self.service(TriggerRequest())
+        self.__service(TriggerRequest())
         self.called = True
 
     def reset(self):
@@ -85,6 +85,7 @@ if __name__=="__main__":
     switch_posture_service = TriggerService('%s/wolf_controller/switch_posture' % (robot_name))
     emergency_stop_service = TriggerService('%s/wolf_controller/emergency_stop' % (robot_name))
     switch_gait_service = TriggerService('%s/wolf_controller/switch_gait' % (robot_name))
+    activate_push_recovery_service = TriggerService('%s/wolf_controller/activate_push_recovery' % (robot_name))
 
     while not rospy.is_shutdown():
         display_surface.fill(white)
@@ -104,6 +105,9 @@ if __name__=="__main__":
             emergency_stop_service()
         elif keys[ord("g")] and not switch_gait_service.called:
             switch_gait_service()
+        elif keys[pygame.K_TAB] and not activate_push_recovery_service.called:
+            print("CALLED TAB")
+            activate_push_recovery_service()
         # here the twist references are handled
         else:
             for key in moveBindings:
@@ -128,6 +132,7 @@ if __name__=="__main__":
                 reset_base_service.reset()
                 emergency_stop_service.reset()
                 switch_gait_service.reset()
+                activate_push_recovery_service.reset()
 
 
         pygame.display.update()
