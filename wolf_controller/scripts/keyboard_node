@@ -80,10 +80,11 @@ if __name__=="__main__":
 
     twist_pub = rospy.Publisher('%s/wolf_controller/keyboard' % (robot_name), Twist, queue_size = 1)
 
-
+    # Trigger services handlers
     reset_base_service = TriggerService('%s/wolf_controller/reset_base' % (robot_name))
     switch_posture_service = TriggerService('%s/wolf_controller/switch_posture' % (robot_name))
     emergency_stop_service = TriggerService('%s/wolf_controller/emergency_stop' % (robot_name))
+    switch_gait_service = TriggerService('%s/wolf_controller/switch_gait' % (robot_name))
 
     while not rospy.is_shutdown():
         display_surface.fill(white)
@@ -94,12 +95,16 @@ if __name__=="__main__":
 
         command = np.array([0, 0, 0, 0, 0, 0])
 
+        # here triggers services are handled
         if keys[ord("r")] and not reset_base_service.called:
             reset_base_service()
         elif keys[pygame.K_RETURN] and not switch_posture_service.called:
             switch_posture_service()
         elif keys[pygame.K_ESCAPE] and not emergency_stop_service.called:
             emergency_stop_service()
+        elif keys[ord("g")] and not switch_gait_service.called:
+            switch_gait_service()
+        # here the twist references are handled
         else:
             for key in moveBindings:
                 if keys[ord(key)]:
@@ -118,10 +123,11 @@ if __name__=="__main__":
             exit()
 
         for event in pygame.event.get():
-            if event.type == pygame.KEYUP:
+            if event.type == pygame.KEYUP: # these events are triggered only when the button is released!
                 switch_posture_service.reset()
                 reset_base_service.reset()
                 emergency_stop_service.reset()
+                switch_gait_service.reset()
 
 
         pygame.display.update()
