@@ -14,7 +14,8 @@ import rospkg
 
 rospack = rospkg.RosPack()
 rospack.list()
-img_path = rospack.get_path('wolf_controller') + "/resources/keyboard_controls.png"
+path_full_keyboard_buttons = rospack.get_path('wolf_controller') + "/resources/keyboard_controls.png"
+path_simple_keyboard_buttons = rospack.get_path('wolf_controller') + "/resources/simple_keyboard_controls.png"
 
 msg = """
 Reading from the keyboard  and Publishing to Twist!
@@ -61,6 +62,18 @@ class TriggerService:
     def reset(self):
         self.called = False
 
+class TriggerButton:
+    def __init__(self, data):
+        self.called = False
+        self.data = data
+
+    def __call__(self, data):
+        self.called = True
+        self.data = data
+
+    def reset(self):
+        self.called = False
+
 if __name__=="__main__":
     rospy.init_node('wolf_keyboard_node')
     pygame.init()
@@ -70,10 +83,11 @@ if __name__=="__main__":
     Y = 440
     display_surface = pygame.display.set_mode((X, Y))
 
-    pygame.display.set_caption('wolf_keyboard controls')
+    pygame.display.set_caption('wolf_keyboard controls: press 1 to change view')
 
     # create a surface object, image is drawn on it.
-    image = pygame.image.load(img_path)
+    simple_view = TriggerButton(True)
+    image = pygame.image.load(path_simple_keyboard_buttons)
 
 
     robot_name = rospy.get_param('/robot_name')
@@ -90,6 +104,8 @@ if __name__=="__main__":
     decrease_step_service = TriggerService('%s/wolf_controller/decrease_step_height' % (robot_name))
     switch_control_mode_service = TriggerService('%s/wolf_controller/switch_control_mode' % (robot_name))
 
+
+
     while not rospy.is_shutdown():
         display_surface.fill(white)
         display_surface.blit(image, (-125, -50))
@@ -99,8 +115,15 @@ if __name__=="__main__":
 
         command = np.array([0, 0, 0, 0, 0, 0])
 
+        if keys[ord("1")] and not simple_view.called:
+            if simple_view.data:
+                simple_view(False)
+                image = pygame.image.load(path_full_keyboard_buttons)
+            else:
+                simple_view(True)
+                image = pygame.image.load(path_simple_keyboard_buttons)
         # here triggers services are handled
-        if keys[ord("r")] and not reset_base_service.called:
+        elif keys[ord("r")] and not reset_base_service.called:
             reset_base_service()
         elif keys[pygame.K_RETURN] and not switch_posture_service.called:
             switch_posture_service()
@@ -144,6 +167,7 @@ if __name__=="__main__":
                 increase_step_service.reset()
                 decrease_step_service.reset()
                 switch_control_mode_service.reset()
+                simple_view.reset()
 
 
         pygame.display.update()
