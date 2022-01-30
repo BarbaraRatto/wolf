@@ -62,7 +62,7 @@ class TriggerService:
         self.called = False
 
 if __name__=="__main__":
-    rospy.init_node('keyboard_node')
+    rospy.init_node('wolf_keyboard_node')
     pygame.init()
 
     white = (255, 255, 255)
@@ -70,7 +70,7 @@ if __name__=="__main__":
     Y = 440
     display_surface = pygame.display.set_mode((X, Y))
 
-    pygame.display.set_caption('Keyboard controls')
+    pygame.display.set_caption('wolf_keyboard controls')
 
     # create a surface object, image is drawn on it.
     image = pygame.image.load(img_path)
@@ -88,6 +88,7 @@ if __name__=="__main__":
     activate_push_recovery_service = TriggerService('%s/wolf_controller/activate_push_recovery' % (robot_name))
     increase_step_service = TriggerService('%s/wolf_controller/increase_step_height' % (robot_name))
     decrease_step_service = TriggerService('%s/wolf_controller/decrease_step_height' % (robot_name))
+    switch_control_mode_service = TriggerService('%s/wolf_controller/switch_control_mode' % (robot_name))
 
     while not rospy.is_shutdown():
         display_surface.fill(white)
@@ -113,6 +114,8 @@ if __name__=="__main__":
             increase_step_service()
         elif keys[pygame.K_LSHIFT] and not decrease_step_service.called:
             decrease_step_service()
+        elif keys[pygame.K_SPACE] and not switch_control_mode_service.called:
+            switch_control_mode_service()
         # here the twist references are handled
         else:
             for key in moveBindings:
@@ -140,6 +143,7 @@ if __name__=="__main__":
                 activate_push_recovery_service.reset()
                 increase_step_service.reset()
                 decrease_step_service.reset()
+                switch_control_mode_service.reset()
 
 
         pygame.display.update()
