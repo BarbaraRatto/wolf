@@ -7,3 +7,7 @@ see documentation [here](https://github.com/graiola/wolf-setup/blob/master/READM
 ## Todo
 
 see todo list [here](TODO.md)
+
+## Changelog
+
+see changelog [here](CHANGELOG.md)
