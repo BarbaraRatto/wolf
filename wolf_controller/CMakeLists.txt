@@ -34,11 +34,19 @@ add_message_files(FILES
                  ContactForces.msg
                  FootHolds.msg
                  TerrainEstimation.msg
-                 FrictionCones.msg)
+                 FrictionCones.msg
+                 )
+
+add_service_files(
+  FILES
+  float32.srv
+)
 
 generate_messages(
     DEPENDENCIES
-    geometry_msgs)
+    geometry_msgs
+    std_msgs
+)
 
 catkin_package(
   INCLUDE_DIRS include

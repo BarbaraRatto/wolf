@@ -7,13 +7,12 @@ using namespace OpenSoT;
 namespace wolf_controller {
 
 IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
-  model_(model)
+  model_(model), control_mode_(WALKING), change_control_mode_(false)
 {
 
   foot_names_          = model_->getFootNames();
   ee_names_            = model_->getEndEffectorNames();
   contact_names_       = model_->getContactNames();
-  current_robot_state_ = model_->getState();
 
   //
   //  This utility internally creates the right variables which later we will use to
@@ -65,19 +64,19 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   waistRPY_->loadParams();
   waistRPY_->registerReconfigurableVariables();
   //   --------------------------
-  waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
-                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  waistZ_->setLambda(1.,1.);
-  waistZ_->setWeightIsDiagonalFlag(true);
-  waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  waistZ_->loadParams();
-  waistZ_->registerReconfigurableVariables();
+  //waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
+  //                                      WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
+  //waistZ_->setLambda(1.,1.);
+  //waistZ_->setWeightIsDiagonalFlag(true);
+  //waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  //waistZ_->loadParams();
+  //waistZ_->registerReconfigurableVariables();
   //   --------------------------
-  postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
-  postural_->setLambda(1.,1.);
-  postural_->setWeightIsDiagonalFlag(true);
-  postural_->loadParams();
-  postural_->registerReconfigurableVariables();
+  //postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
+  //postural_->setLambda(1.,1.);
+  //postural_->setWeightIsDiagonalFlag(true);
+  //postural_->loadParams();
+  //postural_->registerReconfigurableVariables();
   //   --------------------------
   com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
@@ -132,15 +131,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   std::list<unsigned int> id_XY    = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
-  std::list<unsigned int> id_limbs;
-  id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
-  std::list<unsigned int>::iterator it;
-  unsigned int idx = FLOATING_BASE_DOFS;
-  for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
-  {
-      *it = idx;
-      idx++;
-  }
+  //std::list<unsigned int> id_limbs;
+  //id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
+  //std::list<unsigned int>::iterator it;
+  //unsigned int idx = FLOATING_BASE_DOFS;
+  //for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
+  //{
+  //    *it = idx;
+  //    idx++;
+  //}
 
   //
   // Here we create the stack
@@ -150,7 +149,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_);
+  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_);
 
   if(ee_names_.size() > 0)
   {
@@ -259,19 +258,29 @@ void IDProblem::setLowerForceBoundZ(const double& force)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set z force lower lim to: "<<force);
 }
 
+void IDProblem::setControlMode(mode_t mode)
+{
+  if(control_mode_!=mode)
+  {
+    control_mode_ = mode;
+    change_control_mode_ = true;
+  }
+  else
+    change_control_mode_ = false;
+}
+
 void IDProblem::update()
 {
-  // Update if the robot's state changed
-  if(current_robot_state_ != model_->getState())
+  // Update if state changed
+  if(change_control_mode_)
   {
-    current_robot_state_ = model_->getState();
 
     if(ee_names_.size()>0)
     {
       std::string frame;
-      if(current_robot_state_ == QuadrupedRobot::WALKING)
+      if(control_mode_ == WALKING)
         frame = model_->getBaseLinkName();
-      else if (current_robot_state_ == QuadrupedRobot::MANIPULATION)
+      else if (change_control_mode_ == MANIPULATION)
         frame = WORLD_FRAME_NAME;
       else
         frame = model_->getBaseLinkName();
@@ -307,9 +316,9 @@ void IDProblem::publish(const ros::Time& time)
   for (auto& tmp_map : arms_)
     tmp_map.second->publish(time);
   waistRPY_->publish(time);
-  waistZ_->publish(time);
+  //waistZ_->publish(time);
   com_->publish(time);
-  postural_->publish(time);
+  //postural_->publish(time);
   angular_momentum_->publish(time);
 }
 

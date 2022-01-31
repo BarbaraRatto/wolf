@@ -30,12 +30,8 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
     ret = "INIT";
     break;
 
-  case QuadrupedRobot::robot_states_t::WALKING:
-    ret = "WALKING";
-    break;
-
-  case QuadrupedRobot::robot_states_t::MANIPULATION:
-    ret = "MANIPULATION";
+  case QuadrupedRobot::robot_states_t::ACTIVE:
+    ret = "ACTIVE";
     break;
 
   case QuadrupedRobot::robot_states_t::ANOMALY:
@@ -55,7 +51,7 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
 }
 
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
-  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE)
+  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE), robot_state_prev_(robot_states_t::IDLE)
 {
 
   // Create the ModelInterface from XBot
@@ -91,7 +87,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     if(i>5) // Remove the floating base
     {
       joint_names_.push_back(_dof_names[i]);  // Load the joint names for ROS-Control
-      ROS_INFO_STREAM_NAMED(CLASS_NAME,"ROS-Control joints order: " << joint_names_[joint_names_.size()-1]);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"ROS-Control joints order: " << joint_names_[joint_names_.size()-1]);
     }
   }
 
@@ -170,7 +166,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       std::string current_joint_name = joint_legs_[leg_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
       joint_limb_idx_[leg_names_[i]].push_back(idx);
-      ROS_INFO_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
     }
   }
 
@@ -181,14 +177,14 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       std::string current_joint_name = joint_arms_[arm_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
       joint_limb_idx_[arm_names_[i]].push_back(idx);
-      ROS_INFO_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
     }
   }
 
   for(unsigned int i=0;i<hip_names_.size();i++)
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Hip names: "<<hip_names_[i]);
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Hip names: "<<hip_names_[i]);
 
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Base name: "<<base_name_);
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Base name: "<<base_name_);
 
   hip_names_ = sortByLegPrefix(hip_names_);
   foot_names_ = sortByLegPrefix(foot_names_);
@@ -243,9 +239,9 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   tau_max_.head(6).setZero();
 
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Position limits set to: "<< std::endl <<"-min:" <<q_min_.transpose() << std::endl <<"-max:" <<q_max_.transpose());
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: "<< std::endl <<"-max:" <<qdot_max_.transpose());
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: "  << std::endl <<"-max:" <<tau_max_.transpose());
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Position limits set to: min=["<<q_min_.transpose()<<"]"<< std::endl<<"max=["<<q_max_.transpose()<<"]");
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: max=["<<qdot_max_.transpose()<<"]");
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: max=["<<tau_max_.transpose()<<"]");
 
   tmp_jacobian_.setZero(6, virtual_model_.dof_count);
 
@@ -688,10 +684,16 @@ QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
   return robot_state_;
 }
 
+QuadrupedRobot::robot_states_t QuadrupedRobot::getPreviousState()
+{
+  return robot_state_prev_;
+}
+
 bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
 {
   if(state != robot_state_)
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Change state to "<<enumToString(state));
+  robot_state_prev_.store(robot_state_.load());
   robot_state_ = state;
   return true;
 }
@@ -720,6 +722,11 @@ const double &QuadrupedRobot::getStandUpHeight()
 const double &QuadrupedRobot::getStandDownHeight()
 {
   return stand_down_height_;
+}
+
+const std::string& QuadrupedRobot::getImuSensorName() const
+{
+  return imu_name_;
 }
 
 

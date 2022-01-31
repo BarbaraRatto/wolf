@@ -23,13 +23,12 @@ public:
         assert(controller_ptr);
         controller_ptr_ = controller_ptr;
 
-        sub_ = node.subscribe(topic, 1, &DeviceHandlerRosInterface::callback, this);
-        reset_sub_ = node.subscribe("reset_base", 1, &DeviceHandlerRosInterface::resetCallback, this);
+        cmd_sub_ = node.subscribe(topic, 1, &DeviceHandlerRosInterface::cmdCallback, this);
     }
 
     virtual ~DeviceHandlerRosInterface() {}
 
-    virtual void callback(const msg_t& msg) = 0;
+    virtual void cmdCallback(const msg_t& msg) = 0;
 
 protected:
 
@@ -39,39 +38,45 @@ protected:
         if(base_velocity_x_scale_>1.0) base_velocity_x_scale_ = 1.0; if(base_velocity_x_scale_<-1.0) base_velocity_x_scale_ = -1.0;
         if(base_velocity_y_scale_>1.0) base_velocity_y_scale_ = 1.0; if(base_velocity_y_scale_<-1.0) base_velocity_y_scale_ = -1.0;
         if(base_velocity_z_scale_>1.0) base_velocity_z_scale_ = 1.0; if(base_velocity_z_scale_<-1.0) base_velocity_z_scale_ = -1.0;
-        if(base_roll_scale_>1.0) base_roll_scale_ = 1.0; if(base_roll_scale_<-1.0) base_roll_scale_ = -1.0;
-        if(base_pitch_scale_>1.0) base_pitch_scale_ = 1.0; if(base_pitch_scale_<-1.0) base_pitch_scale_ = -1.0;
-        if(base_yaw_scale_>1.0) base_yaw_scale_ = 1.0; if(base_yaw_scale_<-1.0) base_yaw_scale_ = -1.0;
+        if(base_velocity_roll_scale_>1.0) base_velocity_roll_scale_ = 1.0; if(base_velocity_roll_scale_<-1.0) base_velocity_roll_scale_ = -1.0;
+        if(base_velocity_pitch_scale_>1.0) base_velocity_pitch_scale_ = 1.0; if(base_velocity_pitch_scale_<-1.0) base_velocity_pitch_scale_ = -1.0;
+        if(base_velocity_yaw_scale_>1.0) base_velocity_yaw_scale_ = 1.0; if(base_velocity_yaw_scale_<-1.0) base_velocity_yaw_scale_ = -1.0;
 
+        unsigned int current_control_mode = controller_ptr_->getControlMode();
         unsigned int current_robot_state = controller_ptr_->getRobotModel()->getState();
 
-        if(start_swing_ && current_robot_state == wolf_controller::QuadrupedRobot::WALKING)
+        if(start_swing_ && current_robot_state == wolf_controller::QuadrupedRobot::ACTIVE && current_control_mode == wolf_controller::Controller::WALKING)
         {
             controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(base_velocity_y_scale_);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_yaw_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_pitch_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_roll_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
+            if(set_velocities_cmd_)
+            {
+              controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(base_velocity_x_cmd_,base_velocity_y_cmd_,base_velocity_z_cmd_);
+              controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
+            }
         }
-        else if(reset_base_)
-        {
-            controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::RESET_BASE); // Reset the base orientation and position (height)
-            reset_base_ = false;
-        }
-        else if(std::abs(base_velocity_z_scale_)>0 ||
-                std::abs(base_yaw_scale_)       >0 ||
-                std::abs(base_pitch_scale_)     >0 ||
-                std::abs(base_roll_scale_)      >0  )
+        else if(std::abs(base_velocity_z_scale_)         >0 ||
+                std::abs(base_velocity_yaw_scale_)       >0 ||
+                std::abs(base_velocity_pitch_scale_)     >0 ||
+                std::abs(base_velocity_roll_scale_)      >0  )
         {
             controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::BASE_ONLY); // Move the base orientation and Z
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(0.0);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(0.0);
             controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_yaw_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_pitch_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_roll_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
+            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
+            if(set_velocities_cmd_)
+            {
+              controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(0.0,0.0,base_velocity_z_cmd_);
+              controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
+            }
         }
         else
         {
@@ -85,20 +90,18 @@ protected:
         base_velocity_y_scale_     = 0.;
         base_velocity_z_scale_     = 0.;
 
-        base_roll_scale_        = 0.;
-        base_pitch_scale_       = 0.;
-        base_yaw_scale_         = 0.;
+        base_velocity_roll_scale_  = 0.;
+        base_velocity_pitch_scale_ = 0.;
+        base_velocity_yaw_scale_   = 0.;
 
         start_swing_ = false;
-
-        reset_base_      = true;
 
         update();
     }
 
     wolf_controller::Controller* controller_ptr_;
     /** @brief Ros subscriber for the device */
-    ros::Subscriber sub_, reset_sub_;
+    ros::Subscriber cmd_sub_;
 
 };
 

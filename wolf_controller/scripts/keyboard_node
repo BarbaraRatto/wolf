@@ -8,13 +8,14 @@ import rospy
 import numpy as np
 
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerRequest
 
 import rospkg
 
 rospack = rospkg.RosPack()
 rospack.list()
-img_path = rospack.get_path('wolf_controller') + "/resources/keyboard_controls.png"
+path_full_keyboard_buttons = rospack.get_path('wolf_controller') + "/resources/keyboard_controls.png"
+path_simple_keyboard_buttons = rospack.get_path('wolf_controller') + "/resources/simple_keyboard_controls.png"
 
 msg = """
 Reading from the keyboard  and Publishing to Twist!
@@ -48,14 +49,33 @@ moveBindings = { #     x y z r p y
         "k": np.array([0,0,0,-1,0,0])
     }
 
+class TriggerService:
+    def __init__(self, service_name):
+        self.called = False
+        rospy.wait_for_service(service_name)
+        self.__service = rospy.ServiceProxy(service_name, Trigger)
+
+    def __call__(self):
+        self.__service(TriggerRequest())
+        self.called = True
+
+    def reset(self):
+        self.called = False
+
+class TriggerButton:
+    def __init__(self, data):
+        self.called = False
+        self.data = data
+
+    def __call__(self, data):
+        self.called = True
+        self.data = data
+
+    def reset(self):
+        self.called = False
 
 if __name__=="__main__":
-    rospy.init_node('keyboard_node')
-
-    robot_name = rospy.get_param('/robot_name')
-    twist_pub = rospy.Publisher('%s/wolf_controller/twist' % (robot_name), Twist, queue_size = 1)
-    reset_pub = rospy.Publisher('%s/wolf_controller/reset_base' % (robot_name), Bool, queue_size=1)
-
+    rospy.init_node('wolf_keyboard_node')
     pygame.init()
 
     white = (255, 255, 255)
@@ -63,10 +83,28 @@ if __name__=="__main__":
     Y = 440
     display_surface = pygame.display.set_mode((X, Y))
 
-    pygame.display.set_caption('Keyboard controls')
+    pygame.display.set_caption('wolf_keyboard controls: press 1 to change view')
 
     # create a surface object, image is drawn on it.
-    image = pygame.image.load(img_path)
+    simple_view = TriggerButton(True)
+    image = pygame.image.load(path_simple_keyboard_buttons)
+
+
+    robot_name = rospy.get_param('/robot_name')
+
+    twist_pub = rospy.Publisher('%s/wolf_controller/keyboard' % (robot_name), Twist, queue_size = 1)
+
+    # Trigger services handlers
+    reset_base_service = TriggerService('%s/wolf_controller/reset_base' % (robot_name))
+    switch_posture_service = TriggerService('%s/wolf_controller/switch_posture' % (robot_name))
+    emergency_stop_service = TriggerService('%s/wolf_controller/emergency_stop' % (robot_name))
+    switch_gait_service = TriggerService('%s/wolf_controller/switch_gait' % (robot_name))
+    activate_push_recovery_service = TriggerService('%s/wolf_controller/activate_push_recovery' % (robot_name))
+    increase_step_service = TriggerService('%s/wolf_controller/increase_step_height' % (robot_name))
+    decrease_step_service = TriggerService('%s/wolf_controller/decrease_step_height' % (robot_name))
+    switch_control_mode_service = TriggerService('%s/wolf_controller/switch_control_mode' % (robot_name))
+
+
 
     while not rospy.is_shutdown():
         display_surface.fill(white)
@@ -74,11 +112,34 @@ if __name__=="__main__":
 
         pygame.event.pump()
         keys = pygame.key.get_pressed()
+
         command = np.array([0, 0, 0, 0, 0, 0])
-        if keys[ord("r")]:
-            reset_base = Bool()
-            reset_base.data = True
-            reset_pub.publish(reset_base)
+
+        if keys[ord("1")] and not simple_view.called:
+            if simple_view.data:
+                simple_view(False)
+                image = pygame.image.load(path_full_keyboard_buttons)
+            else:
+                simple_view(True)
+                image = pygame.image.load(path_simple_keyboard_buttons)
+        # here triggers services are handled
+        elif keys[ord("r")] and not reset_base_service.called:
+            reset_base_service()
+        elif keys[pygame.K_RETURN] and not switch_posture_service.called:
+            switch_posture_service()
+        elif keys[pygame.K_ESCAPE] and not emergency_stop_service.called:
+            emergency_stop_service()
+        elif keys[ord("g")] and not switch_gait_service.called:
+            switch_gait_service()
+        elif keys[pygame.K_TAB] and not activate_push_recovery_service.called:
+            activate_push_recovery_service()
+        elif keys[pygame.K_RSHIFT] and not increase_step_service.called:
+            increase_step_service()
+        elif keys[pygame.K_LSHIFT] and not decrease_step_service.called:
+            decrease_step_service()
+        elif keys[pygame.K_SPACE] and not switch_control_mode_service.called:
+            switch_control_mode_service()
+        # here the twist references are handled
         else:
             for key in moveBindings:
                 if keys[ord(key)]:
@@ -95,6 +156,18 @@ if __name__=="__main__":
 
         if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
             exit()
+
+        for event in pygame.event.get():
+            if event.type == pygame.KEYUP: # these events are triggered only when the button is released!
+                switch_posture_service.reset()
+                reset_base_service.reset()
+                emergency_stop_service.reset()
+                switch_gait_service.reset()
+                activate_push_recovery_service.reset()
+                increase_step_service.reset()
+                decrease_step_service.reset()
+                switch_control_mode_service.reset()
+                simple_view.reset()
 
 
         pygame.display.update()

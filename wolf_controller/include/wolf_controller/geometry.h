@@ -328,7 +328,7 @@ inline void rpyToEarBase(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
     Ear<<   1,   0,    -s_p,
             0,   c_r,  c_p*s_r,
             0,  -s_r,  c_p*c_r;
-    // XYZ convetion:
+    // XYZ convention:
     /*Ear<< 1,   0,    s_p,
             0,   c_r,  -c_p*s_r,
             0,   s_r,  c_p*c_r;*/

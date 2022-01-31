@@ -13,6 +13,7 @@
 #include <wolf_controller/ros_wrappers/controller.h>
 #include <wolf_controller/devices/joy.h>
 #include <wolf_controller/devices/twist.h>
+#include <wolf_controller/devices/keyboard.h>
 
 using namespace XBot;
 using namespace Cartesian;
@@ -27,12 +28,19 @@ std::vector<std::string> _rpy = {"roll","pitch","yaw"};
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
+std::string _robot_name = "";
 
 Controller::Controller()
-    :stopping_(false)
+    :MultiInterfaceController<hardware_interface::EffortJointInterface,
+                              hardware_interface::ImuSensorInterface,
+                              hardware_interface::GroundTruthInterface,
+                              hardware_interface::ContactSwitchSensorInterface> (true) // allow_optional_interfaces = true
+    ,stopping_(false)
     ,mode_(WALKING)
+    ,previous_mode_(WALKING)
     ,posture_(DOWN)
 {
+    XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
 }
 
 Controller::~Controller()
@@ -49,74 +57,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     assert(robot_hw);
 
-    hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
-    hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
-    hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
-    hardware_interface::ContactSwitchSensorInterface* cs_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
-
-    // Hardware interfaces checks
-    if(!jt_hw)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::EffortJointInterface not found");
-        return false;
-    }
-    if(!imu_hw)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ImuSensorInterface not found");
-        return false;
-    }
-    if(!gt_hw)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::GroundTruthInterface not found");
-        return false;
-    }
-    else
-        ground_truth_ = gt_hw->getHandle("ground_truth");
-
     robot_model_.reset(createRobotModel(root_nh));
     joint_names_ = robot_model_->getJointNames();
-
-    if(!cs_hw)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
-        return false;
-    }
-    else
-    {
-        contact_sensors_["lf_foot"] = cs_hw->getHandle("lf_foot_contact_sensor"); // FIXME Hardcoded
-        contact_sensors_["rf_foot"] = cs_hw->getHandle("rf_foot_contact_sensor"); // FIXME Hardcoded
-        contact_sensors_["lh_foot"] = cs_hw->getHandle("lh_foot_contact_sensor"); // FIXME Hardcoded
-        contact_sensors_["rh_foot"] = cs_hw->getHandle("rh_foot_contact_sensor"); // FIXME Hardcoded
-    }
-
-    // Setting up joint handles:
-    for (unsigned int i = 0; i < joint_names_.size(); i++)
-    {
-        // Getting joint state handle
-        try
-        {
-            ROS_DEBUG_STREAM("Found joint: "<<joint_names_[i]);
-            joint_states_.push_back(jt_hw->getHandle(joint_names_[i]));
-        }
-        catch(...)
-        {
-            ROS_ERROR_NAMED(CLASS_NAME,"Error loading joint_states_");
-            return false;
-        }
-    }
-    assert(joint_states_.size()>0);
-
-    try
-    {
-        imu_name_ = "trunk_imu"; //FIXME note the hardcoded name...
-        ROS_DEBUG_STREAM("Found imu sensor: "<<imu_name_);
-        imu_sensor_ = imu_hw->getHandle(imu_name_);
-    }
-    catch(...)
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"Error loading imu_sensor_");
-        return false;
-    }
 
     if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
     {
@@ -125,8 +67,93 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     _period = period_;
 
+    if(!root_nh.getParam("/robot_name",robot_name_)) // Get the robot name
+    {
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot name given in namespace /");
+        return false;
+    }
+    _robot_name = robot_name_;
+
+    hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
+    hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
+    hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
+    hardware_interface::ContactSwitchSensorInterface* cs_hw = robot_hw->get<hardware_interface::ContactSwitchSensorInterface>();
+
+    // Hardware interfaces: Joints
+    if(!jt_hw)
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::EffortJointInterface not found");
+        return false;
+    }
+    else
+    {
+      // Setting up joint handles:
+      for (unsigned int i = 0; i < joint_names_.size(); i++)
+      {
+          // Getting joint state handle
+          try
+          {
+              ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Found joint: "<<joint_names_[i]);
+              joint_states_.push_back(jt_hw->getHandle(joint_names_[i])); // FIXME
+          }
+          catch(...)
+          {
+              ROS_ERROR_NAMED(CLASS_NAME,"Error loading the joint handles");
+              return false;
+          }
+      }
+      assert(joint_states_.size()>0);
+    }
+
+    if(!imu_hw)
+    {
+        ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ImuSensorInterface not found");
+        return false;
+    }
+    else
+    {
+        try
+        {
+            std::string imu_sensor_name;
+            if(controller_nh.getParam("imu_sensor_name",imu_sensor_name))
+              imu_sensor_ = imu_hw->getHandle(imu_sensor_name); // Take the selected imu sensor
+            else
+              imu_sensor_ = imu_hw->getHandle(imu_hw->getNames()[0]); // Take the first imu sensor
+        }
+        catch(...)
+        {
+            ROS_ERROR_NAMED(CLASS_NAME,"Error loading the imu handler");
+            return false;
+        }
+    }
+
+    if(!gt_hw)
+        ROS_WARN_NAMED(CLASS_NAME,"hardware_interface::GroundTruthInterface not found");
+    else
+        ground_truth_ = gt_hw->getHandle(gt_hw->getNames()[0]);
+
     use_contact_sensors_ = false;
-    root_nh.getParam("/internal_wrench",use_contact_sensors_);
+    if(controller_nh.getParam("use_contact_sensors",use_contact_sensors_))
+    {
+      if(!cs_hw)
+      {
+          ROS_ERROR_NAMED(CLASS_NAME,"hardware_interface::ContactSwitchSensorInterface not found");
+          return false;
+      }
+      else
+      {
+          auto contact_sensor_names = cs_hw->getNames();
+          if(contact_sensor_names.size() != N_LEGS)
+          {
+            ROS_ERROR_NAMED(CLASS_NAME,"Wrong number of contact sensors! The magic number is 4");
+            return false;
+          }
+          auto foot_names = robot_model_->getFootNames();
+          contact_sensor_names = sortByLegPrefix(contact_sensor_names);
+          for(unsigned int i=0;i<contact_sensor_names.size();i++)
+            contact_sensors_[foot_names[i]] = cs_hw->getHandle(contact_sensor_names[i]);
+      }
+    }
     if(!use_contact_sensors_) // Use the contact sensors
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Using contact estimation");
     else
@@ -186,27 +213,28 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     previous_height_ = robot_model_->getStandUpHeight();
 
+    // Device handler selection
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
     {
         device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use PS3 controller device");
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using Ps3JoyHandler input device");
     }
     else if(input_device == "xbox")
     {
         device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use XBOX controller device");
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using XboxJoyHandler input device");
     }
     else if(input_device == "twist")
     {
         device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using TwistHandler input device");
     }
     else if(input_device == "keyboard")
     {
-        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_INFO_NAMED(CLASS_NAME,"Use ROS::twist input device");
+        device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
+        ROS_DEBUG_NAMED(CLASS_NAME,"Using KeyboardHandler input device");
     }
     else
     {
@@ -217,19 +245,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
 
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope",imu_gyroscope_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/imu_gyroscope_filt",imu_gyroscope_filt_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_velocities",des_joint_velocities_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities",joint_velocities_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_velocities_filt",joint_velocities_filt_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_solver",des_joint_efforts_solver_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts_impedance",des_joint_efforts_impedance_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_efforts",des_joint_efforts_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_efforts",joint_efforts_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_joint_positions",des_joint_positions_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/joint_positions",joint_positions_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/des_base_rpy",des_base_rpy_);
-    RtLogger::getLogger().addPublisher(CLASS_NAME+"/period",period_);
+    RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope)               ,imu_gyroscope_);
+    RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope_filt)          ,imu_gyroscope_filt_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_velocities)        ,des_joint_velocities_);
+    RtLogger::getLogger().addPublisher(TOPIC(joint_velocities)            ,joint_velocities_);
+    RtLogger::getLogger().addPublisher(TOPIC(joint_velocities_filt)       ,joint_velocities_filt_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts_solver)    ,des_joint_efforts_solver_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts_impedance) ,des_joint_efforts_impedance_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts)           ,des_joint_efforts_);
+    RtLogger::getLogger().addPublisher(TOPIC(joint_efforts)               ,joint_efforts_);
+    RtLogger::getLogger().addPublisher(TOPIC(period)                      ,period_);
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
@@ -300,12 +325,26 @@ bool Controller::setSwingFrequency(const double& swing_frequency)
     return true;
 }
 
+bool Controller::setStepHeight(const double& step_height)
+{
+  if(foot_holds_planner_)
+      foot_holds_planner_->setStepHeight(step_height);
+  else
+  {
+      ROS_WARN_NAMED(CLASS_NAME,"foot_holds_planner not initialized yet.");
+      return false;
+  }
+  return true;
+}
+
 bool Controller::selectControlMode(const std::string& mode)
 {
   if(mode == "WALKING")
     mode_ = Controller::mode_t::WALKING;
   else if(mode == "MANIPULATION")
     mode_ = Controller::mode_t::MANIPULATION;
+  else if(mode == "RESET")
+    mode_ = Controller::mode_t::RESET;
   else
   {
     ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
@@ -314,6 +353,11 @@ bool Controller::selectControlMode(const std::string& mode)
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
 
   return true;
+}
+
+unsigned int Controller::getControlMode()
+{
+  return mode_;
 }
 
 void Controller::switchControlMode()
@@ -358,9 +402,14 @@ void Controller::standUp(bool stand_up)
     posture_ = Controller::posture_t::DOWN;
 }
 
-void Controller::activateEmergencyStop()
+void Controller::resetBase()
 {
-    robot_model_->setState(QuadrupedRobot::ANOMALY);
+  mode_ = Controller::mode_t::RESET;
+}
+
+void Controller::emergencyStop()
+{
+  robot_model_->setState(QuadrupedRobot::ANOMALY);
 }
 
 bool Controller::selectGait(const string& gait)
@@ -457,12 +506,12 @@ void Controller::updateStateEstimator(const double &dt)
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
-    if(state_estimator_->getPositionEstimationType() == "ground_truth")
+    if(!ground_truth_.getName().empty() && state_estimator_->getPositionEstimationType() == "ground_truth")
     {
         state_estimator_->setGroundTruthBasePosition(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearPosition()));
         state_estimator_->setGroundTruthBaseLinearVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearVelocity()));
     }
-    if(state_estimator_->getOrientationEstimationType() == "ground_truth")
+    if(!ground_truth_.getName().empty() && state_estimator_->getOrientationEstimationType() == "ground_truth")
     {
         ground_truth_orientation_.w() = ground_truth_.getOrientation()[0];
         ground_truth_orientation_.x() = ground_truth_.getOrientation()[1];
@@ -477,24 +526,23 @@ void Controller::updateStateEstimator(const double &dt)
         state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
     }
 
-    const std::vector<std::string>& foot_names = robot_model_->getFootNames();
     if(use_contact_sensors_)
-        for(unsigned int i = 0; i<foot_names.size(); i++)
+        for(const auto& tmp : contact_sensors_)
         {
-            tmp_vector3d_[0] = contact_sensors_[foot_names[i]].getForce()[0];
-            tmp_vector3d_[1] = contact_sensors_[foot_names[i]].getForce()[1];
-            tmp_vector3d_[2] = contact_sensors_[foot_names[i]].getForce()[2];
-            state_estimator_->setContactForces(foot_names[i],tmp_vector3d_);
+            tmp_vector3d_[0] = tmp.second.getForce()[0];
+            tmp_vector3d_[1] = tmp.second.getForce()[1];
+            tmp_vector3d_[2] = tmp.second.getForce()[2];
+            state_estimator_->setContactForces(tmp.first,tmp_vector3d_);
         }
 
     state_estimator_->update(dt);
-
 }
 
 void Controller::updateStateMachine(const double &dt)
 {
     desired_height_ = 0.0;
     current_height_ = robot_model_->getCurrentHeight();
+    current_rpy_ = robot_model_->getBaseRotationInWorldRPY();
     unsigned int current_state = robot_model_->getState();
     double ramp;
     switch(current_state)
@@ -530,7 +578,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
-        tmp_vector3d_1_.z() = foot_holds_planner_->getLinearVelocityCmd();
+        tmp_vector3d_1_.z() = foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {
@@ -541,35 +589,52 @@ void Controller::updateStateMachine(const double &dt)
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
-          if(mode_ == Controller::mode_t::WALKING)
+          if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
           {
-            robot_model_->setState(QuadrupedRobot::WALKING);
-            break;
-          }
-          else if (mode_ == Controller::mode_t::MANIPULATION)
-          {
-            robot_model_->setState(QuadrupedRobot::MANIPULATION);
-            break;
-          }
-          else
-          {
-            robot_model_->setState(QuadrupedRobot::WALKING);
+            robot_model_->setState(QuadrupedRobot::ACTIVE);
             break;
           }
         }
         break;
 
-      case(QuadrupedRobot::WALKING):
-        updateComponents(dt);
-        updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+      case(QuadrupedRobot::ACTIVE):
+
+        switch(mode_)
+        {
+        case Controller::mode_t::MANIPULATION:
+          updateComponents(dt);
+          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+          id_prob_->setControlMode(IDProblem::mode_t::MANIPULATION);
+          previous_mode_ = Controller::mode_t::MANIPULATION;
+          break;
+        case Controller::mode_t::WALKING:
+          updateComponents(dt);
+          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+          id_prob_->setControlMode(IDProblem::mode_t::WALKING);
+          previous_mode_ = Controller::mode_t::WALKING;
+          break;
+        case Controller::mode_t::RESET:
+          foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
+          updateComponents(dt);
+          tmp_vector3d_1_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // base position
+          tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference(); // base orientation
+          rotToRpy(tmp_matrix3d_,tmp_vector3d_);
+          tmp_vector3d_2_.setZero(); // com velocity
+          updateBaseReferences(tmp_vector3d_1_,tmp_vector3d_2_,tmp_matrix3d_);
+          if( (current_height_ - previous_height_)/dt        <= EPS  &&
+              std::abs(current_rpy_.x() - tmp_vector3d_.x()) <= 0.01 &&
+              std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01
+              )
+          {
+            mode_ = previous_mode_;
+            break;
+          }
+          break;
+        };
+
         if(!updateSolver(dt) || !performSafetyChecks())
         {
           robot_model_->setState(QuadrupedRobot::ANOMALY);
-          break;
-        }
-        if(mode_ == Controller::mode_t::MANIPULATION)
-        {
-          robot_model_->setState(QuadrupedRobot::MANIPULATION);
           break;
         }
         if(posture_ == Controller::posture_t::DOWN)
@@ -578,27 +643,7 @@ void Controller::updateStateMachine(const double &dt)
           robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
           break;
         }
-        break;
 
-      case(QuadrupedRobot::MANIPULATION):
-        updateComponents(dt);
-        updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
-        if(!updateSolver(dt) || !performSafetyChecks())
-        {
-          robot_model_->setState(QuadrupedRobot::ANOMALY);
-          break;
-        }
-        if(mode_ == Controller::mode_t::WALKING)
-        {
-          robot_model_->setState(QuadrupedRobot::WALKING);
-          break;
-        }
-        if(posture_ == Controller::posture_t::DOWN)
-        {
-          stand_down_starting_height_ = current_height_;
-          robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
-          break;
-        }
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
@@ -610,7 +655,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
         tmp_vector3d_1_.setZero(); // com velocity
-        tmp_vector3d_1_.z() = -foot_holds_planner_->getLinearVelocityCmd();
+        tmp_vector3d_1_.z() = -foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
         if(!updateSolver(dt))
         {
@@ -682,8 +727,6 @@ void Controller::updateComponents(const double &dt)
   terrain_estimator_->computeTerrainEstimation(dt);
   // Update the CoM position and velocity reference
   com_planner_->update();
-  // Transform the desired base rotation into RPY for visualization
-  rotToRpy(foot_holds_planner_->getBaseRotationReference(),des_base_rpy_);
 }
 
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
@@ -788,7 +831,6 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Read joint values from the hardware interface
     readJoints();
-
 
     // Read IMU values from the hardware interface
     readImu();

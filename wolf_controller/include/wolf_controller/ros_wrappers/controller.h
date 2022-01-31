@@ -18,6 +18,7 @@
 #include <wolf_controller/FootHolds.h>
 #include <wolf_controller/TerrainEstimation.h>
 #include <wolf_controller/FrictionCones.h>
+#include <wolf_controller/float32.h>
 
 // WoLF
 #include <wolf_controller/controller.h>
@@ -75,6 +76,26 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
         }
+        double max_base_roll = 2*M_PI; // [rad]
+        if (!controller_nh.getParam("max_base_roll", max_base_roll))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No max_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_roll);
+        }
+        double max_base_pitch = 2*M_PI; // [rad]
+        if (!controller_nh.getParam("max_base_pitch", max_base_pitch))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No max_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_pitch);
+        }
+        double min_base_roll = -2*M_PI; // [rad]
+        if (!controller_nh.getParam("min_base_roll", min_base_roll))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No min_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_roll);
+        }
+        double min_base_pitch = -2*M_PI; // [rad]
+        if (!controller_nh.getParam("min_base_pitch", min_base_pitch))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
+        }
         double default_base_linear_velocity = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
         {
@@ -90,12 +111,12 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
         }
-        double default_cutoff_freq_gyroscope = 300.;
+        double default_cutoff_freq_gyroscope = 300.; // [Hz]
         if (!controller_nh.getParam("default_cutoff_freq_gyroscope", default_cutoff_freq_gyroscope))
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
         }
-        double default_cutoff_freq_qdot = 300.;
+        double default_cutoff_freq_qdot = 300.; // [Hz]
         if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
@@ -144,12 +165,16 @@ public:
         controller_->getGaitGenerator()->setSwingFrequency(default_swing_frequency);
         controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
 
-        controller_->getFootholdsPlanner()->setLinearVelocityCmd(default_base_linear_velocity);
-        controller_->getFootholdsPlanner()->setAngularVelocityCmd(default_base_angular_velocity);
+        controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity);
+        controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity);
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
         controller_->getFootholdsPlanner()->setMaxBaseHeight(max_base_height);
+        controller_->getFootholdsPlanner()->setMaxBaseRoll(max_base_roll);
+        controller_->getFootholdsPlanner()->setMaxBasePitch(max_base_pitch);
+        controller_->getFootholdsPlanner()->setMinBaseRoll(min_base_roll);
+        controller_->getFootholdsPlanner()->setMinBasePitch(min_base_pitch);
 
         controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 
@@ -157,35 +182,27 @@ public:
         controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
 
         // Getting Kp and Kd gains
-        // Feet
-        Eigen::Vector3d Kp_swing_leg, Kd_swing_leg, Kp_stance_leg, Kd_stance_leg;
-        Kp_swing_leg = Kd_swing_leg = Kp_stance_leg = Kd_stance_leg = Eigen::Vector3d::Ones();
+        // Legs
+        Eigen::Vector3d Kp_leg, Kd_leg;
+        Kp_leg = Kd_leg = Eigen::Vector3d::Ones();
         for(unsigned int i=0; i<wolf_controller::_joints_prefix.size(); i++)
         {
-          if (!controller_nh.getParam("gains/kp_swing/" + wolf_controller::_joints_prefix[i] , Kp_swing_leg(i)))
+          if (!controller_nh.getParam("gains/Kp_leg/" + wolf_controller::_joints_prefix[i] , Kp_leg(i)))
           {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kp_swing_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No default Kp_leg_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
           }
-          if (!controller_nh.getParam("gains/kd_swing/" + wolf_controller::_joints_prefix[i] , Kd_swing_leg(i)))
+          if (!controller_nh.getParam("gains/Kd_leg/" + wolf_controller::_joints_prefix[i] , Kd_leg(i)))
           {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kd_swing_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-          }
-          if (!controller_nh.getParam("gains/kp_stance/" + wolf_controller::_joints_prefix[i] , Kp_stance_leg(i)))
-          {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kp_stance_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
-          }
-          if (!controller_nh.getParam("gains/kd_stance/" + wolf_controller::_joints_prefix[i] , Kd_stance_leg(i)))
-          {
-            ROS_WARN_NAMED(CLASS_NAME,"No default kd_stance_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+            ROS_WARN_NAMED(CLASS_NAME,"No default Kd_leg_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
           }
           // Check if the values are positive
-          if(Kp_swing_leg(i)<0.0 || Kd_swing_leg(i)<0.0 || Kp_stance_leg(i)<0.0 || Kd_stance_leg(i)<0.0)
+          if(Kp_leg(i)<0.0 || Kd_leg(i)<0.0)
           {
-            ROS_WARN_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
-            Kp_swing_leg(i) = Kd_swing_leg(i) = Kp_stance_leg(i) = Kd_stance_leg(i) = 1.0;
+            ROS_WARN_NAMED(CLASS_NAME,"Kp_leg and Kd_leg gains must be positive!");
+            Kp_leg(i) = Kd_leg(i) = 1.0;
           }
         }
-        controller_ptr->getImpedance()->setLegsGains(Kp_swing_leg,Kd_swing_leg,Kp_stance_leg,Kd_stance_leg);
+        controller_ptr->getImpedance()->setLegsGains(Kp_leg,Kd_leg);
         // Arms
         if(controller_->getRobotModel()->getNumberArms() > 0)
         {
@@ -199,18 +216,18 @@ public:
             Kd_arm.setOnes();
             for(unsigned int i=0; i<n_joint_arms; i++)
             {
-              if (!controller_nh.getParam("gains/kp_arm/j" + std::to_string(i) , Kp_arm(i)))
+              if (!controller_nh.getParam("gains/Kp_arm/j" + std::to_string(i) , Kp_arm(i)))
               {
-                ROS_WARN_NAMED(CLASS_NAME,"No default kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+                ROS_WARN_NAMED(CLASS_NAME,"No default Kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
               }
-              if (!controller_nh.getParam("gains/kd_arm/j"  + std::to_string(i) , Kd_arm(i)))
+              if (!controller_nh.getParam("gains/Kd_arm/j"  + std::to_string(i) , Kd_arm(i)))
               {
-                ROS_WARN_NAMED(CLASS_NAME,"No default kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+                ROS_WARN_NAMED(CLASS_NAME,"No default Kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
               }
               // Check if the values are positive
               if(Kp_arm(i)<0.0 || Kd_arm(i)<0.0)
               {
-                ROS_WARN_NAMED(CLASS_NAME,"Kp and Kd gains must be positive!");
+                ROS_WARN_NAMED(CLASS_NAME,"Kp_arm and Kd_arm gains must be positive!");
                 Kp_arm(i) = Kd_arm(i) = 1.0;
               }
             }
@@ -218,6 +235,8 @@ public:
           }
         }
 
+        // Real time publishers
+        // Contact forces
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
         contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
@@ -226,31 +245,32 @@ public:
         contact_forces_pub_->msg_.contact_positions.resize(n_contacts);
         contact_forces_pub_->msg_.contact_forces.resize(n_contacts);
         contact_forces_pub_->msg_.des_contact_forces.resize(n_contacts);
-
+        // Foot holds
         unsigned int n_feet = controller_->getRobotModel()->getNumberLegs();
         foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FootHolds>(controller_nh, "foot_holds", 4));
         foot_holds_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         foot_holds_pub_->msg_.name.resize(n_feet);
         foot_holds_pub_->msg_.desired_foothold.resize(n_feet);
         foot_holds_pub_->msg_.virtual_foothold.resize(n_feet);
-
+        // Terrain estimation
         terrain_estimation_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>(controller_nh, "terrain_estimation", 4));
         terrain_estimation_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
-
+        // Friciton cones
         friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>(controller_nh, "friction_cones", 4));
         friction_cones_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
 
+        // DDynamic reconfigure
         server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
         server_->registerVariable<bool>("stand_up",false,boost::bind(&wolf_controller::Controller::standUp,controller_,_1),"stand up");
         server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wolf_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
 
         server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wolf_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
         server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wolf_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);
-        server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
+        server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
         server_->registerVariable<double>("set_step_height",default_step_height,boost::bind(&wolf_controller::FootholdsPlanner::setStepHeight,controller_->getFootholdsPlanner(),_1),"set step height",0.0,max_step_height);
         server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wolf_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,100.0);
 
@@ -267,12 +287,119 @@ public:
         server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
         server_->publishServicesTopics();
 
-        //get_robot_state_srv_ = nh.advertiseService("get_robot_state", &ControllerRosWrapper::getRobotStateCB, this);
-        //get_gait_srv_        = nh.advertiseService("get_gait", &ControllerRosWrapper::getGaitCB, this);
-        stand_up_srv_        = controller_nh.advertiseService("stand_up", &ControllerRosWrapper::standUpCB, this);
-        stand_down_srv_      = controller_nh.advertiseService("stand_down", &ControllerRosWrapper::standDownCB, this);
-        //set_control_srv_     = nh.advertiseService("set_control", &ControllerRosWrapper::setControlCB, this);
-        //set_gait_srv_        = nh.advertiseService("set_gait", &ControllerRosWrapper::setGaitCB, this);
+        // ROS services
+        switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",    &ControllerRosWrapper::switchControlModeCB,    this);
+        switch_gait_                 = controller_nh.advertiseService("switch_gait",            &ControllerRosWrapper::switchGaitCB,           this);
+        switch_posture_              = controller_nh.advertiseService("switch_posture",         &ControllerRosWrapper::switchPostureCB,        this);
+        stand_up_srv_                = controller_nh.advertiseService("stand_up",               &ControllerRosWrapper::standUpCB,              this);
+        stand_down_srv_              = controller_nh.advertiseService("stand_down",             &ControllerRosWrapper::standDownCB,            this);
+        emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",         &ControllerRosWrapper::emergencyStopCB,        this);
+        reset_base_srv_              = controller_nh.advertiseService("reset_base",             &ControllerRosWrapper::resetBaseCB,            this);
+        decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",   &ControllerRosWrapper::decreaseStepHeightCB,   this);
+        increase_step_height_        = controller_nh.advertiseService("increase_step_height",   &ControllerRosWrapper::increaseStepHeightCB,   this);
+        set_step_height_             = controller_nh.advertiseService("set_step_height",        &ControllerRosWrapper::setStepHeightCB,        this);
+        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery", &ControllerRosWrapper::activatePushRecoveryCB, this);
+        set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",    &ControllerRosWrapper::setSwingFrequencyCB,    this);
+        set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",        &ControllerRosWrapper::setDutyFactorCB,        this);
+    }
+
+    bool setSwingFrequencyCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    {
+        res.success = true;
+        if(req.data >= 0)
+          controller_->setSwingFrequency(req.data);
+        else
+          res.success = false;
+        return res.success;
+    }
+
+    bool setDutyFactorCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    {
+        res.success = true;
+        if(req.data >= 0)
+          controller_->setDutyFactor(req.data);
+        else
+          res.success = false;
+        return res.success;
+    }
+
+    bool activatePushRecoveryCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getFootholdsPlanner()->togglePushRecovery();
+        return res.success;
+    }
+
+    bool setStepHeightCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    {
+        res.success = true;
+        if(req.data >= 0)
+          controller_->getFootholdsPlanner()->setStepHeight(req.data);
+        else
+          res.success = false;
+        return res.success;
+    }
+
+    bool increaseStepHeightCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getFootholdsPlanner()->increaseStepHeight();
+        return res.success;
+    }
+
+    bool decreaseStepHeightCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getFootholdsPlanner()->decreaseStepHeight();
+        return res.success;
+    }
+
+    bool switchControlModeCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->switchControlMode();
+        return res.success;
+    }
+
+    bool switchGaitCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->switchGait();
+        return res.success;
+    }
+
+    bool switchPostureCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->switchPosture();
+        return res.success;
+    }
+
+    bool emergencyStopCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->emergencyStop();
+        return res.success;
+    }
+
+    bool resetBaseCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->resetBase();
+        unsigned int current_mode = controller_->getControlMode();
+        unsigned int current_state = controller_->getRobotModel()->getState();
+        while(current_mode == wolf_controller::Controller::RESET)
+        {
+            if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
+            {
+                res.success = false;
+                break;
+            }
+            current_mode = controller_->getControlMode();
+            current_state = controller_->getRobotModel()->getState();
+            std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+        }
+        return res.success;
     }
 
     bool standUpCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -280,8 +407,7 @@ public:
         res.success = true;
         controller_->selectPosture("UP");
         unsigned int current_state = controller_->getRobotModel()->getState();
-        while(current_state != wolf_controller::QuadrupedRobot::WALKING      &&
-              current_state != wolf_controller::QuadrupedRobot::MANIPULATION  )
+        while(current_state != wolf_controller::QuadrupedRobot::ACTIVE)
         {
             if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
             {
@@ -314,8 +440,6 @@ public:
 
     virtual void publish(const ros::Time& time)
     {
-
-      // FIXME it should not be there but for the moment I need it here because of the twist reset in the update of the solver:
       if(controller_->getIDProblem())
           controller_->getIDProblem()->publish(time);
 
@@ -411,13 +535,19 @@ protected:
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */
-    ros::ServiceServer get_robot_state_srv_;
-    ros::ServiceServer get_gait_srv_;
-    ros::ServiceServer set_posture_srv_;
-    ros::ServiceServer set_control_srv_;
-    ros::ServiceServer set_gait_srv_;
+    ros::ServiceServer switch_control_mode_;
+    ros::ServiceServer switch_gait_;
+    ros::ServiceServer switch_posture_;
     ros::ServiceServer stand_up_srv_;
     ros::ServiceServer stand_down_srv_;
+    ros::ServiceServer emergency_stop_srv_;
+    ros::ServiceServer reset_base_srv_;
+    ros::ServiceServer increase_step_height_;
+    ros::ServiceServer decrease_step_height_;
+    ros::ServiceServer set_step_height_;
+    ros::ServiceServer activate_push_recovery_;
+    ros::ServiceServer set_swing_frequency_;
+    ros::ServiceServer set_duty_factor_;
 
 };
 

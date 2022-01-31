@@ -97,6 +97,10 @@ public:
 
   bool areAllFeetInStance();
 
+  unsigned int getNumberFeetInStance();
+
+  unsigned int getNumberFeetInSwing();
+
   void setContactState(const std::string& foot_name, const bool& contact);
 
   const bool& getContactState(const std::string& foot_name);
