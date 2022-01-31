@@ -1,6 +1,7 @@
 # TODO list
 
-- test controller
+- controller unit test and profiling with EIGEN
+- replace filters in foothold planner with splines or ramps
 - prepare a readme about the params
 - world -> base footprint and check if navigation can work with ground truth
 - add trajectory for arm

@@ -4,17 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
-## [Unreleased] - yyyy-mm-dd
+## wolf_controller - [0.0.5] - 2022-02-01
  
-Here we write upgrading notes for brands. It's a team effort to make them as
-straightforward as possible.
- 
+sha f1aeaa4ea273b50f028eff620d71e12026062c4
+
 ### Added
-- [PROJECTNAME-XXXX](http://tickets.projectname.com/browse/PROJECTNAME-XXXX)
-  MINOR Ticket title goes here.
-- [PROJECTNAME-YYYY](http://tickets.projectname.com/browse/PROJECTNAME-YYYY)
-  PATCH Ticket title goes here.
- 
+- new ROS services (reset_base, set_swing_frequency, etc...)
+- new ROS services to the keyboard node
+
 ### Changed
+- working on [issue-2](https://github.com/graiola/wolf/issues/2)
+- clean the ros topics
+- reduce xbot logger verbosity
+- cleaned up various branches
  
 ### Fixed
+- bug fix in the foothold reset about the terrain estimation
