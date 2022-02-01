@@ -13,6 +13,7 @@
 
 namespace wolf_controller
 {
+#define BASE_FOOTPRINT_FRAME "base_footprint"
 #define ANGULAR_VELOCITIES_WRT_BASE // Comment it if the IMU's velocities are defined wrt world
 #define GRAVITY 9.81 // Gravity value
 //#define REACHING_MOTION
