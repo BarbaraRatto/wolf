@@ -67,7 +67,7 @@ public:
   const Eigen::Matrix3d& getHfRotationInWorld() const;
   const Eigen::Matrix3d& getBaseRotationInWorld() const;
   const Eigen::Vector3d& getBaseRotationInWorldRPY() const;
-  const double& getHfYawInWorld() const;
+  const double& getBaseYawInWorld() const;
 
   using ModelInterface::getPose;
   using ModelInterface::getCOM;
@@ -245,7 +245,7 @@ private:
   Eigen::Matrix3d world_R_base_;
   Eigen::Matrix3d hf_R_base_;
   Eigen::Vector3d world_RPY_base_;
-  double yaw_base_;
+  double base_yaw_;
 
   /** @brief Foot positions w.r.t base */
   std::map<std::string,Eigen::Vector3d> base_X_foot_;

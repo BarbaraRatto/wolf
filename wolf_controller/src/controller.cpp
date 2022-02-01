@@ -860,6 +860,8 @@ void Controller::odomPublisher()
 {
     ROS_INFO_NAMED(CLASS_NAME,"Start the odomPublisher");
 
+    // For base_footprint definition check here:
+    // https://www.ros.org/reps/rep-0120.html#base-footprint
     // Create the following transformations:
     // base_footprint --> base
     //               `--> world (position available only if using ground_truth)

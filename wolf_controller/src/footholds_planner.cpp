@@ -252,7 +252,7 @@ void FootholdsPlanner::calculateFootSteps()
       current_foothold_hf_[foot_names[i]] = hf_X_current_foothold_;
 
       steps_length_[foot_names[i]]         = step_length_;
-      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getHfYawInWorld();
+      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getBaseYawInWorld();
       steps_height_[foot_names[i]]         = step_height_;
       steps_heading_rate_[foot_names[i]]   = hf_base_angular_velocity_(2);
 

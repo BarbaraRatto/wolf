@@ -434,9 +434,9 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.translation()" << world_T_base_.translation());
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_T_base.linear()" << world_T_base_.linear());
   world_R_hf_ = Eigen::Matrix3d::Identity();
-  yaw_base_   = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
-  world_R_hf_ = Eigen::AngleAxisd(yaw_base_,Eigen::Vector3d::UnitZ());
-  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base" << yaw_base_);
+  base_yaw_   = std::atan2(world_T_base_.linear()(1,0),world_T_base_.linear()(0,0));
+  world_R_hf_ = Eigen::AngleAxisd(base_yaw_,Eigen::Vector3d::UnitZ());
+  ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"yaw_base" << base_yaw_);
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"world_R_hf" << world_R_hf_);
   world_R_base_ = world_T_base_.linear();
   rotToRpy(world_R_base_,world_RPY_base_);
@@ -553,9 +553,9 @@ Eigen::Affine3d& QuadrupedRobot::getFootPoseInBase(const std::string& name)
   return base_T_foot_[name];
 }
 
-const double& QuadrupedRobot::getHfYawInWorld() const
+const double& QuadrupedRobot::getBaseYawInWorld() const
 {
-  return yaw_base_;
+  return base_yaw_;
 }
 
 const Eigen::Matrix3d& QuadrupedRobot::getBaseRotationInWorld() const
