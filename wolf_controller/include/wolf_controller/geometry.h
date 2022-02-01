@@ -13,10 +13,10 @@ namespace wolf_controller
  * @return
  */
 inline double constrainAngle(double x){
-    x = fmod(x + M_PI,2*M_PI);
-    if (x < 0)
-        x += 2*M_PI;
-    return x - M_PI;
+  x = fmod(x + M_PI,2*M_PI);
+  if (x < 0)
+    x += 2*M_PI;
+  return x - M_PI;
 }
 
 /**
@@ -25,7 +25,7 @@ inline double constrainAngle(double x){
  * @return
  */
 inline double angleConv(double angle){
-    return fmod(constrainAngle(angle),2*M_PI);
+  return fmod(constrainAngle(angle),2*M_PI);
 }
 
 /**
@@ -35,10 +35,10 @@ inline double angleConv(double angle){
  * @return
  */
 inline double angleDiff(double a,double b){
-    double dif = fmod(b - a + M_PI,2*M_PI);
-    if (dif < 0)
-        dif += 2*M_PI;
-    return dif - M_PI;
+  double dif = fmod(b - a + M_PI,2*M_PI);
+  if (dif < 0)
+    dif += 2*M_PI;
+  return dif - M_PI;
 }
 
 /**
@@ -48,27 +48,27 @@ inline double angleDiff(double a,double b){
  * @return
  */
 inline double unwrap(double previousAngle,double newAngle){
-    return previousAngle - angleDiff(newAngle,angleConv(previousAngle));
+  return previousAngle - angleDiff(newAngle,angleConv(previousAngle));
 }
 
 inline Eigen::Vector3d unwrap(Eigen::Vector3d& previousAngles, Eigen::Vector3d& newAngles)
 {
-    Eigen::Vector3d outAngles;
-    for (unsigned int i=0; i<3; i++)
-        outAngles(i) = previousAngles(i) - angleDiff(newAngles(i),angleConv(previousAngles(i)));
-    return outAngles;
+  Eigen::Vector3d outAngles;
+  for (unsigned int i=0; i<3; i++)
+    outAngles(i) = previousAngles(i) - angleDiff(newAngles(i),angleConv(previousAngles(i)));
+  return outAngles;
 }
 
 /* wrap x -> [0,max) */
 inline double wrapMax(double x, double max)
 {
-    /* integer math: `(max + x % max) % max` */
-    return fmod(max + fmod(x, max), max);
+  /* integer math: `(max + x % max) % max` */
+  return fmod(max + fmod(x, max), max);
 }
 /* wrap x -> [min,max) */
 inline double wrapMinMax(double x, double min, double max)
 {
-    return min + wrapMax(x - min, max - min);
+  return min + wrapMax(x - min, max - min);
 }
 
 inline void quatToRot(const Eigen::Quaterniond& q, Eigen::Matrix3d& R)
@@ -159,18 +159,24 @@ inline void quatToRpy(const Eigen::Quaterniond& q, Eigen::Vector3d& rpy)
   }
 }
 
-inline void rpyToQuat(const Eigen::Vector3d rpy, Eigen::Quaterniond& q)
+inline void rpyToQuat(const double& roll, const double& pitch, const double& yaw, Eigen::Quaterniond& q)
 {
   double phi, the, psi;
-  phi = rpy(0) / 2;
-  the = rpy(1) / 2;
-  psi = rpy(2) / 2;
+  phi = roll / 2;
+  the = pitch / 2;
+  psi = yaw / 2;
   q.w() = std::cos(phi) * std::cos(the) * std::cos(psi) + std::sin(phi) * std::sin(the) * std::sin(psi);
   q.x() = std::sin(phi) * std::cos(the) * std::cos(psi) - std::cos(phi) * std::sin(the) * std::sin(psi);
   q.y() = std::cos(phi) * std::sin(the) * std::cos(psi) + std::sin(phi) * std::cos(the) * std::sin(psi);
   q.z() = std::cos(phi) * std::cos(the) * std::sin(psi) - std::sin(phi) * std::sin(the) * std::cos(psi);
   q.normalize();
 }
+
+inline void rpyToQuat(const Eigen::Vector3d& rpy, Eigen::Quaterniond& q)
+{
+  rpyToQuat(rpy(0),rpy(1),rpy(2),q);
+}
+
 
 inline void rotToRpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
 {
@@ -186,100 +192,110 @@ inline void rotTransposeToRpy(const Eigen::Matrix3d& R, Eigen::Vector3d& rpy)
   rpy(2) = std::atan2(R(0,1),R(0,0));
 }
 
-inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R)
+inline void rpyToRot(const double& roll, const double& pitch, const double& yaw, Eigen::Matrix3d& R)
 {
   R.setZero();
 
-  double c_y = std::cos(rpy(2));
-  double s_y = std::sin(rpy(2));
+  double c_y = std::cos(yaw);
+  double s_y = std::sin(yaw);
 
-  double c_r = std::cos(rpy(0));
-  double s_r = std::sin(rpy(0));
+  double c_r = std::cos(roll);
+  double s_r = std::sin(roll);
 
-  double c_p = std::cos(rpy(1));
-  double s_p = std::sin(rpy(1));
+  double c_p = std::cos(pitch);
+  double s_p = std::sin(pitch);
 
   R << c_p*c_y ,  s_r*s_p*c_y - c_r*s_y                 ,  c_r*s_p*c_y + s_r*s_y  ,
-       c_p*s_y ,  s_r*s_p*s_y + c_r*c_y                 ,  s_y*s_p*c_r - c_y*s_r,
-       -s_p    ,  c_p*s_r                               ,  c_r*c_p;
+      c_p*s_y ,  s_r*s_p*s_y + c_r*c_y                 ,  s_y*s_p*c_r - c_y*s_r,
+      -s_p    ,  c_p*s_r                               ,  c_r*c_p;
+}
+
+inline void rpyToRot(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R)
+{
+  rpyToRot(rpy(0),rpy(1),rpy(2),R);
+}
+
+inline void rpyToRotTranspose(const double& roll, const double& pitch, const double& yaw, Eigen::Matrix3d& R)
+{
+  R.setZero();
+
+  double c_y = std::cos(yaw);
+  double s_y = std::sin(yaw);
+
+  double c_r = std::cos(roll);
+  double s_r = std::sin(roll);
+
+  double c_p = std::cos(pitch);
+  double s_p = std::sin(pitch);
+
+  R << c_p*c_y               ,  c_p*s_y                ,  -s_p,
+      s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*c_y  ,  s_r*c_p,
+      c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*c_y  ,  c_r*c_p;
 }
 
 inline void rpyToRotTranspose(const Eigen::Vector3d& rpy, Eigen::Matrix3d& R)
 {
-  R.setZero();
-
-  double c_y = std::cos(rpy(2));
-  double s_y = std::sin(rpy(2));
-
-  double c_r = std::cos(rpy(0));
-  double s_r = std::sin(rpy(0));
-
-  double c_p = std::cos(rpy(1));
-  double s_p = std::sin(rpy(1));
-
-  R << c_p*c_y               ,  c_p*s_y                ,  -s_p,
-       s_r*s_p*c_y - c_r*s_y ,  s_r*s_p*s_y + c_r*c_y  ,  s_r*c_p,
-       c_r*s_p*c_y + s_r*s_y ,  c_r*s_p*s_y - s_r*c_y  ,  c_r*c_p;
+  rpyToRotTranspose(rpy(0),rpy(1),rpy(2),R);
 }
 
 inline void rollToRot(const double& roll, Eigen::Matrix3d& R)
 {
-    R.setZero();
-    double c_r = std::cos(roll);
-    double s_r = std::sin(roll);
-    R <<    1   ,    0     	  ,  	  0,
-            0   ,    c_r ,  -s_r,
-            0   ,    s_r,  c_r;
+  R.setZero();
+  double c_r = std::cos(roll);
+  double s_r = std::sin(roll);
+  R <<    1   ,    0     	  ,  	  0,
+      0   ,    c_r ,  -s_r,
+      0   ,    s_r,  c_r;
 }
 
 inline void pitchToRot(const double& pitch, Eigen::Matrix3d& R)
 {
-    R.setZero();
-    double c_p = std::cos(pitch);
-    double s_p = std::sin(pitch);
-    R << c_p 	,	 0  ,   s_p,
-         0       ,    1  ,   0,
-         -s_p 	,	0   ,  c_p;
+  R.setZero();
+  double c_p = std::cos(pitch);
+  double s_p = std::sin(pitch);
+  R << c_p 	,	 0  ,   s_p,
+      0       ,    1  ,   0,
+      -s_p 	,	0   ,  c_p;
 }
 
 inline void yawToRot(const double& yaw, Eigen::Matrix3d& R)
 {
-    R.setZero();
-    double c_y = std::cos(yaw);
-    double s_y = std::sin(yaw);
-    R << c_y,  -s_y ,      0,
-         s_y,  c_y ,      0,
-         0  ,     0,      1;
+  R.setZero();
+  double c_y = std::cos(yaw);
+  double s_y = std::sin(yaw);
+  R << c_y,  -s_y ,      0,
+      s_y,  c_y ,      0,
+      0  ,     0,      1;
 }
 
 inline void rollToRotTranspose(const double& roll, Eigen::Matrix3d& R)
 {
-    R.setZero();
-    double c_r = std::cos(roll);
-    double s_r = std::sin(roll);
-    R <<    1   ,    0     	  ,  	  0,
-            0   ,    c_r ,  s_r,
-            0   ,    -s_r,  c_r;
+  R.setZero();
+  double c_r = std::cos(roll);
+  double s_r = std::sin(roll);
+  R <<    1   ,    0     	  ,  	  0,
+      0   ,    c_r ,  s_r,
+      0   ,    -s_r,  c_r;
 }
 
 inline void pitchToRotTranspose(const double& pitch, Eigen::Matrix3d& R)
 {
-    R.setZero();
-    double c_p = std::cos(pitch);
-    double s_p = std::sin(pitch);
-    R << c_p 	,	 0  ,   -s_p,
-         0       ,    1  ,   0,
-         s_p 	,	0   ,  c_p;
+  R.setZero();
+  double c_p = std::cos(pitch);
+  double s_p = std::sin(pitch);
+  R << c_p 	,	 0  ,   -s_p,
+      0       ,    1  ,   0,
+      s_p 	,	0   ,  c_p;
 }
 
 inline void yawToRotTranspose(const double& yaw, Eigen::Matrix3d& R)
 {
-    R.setZero();
-    double c_y = std::cos(yaw);
-    double s_y = std::sin(yaw);
-    R << c_y,  s_y ,      0,
-         -s_y,  c_y ,      0,
-         0  ,     0,      1;
+  R.setZero();
+  double c_y = std::cos(yaw);
+  double s_y = std::sin(yaw);
+  R << c_y,  s_y ,      0,
+      -s_y,  c_y ,      0,
+      0  ,     0,      1;
 }
 
 /**
@@ -292,18 +308,18 @@ inline void yawToRotTranspose(const double& yaw, Eigen::Matrix3d& R)
 */
 inline void rpyToEarWorld(const Eigen::Vector3d& rpy, Eigen::Matrix3d& Ear){
 
-    const double& pitch = rpy(1);
-    const double& yaw = rpy(2);
+  const double& pitch = rpy(1);
+  const double& yaw = rpy(2);
 
-    double c_y = std::cos(yaw);
-    double s_y = std::sin(yaw);
+  double c_y = std::cos(yaw);
+  double s_y = std::sin(yaw);
 
-    double c_p = std::cos(pitch);
-    double s_p = std::sin(pitch);
+  double c_p = std::cos(pitch);
+  double s_p = std::sin(pitch);
 
-    Ear <<  c_p*c_y, -s_y,    0,
-            c_p*s_y,  c_y,    0,
-            -s_p,     0,      1;
+  Ear <<  c_p*c_y, -s_y,    0,
+      c_p*s_y,  c_y,    0,
+      -s_p,     0,      1;
 }
 
 /**
@@ -316,20 +332,20 @@ inline void rpyToEarWorld(const Eigen::Vector3d& rpy, Eigen::Matrix3d& Ear){
  */
 inline void rpyToEarBase(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
 
-    const double& roll  = rpy(0);
-    const double& pitch = rpy(1);
+  const double& roll  = rpy(0);
+  const double& pitch = rpy(1);
 
-    double c_r = std::cos(roll);
-    double s_r = std::sin(roll);
+  double c_r = std::cos(roll);
+  double s_r = std::sin(roll);
 
-    double c_p = std::cos(pitch);
-    double s_p = std::sin(pitch);
+  double c_p = std::cos(pitch);
+  double s_p = std::sin(pitch);
 
-    Ear<<   1,   0,    -s_p,
-            0,   c_r,  c_p*s_r,
-            0,  -s_r,  c_p*c_r;
-    // XYZ convention:
-    /*Ear<< 1,   0,    s_p,
+  Ear<<   1,   0,    -s_p,
+      0,   c_r,  c_p*s_r,
+      0,  -s_r,  c_p*c_r;
+  // XYZ convention:
+  /*Ear<< 1,   0,    s_p,
             0,   c_r,  -c_p*s_r,
             0,   s_r,  c_p*c_r;*/
 }
@@ -342,18 +358,18 @@ inline void rpyToEarBase(const Eigen::Vector3d & rpy, Eigen::Matrix3d& Ear){
  */
 inline void rpyToEarBaseInv(const Eigen::Vector3d & rpy, Eigen::Matrix3d& EarInv){
 
-    const double& roll = rpy(0);
-    const double& pitch = rpy(1);
+  const double& roll = rpy(0);
+  const double& pitch = rpy(1);
 
-    double c_r = std::cos(roll);
-    double s_r = std::sin(roll);
+  double c_r = std::cos(roll);
+  double s_r = std::sin(roll);
 
-    double c_p = std::cos(pitch);
-    double s_p = std::sin(pitch);
+  double c_p = std::cos(pitch);
+  double s_p = std::sin(pitch);
 
-    EarInv <<1, (s_p*s_r)/c_p,   (c_r*s_p)/c_p,
-             0,          c_r,         -s_r,
-             0,          s_r/c_p,   c_r/c_p;
+  EarInv <<1, (s_p*s_r)/c_p,   (c_r*s_p)/c_p,
+      0,          c_r,         -s_r,
+      0,          s_r/c_p,   c_r/c_p;
 }
 
 /**
@@ -364,7 +380,7 @@ inline void rpyToEarBaseInv(const Eigen::Vector3d & rpy, Eigen::Matrix3d& EarInv
  */
 inline void computeCartesianInertiaInverse(const Eigen::MatrixXd& J, const Eigen::MatrixXd& Mi, Eigen::Matrix6d& Lambdai)
 {
-    Lambdai = J*Mi*J.transpose();
+  Lambdai = J*Mi*J.transpose();
 }
 
 }; // namespace
