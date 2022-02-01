@@ -866,10 +866,11 @@ void Controller::odomPublisher()
     // base_footprint --> base
     //               `--> world (position available only if using ground_truth)
 
-    Eigen::Affine3d base_pose, world_pose;
-    Eigen::Vector3d base_position, world_position;
-    Eigen::Quaterniond base_quaternion, world_quaternion;
+    Eigen::Affine3d world_T_base;
+    Eigen::Vector3d tmp_v;
     double estimated_z;
+    Eigen::Matrix3d tmp_R;
+    Eigen::Quaterniond tmp_q;
 
     static tf::TransformBroadcaster br;
     tf::Transform transform;
@@ -877,38 +878,36 @@ void Controller::odomPublisher()
 
     while(!stopping_)
     {
-        // Get floating base wrt the internal world estimation
-        base_pose = state_estimator_->getFloatingBasePose();
-        // Get the world pose wrt the base
-        world_pose = base_pose.inverse();
+        // Get base wrt the internal world estimation
+        world_T_base = state_estimator_->getFloatingBasePose();
         // Get the estimated z of the base
         estimated_z = state_estimator_->getEstimatedBaseHeight();
 
-        base_position   = base_pose.translation();
-        base_quaternion = base_pose.linear();
-        base_quaternion.normalize();
-
-        world_position   = world_pose.translation();
-        world_quaternion = world_pose.linear();
-        world_quaternion.normalize();
-
         // Create the tf transform between base_footprint -> world
-        transform.setOrigin(tf::Vector3(world_position(0),world_position(1),world_position(2)+estimated_z));
-        q.setX(world_quaternion.x());
-        q.setY(world_quaternion.y());
-        q.setZ(world_quaternion.z());
-        q.setW(world_quaternion.w());
+        tmp_v =  world_T_base.translation();
+        tmp_v(2) = tmp_v(2) - estimated_z;
+        rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
+        tmp_v = - tmp_R * tmp_v;
+        tmp_q = tmp_R;
+        // Set
+        transform.setOrigin(tf::Vector3(tmp_v(0),tmp_v(1),tmp_v(2)));
+        q.setX(tmp_q.x());
+        q.setY(tmp_q.y());
+        q.setZ(tmp_q.z());
+        q.setW(tmp_q.w());
         transform.setRotation(q);
         br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/"  WORLD_FRAME_NAME ));
 
         // Create the tf transform between base_footprint -> base
+        tmp_q = robot_model_->getBaseRotationInHf();
+        // Set
         transform.setOrigin(tf::Vector3(0.0,0.0,estimated_z));
-        q.setX(0);
-        q.setY(0);
-        q.setZ(0);
-        q.setW(1);
+        q.setX(tmp_q.x());
+        q.setY(tmp_q.y());
+        q.setZ(tmp_q.z());
+        q.setW(tmp_q.w());
         transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/"+robot_model_->getBaseLinkName()));
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/" + robot_model_->getBaseLinkName()));
 
         std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
     }
