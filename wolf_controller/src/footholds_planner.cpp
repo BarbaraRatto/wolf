@@ -856,10 +856,8 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher(TOPIC(base_velocity)       ,base_velocity_);
   RtLogger::getLogger().addPublisher(TOPIC(error_abs)           ,error_abs_);
   RtLogger::getLogger().addPublisher(TOPIC(error)               ,error_);
-  RtLogger::getLogger().addPublisher(TOPIC(delta_lf)            ,deltas_["lf_foot"]);
-  RtLogger::getLogger().addPublisher(TOPIC(delta_rf)            ,deltas_["rf_foot"]);
-  RtLogger::getLogger().addPublisher(TOPIC(delta_lh)            ,deltas_["lh_foot"]);
-  RtLogger::getLogger().addPublisher(TOPIC(delta_rh)            ,deltas_["rh_foot"]);
+  for(unsigned int i=0;i<foot_names.size();i++)
+    RtLogger::getLogger().addPublisher(TOPIC(foot_names[i])     ,deltas_[foot_names[i]]);
 #endif
 }
 
