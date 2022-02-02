@@ -958,8 +958,10 @@ const Eigen::Vector2d &PushRecovery::getDelta(const std::string &foot_name)
 
 void PushRecovery::setMaxDelta(const double& max)
 {
-  assert(max > 0);
-  max_delta_ = max;
+  if(max > 0)
+    max_delta_ = max;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"max delta must be positive!");
 }
 
 void PushRecovery::setVelocityThresholds(const Eigen::Vector3d &static_th, const Eigen::Vector3d &dynamic_th)
@@ -970,12 +972,18 @@ void PushRecovery::setVelocityThresholds(const Eigen::Vector3d &static_th, const
 
 void PushRecovery::setGains(const double &k_x, const double &k_y, const double &k_yaw)
 {
-  assert(k_x>0.0 && k_x<=1.0);
-  k_x_ = k_x;
-  assert(k_y>0.0  && k_y<=1.0);
-  k_y_ = k_y;
-  assert(k_yaw>0.0 && k_yaw<=1.0);
-  k_yaw_ = k_yaw;
+  if(k_x>=0.0 && k_x<=1.0)
+    k_x_ = k_x;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"k_x must be between 0 and 1!");
+  if(k_y>=0.0  && k_y<=1.0)
+    k_y_ = k_y;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"k_y must be between 0 and 1!");
+  if(k_yaw>=0.0 && k_yaw<=1.0)
+    k_yaw_ = k_yaw;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"k_yaw must be between 0 and 1!");
 }
 
 void PushRecovery::activateComputeDeltas()
