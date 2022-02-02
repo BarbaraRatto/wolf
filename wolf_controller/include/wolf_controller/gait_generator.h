@@ -9,7 +9,7 @@
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
 #include <wolf_controller/foot_state_machine.h>
-#include <wolf_controller/foot_trajectory.h>
+#include <wolf_controller/foot_trajectory_interface.h>
 
 namespace wolf_controller
 {
