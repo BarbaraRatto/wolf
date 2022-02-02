@@ -16,6 +16,7 @@ rospack = rospkg.RosPack()
 rospack.list()
 path_full_keyboard_buttons = rospack.get_path('wolf_controller') + "/resources/keyboard_controls.png"
 path_simple_keyboard_buttons = rospack.get_path('wolf_controller') + "/resources/simple_keyboard_controls.png"
+path_icon = rospack.get_path('wolf_controller') + "/resources/wolf_logo.png"
 
 msg = """
 Reading from the keyboard  and Publishing to Twist!
@@ -88,6 +89,8 @@ if __name__=="__main__":
     # create a surface object, image is drawn on it.
     simple_view = TriggerButton(True)
     image = pygame.image.load(path_simple_keyboard_buttons)
+    icon  = pygame.image.load(path_icon)
+    pygame.display.set_icon(icon)
 
 
     robot_name = rospy.get_param('/robot_name')
