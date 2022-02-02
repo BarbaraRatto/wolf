@@ -550,13 +550,13 @@ void Controller::updateStateMachine(const double &dt)
       case(QuadrupedRobot::IDLE):
         if(posture_ == Controller::posture_t::UP)
         {
+          init();
           robot_model_->setState(QuadrupedRobot::INIT);
           break;
         }
         break;
 
       case(QuadrupedRobot::INIT):
-        init();
         des_joint_positions_ = robot_model_->getStandDownJointPostion();
         des_joint_velocities_.fill(0.0);
         updateImpedance(des_joint_positions_,des_joint_velocities_);
