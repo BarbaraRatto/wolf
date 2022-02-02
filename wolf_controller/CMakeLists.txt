@@ -35,7 +35,7 @@ add_message_files(FILES
                  FootHolds.msg
                  TerrainEstimation.msg
                  FrictionCones.msg
-                 )
+)
 
 add_service_files(
   FILES
@@ -105,17 +105,25 @@ if (CATKIN_ENABLE_TESTING)
   find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
+  add_library(robot_dummy test/robot_dummy.cpp)
+  target_link_libraries(robot_dummy ${catkin_LIBRARIES} ${PROJECT_NAME})
+
   add_executable(test_state_estimation test/test_state_estimation.cpp)
   target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
-  add_executable(test_id_problem test/test_id_problem.cpp)
+  #add_executable(test_id_problem test/test_id_problem.cpp)
+  #target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
+
+  #add_executable(test_controller test/test_controller.cpp )
+  #target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest robot_dummy)
+
+  add_rostest_gtest(test_controller
+    test/test_controller.test
+    test/test_controller.cpp)
+  target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest robot_dummy)
+
+  add_rostest_gtest(test_id_problem
+    test/test_id_problem.test
+    test/test_id_problem.cpp)
   target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
-
-  add_executable(test_controller test/test_controller.cpp)
-  target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
-
-  #add_rostest_gtest(wolf_controller_test
-  #  test/wolf_controller_test.test
-  #  test/wolf_controller_test.cpp)
-  #target_link_libraries(wolf_controller_test ${catkin_LIBRARIES})
 endif()
