@@ -101,9 +101,11 @@ public:
 
   unsigned int getNumberFeetInSwing();
 
-  void setContactState(const std::string& foot_name, const bool& contact);
+  void setContactState(const std::string& foot_name, const bool& contact, const Eigen::Vector3d& contact_force);
 
-  const bool& getContactState(const std::string& foot_name);
+  const bool& getContact(const std::string& foot_name);
+
+  const Eigen::Vector3d& getContactForce(const std::string& foot_name);
 
   void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose);
 
@@ -167,7 +169,8 @@ private:
   {
     std::shared_ptr<FootStateMachine> state_machine;
     std::shared_ptr<TrajectoryInterface> trajectory;
-    bool contact_state;
+    bool contact;
+    Eigen::Vector3d contact_force;
     bool trigger_stance;
     Eigen::Affine3d initial_pose;
   };

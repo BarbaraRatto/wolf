@@ -358,12 +358,12 @@ void StateEstimator::updateContactState()
     if(haptic_contact_loop_active_)
     {
       qp_estimation_->setContactState(foot_names[i],contacts_[foot_names[i]]);
-      gait_generator_->setContactState(foot_names[i],contacts_[foot_names[i]]);
+      gait_generator_->setContactState(foot_names[i],contacts_[foot_names[i]],contact_forces_[foot_names[i]]);
     }
     else
     {
       qp_estimation_->setContactState(foot_names[i],gait_generator_->isTrajectoryFinished(foot_names[i]));
-      gait_generator_->setContactState(foot_names[i],false);
+      gait_generator_->setContactState(foot_names[i],false,contact_forces_[foot_names[i]]);
     }
   }
 

@@ -22,9 +22,17 @@ public:
 
   TrajectoryReflex(TrajectoryInterface* const trajectory_interface_ptr);
 
-  const Eigen::Vector3d& update(const double& period);
+  void update(const double& period);
 
-  void impactDetected();
+  void standBy();
+
+  bool checkForFrontalImpact(const Eigen::Vector3d& contact_force);
+
+  const Eigen::Vector3d& getReflex();
+  const Eigen::Vector3d& getReflexDot();
+
+  void setContactForceAngleLimits(const double& min, const double& max);
+  void setContactForceThreshold(const double& th);
 
 private:
 
@@ -48,6 +56,13 @@ private:
   bool init_done_;
 
   Eigen::Vector3d xyz_reflex_;
+  Eigen::Vector3d xyz_dot_reflex_;
+
+  Eigen::Vector3d contact_force_swing_frame_;
+
+  double force_angle_lim_min_;
+  double force_angle_lim_max_;
+  double force_th_;
 };
 
 class TrajectoryInterface
@@ -97,7 +112,7 @@ public:
 
   double getSwingFrequency();
 
-  void update(const double& period);
+  void update(const double& period, const Eigen::Vector3d& contact_force);
 
   double getCompletion();
 
@@ -154,6 +169,7 @@ private:
   /** @brief Reflex generator */
   friend class TrajectoryReflex;
   TrajectoryReflex::Ptr reflex_;
+  bool activate_reflex_;
 };
 
 } // namespace
