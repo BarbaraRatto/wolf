@@ -138,7 +138,9 @@ void TrajectoryInterface::update(const double& period)
   xyz_     = trajectoryFunction(time_);
   xyz_dot_ = trajectoryFunctionDot(time_);
 
-  // Rotate the trajectory wrt world and terrain
+
+
+  // Rotate the trajectory position wrt world and terrain
   double c = std::cos(heading_);
   double s = std::sin(heading_);
   world_Rz_swing_(0,0) = c;
@@ -152,7 +154,7 @@ void TrajectoryInterface::update(const double& period)
   pose_reference_.translation() = initial_pose_.translation() + xyz_rotated_;
   position_reference_ = pose_reference_.translation(); // For visualization only
 
-  // Rotate the trajectory dot wrt world
+  // Rotate the trajectory velocity wrt world
   rpy_rates_.setZero();
   omegas_.setZero();
   rpy_.setZero();
@@ -177,3 +179,67 @@ double TrajectoryInterface::getCompletion()
   return swing_frequency_*time_;
 }
 
+TrajectoryReflex::TrajectoryReflex(TrajectoryInterface* const trajectory_interface_ptr)
+{
+  if(trajectory_interface_ptr)
+    trajectory_interface_ptr_ = trajectory_interface_ptr;
+  else
+    throw std::runtime_error("TrajectoryInterface not initialized yet");
+
+
+  retraction_force_angle_ = 150.0/180.0*3.14; // Default angle
+  init(); // Internal update
+
+  init_done_ = false;
+}
+
+void TrajectoryReflex::init()
+{
+  reflex_duration_ = 0.5 * (1.0/trajectory_interface_ptr_->getSwingFrequency());
+  retraction_duration_ = 0.5 * reflex_duration_;
+  Kd_r_ = 10.0 / reflex_duration_;
+  Kp_r_ = 0.25 * (Kd_r_*Kd_r_);
+  double lambda = 5.0/(reflex_duration_);
+  double t_max = (-retraction_duration_*lambda*lambda*std::exp(retraction_duration_ * lambda))/(lambda*lambda*(1.0-std::exp(retraction_duration_*lambda)));
+  double tmp = (1-(1+t_max*lambda)*std::exp(-t_max*lambda)) - (1-(1+(t_max-retraction_duration_)*lambda)*std::exp(-(t_max-retraction_duration_)*lambda));
+  //max_retraction = height/sin(retraction_force_angle);
+  max_retraction_ = trajectory_interface_ptr_->getStepHeight() + 0.1;
+  //force intensity to have that max_retraction in the retractionDuration time interval
+  Fr_max_ = max_retraction_ * Kp_r_ / tmp;
+  r0_     = std::sqrt(trajectory_interface_ptr_->xyz_(0)*trajectory_interface_ptr_->xyz_(0) + trajectory_interface_ptr_->xyz_(2)*trajectory_interface_ptr_->xyz_(2));
+  t0_     = trajectory_interface_ptr_->time_;
+
+  r_ddot_ = r_dot_ = 0.0;
+  r_  = r0_;
+  Fr_ = 0.0;
+
+  xyz_reflex_ = Eigen::Vector3d::Zero();
+}
+
+const Eigen::Vector3d& TrajectoryReflex::update(const double& period)
+{
+
+  if(init_done_)
+  {
+    init();
+    init_done_ = true;
+  }
+
+  double t = trajectory_interface_ptr_->time_;
+  double theta = M_PI * trajectory_interface_ptr_->getSwingFrequency() * t;
+
+  if(t+t0_ >= retraction_duration_)
+    Fr_ = 0.0;
+  else
+    Fr_ = Fr_max_;
+
+  r_ddot_ = - Kp_r_ * r_ - Kd_r_ * r_dot_ + Fr_;
+  r_dot_  = r_ddot_ * period + r_dot_;
+  r_      = r_dot_  * period + r_;
+
+  xyz_reflex_(0) = - r_ * std::cos(theta);
+  xyz_reflex_(1) = 0.0;
+  xyz_reflex_(2) = r_ * std::sin(theta);
+
+  return xyz_reflex_;
+}

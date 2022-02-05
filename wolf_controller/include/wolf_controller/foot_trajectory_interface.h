@@ -8,6 +8,48 @@
 namespace wolf_controller
 {
 
+class TrajectoryInterface;
+
+class TrajectoryReflex
+{
+
+public:
+
+  /**
+   * @brief Shared pointer to TrajectoryReflex
+   */
+  typedef std::shared_ptr<TrajectoryReflex> Ptr;
+
+  TrajectoryReflex(TrajectoryInterface* const trajectory_interface_ptr);
+
+  const Eigen::Vector3d& update(const double& period);
+
+  void impactDetected();
+
+private:
+
+  void init();
+
+  TrajectoryInterface* trajectory_interface_ptr_;
+  double reflex_duration_;
+  double retraction_duration_;
+  double retraction_force_angle_;
+  double max_retraction_;
+  double Kp_r_;
+  double Kd_r_;
+  double Fr_max_;
+  double Fr_;
+  double r0_;
+  double r_;
+  double r_dot_;
+  double r_ddot_;
+  double t0_;
+
+  bool init_done_;
+
+  Eigen::Vector3d xyz_reflex_;
+};
+
 class TrajectoryInterface
 {
 
@@ -97,20 +139,21 @@ private:
   Eigen::Vector3d velocity_reference_;
   /** @brief Initial pose for the trajectory generation */
   Eigen::Affine3d initial_pose_;
-
+  /** @brief Support variables */
   Eigen::Vector3d xyz_;
   Eigen::Vector3d xyz_dot_;
   Eigen::Vector3d xyz_rotated_;
   Eigen::Matrix3d Sz_;
   Eigen::Matrix3d Ear_;
-
   Eigen::Vector3d rpy_;
   Eigen::Vector3d rpy_rates_;
   Eigen::Vector3d omegas_;
-
   Eigen::Matrix3d world_Rz_swing_;
-  Eigen::Matrix3d terrain_R_world_;
   Eigen::Matrix3d terrain_R_swing_;
+  Eigen::Matrix3d terrain_R_world_;
+  /** @brief Reflex generator */
+  friend class TrajectoryReflex;
+  TrajectoryReflex::Ptr reflex_;
 };
 
 } // namespace
