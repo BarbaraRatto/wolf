@@ -8,6 +8,65 @@
 namespace wolf_controller
 {
 
+class TrajectoryInterface;
+
+class TrajectoryReflex
+{
+
+public:
+
+  const std::string CLASS_NAME = "TrajectoryReflex";
+
+  /**
+   * @brief Shared pointer to TrajectoryReflex
+   */
+  typedef std::shared_ptr<TrajectoryReflex> Ptr;
+
+  TrajectoryReflex(TrajectoryInterface* const trajectory_interface_ptr);
+
+  void update(const double& period);
+
+  void standBy();
+
+  bool checkForFrontalImpact(const Eigen::Vector3d& contact_force);
+
+  const Eigen::Vector3d& getReflex();
+  const Eigen::Vector3d& getReflexDot();
+
+  void setContactForceAngleLimits(const double& min, const double& max);
+  void setContactForceThreshold(const double& th);
+
+private:
+
+  void init();
+
+  TrajectoryInterface* trajectory_interface_ptr_;
+  double reflex_duration_;
+  double retraction_duration_;
+  double retraction_force_angle_;
+  double max_retraction_;
+  double Kp_r_;
+  double Kd_r_;
+  double Fr_max_;
+  double Fr_;
+  double r0_;
+  double r_;
+  double r_dot_;
+  double r_ddot_;
+  double t0_;
+
+  bool init_done_;
+
+  Eigen::Vector3d xyz_reflex_;
+  Eigen::Vector3d xyz_dot_reflex_;
+
+  Eigen::Vector3d contact_force_swing_frame_;
+
+  double force_angle_lim_min_;
+  double force_angle_lim_max_;
+  double force_th_;
+};
+
 class TrajectoryInterface
 {
 
@@ -15,152 +74,53 @@ public:
 
   const std::string CLASS_NAME = "TrajectoryInterface";
 
-  TrajectoryInterface()
-    :trajectory_id(_id++)
-  {
-    pose_reference_ = initial_pose_ = pose_ = Eigen::Affine3d::Identity();
-    twist_reference_.setZero();
-    twist_.setZero();
-    swing_frequency_ = 0.0;
-    time_ = 0.0;
-    length_ = 0.0;
-    heading_ = 0.0;
-    heading_rate_ = 0.0;
-    height_ = 0.0;
-    world_R_terrain_.setIdentity();
+  TrajectoryInterface();
 
-    trajectory_finished_ = true;
-#ifdef DEBUG
-    rt_logger::RtLogger::getLogger().addPublisher(TOPIC(position_reference_)+_legs_prefix[trajectory_id],position_reference_);
-    rt_logger::RtLogger::getLogger().addPublisher(TOPIC(velocity_reference_)+_legs_prefix[trajectory_id],velocity_reference_);
-#endif
-  }
+  const Eigen::Affine3d& getReference();
 
-  const Eigen::Affine3d& getReference()
-  {
-    return pose_reference_;
-  }
+  const Eigen::Vector6d& getReferenceDot();
 
-  const Eigen::Vector6d& getReferenceDot()
-  {
-    return twist_reference_;
-  }
+  const Eigen::Affine3d& getInitialPose();
 
-  const Eigen::Affine3d& getInitialPose()
-  {
-    return initial_pose_;
-  }
+  void setInitialPose(const Eigen::Affine3d& initial_pose);
 
-  void setInitialPose(const Eigen::Affine3d& initial_pose)
-  {
-#ifdef OPEN_LOOP_TRAJECTORY
-    // Open loop trajectory
-    initial_pose_ = pose_reference_;
-#else
-    // Closed loop trajectory: to be used if the tracking is good
-    initial_pose_ = initial_pose;
-    pose_reference_ = initial_pose;
-#endif
-  }
+  bool isFinished();
 
-  bool isFinished()
-  {
-    return trajectory_finished_;
-  }
+  void start();
 
-  void start()
-  {
-    time_ = 0.0;
-    twist_reference_.setZero();
-    trajectory_finished_ = false;
-  }
+  void stop();
 
-  void stop()
-  {
-    twist_reference_.setZero();
-  }
+  void setStepHeading(const double& heading);
 
-  void setStepHeading(const double& heading)
-  {
-    heading_ = heading;
-  }
+  void setStepHeadingRate(const double& heading_rate);
 
-  void setStepHeadingRate(const double& heading_rate)
-  {
-    heading_rate_ = heading_rate;
-  }
+  void setTerrainRotation(const Eigen::Matrix3d& world_R_terrain);
 
-  void setTerrainRotation(const Eigen::Matrix3d& world_R_terrain)
-  {
-    world_R_terrain_ = world_R_terrain;
-  }
+  void setStepHeight(const double& height);
 
-  void setStepHeight(const double& height)
-  {
-    height_ = height;
-  }
+  void setStepLength(const double& length);
 
-  void setStepLength(const double& length)
-  {
-    length_ = length;
-  }
+  const double& getStepLength() const;
 
-  const double& getStepLength() const
-  {
-    return length_;
-  }
+  const double& getStepHeight() const;
 
-  const double& getStepHeight() const
-  {
-    return height_;
-  }
+  const double& getStepHeading() const;
 
-  const double& getStepHeading() const
-  {
-    return heading_;
-  }
+  const double& getStepHeadingRate() const;
 
-  const double& getStepHeadingRate() const
-  {
-    return heading_rate_;
-  }
+  const Eigen::Matrix3d& getTerrainRotation() const;
 
-  const Eigen::Matrix3d& getTerrainRotation() const
-  {
-    return world_R_terrain_;
-  }
+  void setSwingFrequency(const double& swing_frequency);
 
-  void setSwingFrequency(const double& swing_frequency)
-  {
-    if(swing_frequency >= 0.0)
-      swing_frequency_ = swing_frequency;
-    else
-      ROS_WARN_NAMED(CLASS_NAME,"Swing frequency has to be positive definite!");
-  }
+  double getSwingFrequency();
 
-  double getSwingFrequency()
-  {
-    return swing_frequency_;
-  }
+  void update(const double& period, const Eigen::Vector3d& contact_force);
 
-  void update(const double& period)
-  {
-    time_ += period;
+  double getCompletion();
 
-    pose_reference_  = trajectoryFunction(time_);
-    twist_reference_ = trajectoryFunctionDot(time_);
+  void startStepReflex(bool start);
 
-    position_reference_ = pose_reference_.translation();
-    velocity_reference_ = twist_reference_.head(3);
-
-    if(swing_frequency_*time_>=1.0)
-      trajectory_finished_ = true;
-  }
-
-  double getCompletion()
-  {
-    return swing_frequency_*time_;
-  }
+  void setStepReflexContactThreshold(const double& th);
 
 protected:
 
@@ -179,6 +139,12 @@ protected:
   double heading_rate_;
   /** @brief Step height */
   double height_;
+
+  virtual const Eigen::Vector3d& trajectoryFunction(const double& time) = 0;
+  virtual const Eigen::Vector3d& trajectoryFunctionDot(const double& time) = 0;
+
+private:
+
   /** @brief Rotation between terrain frame and world, it is used to adapt
       the swing trajectory to align with the terrain */
   Eigen::Matrix3d world_R_terrain_;
@@ -194,13 +160,23 @@ protected:
   Eigen::Vector3d velocity_reference_;
   /** @brief Initial pose for the trajectory generation */
   Eigen::Affine3d initial_pose_;
-  /** @brief Internal pose of the trajectory */
-  Eigen::Affine3d pose_;
-  /** @brief Internal twist of the trajectory */
-  Eigen::Vector6d twist_;
-
-  virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
-  virtual const Eigen::Vector6d& trajectoryFunctionDot(const double& time) = 0;
+  /** @brief Support variables */
+  Eigen::Vector3d xyz_;
+  Eigen::Vector3d xyz_dot_;
+  Eigen::Vector3d xyz_rotated_;
+  Eigen::Matrix3d Sz_;
+  Eigen::Matrix3d Ear_;
+  Eigen::Vector3d rpy_;
+  Eigen::Vector3d rpy_rates_;
+  Eigen::Vector3d omegas_;
+  Eigen::Matrix3d world_Rz_swing_;
+  Eigen::Matrix3d terrain_R_swing_;
+  Eigen::Matrix3d terrain_R_world_;
+  /** @brief Reflex generator */
+  friend class TrajectoryReflex;
+  TrajectoryReflex::Ptr reflex_;
+  bool compute_reflex_trajectory_;
+  bool activate_step_reflex_;
 };
 
 } // namespace

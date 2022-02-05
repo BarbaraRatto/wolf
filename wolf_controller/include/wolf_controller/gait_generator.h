@@ -101,9 +101,11 @@ public:
 
   unsigned int getNumberFeetInSwing();
 
-  void setContactState(const std::string& foot_name, const bool& contact);
+  void setContactState(const std::string& foot_name, const bool& contact, const Eigen::Vector3d& contact_force);
 
-  const bool& getContactState(const std::string& foot_name);
+  const bool& getContact(const std::string& foot_name);
+
+  const Eigen::Vector3d& getContactForce(const std::string& foot_name);
 
   void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose);
 
@@ -159,6 +161,14 @@ public:
 
   void update(const double& period);
 
+  void startStepReflex(bool start);
+
+  void toggleStepReflex();
+
+  bool isStepReflexActive();
+
+  void setStepReflexContactThreshold(const double &th);
+
 private:
 
   void changeGait();
@@ -167,7 +177,8 @@ private:
   {
     std::shared_ptr<FootStateMachine> state_machine;
     std::shared_ptr<TrajectoryInterface> trajectory;
-    bool contact_state;
+    bool contact;
+    Eigen::Vector3d contact_force;
     bool trigger_stance;
     Eigen::Affine3d initial_pose;
   };
@@ -189,6 +200,8 @@ private:
   Trigger next_schedule_;
 
   Gait::gait_t gait_type_;
+
+  std::atomic<bool> step_reflex_active_;
 
 };
 

@@ -12,7 +12,6 @@
 - relative tasks between the feet / kin adjustment
 - port the robots to the new stack 
 - move headers code in cpp
-- step reflexes
 - collision avoidance for the arm
 - experiments on the real robot
 - tests and profiling

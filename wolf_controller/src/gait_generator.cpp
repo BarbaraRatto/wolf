@@ -107,7 +107,8 @@ GaitGenerator::GaitGenerator(const std::vector<std::string>& foot_names, const G
   {
     feet_[foot_names_[i]].state_machine.reset(new FootStateMachine());
     feet_[foot_names_[i]].trajectory.reset(selectTrajectoryType(trajectory_type));
-    feet_[foot_names_[i]].contact_state  = false;
+    feet_[foot_names_[i]].contact        = false;
+    feet_[foot_names_[i]].contact_force  = Eigen::Vector3d::Zero();
     feet_[foot_names_[i]].trigger_stance = false;
     feet_[foot_names_[i]].initial_pose = Eigen::Affine3d::Identity();
   }
@@ -121,6 +122,8 @@ GaitGenerator::GaitGenerator(const std::vector<std::string>& foot_names, const G
   current_gait_idx_ = 0;
   next_gait_idx_ = 1;
   scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
+
+  step_reflex_active_ = false;
 
   reset();
 }
@@ -255,14 +258,20 @@ unsigned int GaitGenerator::getNumberFeetInSwing()
   return n;
 }
 
-void GaitGenerator::setContactState(const std::string& foot_name, const bool& contact)
+void GaitGenerator::setContactState(const std::string& foot_name, const bool& contact, const Eigen::Vector3d& contact_force)
 {
-  feet_[foot_name].contact_state = contact;
+  feet_[foot_name].contact = contact;
+  feet_[foot_name].contact_force = contact_force;
 }
 
-const bool& GaitGenerator::getContactState(const std::string& foot_name)
+const bool& GaitGenerator::getContact(const std::string& foot_name)
 {
-  return feet_[foot_name].contact_state;
+  return feet_[foot_name].contact;
+}
+
+const Eigen::Vector3d&  GaitGenerator::getContactForce(const std::string& foot_name)
+{
+  return feet_[foot_name].contact_force;
 }
 
 void GaitGenerator::setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose)
@@ -450,7 +459,7 @@ void GaitGenerator::update(const double& period)
 #ifdef REACHING_MOTION
     it->second.trigger_stance = it->second.contact_state;
 #else
-    it->second.trigger_stance = it->second.contact_state || it->second.trajectory->isFinished(); //CloseLoop with trajectory end
+    it->second.trigger_stance = it->second.contact || it->second.trajectory->isFinished(); //CloseLoop with trajectory end
 #endif
     it->second.state_machine->update(period,it->second.trigger_stance);
 
@@ -460,7 +469,7 @@ void GaitGenerator::update(const double& period)
       {
         it->second.trajectory->start();
       }
-      it->second.trajectory->update(period);
+      it->second.trajectory->update(period,it->second.contact_force);
 
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Update trajectory for foot "<< it->first);
     }
@@ -496,6 +505,41 @@ void GaitGenerator::update(const double& period)
     gait_buffer_[current_gait_idx_]->update();
     scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
   }
+}
+
+void GaitGenerator::startStepReflex(bool start)
+{
+  step_reflex_active_ = start;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->startStepReflex(step_reflex_active_);
+
+  if(step_reflex_active_)
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+}
+
+void GaitGenerator::toggleStepReflex()
+{
+  step_reflex_active_ = !step_reflex_active_;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->startStepReflex(step_reflex_active_);
+
+  if(step_reflex_active_)
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+}
+
+bool GaitGenerator::isStepReflexActive()
+{
+  return step_reflex_active_;
+}
+
+void GaitGenerator::setStepReflexContactThreshold(const double& th)
+{
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->setStepReflexContactThreshold(th);
 }
 
 void GaitGenerator::changeGait()
