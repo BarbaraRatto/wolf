@@ -76,6 +76,12 @@ protected:
   double heading_rate_;
   /** @brief Step height */
   double height_;
+
+  virtual const Eigen::Vector3d& trajectoryFunction(const double& time) = 0;
+  virtual const Eigen::Vector3d& trajectoryFunctionDot(const double& time) = 0;
+
+private:
+
   /** @brief Rotation between terrain frame and world, it is used to adapt
       the swing trajectory to align with the terrain */
   Eigen::Matrix3d world_R_terrain_;
@@ -91,13 +97,20 @@ protected:
   Eigen::Vector3d velocity_reference_;
   /** @brief Initial pose for the trajectory generation */
   Eigen::Affine3d initial_pose_;
-  /** @brief Internal pose of the trajectory */
-  Eigen::Affine3d pose_;
-  /** @brief Internal twist of the trajectory */
-  Eigen::Vector6d twist_;
 
-  virtual const Eigen::Affine3d& trajectoryFunction(const double& time) = 0;
-  virtual const Eigen::Vector6d& trajectoryFunctionDot(const double& time) = 0;
+  Eigen::Vector3d xyz_;
+  Eigen::Vector3d xyz_dot_;
+  Eigen::Vector3d xyz_rotated_;
+  Eigen::Matrix3d Sz_;
+  Eigen::Matrix3d Ear_;
+
+  Eigen::Vector3d rpy_;
+  Eigen::Vector3d rpy_rates_;
+  Eigen::Vector3d omegas_;
+
+  Eigen::Matrix3d world_Rz_swing_;
+  Eigen::Matrix3d terrain_R_world_;
+  Eigen::Matrix3d terrain_R_swing_;
 };
 
 } // namespace
