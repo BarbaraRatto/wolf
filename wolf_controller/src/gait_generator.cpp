@@ -123,6 +123,8 @@ GaitGenerator::GaitGenerator(const std::vector<std::string>& foot_names, const G
   next_gait_idx_ = 1;
   scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
 
+  step_reflex_active_ = false;
+
   reset();
 }
 
@@ -503,6 +505,41 @@ void GaitGenerator::update(const double& period)
     gait_buffer_[current_gait_idx_]->update();
     scheduled_feet_ = gait_buffer_[current_gait_idx_]->getNextSchedule();
   }
+}
+
+void GaitGenerator::startStepReflex(bool start)
+{
+  step_reflex_active_ = start;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->startStepReflex(step_reflex_active_);
+
+  if(step_reflex_active_)
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+}
+
+void GaitGenerator::toggleStepReflex()
+{
+  step_reflex_active_ = !step_reflex_active_;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->startStepReflex(step_reflex_active_);
+
+  if(step_reflex_active_)
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+}
+
+bool GaitGenerator::isStepReflexActive()
+{
+  return step_reflex_active_;
+}
+
+void GaitGenerator::setStepReflexContactThreshold(const double& th)
+{
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->setStepReflexContactThreshold(th);
 }
 
 void GaitGenerator::changeGait()

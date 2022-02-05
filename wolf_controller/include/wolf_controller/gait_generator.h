@@ -161,6 +161,14 @@ public:
 
   void update(const double& period);
 
+  void startStepReflex(bool start);
+
+  void toggleStepReflex();
+
+  bool isStepReflexActive();
+
+  void setStepReflexContactThreshold(const double &th);
+
 private:
 
   void changeGait();
@@ -192,6 +200,8 @@ private:
   Trigger next_schedule_;
 
   Gait::gait_t gait_type_;
+
+  std::atomic<bool> step_reflex_active_;
 
 };
 

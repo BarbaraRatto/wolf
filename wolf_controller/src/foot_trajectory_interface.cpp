@@ -5,6 +5,7 @@ using namespace wolf_controller;
 
 TrajectoryInterface::TrajectoryInterface()
   :trajectory_id(_id++)
+  ,activate_step_reflex_(false)
 {
   pose_reference_ = initial_pose_ = Eigen::Affine3d::Identity();
   twist_reference_.setZero();
@@ -63,7 +64,7 @@ void TrajectoryInterface::start()
   time_ = 0.0;
   twist_reference_.setZero();
   trajectory_finished_ = false;
-  activate_reflex_ = false;
+  compute_reflex_trajectory_ = false;
   reflex_->standBy();
 }
 
@@ -152,14 +153,17 @@ void TrajectoryInterface::update(const double& period,const Eigen::Vector3d& con
   xyz_dot_ = trajectoryFunctionDot(time_);
 
   // Reflex
-  if (time_<0.5*(1.0/swing_frequency_) && reflex_->checkForFrontalImpact(contact_force))
-     activate_reflex_ = true;
+  if(activate_step_reflex_)
+  {
+    if (time_<0.5*(1.0/swing_frequency_) && reflex_->checkForFrontalImpact(contact_force))
+       compute_reflex_trajectory_ = true;
 
-  if(activate_reflex_)
-     reflex_->update(period);
+    if(compute_reflex_trajectory_)
+       reflex_->update(period);
 
-  xyz_ = xyz_ + reflex_->getReflex();
-  xyz_dot_ = xyz_dot_ + reflex_->getReflexDot();
+    xyz_ = xyz_ + reflex_->getReflex();
+    xyz_dot_ = xyz_dot_ + reflex_->getReflexDot();
+  }
 
   // Rotate the trajectory position wrt world and terrain
   terrain_R_world_.noalias() = world_R_terrain_.transpose();
@@ -193,6 +197,17 @@ double TrajectoryInterface::getCompletion()
   return swing_frequency_*time_;
 }
 
+void TrajectoryInterface::startStepReflex(bool start)
+{
+  activate_step_reflex_ = start;
+
+}
+
+void TrajectoryInterface::setStepReflexContactThreshold(const double &th)
+{
+  reflex_->setContactForceThreshold(th);
+}
+
 TrajectoryReflex::TrajectoryReflex(TrajectoryInterface* const trajectory_interface_ptr)
 {
   if(trajectory_interface_ptr)
@@ -201,13 +216,13 @@ TrajectoryReflex::TrajectoryReflex(TrajectoryInterface* const trajectory_interfa
     throw std::runtime_error("TrajectoryInterface not initialized yet");
 
   retraction_force_angle_ = 150.0/180.0*3.14; // Default angle
-  init(); // Internal update
+  init();
 
   standBy();
 
-  force_angle_lim_min_ = -120* (M_PI / 180.0); // lower than 90 ° the robot is sagging because the CPG trajectory is going down and the reflex is going up and they cancel each other
-  force_angle_lim_max_ = 140* (M_PI / 180.0);
-  force_th_ = 10.0;
+  force_angle_lim_min_ = -120.0 * (M_PI / 180.0); // lower than 90 ° the robot is sagging because the trajectory is going down and the reflex is going up and they cancel each other
+  force_angle_lim_max_ =  140.0 * (M_PI / 180.0);
+  force_th_ = 10.0; // FIXME
 }
 
 void TrajectoryReflex::init()
@@ -240,7 +255,7 @@ void TrajectoryReflex::update(const double& period)
   {
     init();
     init_done_ = true;
-    ROS_INFO("ACTIVATE REFLEX!");
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Activate step reflex for foot: "<<_legs_prefix[trajectory_interface_ptr_->trajectory_id]);
   }
 
   double t = trajectory_interface_ptr_->time_;
@@ -307,5 +322,8 @@ void TrajectoryReflex::setContactForceAngleLimits(const double &min, const doubl
 
 void TrajectoryReflex::setContactForceThreshold(const double &th)
 {
-  force_th_ = th;
+  if(th>0.0)
+    force_th_ = th;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Contact force threshold must be positive!");
 }

@@ -164,6 +164,7 @@ public:
 
         controller_->getGaitGenerator()->setSwingFrequency(default_swing_frequency);
         controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
+        controller_->getGaitGenerator()->setStepReflexContactThreshold(default_contact_threshold/3.0);
 
         controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity);
         controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity);
@@ -266,6 +267,7 @@ public:
         server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
         server_->registerVariable<bool>("stand_up",false,boost::bind(&wolf_controller::Controller::standUp,controller_,_1),"stand up");
         server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wolf_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
+        server_->registerVariable<bool>("activate_step_reflex",controller_->getGaitGenerator()->isStepReflexActive(),boost::bind(&wolf_controller::GaitGenerator::startStepReflex,controller_->getGaitGenerator(),_1),"activate step reflex");
 
         server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wolf_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
         server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wolf_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);
@@ -299,6 +301,7 @@ public:
         increase_step_height_        = controller_nh.advertiseService("increase_step_height",   &ControllerRosWrapper::increaseStepHeightCB,   this);
         set_step_height_             = controller_nh.advertiseService("set_step_height",        &ControllerRosWrapper::setStepHeightCB,        this);
         activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery", &ControllerRosWrapper::activatePushRecoveryCB, this);
+        activate_step_reflex_        = controller_nh.advertiseService("activate_step_reflex",   &ControllerRosWrapper::activateStepReflexCB,   this);
         set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",    &ControllerRosWrapper::setSwingFrequencyCB,    this);
         set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",        &ControllerRosWrapper::setDutyFactorCB,        this);
     }
@@ -327,6 +330,13 @@ public:
     {
         res.success = true;
         controller_->getFootholdsPlanner()->togglePushRecovery();
+        return res.success;
+    }
+
+    bool activateStepReflexCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getGaitGenerator()->toggleStepReflex();
         return res.success;
     }
 
@@ -546,6 +556,7 @@ protected:
     ros::ServiceServer decrease_step_height_;
     ros::ServiceServer set_step_height_;
     ros::ServiceServer activate_push_recovery_;
+    ros::ServiceServer activate_step_reflex_;
     ros::ServiceServer set_swing_frequency_;
     ros::ServiceServer set_duty_factor_;
 

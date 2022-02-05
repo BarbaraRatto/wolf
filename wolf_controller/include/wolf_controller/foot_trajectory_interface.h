@@ -15,6 +15,8 @@ class TrajectoryReflex
 
 public:
 
+  const std::string CLASS_NAME = "TrajectoryReflex";
+
   /**
    * @brief Shared pointer to TrajectoryReflex
    */
@@ -116,6 +118,10 @@ public:
 
   double getCompletion();
 
+  void startStepReflex(bool start);
+
+  void setStepReflexContactThreshold(const double& th);
+
 protected:
 
   inline static int _id = 0;
@@ -169,7 +175,8 @@ private:
   /** @brief Reflex generator */
   friend class TrajectoryReflex;
   TrajectoryReflex::Ptr reflex_;
-  bool activate_reflex_;
+  bool compute_reflex_trajectory_;
+  bool activate_step_reflex_;
 };
 
 } // namespace
