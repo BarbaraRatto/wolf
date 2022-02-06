@@ -45,43 +45,44 @@ protected:
         unsigned int current_control_mode = controller_ptr_->getControlMode();
         unsigned int current_robot_state = controller_ptr_->getRobotModel()->getState();
 
-        if(start_swing_ && current_robot_state == wolf_controller::QuadrupedRobot::ACTIVE && current_control_mode == wolf_controller::Controller::WALKING)
-        {
-            controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(base_velocity_y_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
-            if(set_velocities_cmd_)
-            {
-              controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(base_velocity_x_cmd_,base_velocity_y_cmd_,base_velocity_z_cmd_);
-              controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
-            }
-        }
-        else if(std::abs(base_velocity_z_scale_)         >0 ||
-                std::abs(base_velocity_yaw_scale_)       >0 ||
-                std::abs(base_velocity_pitch_scale_)     >0 ||
-                std::abs(base_velocity_roll_scale_)      >0  )
-        {
-            controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::BASE_ONLY); // Move the base orientation and Z
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(0.0);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(0.0);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
-            controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
-            if(set_velocities_cmd_)
-            {
-              controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(0.0,0.0,base_velocity_z_cmd_);
-              controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
-            }
-        }
-        else
-        {
-            controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::HOLD); // HODOR!
-        }
+        if(current_robot_state == wolf_controller::QuadrupedRobot::ACTIVE)
+          if(start_swing_ && current_control_mode == wolf_controller::Controller::WALKING)
+          {
+              controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(base_velocity_y_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
+              if(set_velocities_cmd_)
+              {
+                controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(base_velocity_x_cmd_,base_velocity_y_cmd_,base_velocity_z_cmd_);
+                controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
+              }
+          }
+          else if(std::abs(base_velocity_z_scale_)         >0 ||
+                  std::abs(base_velocity_yaw_scale_)       >0 ||
+                  std::abs(base_velocity_pitch_scale_)     >0 ||
+                  std::abs(base_velocity_roll_scale_)      >0  )
+          {
+              controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::BASE_ONLY); // Move the base orientation and Z
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(0.0);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleY(0.0);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleZ(base_velocity_z_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleYaw(base_velocity_yaw_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScalePitch(base_velocity_pitch_scale_);
+              controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleRoll(base_velocity_roll_scale_);
+              if(set_velocities_cmd_)
+              {
+                controller_ptr_->getFootholdsPlanner()->setBaseLinearVelocityCmd(0.0,0.0,base_velocity_z_cmd_);
+                controller_ptr_->getFootholdsPlanner()->setBaseAngularVelocityCmd(base_velocity_roll_cmd_,base_velocity_pitch_cmd_,base_velocity_yaw_cmd_);
+              }
+          }
+          else
+          {
+              controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::HOLD); // HODOR!
+          }
     }
 
     void resetCallback(const std_msgs::Bool::ConstPtr& msg)
