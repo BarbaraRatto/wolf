@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## wolf_controller - [0.0.7] - ????-??-??
+ 
+sha ??
+
+### Added
+- activate push recovery and step reflex in the param files
+
+### Changed
+- send input device commands only if the robot is in the active state
+ 
+### Fixed
+- angular velocities bug
+
 ## wolf_controller - [0.0.6] - 2022-02-06
  
 sha 0db116a4324dc8565576ae621997f5dbeb11faf2
