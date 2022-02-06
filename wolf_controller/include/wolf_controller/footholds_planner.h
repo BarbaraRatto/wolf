@@ -198,6 +198,12 @@ public:
     void setBaseAngularVelocityCmd(const double& angular);
     void setBaseLinearVelocityCmd(const double& x, const double& y, const double& z, bool verbose = false);
     void setBaseAngularVelocityCmd(const double& roll, const double& pitch, const double& yaw, bool verbose = false);
+    void setBaseLinearVelocityCmdX(const double& v);
+    void setBaseLinearVelocityCmdY(const double& v);
+    void setBaseLinearVelocityCmdZ(const double& v);
+    void setBaseAngularVelocityCmdRoll(const double& v);
+    void setBaseAngularVelocityCmdPitch(const double& v);
+    void setBaseAngularVelocityCmdYaw(const double& v);
     void setStepHeight(const double& height);
     void setMaxStepHeight(const double& max);
     void setMaxStepLength(const double& max);

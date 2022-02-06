@@ -578,6 +578,36 @@ void FootholdsPlanner::setBaseAngularVelocityCmd(const double& roll, const doubl
     ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<<" "<<roll<<" "<<pitch<<" "<<yaw);
 }
 
+void FootholdsPlanner::setBaseLinearVelocityCmdX(const double &v)
+{
+  base_linear_velocity_cmd_x_ = v;
+}
+
+void FootholdsPlanner::setBaseLinearVelocityCmdY(const double &v)
+{
+  base_linear_velocity_cmd_y_ = v;
+}
+
+void FootholdsPlanner::setBaseLinearVelocityCmdZ(const double &v)
+{
+  base_linear_velocity_cmd_z_ = v;
+}
+
+void FootholdsPlanner::setBaseAngularVelocityCmdRoll(const double &v)
+{
+  base_angular_velocity_cmd_roll_  = v;
+}
+
+void FootholdsPlanner::setBaseAngularVelocityCmdPitch(const double &v)
+{
+  base_angular_velocity_cmd_pitch_  = v;
+}
+
+void FootholdsPlanner::setBaseAngularVelocityCmdYaw(const double &v)
+{
+  base_angular_velocity_cmd_yaw_  = v;
+}
+
 void FootholdsPlanner::setStepHeight(const double& height)
 {
   if(height > step_height_max_) // Check if it is ok
