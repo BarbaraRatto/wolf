@@ -187,7 +187,7 @@ public:
         if(set_same_angular_velocities)
           controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity);
         else
-          controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_angular_velocity_roll,default_base_angular_velocity_pitch,default_base_angular_velocity_yaw);
+          controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity_roll,default_base_angular_velocity_pitch,default_base_angular_velocity_yaw);
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
