@@ -188,6 +188,7 @@ public:
           controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity);
         else
           controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity_roll,default_base_angular_velocity_pitch,default_base_angular_velocity_yaw);
+
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
@@ -201,6 +202,14 @@ public:
 
         controller_->setCutoffFreqQdot(default_cutoff_freq_qdot);
         controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
+
+        bool activate_push_recovery = false;
+        controller_nh.getParam("activate_push_recovery", activate_push_recovery);
+        controller_->getFootholdsPlanner()->startPushRecovery(activate_push_recovery);
+
+        bool activate_step_reflex = false;
+        controller_nh.getParam("activate_step_reflex", activate_step_reflex);
+        controller_->getGaitGenerator()->startStepReflex(activate_step_reflex);
 
         // Getting Kp and Kd gains
         // Legs
