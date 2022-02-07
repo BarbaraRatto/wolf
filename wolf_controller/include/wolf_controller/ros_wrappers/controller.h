@@ -56,6 +56,11 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
         }
+        double default_step_reflex_contact_threshold = default_contact_threshold/3.0; // [N]
+        if (!controller_nh.getParam("default_step_reflex_contact_threshold", default_step_reflex_contact_threshold))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default_step_reflex_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_contact_threshold);
+        }
         double default_step_height = 0.05; // [m]
         if (!controller_nh.getParam("default_step_height", default_step_height))
         {
@@ -178,7 +183,7 @@ public:
 
         controller_->getGaitGenerator()->setSwingFrequency(default_swing_frequency);
         controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
-        controller_->getGaitGenerator()->setStepReflexContactThreshold(default_contact_threshold/3.0);
+        controller_->getGaitGenerator()->setStepReflexContactThreshold(default_step_reflex_contact_threshold);
 
         if(set_same_linear_velocities)
           controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity);
