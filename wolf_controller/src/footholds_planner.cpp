@@ -887,7 +887,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   RtLogger::getLogger().addPublisher(TOPIC(error_abs)           ,error_abs_);
   RtLogger::getLogger().addPublisher(TOPIC(error)               ,error_);
   for(unsigned int i=0;i<foot_names.size();i++)
-    RtLogger::getLogger().addPublisher(TOPIC(foot_names[i])     ,deltas_[foot_names[i]]);
+    RtLogger::getLogger().addPublisher(_robot_name+"/wolf_controller/delta_"+foot_names[i],deltas_[foot_names[i]]);
 #endif
 }
 
