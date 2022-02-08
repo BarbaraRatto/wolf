@@ -838,10 +838,6 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   base_length_ = footholds_planner_ptr_->robot_model_->getBaseLength();
   base_width_  = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
-  r_ = std::sqrt(base_length_*base_length_ + base_width_*base_length_)/2.0;
-  rx_ = base_length_/2.0;
-  ry_ = base_width_/2.0;
-
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
   for(unsigned int i=0;i<foot_names.size();i++)
   {
@@ -873,10 +869,6 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   dynamic_th_dot_(2) = 1000.0; // yaw [rad/s]
 
   current_th_dot_filt_ = current_th_dot_ = static_th_dot_;
-
-  k_x_    = 0.0;
-  k_y_    = 0.0;
-  k_yaw_  = 0.0;
 
   compute_deltas_ = true;
 
@@ -927,10 +919,10 @@ bool PushRecovery::update(const double& period)
   I_hf_ = footholds_planner_ptr_->world_R_hf_.transpose() * I_world_;
   base_inertia_z_ = I_hf_(2,2);
 
-  error_ = base_velocity_ - cmd_velocity_;
-  error_abs_(0) = std::abs(error_(0));
-  error_abs_(1) = std::abs(error_(1));
-  error_abs_(2) = std::abs(error_(2));
+  disturbance_ = base_velocity_ - cmd_velocity_;
+  disturbance_abs_(0) = std::abs(disturbance_(0));
+  disturbance_abs_(1) = std::abs(disturbance_(1));
+  disturbance_abs_(2) = std::abs(disturbance_(2));
 
   if(cmd_velocity_.norm() > 0.0 || footholds_planner_ptr_->gait_generator_->isAnyFootInSwing()) // Check if the robot is moving
     current_th_dot_ = dynamic_th_dot_; // Apply the 'dynamic' threshold  i.e. higher bounds
@@ -939,7 +931,7 @@ bool PushRecovery::update(const double& period)
 
   current_th_dot_filt_ = th_filter_.process(current_th_dot_);
 
-  if(error_abs_(0) < current_th_dot_filt_(0) && error_abs_(1) < current_th_dot_filt_(1) && error_abs_(2) < current_th_dot_filt_(2))
+  if(disturbance_abs_(0) < current_th_dot_filt_(0) && disturbance_abs_(1) < current_th_dot_filt_(1) && disturbance_abs_(2) < current_th_dot_filt_(2))
     push_detected = false;
   else
     push_detected = true;
@@ -952,17 +944,11 @@ bool PushRecovery::update(const double& period)
 
     if(push_detected && footholds_planner_ptr_->gait_generator_->isLiftOff(foot_names[i]))
     {
-      Z0h_  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
-      st_p_ = footholds_planner_ptr_->gait_generator_->getStancePeriod(foot_names[i]);
-      tau_t_ = std::sqrt(Z0h_/GRAVITY);
-      tau_r_ = std::sqrt(Z0h_*base_inertia_z_/base_mass_/GRAVITY/(r_*r_));
+      double z0h  = std::abs(footholds_planner_ptr_->getCurrentFootholdHF(foot_names[i])(2));
+      double tau_t = std::sqrt(z0h/GRAVITY);
 
-      Cx_pr_ =  tau_t_ * ( std::cosh(st_p_/tau_t_) / std::sinh(st_p_/tau_t_) - (1 - k_x_) / std::sinh(st_p_/tau_t_) );
-      Cy_pr_ =  tau_t_ * ( std::cosh(st_p_/tau_t_) / std::sinh(st_p_/tau_t_) - (1 - k_y_) / std::sinh(st_p_/tau_t_) );
-      Cr_pr_ =  tau_r_ * ( std::cosh(st_p_/tau_r_) / std::sinh(st_p_/tau_r_) - (1 - k_yaw_)  / std::sinh(st_p_/tau_r_) );
-
-      deltas_[foot_names[i]].x() = Cx_pr_ * error_(0) + signs_[foot_names[i]].first  * Cr_pr_ * ry_ * error_(2);
-      deltas_[foot_names[i]].y() = Cy_pr_ * error_(1) + signs_[foot_names[i]].second * Cr_pr_ * rx_ * error_(2);
+      deltas_[foot_names[i]].x() = tau_t * base_velocity_(0);
+      deltas_[foot_names[i]].y() = tau_t * base_velocity_(1);
 
       if(deltas_[foot_names[i]].x() > max_delta_)
         deltas_[foot_names[i]].x() = max_delta_;
@@ -1000,18 +986,6 @@ void PushRecovery::setVelocityThresholds(const Eigen::Vector3d &static_th, const
 
 void PushRecovery::setGains(const double &k_x, const double &k_y, const double &k_yaw)
 {
-  if(k_x>=0.0 && k_x<=1.0)
-    k_x_ = k_x;
-  else
-    ROS_WARN_NAMED(CLASS_NAME,"k_x must be between 0 and 1!");
-  if(k_y>=0.0  && k_y<=1.0)
-    k_y_ = k_y;
-  else
-    ROS_WARN_NAMED(CLASS_NAME,"k_y must be between 0 and 1!");
-  if(k_yaw>=0.0 && k_yaw<=1.0)
-    k_yaw_ = k_yaw;
-  else
-    ROS_WARN_NAMED(CLASS_NAME,"k_yaw must be between 0 and 1!");
 }
 
 void PushRecovery::activateComputeDeltas()

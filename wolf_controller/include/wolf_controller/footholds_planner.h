@@ -83,8 +83,8 @@ private:
   std::map<std::string,std::pair<int,int> > signs_;
   Eigen::Vector3d cmd_velocity_;
   Eigen::Vector3d base_velocity_;
-  Eigen::Vector3d error_;
-  Eigen::Vector3d error_abs_;
+  Eigen::Vector3d disturbance_;
+  Eigen::Vector3d disturbance_abs_;
   double max_delta_;
   Eigen::Vector6d base_twist_;
   Eigen::Vector3d com_vel_hf_;
@@ -99,11 +99,6 @@ private:
   // Filter cut off frequency
   double cutoff_freq_;
   // Gains
-  double k_x_;
-  double k_y_;
-  double k_yaw_;
-  // Support variables
-  double tau_t_, tau_r_, Cx_pr_, Cy_pr_, Cr_pr_, st_p_, Z0h_, r_, rx_, ry_;
   double cmd_velocity_scale_;
 };
 
