@@ -330,20 +330,36 @@ public:
         server_->publishServicesTopics();
 
         // ROS services
-        switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",    &ControllerRosWrapper::switchControlModeCB,    this);
-        switch_gait_                 = controller_nh.advertiseService("switch_gait",            &ControllerRosWrapper::switchGaitCB,           this);
-        switch_posture_              = controller_nh.advertiseService("switch_posture",         &ControllerRosWrapper::switchPostureCB,        this);
-        stand_up_srv_                = controller_nh.advertiseService("stand_up",               &ControllerRosWrapper::standUpCB,              this);
-        stand_down_srv_              = controller_nh.advertiseService("stand_down",             &ControllerRosWrapper::standDownCB,            this);
-        emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",         &ControllerRosWrapper::emergencyStopCB,        this);
-        reset_base_srv_              = controller_nh.advertiseService("reset_base",             &ControllerRosWrapper::resetBaseCB,            this);
-        decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",   &ControllerRosWrapper::decreaseStepHeightCB,   this);
-        increase_step_height_        = controller_nh.advertiseService("increase_step_height",   &ControllerRosWrapper::increaseStepHeightCB,   this);
-        set_step_height_             = controller_nh.advertiseService("set_step_height",        &ControllerRosWrapper::setStepHeightCB,        this);
-        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery", &ControllerRosWrapper::activatePushRecoveryCB, this);
-        activate_step_reflex_        = controller_nh.advertiseService("activate_step_reflex",   &ControllerRosWrapper::activateStepReflexCB,   this);
-        set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",    &ControllerRosWrapper::setSwingFrequencyCB,    this);
-        set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",        &ControllerRosWrapper::setDutyFactorCB,        this);
+        switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",         &ControllerRosWrapper::switchControlModeCB,         this);
+        switch_gait_                 = controller_nh.advertiseService("switch_gait",                 &ControllerRosWrapper::switchGaitCB,                this);
+        switch_posture_              = controller_nh.advertiseService("switch_posture",              &ControllerRosWrapper::switchPostureCB,             this);
+        stand_up_srv_                = controller_nh.advertiseService("stand_up",                    &ControllerRosWrapper::standUpCB,                   this);
+        stand_down_srv_              = controller_nh.advertiseService("stand_down",                  &ControllerRosWrapper::standDownCB,                 this);
+        emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",              &ControllerRosWrapper::emergencyStopCB,             this);
+        reset_base_srv_              = controller_nh.advertiseService("reset_base",                  &ControllerRosWrapper::resetBaseCB,                 this);
+        decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",        &ControllerRosWrapper::decreaseStepHeightCB,        this);
+        increase_step_height_        = controller_nh.advertiseService("increase_step_height",        &ControllerRosWrapper::increaseStepHeightCB,        this);
+        set_step_height_             = controller_nh.advertiseService("set_step_height",             &ControllerRosWrapper::setStepHeightCB,             this);
+        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery",      &ControllerRosWrapper::activatePushRecoveryCB,      this);
+        activate_step_reflex_        = controller_nh.advertiseService("activate_step_reflex",        &ControllerRosWrapper::activateStepReflexCB,        this);
+        increase_swing_frequency_    = controller_nh.advertiseService("increase_swing_frequency",    &ControllerRosWrapper::increaseSwingFrequencyCB,    this);
+        decrease_swing_frequency_    = controller_nh.advertiseService("decrease_swing_frequency",    &ControllerRosWrapper::decreaseSwingFrequencyCB,    this);
+        set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",         &ControllerRosWrapper::setSwingFrequencyCB,         this);
+        set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",             &ControllerRosWrapper::setDutyFactorCB,             this);
+    }
+
+    bool increaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getGaitGenerator()->increaseSwingFrequency();
+        return res.success;
+    }
+
+    bool decreaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getGaitGenerator()->decreaseSwingFrequency();
+        return res.success;
     }
 
     bool setSwingFrequencyCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
@@ -599,6 +615,8 @@ protected:
     ros::ServiceServer activate_step_reflex_;
     ros::ServiceServer set_swing_frequency_;
     ros::ServiceServer set_duty_factor_;
+    ros::ServiceServer increase_swing_frequency_;
+    ros::ServiceServer decrease_swing_frequency_;
 
 };
 

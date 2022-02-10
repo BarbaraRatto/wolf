@@ -117,6 +117,14 @@ public:
 
   void setSwingFrequency(const double& swing_frequency);
 
+  void increaseSwingFrequency();
+
+  void decreaseSwingFrequency();
+
+  void increaseDutyCycle();
+
+  void decreaseDutyCycle();
+
   void setSwingFrequency(const std::string& foot_name, const double& swing_frequency);
 
   double getSwingFrequency(const std::string& foot_name);

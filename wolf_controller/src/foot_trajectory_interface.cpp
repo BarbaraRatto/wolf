@@ -125,10 +125,10 @@ const Eigen::Matrix3d& TrajectoryInterface::getTerrainRotation() const
 
 void TrajectoryInterface::setSwingFrequency(const double& swing_frequency)
 {
-  if(swing_frequency >= 0.0)
+  if(swing_frequency >= 0.0 && swing_frequency <= 6.0)
     swing_frequency_ = swing_frequency;
   else
-    ROS_WARN_NAMED(CLASS_NAME,"Swing frequency has to be positive definite!");
+    ROS_WARN_NAMED(CLASS_NAME,"Swing frequency has to be between 0.0 and 6.0 [Hz]!");
 }
 
 double TrajectoryInterface::getSwingFrequency()
