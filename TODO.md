@@ -1,5 +1,6 @@
 # TODO list
 
+- transparent walk
 - robustness tests with push recovery
 - prepare a readme about the params
 - replace filters in foothold planner with splines or ramps
