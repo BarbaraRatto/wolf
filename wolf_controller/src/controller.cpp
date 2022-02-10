@@ -247,6 +247,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope)               ,imu_gyroscope_);
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope_filt)          ,imu_gyroscope_filt_);
+    RtLogger::getLogger().addPublisher(TOPIC(des_joint_positions)         ,des_joint_positions_);
+    RtLogger::getLogger().addPublisher(TOPIC(joint_positions)             ,joint_positions_);
     RtLogger::getLogger().addPublisher(TOPIC(des_joint_velocities)        ,des_joint_velocities_);
     RtLogger::getLogger().addPublisher(TOPIC(joint_velocities)            ,joint_velocities_);
     RtLogger::getLogger().addPublisher(TOPIC(joint_velocities_filt)       ,joint_velocities_filt_);
