@@ -163,6 +163,24 @@ public:
     double getFrictionConesMu() const;
 
     /**
+     * @brief reset the tasks
+     */
+    void reset();
+
+private:
+
+    /**
+     * @brief Tasks
+     */
+    std::map<std::string,Cartesian::Ptr> feet_;
+    std::map<std::string,Cartesian::Ptr> arms_;
+    Cartesian::Ptr waistRPY_;
+    Cartesian::Ptr waistZ_;
+    CoM::Ptr com_;
+    AngularMomentum::Ptr angular_momentum_;
+    OpenSoT::tasks::GenericTask::Ptr regularization_;
+
+    /**
      * @brief postural_ a postural task
      */
     Postural::Ptr postural_;
@@ -186,19 +204,6 @@ public:
      * @brief _model
      */
     QuadrupedRobot::Ptr model_;
-
-private:
-
-    /**
-     * @brief Tasks
-     */
-    std::map<std::string,Cartesian::Ptr> feet_;
-    std::map<std::string,Cartesian::Ptr> arms_;
-    Cartesian::Ptr waistRPY_;
-    Cartesian::Ptr waistZ_;
-    CoM::Ptr com_;
-    AngularMomentum::Ptr angular_momentum_;
-    OpenSoT::tasks::GenericTask::Ptr regularization_;
 
     /**
      * @brief update call after the model.update() to update the autostack

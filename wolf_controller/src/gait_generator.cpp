@@ -295,6 +295,16 @@ void GaitGenerator::setDutyFactor(const std::string& foot_name, const double& du
   feet_[foot_name].state_machine->setDutyFactor(duty_factor);
 }
 
+void GaitGenerator::increaseDutyCycle()
+{
+    setDutyFactor(getAvgDutyFactor()+0.1);
+}
+
+void GaitGenerator::decreaseDutyCycle()
+{
+    setDutyFactor(getAvgDutyFactor()-0.1);
+}
+
 void GaitGenerator::setSwingFrequency(const double& swing_frequency)
 {
   for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
@@ -302,6 +312,16 @@ void GaitGenerator::setSwingFrequency(const double& swing_frequency)
     it->second.trajectory->setSwingFrequency(swing_frequency);
     it->second.state_machine->setSwingFrequency(swing_frequency);
   }
+}
+
+void GaitGenerator::increaseSwingFrequency()
+{
+    setSwingFrequency(getAvgSwingFrequency()+0.1);
+}
+
+void GaitGenerator::decreaseSwingFrequency()
+{
+    setSwingFrequency(getAvgSwingFrequency()-0.1);
 }
 
 void GaitGenerator::setSwingFrequency(const std::string& foot_name, const double& swing_frequency)
@@ -516,7 +536,7 @@ void GaitGenerator::startStepReflex(bool start)
   if(step_reflex_active_)
     ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
   else
-    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex de-activated!");
 }
 
 void GaitGenerator::toggleStepReflex()
@@ -528,7 +548,7 @@ void GaitGenerator::toggleStepReflex()
   if(step_reflex_active_)
     ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
   else
-    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex de-activated!");
 }
 
 bool GaitGenerator::isStepReflexActive()

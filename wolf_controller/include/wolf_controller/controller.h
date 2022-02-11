@@ -346,6 +346,7 @@ private:
     double current_height_;
     double previous_height_;
     Eigen::Vector3d current_rpy_;
+    double desired_yaw_;
 
     /**
          * @brief thread body for the odometry publisher
