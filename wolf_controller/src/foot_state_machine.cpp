@@ -83,7 +83,7 @@ void FootStateMachine::setDutyFactor(double duty_factor)
 
 void FootStateMachine::setSwingFrequency(double swing_frequency)
 {
-    if(swing_frequency > 0)
+    if(swing_frequency >= 0)
         swing_frequency_ = swing_frequency;
     else
         ROS_WARN_NAMED(CLASS_NAME,"Swing frequency has to be positive definite!");
