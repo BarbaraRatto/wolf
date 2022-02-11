@@ -561,6 +561,7 @@ void Controller::updateStateMachine(const double &dt)
       case(QuadrupedRobot::INIT):
         des_joint_positions_ = robot_model_->getStandDownJointPostion();
         des_joint_velocities_.fill(0.0);
+        des_joint_efforts_solver_.fill(0.0);
         updateImpedance(des_joint_positions_,des_joint_velocities_);
         ramp = ramp_impedance_->update(dt);
         des_joint_efforts_impedance_ = ramp * des_joint_efforts_impedance_;
