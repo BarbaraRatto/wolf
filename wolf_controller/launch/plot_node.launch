@@ -1,6 +1,0 @@
-<?xml version="1.0" ?>
-<launch>
-	<arg name="robot_name" default="hyq" />
-        <node name="plot_node" pkg="wolf_controller" type="plot_node" output="screen" ns="$(arg robot_name)" />
-</launch>
-

@@ -40,7 +40,7 @@ public:
     //buffer_pose_reference_.initRT(actual_pose);
 
     // Create the interactive marker
-    marker_server_.reset(new interactive_markers::InteractiveMarkerServer(_task_id));
+    marker_server_.reset(new interactive_markers::InteractiveMarkerServer(wolf_controller::_robot_name+"/wolf_controller/marker/"+_task_id));
     visualization_msgs::InteractiveMarker&& marker = createInteractiveMarker(actual_pose,getBaseLink());
     marker_server_->insert(marker,boost::bind(&Cartesian::processFeedback, this, _1));
     marker_server_->applyChanges();

@@ -9,7 +9,7 @@
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
 #include <wolf_controller/foot_state_machine.h>
-#include <wolf_controller/foot_trajectory.h>
+#include <wolf_controller/foot_trajectory_interface.h>
 
 namespace wolf_controller
 {
@@ -97,9 +97,15 @@ public:
 
   bool areAllFeetInStance();
 
-  void setContactState(const std::string& foot_name, const bool& contact);
+  unsigned int getNumberFeetInStance();
 
-  const bool& getContactState(const std::string& foot_name);
+  unsigned int getNumberFeetInSwing();
+
+  void setContactState(const std::string& foot_name, const bool& contact, const Eigen::Vector3d& contact_force);
+
+  const bool& getContact(const std::string& foot_name);
+
+  const Eigen::Vector3d& getContactForce(const std::string& foot_name);
 
   void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose);
 
@@ -110,6 +116,14 @@ public:
   void setDutyFactor(const std::string& foot_name, const double& duty_factor);
 
   void setSwingFrequency(const double& swing_frequency);
+
+  void increaseSwingFrequency();
+
+  void decreaseSwingFrequency();
+
+  void increaseDutyCycle();
+
+  void decreaseDutyCycle();
 
   void setSwingFrequency(const std::string& foot_name, const double& swing_frequency);
 
@@ -155,6 +169,14 @@ public:
 
   void update(const double& period);
 
+  void startStepReflex(bool start);
+
+  void toggleStepReflex();
+
+  bool isStepReflexActive();
+
+  void setStepReflexContactThreshold(const double &th);
+
 private:
 
   void changeGait();
@@ -163,7 +185,8 @@ private:
   {
     std::shared_ptr<FootStateMachine> state_machine;
     std::shared_ptr<TrajectoryInterface> trajectory;
-    bool contact_state;
+    bool contact;
+    Eigen::Vector3d contact_force;
     bool trigger_stance;
     Eigen::Affine3d initial_pose;
   };
@@ -185,6 +208,8 @@ private:
   Trigger next_schedule_;
 
   Gait::gait_t gait_type_;
+
+  std::atomic<bool> step_reflex_active_;
 
 };
 

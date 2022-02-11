@@ -1,23 +1,25 @@
+#define EIGEN_RUNTIME_NO_MALLOC
 #include <gtest/gtest.h>
-#include <ros/ros.h>
 #include "wolf_controller/id_problem.h"
 #include "test_common_utils.h"
 
 static wolf_controller::QuadrupedRobot::Ptr _robot;
 static wolf_controller::IDProblem::Ptr _id_problem;
-static std::unique_ptr<ros::NodeHandle> _root_nh_ptr; // FIXME
+static std::unique_ptr<ros::NodeHandle> _root_nh_ptr;
 static double _period = 0.001;
 
 // TEST CASES
 TEST(IDProblem, Constructor)
 {
-    _id_problem.reset(new wolf_controller::IDProblem(*_root_nh_ptr,_robot,_period));
+  _id_problem.reset(new wolf_controller::IDProblem(*_root_nh_ptr,_robot,_period));
 }
 
 TEST(IDProblem, Solve)
 {
-    Eigen::VectorXd x;
-    ASSERT_TRUE(_id_problem->solve(x));
+  Eigen::VectorXd x;
+  START_REAL_TIME_CRITICAL_CODE();
+  ASSERT_TRUE(_id_problem->solve(x));
+  END_REAL_TIME_CRITICAL_CODE();
 }
 
 int main(int argc, char** argv)

@@ -13,8 +13,9 @@
 
 namespace wolf_controller
 {
+#define BASE_FOOTPRINT_FRAME "base_footprint"
 #define ANGULAR_VELOCITIES_WRT_BASE // Comment it if the IMU's velocities are defined wrt world
-#define GRAVITY 9.81
+#define GRAVITY 9.81 // Gravity value
 //#define REACHING_MOTION
 #define FLOATING_BASE_DOFS 6
 #define N_LEGS 4 // Fixed number of legs supported
@@ -22,11 +23,11 @@ namespace wolf_controller
 #define THREADS_SLEEP_TIME_ms 4
 #define THROTTLE_SEC 3.0
 //#define COMPUTE_COST
+//#define DEBUG
 #define EPS 0.00001 //std::numeric_limits<double>::epsilon()
 extern double _period;
-
-// If I use closed loop trajectory and remove the floating base velocity estimation, there is no movement at all! the robot
-// stays in the same position because the feet don't move relatively to the base anymore. There is no reset!
+extern std::string _robot_name;
+#define TOPIC( data ) (_robot_name+"/wolf_controller/"#data)
 //#define OPEN_LOOP_TRAJECTORY
 
 inline void affine3dToPose(const Eigen::Affine3d& affine3d, geometry_msgs::Pose& pose)

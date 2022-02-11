@@ -27,7 +27,7 @@ public:
   typedef std::map<std::string,std::vector<unsigned int>>         limb_joint_idxs_map_t;
   typedef std::map<std::string,unsigned int>                      joint_idxs_map_t;
 
-  enum robot_states_t {IDLE,INIT,WALKING,MANIPULATION,ANOMALY,STANDING_UP,STANDING_DOWN};
+  enum robot_states_t {IDLE,INIT,ANOMALY,STANDING_UP,STANDING_DOWN,ACTIVE};
 
   QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
@@ -44,6 +44,7 @@ public:
   const std::vector<std::string>& getContactNames() const;
   const std::vector<std::string>& getLimbNames() const;
   const std::string& getBaseLinkName() const;
+  const std::string& getImuSensorName() const;
 
   const std::vector<unsigned int> &getLimbJointsIds(const std::string& limb_name);
 
@@ -54,6 +55,7 @@ public:
   const double& getBaseWidth() const;
 
   robot_states_t getState();
+  robot_states_t getPreviousState();
   bool setState(robot_states_t robot_state);
 
   void getFloatingBasePositionInertia(Eigen::Matrix3d& M);
@@ -65,7 +67,7 @@ public:
   const Eigen::Matrix3d& getHfRotationInWorld() const;
   const Eigen::Matrix3d& getBaseRotationInWorld() const;
   const Eigen::Vector3d& getBaseRotationInWorldRPY() const;
-  const double& getHfYawInWorld() const;
+  const double& getBaseYawInWorld() const;
 
   using ModelInterface::getPose;
   using ModelInterface::getCOM;
@@ -223,6 +225,7 @@ private:
   std::vector<std::string> contact_names_; // foot + arm names
   std::vector<std::string> limb_names_; // chain names
   std::string base_name_;
+  std::string imu_name_;
 
   limb_joint_idxs_map_t joint_limb_idx_;
 
@@ -242,7 +245,7 @@ private:
   Eigen::Matrix3d world_R_base_;
   Eigen::Matrix3d hf_R_base_;
   Eigen::Vector3d world_RPY_base_;
-  double yaw_base_;
+  double base_yaw_;
 
   /** @brief Foot positions w.r.t base */
   std::map<std::string,Eigen::Vector3d> base_X_foot_;
@@ -278,6 +281,7 @@ private:
   double stand_down_height_;
 
   std::atomic<robot_states_t> robot_state_;
+  std::atomic<robot_states_t> robot_state_prev_;
 
   mutable RigidBodyDynamics::Model virtual_model_;
 

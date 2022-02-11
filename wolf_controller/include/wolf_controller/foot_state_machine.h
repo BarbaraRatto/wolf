@@ -2,6 +2,7 @@
 #define FOOT_STATE_MACHINE_H
 
 #include <atomic>
+#include <string>
 
 namespace wolf_controller
 {
@@ -10,163 +11,43 @@ class FootStateMachine
 {
 public:
 
-  FootStateMachine()
-  {
-    // Inputs
-    duty_factor_ = 0.8; // It is defined as T_stance / T_cycle
-    swing_frequency_ = 0.3;
-    reset();
-  }
+  const std::string CLASS_NAME = "FootStateMachine";
 
-  void reset()
-  {
-    init();
-    cycle_ended_ = true; // We set true so that the swing can be triggered
-    updatePeriods();
-    state_ = prev_state_ = states::STANCE;
-  }
+  FootStateMachine();
 
-  bool isSwing()
-  {
-    if(state_ == states::SWING)
-      return true;
-    else
-      return false;
-  }
+  void reset();
 
-  bool isStance()
-  {
-    if(state_ == states::STANCE)
-      return true;
-    else
-      return false;
-  }
+  bool isSwing();
 
-  bool isStateChanged()
-  {
-    if(prev_state_ != state_)
-      return true;
-    else
-      return false;
-  }
+  bool isStance();
 
-  bool isTouchDown()
-  {
-    if(prev_state_ == states::SWING && state_ == states::STANCE)
-      return true;
-    else
-      return false;
-  }
+  bool isStateChanged();
 
-  bool isLiftOff()
-  {
-    if(prev_state_ == states::STANCE && state_ == states::SWING)
-      return true;
-    else
-      return false;
-  }
+  bool isTouchDown();
 
-  bool isCycleEnded()
-  {
-    if(cycle_ended_)
-      return true;
-    else
-      return false;
-  }
+  bool isLiftOff();
 
-  void triggerSwing()
-  {
-    trigger_swing_ = true;
-  }
+  bool isCycleEnded();
 
-  void setDutyFactor(double duty_factor)
-  {
-    assert(duty_factor >= 0 && duty_factor <1);
-    duty_factor_ = duty_factor;
-  }
+  void triggerSwing();
 
-  void setSwingFrequency(double swing_frequency)
-  {
-    assert(swing_frequency >= 0);
-    swing_frequency_ = swing_frequency;
-  }
+  void setDutyFactor(double duty_factor);
 
-  double getDutyFactor()
-  {
-    return duty_factor_;
-  }
+  void setSwingFrequency(double swing_frequency);
 
-  double getStancePeriod()
-  {
-    return T_stance_;
-  }
+  double getDutyFactor();
 
-  double getSwingPeriod()
-  {
-    return T_swing_;
-  }
+  double getStancePeriod();
 
-  void update(const double& period, const bool& contact)
-  {
+  double getSwingPeriod();
 
-    prev_state_ = state_;
-
-    updatePeriods();
-
-    switch (state_)
-    {
-
-    case states::STANCE:
-
-      stance_time_+=period;
-
-      if(stance_time_ >= T_stance_)
-        cycle_ended_ = true;
-
-      if(trigger_swing_ && cycle_ended_)
-      {
-        state_ = states::SWING;
-        cycle_ended_ = false;
-      }
-
-      break;
-
-    case states::SWING:
-
-      swing_time_+=period;
-
-      //if(swing_frequency_>0)
-      //  half_swing_time = 1/(2*swing_frequency_); // NOTE: since we use f'=2f, we should divide by 4 and not by 2.
-      // If swing frequency is geq than 0
-      // deactivate the contact sensing for half of the swing period
-      if(contact && swing_time_>=T_swing_/2.0)
-      {
-        state_ = states::STANCE;
-        init();
-      }
-
-      break;
-
-    default:
-      break;
-
-    };
-  }
+  void update(const double& period, const bool& contact);
 
 private:
 
-  void init()
-  {
-    stance_time_ = 0.0;
-    swing_time_ = 0.0;
-    trigger_swing_ = false;
-  }
+  void init();
 
-  void updatePeriods()
-  {
-    T_swing_ = 1/swing_frequency_;
-    T_stance_ = duty_factor_/(1 - duty_factor_) * T_swing_;
-  }
+  void updatePeriods();
 
   double swing_time_;
   double stance_time_;

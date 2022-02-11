@@ -35,12 +35,16 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
   step_height_ = 0.0; // [m]
   step_length_ = 0.0; // [m]
 
-  base_linear_velocity_cmd_ = 0.0; // [m/s]
-  base_angular_velocity_cmd_ = 0.0; // [rad/s]
+  base_linear_velocity_cmd_x_ = 0.0; // [m/s]
+  base_linear_velocity_cmd_y_ = 0.0; // [m/s]
+  base_linear_velocity_cmd_z_ = 0.0; // [m/s]
+  base_angular_velocity_cmd_roll_  = 0.0; // [rad/s]
+  base_angular_velocity_cmd_pitch_ = 0.0; // [rad/s]
+  base_angular_velocity_cmd_yaw_   = 0.0; // [rad/s]
 
   reset();
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/desired_height",base_position_(2));
+  RtLogger::getLogger().addPublisher(TOPIC(des_base_height),base_position_(2));
 }
 
 void FootholdsPlanner::reset()
@@ -218,8 +222,6 @@ void FootholdsPlanner::calculateFootSteps()
       robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),base_T_foot_);
       // current foot position in the horizontal frame
       hf_X_current_foothold_ = hf_R_base_ * base_T_foot_.translation();
-      //world_X_virtual_foothold_offset_ = world_R_hf_ * (hf_X_initial_footholds_[i] - hf_X_current_foothold_);
-      //world_X_virtual_foothold_offset_(2) = 0;
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_X_current_foothold_: "<<hf_X_current_foothold_.transpose());
 
       // 5) Sum everything to obtain the new foothold displacement w.r.t hf
@@ -250,7 +252,7 @@ void FootholdsPlanner::calculateFootSteps()
       current_foothold_hf_[foot_names[i]] = hf_X_current_foothold_;
 
       steps_length_[foot_names[i]]         = step_length_;
-      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getHfYawInWorld();
+      steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getBaseYawInWorld();
       steps_height_[foot_names[i]]         = step_height_;
       steps_heading_rate_[foot_names[i]]   = hf_base_angular_velocity_(2);
 
@@ -316,6 +318,9 @@ void FootholdsPlanner::resetBaseOrientation()
     base_orientation_(i) = secondOrderFilter(base_orientation_(i),base_orientation_filt_(i),default_base_orientation_(i),1.0); //FIXME hardcoded gain, it should be based on the sampling time
 
   rpyToRot(base_orientation_,base_rotation_reference_);
+
+  // This is the base rotation reference computed w.r.t terrain
+  base_rotation_reference_ = world_T_terrain_.linear().transpose() * base_rotation_reference_;
 }
 
 void FootholdsPlanner::resetVelocyScales()
@@ -333,9 +338,9 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
 {
   base_position_ = base_position;
 
-  hf_base_linear_velocity_ref_(0) = base_linear_velocity_cmd_ * base_linear_velocity_scale_x_;
-  hf_base_linear_velocity_ref_(1) = base_linear_velocity_cmd_ * base_linear_velocity_scale_y_;
-  hf_base_linear_velocity_ref_(2) = base_linear_velocity_cmd_ * base_linear_velocity_scale_z_;
+  hf_base_linear_velocity_ref_(0) = base_linear_velocity_cmd_x_ * base_linear_velocity_scale_x_;
+  hf_base_linear_velocity_ref_(1) = base_linear_velocity_cmd_y_ * base_linear_velocity_scale_y_;
+  hf_base_linear_velocity_ref_(2) = base_linear_velocity_cmd_z_ * base_linear_velocity_scale_z_;
 
   for(unsigned int i=0;i<3;i++)
     hf_base_linear_velocity_(i) = secondOrderFilter(hf_base_linear_velocity_(i),hf_base_linear_velocity_filt_(i),hf_base_linear_velocity_ref_(i),0.5); //FIXME hardcoded gain, it should be based on the sampling time
@@ -371,9 +376,9 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
 {
   base_orientation_ = base_orientation;
 
-  hf_base_angular_velocity_ref_(0) = base_angular_velocity_cmd_ * base_angular_velocity_scale_roll_;
-  hf_base_angular_velocity_ref_(1) = base_angular_velocity_cmd_ * base_angular_velocity_scale_pitch_;
-  hf_base_angular_velocity_ref_(2) = base_angular_velocity_cmd_ * base_angular_velocity_scale_yaw_;
+  hf_base_angular_velocity_ref_(0) = base_angular_velocity_cmd_roll_ * base_angular_velocity_scale_roll_;
+  hf_base_angular_velocity_ref_(1) = base_angular_velocity_cmd_pitch_ * base_angular_velocity_scale_pitch_;
+  hf_base_angular_velocity_ref_(2) = base_angular_velocity_cmd_yaw_ * base_angular_velocity_scale_yaw_;
 
   for(unsigned int i=0;i<3;i++)
     hf_base_angular_velocity_(i) = secondOrderFilter(hf_base_angular_velocity_(i),hf_base_angular_velocity_filt_(i),hf_base_angular_velocity_ref_(i),0.5);
@@ -381,6 +386,32 @@ void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eige
   base_angular_velocity_reference_ = hf_base_angular_velocity_;
 
   base_orientation_ = base_angular_velocity_reference_ * period + base_orientation_;
+
+  // Clamp the roll and pitch values
+  if(base_orientation_(0) > base_roll_max_)
+  {
+    base_orientation_(0) = base_roll_max_;
+    base_angular_velocity_reference_(0) = hf_base_angular_velocity_ref_(0) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base roll rotation max reached: "<<base_roll_max_);
+  }
+  else if (base_orientation_(0) < base_roll_min_)
+  {
+    base_orientation_(0) = base_roll_min_;
+    base_angular_velocity_reference_(0) = hf_base_angular_velocity_ref_(0) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base roll rotation min reached: "<<base_roll_min_);
+  }
+  if(base_orientation_(1) > base_roll_max_)
+  {
+    base_orientation_(1) = base_pitch_max_;
+    base_angular_velocity_reference_(1) = hf_base_angular_velocity_ref_(1) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base pitch rotation max reached: "<<base_pitch_max_);
+  }
+  else if (base_orientation_(1) < base_pitch_min_)
+  {
+    base_orientation_(1) = base_pitch_min_;
+    base_angular_velocity_reference_(1) = hf_base_angular_velocity_ref_(1) = 0.0;
+    ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base pitch rotation min reached: "<<base_pitch_min_);
+  }
 
   rpyToRot(base_orientation_,base_rotation_reference_);
   // This is the base rotation reference computed w.r.t terrain
@@ -513,16 +544,68 @@ void FootholdsPlanner::setPushRecoveryGains(const double &k_x, const double &k_y
   push_recovery_->setGains(k_x,k_y,k_r);
 }
 
-void FootholdsPlanner::setLinearVelocityCmd(const double& linear)
+void FootholdsPlanner::setBaseLinearVelocityCmd(const double& linear)
 {
-  base_linear_velocity_cmd_ = linear;
+  base_linear_velocity_cmd_x_ = linear;
+  base_linear_velocity_cmd_y_ = linear;
+  base_linear_velocity_cmd_z_ = linear;
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<< linear);
 }
 
-void FootholdsPlanner::setAngularVelocityCmd(const double& angular)
+void FootholdsPlanner::setBaseAngularVelocityCmd(const double& angular)
 {
-  base_angular_velocity_cmd_ = angular;
+  base_angular_velocity_cmd_roll_  = angular;
+  base_angular_velocity_cmd_pitch_ = angular;
+  base_angular_velocity_cmd_yaw_   = angular;
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<< angular);
+}
+
+void FootholdsPlanner::setBaseLinearVelocityCmd(const double& x, const double& y, const double& z, bool verbose)
+{
+  base_linear_velocity_cmd_x_ = x;
+  base_linear_velocity_cmd_y_ = y;
+  base_linear_velocity_cmd_z_ = z;
+  if(verbose)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base linear velocity to "<<" "<<x<<" "<<y<<" "<<z);
+}
+
+void FootholdsPlanner::setBaseAngularVelocityCmd(const double& roll, const double& pitch, const double& yaw, bool verbose)
+{
+  base_angular_velocity_cmd_roll_  = roll;
+  base_angular_velocity_cmd_pitch_ = pitch;
+  base_angular_velocity_cmd_yaw_   = yaw;
+  if(verbose)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set base angular velocity to "<<" "<<roll<<" "<<pitch<<" "<<yaw);
+}
+
+void FootholdsPlanner::setBaseLinearVelocityCmdX(const double &v)
+{
+  base_linear_velocity_cmd_x_ = v;
+}
+
+void FootholdsPlanner::setBaseLinearVelocityCmdY(const double &v)
+{
+  base_linear_velocity_cmd_y_ = v;
+}
+
+void FootholdsPlanner::setBaseLinearVelocityCmdZ(const double &v)
+{
+  base_linear_velocity_cmd_z_ = v;
+}
+
+void FootholdsPlanner::setBaseAngularVelocityCmdRoll(const double &v)
+{
+  base_angular_velocity_cmd_roll_  = v;
+}
+
+void FootholdsPlanner::setBaseAngularVelocityCmdPitch(const double &v)
+{
+  base_angular_velocity_cmd_pitch_  = v;
+}
+
+void FootholdsPlanner::setBaseAngularVelocityCmdYaw(const double &v)
+{
+  base_angular_velocity_cmd_yaw_  = v;
 }
 
 void FootholdsPlanner::setStepHeight(const double& height)
@@ -563,6 +646,26 @@ void FootholdsPlanner::setMaxBaseHeight(const double& max)
   }
   else
     ROS_WARN_NAMED(CLASS_NAME,"Max base height is less equal than: 0.0");
+}
+
+void FootholdsPlanner::setMaxBaseRoll(const double &max)
+{
+  base_roll_max_ = max;
+}
+
+void FootholdsPlanner::setMaxBasePitch(const double &max)
+{
+  base_pitch_max_ = max;
+}
+
+void FootholdsPlanner::setMinBaseRoll(const double &min)
+{
+  base_roll_min_ = min;
+}
+
+void FootholdsPlanner::setMinBasePitch(const double &min)
+{
+  base_pitch_min_ = min;
 }
 
 void FootholdsPlanner::setMaxStepLength(const double& max)
@@ -637,14 +740,34 @@ const double& FootholdsPlanner::getBaseHeight() const
   return base_position_reference_(2);
 }
 
-double FootholdsPlanner::getLinearVelocityCmd() const
+double FootholdsPlanner::getBaseLinearVelocityCmdX() const
 {
-  return base_linear_velocity_cmd_;
+  return base_linear_velocity_cmd_x_;
 }
 
-double FootholdsPlanner::getAngularVelocityCmd() const
+double FootholdsPlanner::getBaseLinearVelocityCmdY() const
 {
-  return base_angular_velocity_cmd_;
+  return base_linear_velocity_cmd_y_;
+}
+
+double FootholdsPlanner::getBaseLinearVelocityCmdZ() const
+{
+  return base_linear_velocity_cmd_z_;
+}
+
+double FootholdsPlanner::getBaseAngularVelocityCmdRoll() const
+{
+  return base_angular_velocity_cmd_roll_;
+}
+
+double FootholdsPlanner::getBaseAngularVelocityCmdPitch() const
+{
+  return base_angular_velocity_cmd_pitch_;
+}
+
+double FootholdsPlanner::getBaseAngularVelocityCmdYaw() const
+{
+  return base_angular_velocity_cmd_yaw_;
 }
 
 double FootholdsPlanner::getStepHeight() const
@@ -757,16 +880,15 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 
   compute_deltas_ = true;
 
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/current_th_dot_filt",current_th_dot_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/cmd_velocity",cmd_velocity_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity",base_velocity_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/base_velocity_filt",base_velocity_filt_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/error_abs",error_abs_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/error",error_);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lf",deltas_["lf_foot"]);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rf",deltas_["rf_foot"]);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_lh",deltas_["lh_foot"]);
-  RtLogger::getLogger().addPublisher(CLASS_NAME+"/delta_rh",deltas_["rh_foot"]);
+#ifdef DEBUG
+  RtLogger::getLogger().addPublisher(TOPIC(current_th_dot_filt) ,current_th_dot_filt_);
+  RtLogger::getLogger().addPublisher(TOPIC(cmd_velocity)        ,cmd_velocity_);
+  RtLogger::getLogger().addPublisher(TOPIC(base_velocity)       ,base_velocity_);
+  RtLogger::getLogger().addPublisher(TOPIC(error_abs)           ,error_abs_);
+  RtLogger::getLogger().addPublisher(TOPIC(error)               ,error_);
+  for(unsigned int i=0;i<foot_names.size();i++)
+    RtLogger::getLogger().addPublisher(_robot_name+"/wolf_controller/delta_"+foot_names[i],deltas_[foot_names[i]]);
+#endif
 }
 
 bool PushRecovery::update(const double& period)
@@ -864,8 +986,10 @@ const Eigen::Vector2d &PushRecovery::getDelta(const std::string &foot_name)
 
 void PushRecovery::setMaxDelta(const double& max)
 {
-  assert(max > 0);
-  max_delta_ = max;
+  if(max > 0)
+    max_delta_ = max;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"max delta must be positive!");
 }
 
 void PushRecovery::setVelocityThresholds(const Eigen::Vector3d &static_th, const Eigen::Vector3d &dynamic_th)
@@ -876,12 +1000,18 @@ void PushRecovery::setVelocityThresholds(const Eigen::Vector3d &static_th, const
 
 void PushRecovery::setGains(const double &k_x, const double &k_y, const double &k_yaw)
 {
-  assert(k_x>0.0 && k_x<=1.0);
-  k_x_ = k_x;
-  assert(k_y>0.0  && k_y<=1.0);
-  k_y_ = k_y;
-  assert(k_yaw>0.0 && k_yaw<=1.0);
-  k_yaw_ = k_yaw;
+  if(k_x>=0.0 && k_x<=1.0)
+    k_x_ = k_x;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"k_x must be between 0 and 1!");
+  if(k_y>=0.0  && k_y<=1.0)
+    k_y_ = k_y;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"k_y must be between 0 and 1!");
+  if(k_yaw>=0.0 && k_yaw<=1.0)
+    k_yaw_ = k_yaw;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"k_yaw must be between 0 and 1!");
 }
 
 void PushRecovery::activateComputeDeltas()

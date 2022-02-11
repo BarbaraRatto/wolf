@@ -69,6 +69,16 @@ void Impedance::startInertiaCompensation(const bool& start)
     inertia_compensation_active_ = start;
 }
 
+void Impedance::setLegsGains(const Eigen::Vector3d& Kp_leg, const Eigen::Vector3d& Kd_leg)
+{
+    Kp_swing_leg_  = Kp_leg.asDiagonal();
+    Kd_swing_leg_  = Kd_leg.asDiagonal();
+    Kp_stance_leg_ = Kp_leg.asDiagonal();
+    Kd_stance_leg_ = Kd_leg.asDiagonal();
+
+    loadValues();
+}
+
 void Impedance::setLegsGains(const Eigen::Vector3d& Kp_swing_leg, const Eigen::Vector3d& Kd_swing_leg,
                              const Eigen::Vector3d& Kp_stance_leg, const Eigen::Vector3d& Kd_stance_leg)
 {

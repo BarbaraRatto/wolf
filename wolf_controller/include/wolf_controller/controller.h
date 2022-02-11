@@ -14,14 +14,12 @@
 #include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
-#include <wolf_hardware_interface/ground_truth_interface.h>
-#include <wolf_hardware_interface/contact_switch_sensor_interface.h>
 // STD
 #include <atomic>
 #include <thread>
 #include <chrono>
 #include <memory>
-// Controller
+// WoLF
 #include <wolf_controller/quadruped_robot.h>
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/impedance.h>
@@ -32,6 +30,8 @@
 #include <wolf_controller/id_problem.h>
 #include <wolf_controller/ros_wrappers/interface.h>
 #include <wolf_controller/devices/interface.h>
+#include <wolf_hardware_interface/ground_truth_interface.h>
+#include <wolf_hardware_interface/contact_switch_sensor_interface.h>
 
 // Eigen
 #include <Eigen/Geometry>
@@ -39,15 +39,15 @@
 namespace wolf_controller
 {
 
-class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface,
-                                                                         hardware_interface::ImuSensorInterface,
-                                                                         hardware_interface::GroundTruthInterface,
-                                                                         hardware_interface::ContactSwitchSensorInterface>
+class Controller : public controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface, // Mandatory interface
+                                                                         hardware_interface::ImuSensorInterface, // Mandatory interface
+                                                                         hardware_interface::GroundTruthInterface, // Optional interface
+                                                                         hardware_interface::ContactSwitchSensorInterface> // Optional interface
 {
 public:
 
      enum posture_t {UP=0,DOWN};
-     enum mode_t {WALKING=0,MANIPULATION};
+     enum mode_t {WALKING=0,MANIPULATION,RESET};
 
      const std::string CLASS_NAME = "Controller";
 
@@ -120,6 +120,12 @@ public:
     bool setSwingFrequency(const double& swing_frequency);
 
     /**
+         * @brief Set the step height
+         * @param const double& swing_frequency
+         */
+    bool setStepHeight(const double& step_height);
+
+    /**
          * @brief set cutoff frequency for the qdot filter
          */
     void setCutoffFreqQdot(const double& hz);
@@ -133,6 +139,11 @@ public:
          * @brief Select the control mode to use [WALKING|MANIPULATION]
          */
     bool selectControlMode(const std::string& mode);
+
+    /**
+         * @brief get the current control mode
+         */
+    unsigned int getControlMode();
 
     /**
          * @brief Switch between WALKING and MANIPULATION
@@ -157,7 +168,12 @@ public:
     /**
          * @brief emergency stop
          */
-    void activateEmergencyStop();
+    void emergencyStop();
+
+    /**
+         * @brief reset base orientation (roll and pitch) and base height
+         */
+    void resetBase();
 
     /**
          * @brief Select the gait to use
@@ -221,6 +237,8 @@ private:
     std::vector<std::string> joint_names_;
     /** @brief Joint states for reading positions, velocities and efforts and writing effort commands */
     std::vector<hardware_interface::JointHandle> joint_states_;
+    /** @brief Robot name */
+    std::string robot_name_;
     /** @brief Control period */
     double period_;
     /** @brief IMU sensor name */
@@ -269,8 +287,6 @@ private:
     Eigen::Quaterniond imu_orientation_;
     /** @brief Ground Truth Orientation */
     Eigen::Quaterniond ground_truth_orientation_;
-    /** @brief Reference for the waist RPY */
-    Eigen::Vector3d des_base_rpy_;
     /** @brief Thread for the odometry publisher */
     std::shared_ptr<std::thread> odom_publisher_thread_;
     /** @brief Gait generator */
@@ -304,8 +320,12 @@ private:
     Eigen::Vector3d tmp_vector3d_;
     /** @brief Support temporary Vector3d */
     Eigen::Vector3d tmp_vector3d_1_;
+    /** @brief Support temporary Vector3d */
+    Eigen::Vector3d tmp_vector3d_2_;
     /** @brief Support temporary Matrix3d */
     Eigen::Matrix3d tmp_matrix3d_;
+    /** @brief Support temporary double */
+    double tmp_double_;
 
     /** @brief Counters used for checks */
     Counter::Ptr solver_failures_cnt_;
@@ -319,11 +339,14 @@ private:
 
     /** @brief state machine support variables */
     unsigned int mode_;
+    unsigned int previous_mode_;
     unsigned int posture_;
     double stand_down_starting_height_;
     double desired_height_;
     double current_height_;
     double previous_height_;
+    Eigen::Vector3d current_rpy_;
+    double desired_yaw_;
 
     /**
          * @brief thread body for the odometry publisher
