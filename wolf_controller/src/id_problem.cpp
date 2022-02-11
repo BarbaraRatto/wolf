@@ -7,7 +7,8 @@ using namespace OpenSoT;
 namespace wolf_controller {
 
 IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
-  model_(model), control_mode_(WALKING), change_control_mode_(true)
+IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& /*dt*/):
+  model_(model), control_mode_(WALKING), change_control_mode_(false)
 {
 
   foot_names_          = model_->getFootNames();
