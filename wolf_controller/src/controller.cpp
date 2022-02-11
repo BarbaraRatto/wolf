@@ -568,6 +568,7 @@ void Controller::updateStateMachine(const double &dt)
         if(ramp >= 1.0)
         {
           desired_yaw_ = robot_model_->getBaseRotationInWorldRPY().z();
+          id_prob_->reset();
           ramp_impedance_->reset();
           robot_model_->setState(QuadrupedRobot::STANDING_UP);
         }
