@@ -536,7 +536,7 @@ void GaitGenerator::startStepReflex(bool start)
   if(step_reflex_active_)
     ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
   else
-    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex de-activated!");
 }
 
 void GaitGenerator::toggleStepReflex()
@@ -548,7 +548,7 @@ void GaitGenerator::toggleStepReflex()
   if(step_reflex_active_)
     ROS_INFO_NAMED(CLASS_NAME,"Step reflex activated!");
   else
-    ROS_INFO_NAMED(CLASS_NAME,"Step reflex deactivated!");
+    ROS_INFO_NAMED(CLASS_NAME,"Step reflex de-activated!");
 }
 
 bool GaitGenerator::isStepReflexActive()
