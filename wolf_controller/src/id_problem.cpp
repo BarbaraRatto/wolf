@@ -6,7 +6,6 @@ using namespace OpenSoT;
 
 namespace wolf_controller {
 
-IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
 IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& /*dt*/):
   model_(model), control_mode_(WALKING), change_control_mode_(false)
 {
@@ -205,7 +204,8 @@ void IDProblem::setFrictionConesMu(const double& mu)
 
 double IDProblem::getFrictionConesMu() const
 {
-   return fc_.second;
+  return fc_.second;
+}
 
 void IDProblem::reset()
 {
@@ -289,7 +289,7 @@ void IDProblem::setControlMode(mode_t mode)
 
 void IDProblem::update()
 {
-  // Update if state changed
+  // Update arm tasks base frame if state changed
   if(change_control_mode_)
   {
 
