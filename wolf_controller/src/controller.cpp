@@ -567,6 +567,7 @@ void Controller::updateStateMachine(const double &dt)
         des_joint_efforts_impedance_ = ramp * des_joint_efforts_impedance_;
         if(ramp >= 1.0)
         {
+          desired_yaw_ = robot_model_->getBaseRotationInWorldRPY().z();
           ramp_impedance_->reset();
           robot_model_->setState(QuadrupedRobot::STANDING_UP);
         }
@@ -576,7 +577,7 @@ void Controller::updateStateMachine(const double &dt)
         updateComponents(dt);
         ramp = ramp_stand_up_->update(dt);
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
-        tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
+        tmp_vector3d_ << 0.0, 0.0, desired_yaw_;
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_vector3d_.setZero(); // com position
         tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
