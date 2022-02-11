@@ -163,6 +163,11 @@ public:
     double getFrictionConesMu() const;
 
     /**
+     * @brief reset the tasks
+     */
+    void reset();
+
+    /**
      * @brief postural_ a postural task
      */
     Postural::Ptr postural_;

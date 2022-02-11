@@ -205,6 +205,23 @@ void IDProblem::setFrictionConesMu(const double& mu)
 double IDProblem::getFrictionConesMu() const
 {
    return fc_.second;
+
+void IDProblem::reset()
+{
+  for (auto& tmp_map : arms_)
+  {
+    tmp_map.second->update(Eigen::VectorXd(1));
+    tmp_map.second->reset();
+  }
+  for (auto& tmp_map : feet_)
+  {
+    tmp_map.second->update(Eigen::VectorXd(1));
+    tmp_map.second->reset();
+  }
+  waistRPY_->update(Eigen::VectorXd(1));
+  waistRPY_->reset();
+  com_->update(Eigen::VectorXd(1));
+  com_->reset();
 }
 
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
