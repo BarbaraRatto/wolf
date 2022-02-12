@@ -383,6 +383,13 @@ inline void computeCartesianInertiaInverse(const Eigen::MatrixXd& J, const Eigen
   Lambdai = J*Mi*J.transpose();
 }
 
+inline double getAngleBetween(Eigen::Vector2d& a, Eigen::Vector2d& b) {
+
+  double angle = 0.0;
+  angle = std::acos((a.dot(b))/(a.norm()*b.norm()));
+  return angle;
+}
+
 }; // namespace
 
 #endif
