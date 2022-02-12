@@ -141,32 +141,6 @@ public:
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
 
-        Eigen::Vector3d k, dynamic_th, static_th;
-        if (!controller_nh.getParam("push_recovery/k/x", k(0)) || // gains
-            !controller_nh.getParam("push_recovery/k/y", k(1)) || // gains
-            !controller_nh.getParam("push_recovery/k/r", k(2))  ) // gains
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/k given, proceeding without...");
-            k = Eigen::Vector3d::Zero();
-        }
-        if (!controller_nh.getParam("push_recovery/dynamic_th/x", dynamic_th(0)) || // [m/s]
-            !controller_nh.getParam("push_recovery/dynamic_th/y", dynamic_th(1)) || // [m/s]
-            !controller_nh.getParam("push_recovery/dynamic_th/r", dynamic_th(2))  ) // [rad/s]
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/dynamic_th given, proceeding without...");
-            dynamic_th = Eigen::Vector3d::Ones() * 1000.0;// dummy
-        }
-        if (!controller_nh.getParam("push_recovery/static_th/x", static_th(0)) || // [m/s]
-            !controller_nh.getParam("push_recovery/static_th/y", static_th(1)) || // [m/s]
-            !controller_nh.getParam("push_recovery/static_th/r", static_th(2))  ) // [rad/s]
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/static_th given, proceeding without...");
-            static_th = Eigen::Vector3d::Ones() * 1000.0; // dummy
-        }
-
-        controller_->getFootholdsPlanner()->setPushRecoveryGains(k(0),k(1),k(2));
-        controller_->getFootholdsPlanner()->setPushRecoveryThresholds(static_th,dynamic_th);
-
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
             ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());

@@ -25,6 +25,11 @@ public:
    */
   typedef std::shared_ptr<PushRecovery> Ptr;
 
+
+  /**
+   * @brief Calculate the capture point and use that to add deltas to the footholds.
+   * A push is detected when the capture point is outside the support polygon.
+   */
   PushRecovery(FootholdsPlanner* const footholds_planner_ptr);
 
   /**
@@ -47,21 +52,6 @@ public:
   void setMaxDelta(const double &max);
 
   /**
-   * @brief setVelocityThresholds set the static and dynamic velocity thresholds [dotx,doty,dotyaw] used to detect a push
-   * @param static_th static threshold used when the robot is not swinging, [m/s,m/s,rad/s]
-   * @param dynamic_th threshold used when the robot is swinging, [m/s,m/s,rad/s]
-   */
-  void setVelocityThresholds(const Eigen::Vector3d& static_th, const Eigen::Vector3d& dynamic_th);
-
-  /**
-   * @brief setGains set the gains for the push recovery
-   * @param k_x
-   * @param k_y
-   * @param k_yaw
-   */
-  void setGains(const double& k_x, const double& k_y, const double& k_yaw);
-
-  /**
    * @brief activate the computation of the deltas for the push recovery
    */
   void activateComputeDeltas();
@@ -81,25 +71,16 @@ private:
   double base_inertia_z_;
   std::map<std::string,Eigen::Vector2d> deltas_;
   std::map<std::string,std::pair<int,int> > signs_;
-  Eigen::Vector3d cmd_velocity_;
-  Eigen::Vector3d base_velocity_;
-  Eigen::Vector3d disturbance_;
-  Eigen::Vector3d disturbance_abs_;
+  Eigen::Vector2d capture_point_;
+  Eigen::Vector3d com_vel_;
+  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> com_vel_filt_;
+  Eigen::Vector3d com_pos_;
   double max_delta_;
-  Eigen::Vector6d base_twist_;
-  Eigen::Vector3d com_vel_hf_;
-  Eigen::Matrix3d I_hf_;
-  Eigen::Matrix3d I_world_;
-  // Thresholds
-  Eigen::Vector3d dynamic_th_dot_;
-  Eigen::Vector3d static_th_dot_;
-  Eigen::Vector3d current_th_dot_;
-  Eigen::Vector3d current_th_dot_filt_;
-  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> th_filter_;
-  // Filter cut off frequency
-  double cutoff_freq_;
-  // Gains
-  double cmd_velocity_scale_;
+  bool push_detected_;
+  std::vector<float> vertx_;
+  std::vector<float> verty_;
+  std::vector<std::string> ordered_foot_names_;
+  std::map<std::string,Eigen::Vector3d> feet_pos_;
 };
 
 /**
@@ -208,8 +189,6 @@ public:
     void setMinBaseRoll(const double& min);
     void setMinBasePitch(const double& min);
     void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
-    void setPushRecoveryThresholds(const Eigen::Vector3d& static_th, const Eigen::Vector3d& dynamic_th);
-    void setPushRecoveryGains(const double& k_x, const double& k_y, const double& k_r);
 
     /**
      * @brief Get functions
@@ -401,6 +380,7 @@ private:
     std::map<std::string,Eigen::Vector3d> virtual_foothold_;
     std::map<std::string,Eigen::Vector3d> current_foothold_;
     std::map<std::string,Eigen::Vector3d> current_foothold_hf_;
+    std::map<std::string,Eigen::Vector2d> capture_point_delta_;
 
     double step_length_;
 
