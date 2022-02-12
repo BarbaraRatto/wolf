@@ -295,12 +295,12 @@ void GaitGenerator::setDutyFactor(const std::string& foot_name, const double& du
   feet_[foot_name].state_machine->setDutyFactor(duty_factor);
 }
 
-void GaitGenerator::increaseDutyCycle()
+void GaitGenerator::increaseDutyFactor()
 {
     setDutyFactor(getAvgDutyFactor()+0.1);
 }
 
-void GaitGenerator::decreaseDutyCycle()
+void GaitGenerator::decreaseDutyFactor()
 {
     setDutyFactor(getAvgDutyFactor()-0.1);
 }
@@ -340,6 +340,24 @@ double GaitGenerator::getAvgSwingFrequency()
   double avg = 0.0;
   for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
     avg = avg + it->second.trajectory->getSwingFrequency();
+  avg = avg / feet_.size();
+  return avg;
+}
+
+double GaitGenerator::getAvgStanceFrequency()
+{
+  double avg = 0.0;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    avg = avg + 1.0/it->second.state_machine->getStancePeriod();
+  avg = avg / feet_.size();
+  return avg;
+}
+
+double GaitGenerator::getAvgCycleTime()
+{
+  double avg = 0.0;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    avg = avg + (it->second.state_machine->getStancePeriod() + it->second.state_machine->getSwingPeriod());
   avg = avg / feet_.size();
   return avg;
 }

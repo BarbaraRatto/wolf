@@ -121,15 +121,19 @@ public:
 
   void decreaseSwingFrequency();
 
-  void increaseDutyCycle();
+  void increaseDutyFactor();
 
-  void decreaseDutyCycle();
+  void decreaseDutyFactor();
 
   void setSwingFrequency(const std::string& foot_name, const double& swing_frequency);
 
   double getSwingFrequency(const std::string& foot_name);
 
   double getAvgSwingFrequency();
+
+  double getAvgStanceFrequency();
+
+  double getAvgCycleTime();
 
   double getAvgDutyFactor();
 
