@@ -542,6 +542,11 @@ void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrai
   world_T_terrain_ = world_T_terrain;
 }
 
+void FootholdsPlanner::setPushRecoverySensibility(const double& v)
+{
+  push_recovery_->setScaleValue(v);
+}
+
 void FootholdsPlanner::setBaseLinearVelocityCmd(const double& linear)
 {
   base_linear_velocity_cmd_x_ = linear;
@@ -808,6 +813,11 @@ double FootholdsPlanner::getSwingFrequency()
   return gait_generator_->getAvgSwingFrequency();
 }
 
+double FootholdsPlanner::getPushRecoverySensibility()
+{
+  return push_recovery_->getScaleValue();
+}
+
 Eigen::Vector3d &FootholdsPlanner::getCurrentFoothold(const std::string &foot_name)
 {
   return current_foothold_[foot_name];
@@ -832,9 +842,9 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 {
   assert(footholds_planner_ptr);
   footholds_planner_ptr_ = footholds_planner_ptr;
-  base_mass_   = footholds_planner_ptr_->robot_model_->getMass();
-  base_length_ = footholds_planner_ptr_->robot_model_->getBaseLength();
-  base_width_  = footholds_planner_ptr_->robot_model_->getBaseWidth();
+  base_mass_        = footholds_planner_ptr_->robot_model_->getMass();
+  base_length_      = footholds_planner_ptr_->robot_model_->getBaseLength();
+  base_width_       = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
   for(unsigned int i=0;i<foot_names.size();i++)
@@ -854,9 +864,13 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   }
 
   max_delta_ = (footholds_planner_ptr_->step_length_max_) / 1.5; //  x ~ L/sqrt(2)
+  footholds_planner_ptr_->robot_model_->getFloatingBaseOrientationInertia(tmp_matrix3d_);
+  base_inertia_z_   = tmp_matrix3d_(2,2);
 
-  compute_deltas_ = true;
-  push_detected_ = false;
+  compute_deltas_   = true;
+  compute_rotation_ = false;
+  push_detected_    = false;
+  scale_ = 1.0;
 
   vertx_.resize(N_LEGS);
   verty_.resize(N_LEGS);
@@ -876,9 +890,10 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 bool PushRecovery::update(const double& period)
 {
 
-  // Get COM infos
+  // Get COM and FB informations
   footholds_planner_ptr_->robot_model_->getCOM(com_pos_);
   footholds_planner_ptr_->robot_model_->getCOMVelocity(com_vel_);
+  footholds_planner_ptr_->robot_model_->getFloatingBaseTwist(base_twist_);
 
   // Filter COM velocity around the cycle frequency because when lifting off the robot kind of shakes generating
   // velocities
@@ -886,10 +901,11 @@ bool PushRecovery::update(const double& period)
   com_vel_filt_.setTimeStep(period);
   com_vel_ = com_vel_filt_.process(com_vel_);
 
-  float scale = 1.0;
+  float scale = static_cast<float>(scale_); // Note: I could use that to shrink the support polygon
+  double tau =  std::sqrt(std::abs(com_pos_(2))/GRAVITY);
 
   // Compute the capture point
-  capture_point_ = std::sqrt(com_pos_(2)/GRAVITY) * com_vel_.head(2) + com_pos_.head(2); // World
+  capture_point_ = tau * com_vel_.head(2) + com_pos_.head(2); // World
 
   // Update the support polygon
   if (footholds_planner_ptr_->areAllFeetInStance())
@@ -918,8 +934,16 @@ bool PushRecovery::update(const double& period)
     const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
     for(unsigned int i=0;i<foot_names.size();i++)
     {
-      deltas_[foot_names[i]].x() = capture_point_(0);
-      deltas_[foot_names[i]].y() = capture_point_(1);
+      if(!compute_rotation_)
+      {
+        deltas_[foot_names[i]].x() = capture_point_(0);
+        deltas_[foot_names[i]].y() = capture_point_(1);
+      }
+      else
+      {
+        deltas_[foot_names[i]].x() = capture_point_(0) + tau * signs_[foot_names[i]].first  * base_inertia_z_/base_mass_ * base_twist_(5);
+        deltas_[foot_names[i]].y() = capture_point_(1) + tau * signs_[foot_names[i]].second * base_inertia_z_/base_mass_ * base_twist_(5);
+      }
 
       if(deltas_[foot_names[i]].x() > max_delta_)
         deltas_[foot_names[i]].x() = max_delta_;
@@ -962,6 +986,16 @@ void PushRecovery::deactivateComputeDeltas()
 {
   compute_deltas_ = false;
   ROS_INFO_NAMED(CLASS_NAME,"Push recovery de-activated!");
+}
+
+void PushRecovery::setScaleValue(double scale)
+{
+  scale_ = scale;
+}
+
+double PushRecovery::getScaleValue()
+{
+  return scale_;
 }
 
 }; // namespace

@@ -61,10 +61,21 @@ public:
    */
   void deactivateComputeDeltas();
 
+  /**
+   * @brief set a scale value between 0 and 1 for the support polygon
+   */
+  void setScaleValue(double scale);
+
+  /**
+   * @brief get the scale value for the support polygon
+   */
+  double getScaleValue();
+
 private:
 
   FootholdsPlanner* footholds_planner_ptr_;
   std::atomic<bool> compute_deltas_;
+  std::atomic<double> scale_;
   double base_mass_;
   double base_length_;
   double base_width_;
@@ -73,14 +84,19 @@ private:
   std::map<std::string,std::pair<int,int> > signs_;
   Eigen::Vector2d capture_point_;
   Eigen::Vector3d com_vel_;
+  Eigen::Vector6d base_twist_;
   XBot::Utils::SecondOrderFilter<Eigen::Vector3d> com_vel_filt_;
   Eigen::Vector3d com_pos_;
   double max_delta_;
   bool push_detected_;
+  bool compute_rotation_;
   std::vector<float> vertx_;
   std::vector<float> verty_;
   std::vector<std::string> ordered_foot_names_;
   std::map<std::string,Eigen::Vector3d> feet_pos_;
+
+
+  Eigen::Matrix3d tmp_matrix3d_;
 };
 
 /**
@@ -189,6 +205,7 @@ public:
     void setMinBaseRoll(const double& min);
     void setMinBasePitch(const double& min);
     void setTerrainTransform(const Eigen::Affine3d& world_T_terrain);
+    void setPushRecoverySensibility(const double& v);
 
     /**
      * @brief Get functions
@@ -220,6 +237,7 @@ public:
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
     const std::vector<std::string>& getFootNames() const;
     double getSwingFrequency();
+    double getPushRecoverySensibility();
 
     /**
      * @brief Increase step height
