@@ -281,14 +281,14 @@ void FootholdsPlanner::calculateFootSteps()
 
 void FootholdsPlanner::resetFeetStep()
 {
-  const std::vector<std::string>& feet_names = gait_generator_->getFootNames();
-
-  for(unsigned int i=0; i<feet_names.size(); i++)
+  const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
+  for(unsigned int i=0; i<foot_names.size(); i++)
   {
-    steps_length_[feet_names[i]]   = 0.0;
-    steps_heading_[feet_names[i]] = 0.0;
-    steps_height_[feet_names[i]]   = 0.0;
-    steps_heading_rate_[feet_names[i]]   = 0.0;
+    steps_length_[foot_names[i]]         = 0.0;
+    steps_heading_[foot_names[i]]        = 0.0;
+    steps_height_[foot_names[i]]         = 0.0;
+    steps_heading_rate_[foot_names[i]]   = 0.0;
+    capture_point_delta_[foot_names[i]]  = Eigen::Vector2d::Zero();
   }
 }
 
