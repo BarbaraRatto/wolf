@@ -87,6 +87,8 @@ public:
 
   bool isCycleEnded(const std::string& foot_name);
 
+  bool isGaitCycleEnded();
+
   bool isAnyFootInLiftOff();
 
   bool isAnyFootInSwing();

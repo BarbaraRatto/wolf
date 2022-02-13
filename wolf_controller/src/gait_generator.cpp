@@ -200,6 +200,11 @@ bool GaitGenerator::isCycleEnded(const std::string& foot_name)
   return feet_[foot_name].state_machine->isCycleEnded();
 }
 
+bool GaitGenerator::isGaitCycleEnded()
+{
+  return gait_buffer_[current_gait_idx_]->isCycleEnded();
+}
+
 bool GaitGenerator::isAnyFootInLiftOff()
 {
   bool result = false;
@@ -269,7 +274,7 @@ const bool& GaitGenerator::getContact(const std::string& foot_name)
   return feet_[foot_name].contact;
 }
 
-const Eigen::Vector3d&  GaitGenerator::getContactForce(const std::string& foot_name)
+const Eigen::Vector3d& GaitGenerator::getContactForce(const std::string& foot_name)
 {
   return feet_[foot_name].contact_force;
 }

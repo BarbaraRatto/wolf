@@ -544,7 +544,13 @@ void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrai
 
 void FootholdsPlanner::setPushRecoverySensibility(const double& v)
 {
-  push_recovery_->setScaleValue(v);
+  if(v>=0.0 && v<= 1.0)
+  {
+    push_recovery_->setScaleValue(1.0 - v);
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set push recovery sensibility to "<< v);
+  }
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Push recovery sensibility has to be defined between 0 and 1!");
 }
 
 void FootholdsPlanner::setBaseLinearVelocityCmd(const double& linear)
@@ -798,6 +804,11 @@ bool FootholdsPlanner::isAnyFootInSwing()
   return gait_generator_->isAnyFootInSwing();
 }
 
+PushRecovery* FootholdsPlanner::getPushRecovery() const
+{
+  return push_recovery_.get();
+}
+
 bool FootholdsPlanner::areAllFeetInStance()
 {
   return gait_generator_->areAllFeetInStance();
@@ -815,7 +826,7 @@ double FootholdsPlanner::getSwingFrequency()
 
 double FootholdsPlanner::getPushRecoverySensibility()
 {
-  return push_recovery_->getScaleValue();
+  return (1.0 - push_recovery_->getScaleValue());
 }
 
 Eigen::Vector3d &FootholdsPlanner::getCurrentFoothold(const std::string &foot_name)
@@ -842,46 +853,37 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 {
   assert(footholds_planner_ptr);
   footholds_planner_ptr_ = footholds_planner_ptr;
-  base_mass_        = footholds_planner_ptr_->robot_model_->getMass();
-  base_length_      = footholds_planner_ptr_->robot_model_->getBaseLength();
-  base_width_       = footholds_planner_ptr_->robot_model_->getBaseWidth();
 
   const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
   for(unsigned int i=0;i<foot_names.size();i++)
-  {
-    // Compute the signs for the feet:
-    //signs_["lf_foot"] = std::make_pair<int,int>(1,1);
-    //signs_["rf_foot"] = std::make_pair<int,int>(1,-1);
-    //signs_["lh_foot"] = std::make_pair<int,int>(-1,1);
-    //signs_["rh_foot"] = std::make_pair<int,int>(-1,-1);
-    Eigen::Affine3d pose;
-    auto qhome = footholds_planner_ptr->robot_model_->getStandUpJointPostion();
-    auto base_name = footholds_planner_ptr->robot_model_->getBaseLinkName();
-    footholds_planner_ptr->robot_model_->getPose(qhome,foot_names[i],base_name,pose);
-    signs_[foot_names[i]] = std::make_pair<int,int>(sgn(pose.translation().x()),sgn(pose.translation().y()));
-    // Reset the deltas
     deltas_[foot_names[i]].setZero();
-  }
 
   max_delta_ = (footholds_planner_ptr_->step_length_max_) / 1.5; //  x ~ L/sqrt(2)
-  footholds_planner_ptr_->robot_model_->getFloatingBaseOrientationInertia(tmp_matrix3d_);
-  base_inertia_z_   = tmp_matrix3d_(2,2);
 
-  compute_deltas_   = true;
-  compute_rotation_ = false;
-  push_detected_    = false;
+  compute_deltas_    = true;
+  push_detected_     = false;
   scale_ = 1.0;
 
   vertx_.resize(N_LEGS);
   verty_.resize(N_LEGS);
+  support_polygon_edges_.resize(N_LEGS);
+  com_pos_.setZero();
 
-  // Order the foot names such that they are in consecutive order, this is needed by pnpoly
+  // Order the foot names such that they are in a consecutive order, this is needed by pnpoly
   feet_pos_ = footholds_planner_ptr_->robot_model_->getFeetPositionInWorld();
   ordered_foot_names_ = sortByLegPrefix(footholds_planner_ptr_->robot_model_->getFootNames(),{"lf","rf","rh","lh"});
 
+  for(unsigned int i=0;i<ordered_foot_names_.size();i++)
+  {
+    vertx_[i] = 0.0;
+    verty_[i] = 0.0;
+    support_polygon_edges_[i] = Eigen::Vector2d::Zero();
+  }
+
 #ifdef DEBUG
-  RtLogger::getLogger().addPublisher(TOPIC(capture_point),capture_point_);
-  RtLogger::getLogger().addPublisher(TOPIC(com_vel),com_vel_);
+  //RtLogger::getLogger().addPublisher(TOPIC(capture_point),capture_point_);
+  //RtLogger::getLogger().addPublisher(TOPIC(com_vel),com_vel_);
+  //RtLogger::getLogger().addPublisher(TOPIC(com_pos),com_pos_);
   for(unsigned int i=0;i<foot_names.size();i++)
     RtLogger::getLogger().addPublisher(_robot_name+"/wolf_controller/delta_"+foot_names[i],deltas_[foot_names[i]]);
 #endif
@@ -890,34 +892,42 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
 bool PushRecovery::update(const double& period)
 {
 
-  // Get COM and FB informations
-  footholds_planner_ptr_->robot_model_->getCOM(com_pos_);
+  // Get COM
   footholds_planner_ptr_->robot_model_->getCOMVelocity(com_vel_);
-  footholds_planner_ptr_->robot_model_->getFloatingBaseTwist(base_twist_);
+  footholds_planner_ptr_->robot_model_->getCOM(tmp_vector3d_);
 
   // Filter COM velocity around the cycle frequency because when lifting off the robot kind of shakes generating
-  // velocities
+  // unwanted velocities
   com_vel_filt_.setOmega(2.0*M_PI*1.0/footholds_planner_ptr_->gait_generator_->getAvgCycleTime());
   com_vel_filt_.setTimeStep(period);
   com_vel_ = com_vel_filt_.process(com_vel_);
 
-  float scale = static_cast<float>(scale_); // Note: I could use that to shrink the support polygon
-  double tau =  std::sqrt(std::abs(com_pos_(2))/GRAVITY);
-
-  // Compute the capture point
-  capture_point_ = tau * com_vel_.head(2) + com_pos_.head(2); // World
+  // Get COM position
+  com_pos_(2) = tmp_vector3d_(2);
+  com_pos_.head(2) = com_pos_.head(2) + com_vel_.head(2) * period; // Integrate COM
+  //com_pos_ = tmp_vector3d_; // Do not integrate
+  com_pos_xy_ = com_pos_.head(2); // To export only
 
   // Update the support polygon
-  if (footholds_planner_ptr_->areAllFeetInStance())
+  if(footholds_planner_ptr_->gait_generator_->areAllFeetInStance())
   {
+    float scale = static_cast<float>(scale_); // Note: I use that to shrink the support polygon
     feet_pos_ = footholds_planner_ptr_->robot_model_->getFeetPositionInWorld();
-
     for(unsigned int i=0;i<ordered_foot_names_.size();i++)
     {
       vertx_[i] = scale * static_cast<float>(feet_pos_[ordered_foot_names_[i]].x());
       verty_[i] = scale * static_cast<float>(feet_pos_[ordered_foot_names_[i]].y());
+      support_polygon_edges_[i] = scale * feet_pos_[ordered_foot_names_[i]].head(2); // To export only
     }
   }
+
+  // Compute the capture point
+  double tau =  std::sqrt(std::abs(com_pos_(2))/GRAVITY);
+  capture_point_ = tau * com_vel_.head(2) + com_pos_.head(2); // World
+
+  // Reset COM integration if the gait cycle is ended
+  if(gait_cycle_ended_.update(footholds_planner_ptr_->gait_generator_->isGaitCycleEnded()))
+    com_pos_.head(2).setZero();
 
   float testx = static_cast<float>(capture_point_.x());
   float testy = static_cast<float>(capture_point_.y());
@@ -934,16 +944,9 @@ bool PushRecovery::update(const double& period)
     const std::vector<std::string>& foot_names = footholds_planner_ptr_->robot_model_->getFootNames();
     for(unsigned int i=0;i<foot_names.size();i++)
     {
-      if(!compute_rotation_)
-      {
-        deltas_[foot_names[i]].x() = capture_point_(0);
-        deltas_[foot_names[i]].y() = capture_point_(1);
-      }
-      else
-      {
-        deltas_[foot_names[i]].x() = capture_point_(0) + tau * signs_[foot_names[i]].first  * base_inertia_z_/base_mass_ * base_twist_(5);
-        deltas_[foot_names[i]].y() = capture_point_(1) + tau * signs_[foot_names[i]].second * base_inertia_z_/base_mass_ * base_twist_(5);
-      }
+
+      deltas_[foot_names[i]].x() = capture_point_(0);
+      deltas_[foot_names[i]].y() = capture_point_(1);
 
       if(deltas_[foot_names[i]].x() > max_delta_)
         deltas_[foot_names[i]].x() = max_delta_;
@@ -966,6 +969,21 @@ bool PushRecovery::update(const double& period)
 const Eigen::Vector2d &PushRecovery::getDelta(const std::string &foot_name)
 {
   return deltas_[foot_name];
+}
+
+const std::vector<Eigen::Vector2d> &PushRecovery::getSupportPolygonEdges()
+{
+  return support_polygon_edges_;
+}
+
+const Eigen::Vector2d &PushRecovery::getCapturePoint()
+{
+  return capture_point_;
+}
+
+const Eigen::Vector2d &PushRecovery::getComPositionXY()
+{
+  return com_pos_xy_;
 }
 
 void PushRecovery::setMaxDelta(const double& max)

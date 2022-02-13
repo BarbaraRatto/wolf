@@ -18,6 +18,7 @@
 #include <wolf_controller/FootHolds.h>
 #include <wolf_controller/TerrainEstimation.h>
 #include <wolf_controller/FrictionCones.h>
+#include <wolf_controller/CapturePoint.h>
 #include <wolf_controller/float32.h>
 
 // WoLF
@@ -270,6 +271,10 @@ public:
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
+        // Capture point
+        capture_point_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>(controller_nh, "capture_point", 4));
+        capture_point_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
+        capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
 
         // DDynamic reconfigure
         server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
@@ -561,7 +566,25 @@ public:
           friction_cones_pub_->msg_.header.stamp = time;
           friction_cones_pub_->unlockAndPublish();
       }
-    };
+
+      if(capture_point_pub_.get() && capture_point_pub_->trylock())
+      {
+          for(unsigned int i=0; i <N_LEGS; i++)
+          {
+            capture_point_pub_->msg_.support_polygon.points[i].x = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].x();
+            capture_point_pub_->msg_.support_polygon.points[i].y = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].y();
+            capture_point_pub_->msg_.support_polygon.points[i].z = 0.0;
+          }
+          capture_point_pub_->msg_.com.x = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().x();
+          capture_point_pub_->msg_.com.y = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().y();
+          capture_point_pub_->msg_.com.z = 0.0;
+          capture_point_pub_->msg_.capture_point.x = controller_->getFootholdsPlanner()->getPushRecovery()->getCapturePoint().x();
+          capture_point_pub_->msg_.capture_point.y = controller_->getFootholdsPlanner()->getPushRecovery()->getCapturePoint().y();
+          capture_point_pub_->msg_.capture_point.z = 0.0;
+          capture_point_pub_->msg_.header.stamp = time;
+          capture_point_pub_->unlockAndPublish();
+      }
+    }
 
 protected:
 
@@ -573,6 +596,8 @@ protected:
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>> terrain_estimation_pub_;
     /** @brief Real time publisher - friction cones */
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>> friction_cones_pub_;
+    /** @brief Real time publisher - capture point */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>> capture_point_pub_;
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */
