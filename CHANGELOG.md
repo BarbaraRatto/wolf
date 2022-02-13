@@ -4,18 +4,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
-## wolf_controller - [0.0.7] - ????-??-??
+## wolf_controller - [0.0.8] - xxxx-xx-xx
  
-sha ??
+sha xxx
+
+### Added
+
+### Changed
+ 
+### Fixed
+
+## wolf_controller - [0.0.7] - 2022-02-13
+ 
+sha a77bde6b414113977ea6b1e624c39f362bc0cfc7
 
 ### Added
 - activate push recovery and step reflex in the param files
+- plot capture point info
+- state estimation integrate velocity, but it needs testing and at the actual state doesn't work
 
 ### Changed
 - send input device commands only if the robot is in the active state
+- push recovery based on capture point
+- integrated other services in the keyboard node
  
 ### Fixed
 - angular velocities bug
+- arm startup problem
 
 ## wolf_controller - [0.0.6] - 2022-02-06
  
