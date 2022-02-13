@@ -867,7 +867,7 @@ PushRecovery::PushRecovery(FootholdsPlanner* const footholds_planner_ptr)
   vertx_.resize(N_LEGS);
   verty_.resize(N_LEGS);
   support_polygon_edges_.resize(N_LEGS);
-  com_pos_.setZero();
+  footholds_planner_ptr_->robot_model_->getCOM(com_pos_);
 
   // Order the foot names such that they are in a consecutive order, this is needed by pnpoly
   feet_pos_ = footholds_planner_ptr_->robot_model_->getFeetPositionInWorld();
@@ -903,16 +903,16 @@ bool PushRecovery::update(const double& period)
   com_vel_ = com_vel_filt_.process(com_vel_);
 
   // Get COM position
-  com_pos_(2) = tmp_vector3d_(2);
+  com_pos_(2) = tmp_vector3d_(2); // Take Z
   com_pos_.head(2) = com_pos_.head(2) + com_vel_.head(2) * period; // Integrate COM
   //com_pos_ = tmp_vector3d_; // Do not integrate
   com_pos_xy_ = com_pos_.head(2); // To export only
 
   // Update the support polygon
+  feet_pos_ = footholds_planner_ptr_->robot_model_->getFeetPositionInWorld();
   if(footholds_planner_ptr_->gait_generator_->areAllFeetInStance())
   {
     float scale = static_cast<float>(scale_); // Note: I use that to shrink the support polygon
-    feet_pos_ = footholds_planner_ptr_->robot_model_->getFeetPositionInWorld();
     for(unsigned int i=0;i<ordered_foot_names_.size();i++)
     {
       vertx_[i] = scale * static_cast<float>(feet_pos_[ordered_foot_names_[i]].x());
@@ -927,7 +927,7 @@ bool PushRecovery::update(const double& period)
 
   // Reset COM integration if the gait cycle is ended
   if(gait_cycle_ended_.update(footholds_planner_ptr_->gait_generator_->isGaitCycleEnded()))
-    com_pos_.head(2).setZero();
+    com_pos_.head(2) = tmp_vector3d_.head(2);
 
   float testx = static_cast<float>(capture_point_.x());
   float testy = static_cast<float>(capture_point_.y());
@@ -945,8 +945,8 @@ bool PushRecovery::update(const double& period)
     for(unsigned int i=0;i<foot_names.size();i++)
     {
 
-      deltas_[foot_names[i]].x() = capture_point_(0);
-      deltas_[foot_names[i]].y() = capture_point_(1);
+      deltas_[foot_names[i]].x() = capture_point_(0) - tmp_vector3d_.x();
+      deltas_[foot_names[i]].y() = capture_point_(1) - tmp_vector3d_.y();
 
       if(deltas_[foot_names[i]].x() > max_delta_)
         deltas_[foot_names[i]].x() = max_delta_;
