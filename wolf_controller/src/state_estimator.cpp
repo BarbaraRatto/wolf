@@ -29,7 +29,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   joint_velocities_.resize(static_cast<Eigen::Index>(n_dofs));
   joint_efforts_.resize(static_cast<Eigen::Index>(n_dofs));
   base_rpy_ = Eigen::Vector3d::Zero();
-  floating_base_position_ = Eigen::Vector3d::Zero();
+  floating_base_position_      = Eigen::Vector3d::Zero();
   floating_base_velocity_ = Eigen::Vector6d::Zero();
   floating_base_pose_ = Eigen::Affine3d::Identity();
   gt_position_ = Eigen::Vector3d::Zero();
@@ -63,6 +63,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   estimations_["imu_gyroscope"] = estimation_t::IMU_GYROSCOPE;
   estimations_["ground_truth"] = estimation_t::GROUND_TRUTH;
   estimations_["estimated_z"] = estimation_t::ESTIMATED_Z;
+  estimations_["integrated_linear_velocities"] = estimation_t::INTEGRATED_LINEAR_VELOCITIES;
 
   reset_gyro_integration_done_ = false;
 
@@ -503,13 +504,24 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::ESTIMATED_Z:
     // Update the qp estimation based on the new virtual model state
-    //termporarily commented to save time
     qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
     //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
     floating_base_position_ << 0.0,0.0, estimated_z_; // Remove x and y from the state estimation
+    break;
+  case estimation_t::INTEGRATED_LINEAR_VELOCITIES:
+    // Update the qp estimation based on the new virtual model state
+    qp_estimation_->update();
+    qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+    floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    floating_base_position_.head(2) = floating_base_position_.head(2) + floating_base_velocity_.segment(0,2) * period;  // Integrate x and y
+    floating_base_position_(2) = estimated_z_; // Use estimated z
+    if(gait_cycle_ended_.update(gait_generator_->isGaitCycleEnded()))
+    {
+      floating_base_position_.head(2).setZero();
+    }
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
