@@ -7,7 +7,6 @@
 - dedicated state machine code
 - sometimes when standing down the robot kind of fall (only Aliengo)
 - q_lims subconstraint
-- add script in description_utils to create model.config and model.sdf for gazebo
 - relative tasks between the feet / kin adjustment
 - port the robots to the new stack 
 - collision avoidance for the arm
