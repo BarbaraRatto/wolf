@@ -1,3 +1,11 @@
+/**
+ * @file footholds_planner.cpp
+ * @author Gennaro Raiola, Michele Focchi
+ * @date 12 June, 2019
+ * @brief This file contains the implementation of the walking pattern generator and push
+ * recovery
+ */
+
 #include <wolf_controller/footholds_planner.h>
 #include <OpenSoT/utils/cartesian_utils.h>
 

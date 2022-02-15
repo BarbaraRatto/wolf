@@ -2,11 +2,8 @@
  * @file controller.cpp
  * @author Gennaro Raiola
  * @date 12 June, 2019
- * @brief WholeBody Controller.
- *
- * This file contains the constructor, destructor, init, stopping and other facilities for the
- * WholeBody Controller.
- * @see todo.git
+ * @brief This file contains the constructor, destructor, init, stopping and other facilities for the
+ * WoLF controller.
  */
 
 #include <wolf_controller/controller.h>

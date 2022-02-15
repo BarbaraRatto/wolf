@@ -1,3 +1,10 @@
+/**
+ * @file state_estimator.cpp
+ * @author Gennaro Raiola
+ * @date 12 June, 2019
+ * @brief State estimator
+ */
+
 #include <wolf_controller/state_estimator.h>
 #include <wolf_controller/utils.h>
 

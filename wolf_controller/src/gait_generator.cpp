@@ -1,3 +1,10 @@
+/**
+ * @file gait_generator.cpp
+ * @author Gennaro Raiola
+ * @date 12 June, 2019
+ * @brief This file contains the Gait and GaitGenerator
+ */
+
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/foot_trajectory_ellipse.h>
 

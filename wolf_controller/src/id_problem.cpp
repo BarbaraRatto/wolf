@@ -1,3 +1,10 @@
+/**
+ * @file id_problem.cpp
+ * @author Gennaro Raiola, Enrico Mingo Hoffman, Michele Focchi
+ * @date 12 June, 2019
+ * @brief This file contains the implementation of the Inverse Dynamic problem
+ */
+
 #include <wolf_controller/id_problem.h>
 #include <OpenSoT/utils/Affine.h>
 #include <wolf_controller/utils.h>
