@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
  
 ## wolf_controller - [0.0.8] - 2022-02-15
  
-sha xxx
+sha 7cbb2f88217efc3c99aa1f7174f230172555d512
 
 ### Added
 - License
