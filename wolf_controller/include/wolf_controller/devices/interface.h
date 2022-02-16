@@ -33,14 +33,12 @@ public:
         return active_;
     };
 
-    void activate()
+    void checkIfActive(const double& v)
     {
-        active_ = true;
-    }
-
-    void deactivate()
-    {
-        active_ = false;
+        if(std::abs(v)>EPS)
+          active_ = true;
+        else
+          active_ = false;
     }
 
 private:
@@ -64,12 +62,13 @@ public:
     void selectInput()
     {
         list_t::iterator it;
-        for (it=inputs_.begin(); it!=inputs_.end(); ++it)
+        std::cout << "*********" << std::endl;
+        for (it=inputs_.begin(); it!=inputs_.end(); it++)
         {
+            std::cout << it->first << std::endl;
             if(it->second->isInputActive())
             {
                 it->second->updateInput();
-                it->second->deactivate();
                 break;
             }
         }
@@ -96,19 +95,24 @@ public:
 
     DeviceHandlerInterface()
     {
-        base_velocity_x_scale_     = 0.0;
-        base_velocity_y_scale_     = 0.0;
-        base_velocity_z_scale_     = 0.0;
-        base_velocity_yaw_scale_   = 0.0;
-        base_velocity_pitch_scale_ = 0.0;
-        base_velocity_roll_scale_  = 0.0;
-        base_velocity_x_cmd_       = 0.0;
-        base_velocity_y_cmd_       = 0.0;
-        base_velocity_z_cmd_       = 0.0;
-        base_velocity_yaw_cmd_     = 0.0;
-        base_velocity_pitch_cmd_   = 0.0;
-        base_velocity_roll_cmd_    = 0.0;
-        start_swing_               = false;
+      reset();
+    }
+
+    void reset()
+    {
+      base_velocity_x_scale_     = 0.0;
+      base_velocity_y_scale_     = 0.0;
+      base_velocity_z_scale_     = 0.0;
+      base_velocity_yaw_scale_   = 0.0;
+      base_velocity_pitch_scale_ = 0.0;
+      base_velocity_roll_scale_  = 0.0;
+      base_velocity_x_cmd_       = 0.0;
+      base_velocity_y_cmd_       = 0.0;
+      base_velocity_z_cmd_       = 0.0;
+      base_velocity_yaw_cmd_     = 0.0;
+      base_velocity_pitch_cmd_   = 0.0;
+      base_velocity_roll_cmd_    = 0.0;
+      start_swing_               = false;
     }
 
     virtual ~DeviceHandlerInterface() {}

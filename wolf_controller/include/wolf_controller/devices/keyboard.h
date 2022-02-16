@@ -55,7 +55,8 @@ public:
         else
             start_swing_ = false;
 
-        activate();
+        checkIfActive(  base_velocity_x_scale_    + base_velocity_y_scale_     + base_velocity_z_scale_
+                      + base_velocity_roll_scale_ + base_velocity_pitch_scale_ + base_velocity_yaw_scale_);
     }
 };
 

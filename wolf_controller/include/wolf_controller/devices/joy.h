@@ -62,7 +62,7 @@ public:
 
 protected:
 
-    void update()
+    void cmdCallback()
     {
 
         base_velocity_x_cmd_       = controller_ptr_->getBaseLinearVelocityCmdX();
@@ -77,7 +77,8 @@ protected:
         else if (step_height_.getStatus() == wolf_controller::AxisToTrigger::DOWN)
             controller_ptr_->getFootholdsPlanner()->decreaseStepHeight();
 
-        activate();
+        checkIfActive(  base_velocity_x_scale_    + base_velocity_y_scale_     + base_velocity_z_scale_
+                      + base_velocity_roll_scale_ + base_velocity_pitch_scale_ + base_velocity_yaw_scale_);
     }
 
     FunctionTrigger switch_posture_;
@@ -131,7 +132,7 @@ public:
                 reset_base_.f_();
         }
 
-        JoyHandler::update();
+        JoyHandler::cmdCallback();
     }
 };
 
@@ -178,7 +179,7 @@ public:
                 reset_base_.f_();
         }
 
-        JoyHandler::update();
+        JoyHandler::cmdCallback();
     }
 };
 
