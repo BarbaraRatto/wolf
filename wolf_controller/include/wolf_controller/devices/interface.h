@@ -10,9 +10,76 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #ifndef DEVICES_INTERFACE_H
 #define DEVICES_INTERFACE_H
 
-#include <memory>
+// WoLF
+#include <wolf_controller/utils.h>
 
-class DeviceHandlerInterface
+// STD
+#include <memory>
+#include <algorithm>
+#include <chrono>
+
+class Input
+{
+public:
+
+    Input() {active_=false;}
+
+    ~Input() {}
+
+    virtual void updateInput()=0;
+
+    bool isInputActive()
+    {
+        return active_;
+    };
+
+    void activate()
+    {
+        active_ = true;
+    }
+
+    void deactivate()
+    {
+        active_ = false;
+    }
+
+private:
+    std::atomic<bool> active_;
+};
+
+class Mux
+{
+public:
+
+    typedef std::list<std::pair<unsigned int,Input*> > list_t;
+
+    Mux() {}
+
+    void addInput(unsigned int priority, Input* input)
+    {
+        inputs_.push_back(std::make_pair(priority,input));
+        inputs_.sort();
+    }
+
+    void selectInput()
+    {
+        list_t::iterator it;
+        for (it=inputs_.begin(); it!=inputs_.end(); ++it)
+        {
+            if(it->second->isInputActive())
+            {
+                it->second->updateInput();
+                it->second->deactivate();
+                break;
+            }
+        }
+    }
+
+private:
+    list_t inputs_;
+};
+
+class DeviceHandlerInterface : public Input
 {
 
 public:
@@ -42,10 +109,14 @@ public:
         base_velocity_pitch_cmd_   = 0.0;
         base_velocity_roll_cmd_    = 0.0;
         start_swing_               = false;
-        set_velocities_cmd_        = false;
     }
 
     virtual ~DeviceHandlerInterface() {}
+
+    virtual void updateInput()
+    {
+        update();
+    }
 
 protected:
 
@@ -64,8 +135,30 @@ protected:
     double base_velocity_pitch_cmd_;
     double base_velocity_roll_cmd_;
     bool   start_swing_;
-    bool   set_velocities_cmd_;
+};
 
+class DeviceHandlers
+{
+public:
+
+    enum priority_t {HIGH=0,MEDIUM=1,LOW=2};
+
+    DeviceHandlers() {}
+
+    void addDevice(priority_t priority, DeviceHandlerInterface::Ptr device)
+    {
+        devices_.push_back(device);
+        mux_.addInput(priority,device.get());
+    }
+
+    void writeToOutput()
+    {
+        mux_.selectInput();
+    }
+
+private:
+    std::vector<DeviceHandlerInterface::Ptr> devices_;
+    Mux mux_;
 };
 
 

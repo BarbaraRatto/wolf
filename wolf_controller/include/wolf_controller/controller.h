@@ -110,6 +110,20 @@ public:
          */
     void stopping(const ros::Time& time);
 
+    void setBaseLinearVelocityCmdX(const double& v);
+    void setBaseLinearVelocityCmdY(const double& v);
+    void setBaseLinearVelocityCmdZ(const double& v);
+    void setBaseAngularVelocityCmdRoll(const double& v);
+    void setBaseAngularVelocityCmdPitch(const double& v);
+    void setBaseAngularVelocityCmdYaw(const double& v);
+
+    double getBaseLinearVelocityCmdX();
+    double getBaseLinearVelocityCmdY();
+    double getBaseLinearVelocityCmdZ();
+    double getBaseAngularVelocityCmdRoll();
+    double getBaseAngularVelocityCmdPitch();
+    double getBaseAngularVelocityCmdYaw();
+
     /**
          * @brief Set the duty factor for the feet
          * @param const double duty_factor
@@ -304,8 +318,8 @@ private:
     TerrainEstimator::Ptr terrain_estimator_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
-    /** @brief Device handler */
-    DeviceHandlerInterface::Ptr device_handler_;
+    /** @brief Input devices */
+    DeviceHandlers devices_;
     /** @brief Foot holds Planner */
     FootholdsPlanner::Ptr foot_holds_planner_;
     /** @brief CoM Planner */
@@ -322,7 +336,13 @@ private:
     bool use_contact_sensors_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
-
+    /** @brief Linear and angular velocities */
+    std::atomic<double> vel_x_;
+    std::atomic<double> vel_y_;
+    std::atomic<double> vel_z_;
+    std::atomic<double> vel_roll_;
+    std::atomic<double> vel_pitch_;
+    std::atomic<double> vel_yaw_;
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */
@@ -335,17 +355,14 @@ private:
     Eigen::Matrix3d tmp_matrix3d_;
     /** @brief Support temporary double */
     double tmp_double_;
-
     /** @brief Counters used for checks */
     Counter::Ptr solver_failures_cnt_;
     Counter::Ptr contact_failures_cnt_;
     std::vector<Counter::Ptr> velocity_lims_failures_cnt_;
-
     /** @brief Ramps */
     Ramp::Ptr ramp_stand_up_;
     Ramp::Ptr ramp_stand_down_;
     Ramp::Ptr ramp_impedance_;
-
     /** @brief state machine support variables */
     unsigned int mode_;
     unsigned int previous_mode_;

@@ -211,33 +211,42 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     previous_height_ = robot_model_->getStandUpHeight();
 
     // Device handler selection
+    //std::string input_device = "ps3";
+    //root_nh.getParam("/input_device",input_device);
+    //if(input_device == "ps3")
+    //{
+    //    device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
+    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using Ps3JoyHandler input device");
+    //}
+    //else if(input_device == "xbox")
+    //{
+    //    device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
+    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using XboxJoyHandler input device");
+    //}
+    //else if(input_device == "twist")
+    //{
+    //    device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
+    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using TwistHandler input device");
+    //}
+    //else if(input_device == "keyboard")
+    //{
+    //    device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
+    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using KeyboardHandler input device");
+    //}
+    //else
+    //{
+    //    ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
+    //    return false;
+    //}
+
     std::string input_device = "ps3";
-    root_nh.getParam("/input_device",input_device);
+    root_nh.getParam("/input_device",input_device); // FIXME change to joy_device
     if(input_device == "ps3")
-    {
-        device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using Ps3JoyHandler input device");
-    }
+        devices_.addDevice(DeviceHandlers::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
     else if(input_device == "xbox")
-    {
-        device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using XboxJoyHandler input device");
-    }
-    else if(input_device == "twist")
-    {
-        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using TwistHandler input device");
-    }
-    else if(input_device == "keyboard")
-    {
-        device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using KeyboardHandler input device");
-    }
-    else
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
-        return false;
-    }
+        devices_.addDevice(DeviceHandlers::priority_t::HIGH,std::make_shared<XboxJoyHandler>(controller_nh,this)); // Xbox joy
+    devices_.addDevice(DeviceHandlers::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
+    devices_.addDevice(DeviceHandlers::priority_t::MEDIUM,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
@@ -824,6 +833,9 @@ bool Controller::updateSolver(const double &/*dt*/)
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
+    // Update input devices
+    devices_.writeToOutput();
+
     // Reset control values
     des_joint_efforts_impedance_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
@@ -924,6 +936,66 @@ void Controller::stopping(const ros::Time& /*time*/)
     odom_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
+}
+
+void Controller::setBaseLinearVelocityCmdX(const double &v)
+{
+    vel_x_ = v;
+}
+
+void Controller::setBaseLinearVelocityCmdY(const double &v)
+{
+    vel_y_ = v;
+}
+
+void Controller::setBaseLinearVelocityCmdZ(const double &v)
+{
+    vel_z_ = v;
+}
+
+void Controller::setBaseAngularVelocityCmdRoll(const double &v)
+{
+    vel_roll_ = v;
+}
+
+void Controller::setBaseAngularVelocityCmdPitch(const double &v)
+{
+    vel_pitch_ = v;
+}
+
+void Controller::setBaseAngularVelocityCmdYaw(const double &v)
+{
+    vel_yaw_ = v;
+}
+
+double Controller::getBaseLinearVelocityCmdX()
+{
+    return vel_x_;
+}
+
+double Controller::getBaseLinearVelocityCmdY()
+{
+    return vel_y_;
+}
+
+double Controller::getBaseLinearVelocityCmdZ()
+{
+    return vel_z_;
+}
+
+double Controller::getBaseAngularVelocityCmdRoll()
+{
+    return vel_roll_;
+}
+
+double Controller::getBaseAngularVelocityCmdPitch()
+{
+    return vel_pitch_;
+}
+
+double Controller::getBaseAngularVelocityCmdYaw()
+{
+    return vel_yaw_;
 }
 
 IDProblem* Controller::getIDProblem() const

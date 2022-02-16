@@ -64,12 +64,20 @@ protected:
 
     void update()
     {
+
+        base_velocity_x_cmd_       = controller_ptr_->getBaseLinearVelocityCmdX();
+        base_velocity_y_cmd_       = controller_ptr_->getBaseLinearVelocityCmdY();
+        base_velocity_z_cmd_       = controller_ptr_->getBaseLinearVelocityCmdZ();
+        base_velocity_roll_cmd_    = controller_ptr_->getBaseAngularVelocityCmdRoll();
+        base_velocity_pitch_cmd_   = controller_ptr_->getBaseAngularVelocityCmdPitch();
+        base_velocity_yaw_cmd_     = controller_ptr_->getBaseAngularVelocityCmdYaw();
+
         if(step_height_.getStatus() == wolf_controller::AxisToTrigger::UP)
             controller_ptr_->getFootholdsPlanner()->increaseStepHeight();
         else if (step_height_.getStatus() == wolf_controller::AxisToTrigger::DOWN)
             controller_ptr_->getFootholdsPlanner()->decreaseStepHeight();
 
-        DeviceHandlerRosInterface::update();
+        activate();
     }
 
     FunctionTrigger switch_posture_;

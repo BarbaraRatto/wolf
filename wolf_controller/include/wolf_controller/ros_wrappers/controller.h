@@ -111,7 +111,6 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
         }
-        bool set_same_linear_velocities = true;
         double default_base_linear_velocity, default_base_linear_velocity_x, default_base_linear_velocity_y, default_base_linear_velocity_z;
         default_base_linear_velocity = default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
@@ -121,9 +120,9 @@ public:
                !controller_nh.getParam("default_base_linear_velocity_y", default_base_linear_velocity_y) ||
                !controller_nh.getParam("default_base_linear_velocity_z", default_base_linear_velocity_z)  )
                ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity_[x,y,z] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
-            set_same_linear_velocities = false;
         }
-        bool set_same_angular_velocities = true;
+        else
+             default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = default_base_linear_velocity;
         double default_base_angular_velocity, default_base_angular_velocity_roll, default_base_angular_velocity_pitch, default_base_angular_velocity_yaw;
         default_base_angular_velocity = default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = 0.5; // [rad/s]
         if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
@@ -133,8 +132,10 @@ public:
                !controller_nh.getParam("default_base_angular_velocity_pitch", default_base_angular_velocity_pitch) ||
                !controller_nh.getParam("default_base_angular_velocity_yaw", default_base_angular_velocity_yaw)     )
                ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity_[roll,pitch,yaw] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
-            set_same_angular_velocities = false;
         }
+        else
+            default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = default_base_angular_velocity;
+
         double default_friction_cones_mu = 0.7;
         if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
         {
@@ -169,15 +170,8 @@ public:
         controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
         controller_->getGaitGenerator()->setStepReflexContactThreshold(default_step_reflex_contact_threshold);
 
-        if(set_same_linear_velocities)
-          controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity);
-        else
-          controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity_x,default_base_linear_velocity_y,default_base_linear_velocity_z);
-        if(set_same_angular_velocities)
-          controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity);
-        else
-          controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity_roll,default_base_angular_velocity_pitch,default_base_angular_velocity_yaw);
-
+        controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity_x,default_base_linear_velocity_y,default_base_linear_velocity_z);
+        controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity_roll,default_base_angular_velocity_pitch,default_base_angular_velocity_yaw);
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
@@ -191,6 +185,13 @@ public:
 
         controller_->setCutoffFreqQdot(default_cutoff_freq_qdot);
         controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
+
+        controller_->setBaseLinearVelocityCmdX(default_base_linear_velocity_x);
+        controller_->setBaseLinearVelocityCmdY(default_base_linear_velocity_y);
+        controller_->setBaseLinearVelocityCmdZ(default_base_linear_velocity_z);
+        controller_->setBaseAngularVelocityCmdRoll(default_base_angular_velocity_roll);
+        controller_->setBaseAngularVelocityCmdPitch(default_base_angular_velocity_pitch);
+        controller_->setBaseAngularVelocityCmdYaw(default_base_angular_velocity_yaw);
 
         bool activate_push_recovery = false;
         controller_nh.getParam("activate_push_recovery", activate_push_recovery);
@@ -293,12 +294,12 @@ public:
 
         server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wolf_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
         server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wolf_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);
-        server_->registerVariable<double>("set_linear_vel_x",default_base_linear_velocity_x,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmdX,controller_->getFootholdsPlanner(),_1),"set linear velocity x",0.0,1.0);
-        server_->registerVariable<double>("set_linear_vel_y",default_base_linear_velocity_y,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmdY,controller_->getFootholdsPlanner(),_1),"set linear velocity y",0.0,1.0);
-        server_->registerVariable<double>("set_linear_vel_z",default_base_linear_velocity_z,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmdZ,controller_->getFootholdsPlanner(),_1),"set linear velocity z",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel_roll",default_base_angular_velocity_roll,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmdRoll,controller_->getFootholdsPlanner(),_1),"set angular velocity roll",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel_pitch",default_base_angular_velocity_pitch,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmdPitch,controller_->getFootholdsPlanner(),_1),"set angular velocity pitch",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel_yaw",default_base_angular_velocity_yaw,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmdYaw,controller_->getFootholdsPlanner(),_1),"set angular velocity yaw",0.0,1.0);
+        server_->registerVariable<double>("set_linear_vel_x",default_base_linear_velocity_x,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdX,controller_,_1),"set linear velocity x",0.0,1.0);
+        server_->registerVariable<double>("set_linear_vel_y",default_base_linear_velocity_y,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdY,controller_,_1),"set linear velocity y",0.0,1.0);
+        server_->registerVariable<double>("set_linear_vel_z",default_base_linear_velocity_z,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdZ,controller_,_1),"set linear velocity z",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel_roll",default_base_angular_velocity_roll,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdRoll,controller_,_1),"set angular velocity roll",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel_pitch",default_base_angular_velocity_pitch,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdPitch,controller_,_1),"set angular velocity pitch",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel_yaw",default_base_angular_velocity_yaw,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdYaw,controller_,_1),"set angular velocity yaw",0.0,1.0);
         server_->registerVariable<double>("push_recovery_sensibility",controller_->getFootholdsPlanner()->getPushRecoverySensibility(),boost::bind(&wolf_controller::FootholdsPlanner::setPushRecoverySensibility,controller_->getFootholdsPlanner(),_1),"push recovery sensibility",0.0,1.0);
         //server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
         //server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
