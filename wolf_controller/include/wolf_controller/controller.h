@@ -110,18 +110,76 @@ public:
          */
     void stopping(const ros::Time& time);
 
+    /**
+         * @brief Set the base linear velocity command along X
+         * @param v
+         */
     void setBaseLinearVelocityCmdX(const double& v);
+
+    /**
+         * @brief Set the base linear velocity command along Y
+         * @param v
+         */
     void setBaseLinearVelocityCmdY(const double& v);
+
+    /**
+         * @brief Set the base linear velocity command along Z
+         * @param v
+         */
     void setBaseLinearVelocityCmdZ(const double& v);
+
+    /**
+         * @brief Set the base angular velocity command along roll
+         * @param v
+         */
     void setBaseAngularVelocityCmdRoll(const double& v);
+
+    /**
+         * @brief Set the base angular velocity command along pitch
+         * @param v
+         */
     void setBaseAngularVelocityCmdPitch(const double& v);
+
+    /**
+         * @brief Set the base angular velocity command along yaw
+         * @param v
+         */
     void setBaseAngularVelocityCmdYaw(const double& v);
 
+    /**
+         * @brief Get the base linear velocity command along X
+         * @return x velocity
+         */
     double getBaseLinearVelocityCmdX();
+
+    /**
+         * @brief Get the base linear velocity command along Y
+         * @return y velocity
+         */
     double getBaseLinearVelocityCmdY();
+
+    /**
+         * @brief Get the base linear velocity command along Z
+         * @return z velocity
+         */
     double getBaseLinearVelocityCmdZ();
+
+    /**
+         * @brief Get the base angular velocity command along roll
+         * @return roll velocity
+         */
     double getBaseAngularVelocityCmdRoll();
+
+    /**
+         * @brief Get the base angular velocity command along pitch
+         * @return pitch velocity
+         */
     double getBaseAngularVelocityCmdPitch();
+
+    /**
+         * @brief Get the base angular velocity command along yaw
+         * @return yaw velocity
+         */
     double getBaseAngularVelocityCmdYaw();
 
     /**

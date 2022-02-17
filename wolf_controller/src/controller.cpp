@@ -835,7 +835,7 @@ bool Controller::updateSolver(const double &/*dt*/)
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
     // Update input devices
-    devices_.writeToOutput();
+    devices_.writeToOutput(period.toSec());
 
     // Reset control values
     des_joint_efforts_impedance_.fill(0.0);
@@ -942,31 +942,37 @@ void Controller::stopping(const ros::Time& /*time*/)
 void Controller::setBaseLinearVelocityCmdX(const double &v)
 {
     vel_x_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdX(vel_x_);
 }
 
 void Controller::setBaseLinearVelocityCmdY(const double &v)
 {
     vel_y_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdY(vel_y_);
 }
 
 void Controller::setBaseLinearVelocityCmdZ(const double &v)
 {
     vel_z_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdZ(vel_z_);
 }
 
 void Controller::setBaseAngularVelocityCmdRoll(const double &v)
 {
     vel_roll_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdRoll(vel_roll_);
 }
 
 void Controller::setBaseAngularVelocityCmdPitch(const double &v)
 {
     vel_pitch_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdPitch(vel_pitch_);
 }
 
 void Controller::setBaseAngularVelocityCmdYaw(const double &v)
 {
     vel_yaw_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdYaw(vel_yaw_);
 }
 
 double Controller::getBaseLinearVelocityCmdX()

@@ -16,13 +16,12 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // STD
 #include <memory>
 #include <algorithm>
-#include <chrono>
 
 class Input
 {
 public:
 
-    Input() {active_=false;}
+    Input(const double& T = 2.0) {active_=false;t_=0.0;T_=T;}
 
     ~Input() {}
 
@@ -33,8 +32,23 @@ public:
         return active_;
     };
 
+    void increaseTimer(const double& period)
+    {
+        t_+=period;
+    }
+
+    bool isTimerExpired()
+    {
+        if(t_>=T_)
+            return true;
+        else
+            return false;
+    }
+
     void activate()
     {
+        // Reset the timer everytime the input is activated
+        t_  = 0.0;
         active_ = true;
     }
 
@@ -46,6 +60,8 @@ public:
 
 private:
     std::atomic<bool> active_;
+    double t_;
+    double T_;
 };
 
 class Mux
@@ -62,16 +78,14 @@ public:
         inputs_.sort();
     }
 
-    void selectInput()
+    void selectInput(const double& period)
     {
         list_t::iterator it;
-        std::cout << "*********" << std::endl;
         for (it=inputs_.begin(); it!=inputs_.end(); it++)
         {
-            std::cout << it->first << std::endl;
-            if(it->second->isInputActive())
+            it->second->increaseTimer(period);
+            if(it->second->isInputActive() || !it->second->isTimerExpired())
             {
-                std::cout << "Active " <<it->first << std::endl;
                 it->second->updateInput();
                 it->second->deactivate();
                 break;
@@ -160,9 +174,9 @@ public:
         mux_.addInput(priority,device.get());
     }
 
-    void writeToOutput()
+    void writeToOutput(const double& period)
     {
-        mux_.selectInput();
+        mux_.selectInput(period);
     }
 
 private:
