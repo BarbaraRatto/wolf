@@ -210,35 +210,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     previous_height_ = robot_model_->getStandUpHeight();
 
-    // Device handler selection
-    //std::string input_device = "ps3";
-    //root_nh.getParam("/input_device",input_device);
-    //if(input_device == "ps3")
-    //{
-    //    device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
-    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using Ps3JoyHandler input device");
-    //}
-    //else if(input_device == "xbox")
-    //{
-    //    device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
-    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using XboxJoyHandler input device");
-    //}
-    //else if(input_device == "twist")
-    //{
-    //    device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using TwistHandler input device");
-    //}
-    //else if(input_device == "keyboard")
-    //{
-    //    device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
-    //    ROS_DEBUG_NAMED(CLASS_NAME,"Using KeyboardHandler input device");
-    //}
-    //else
-    //{
-    //    ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
-    //    return false;
-    //}
-
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
