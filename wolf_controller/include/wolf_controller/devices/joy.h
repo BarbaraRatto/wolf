@@ -77,8 +77,14 @@ protected:
         else if (step_height_.getStatus() == wolf_controller::AxisToTrigger::DOWN)
             controller_ptr_->getFootholdsPlanner()->decreaseStepHeight();
 
-        checkIfActive(  base_velocity_x_scale_    + base_velocity_y_scale_     + base_velocity_z_scale_
-                      + base_velocity_roll_scale_ + base_velocity_pitch_scale_ + base_velocity_yaw_scale_);
+        if( start_swing_                             ||
+            std::abs(base_velocity_x_scale_)    >0.0 ||
+            std::abs(base_velocity_y_scale_)    >0.0 ||
+            std::abs(base_velocity_z_scale_)    >0.0 ||
+            std::abs(base_velocity_roll_scale_) >0.0 ||
+            std::abs(base_velocity_pitch_scale_)>0.0 ||
+            std::abs(base_velocity_yaw_scale_)  >0.0 )
+            activate();
     }
 
     FunctionTrigger switch_posture_;

@@ -55,8 +55,13 @@ public:
         else
             start_swing_ = false;
 
-        checkIfActive(  base_velocity_x_scale_    + base_velocity_y_scale_     + base_velocity_z_scale_
-                      + base_velocity_roll_scale_ + base_velocity_pitch_scale_ + base_velocity_yaw_scale_);
+        if( std::abs(base_velocity_x_scale_)    >0.0 ||
+            std::abs(base_velocity_y_scale_)    >0.0 ||
+            std::abs(base_velocity_z_scale_)    >0.0 ||
+            std::abs(base_velocity_roll_scale_) >0.0 ||
+            std::abs(base_velocity_pitch_scale_)>0.0 ||
+            std::abs(base_velocity_yaw_scale_)  >0.0 )
+            activate();
     }
 };
 

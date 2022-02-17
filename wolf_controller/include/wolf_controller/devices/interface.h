@@ -33,13 +33,16 @@ public:
         return active_;
     };
 
-    void checkIfActive(const double& v)
+    void activate()
     {
-        if(std::abs(v)>EPS)
-          active_ = true;
-        else
-          active_ = false;
+        active_ = true;
     }
+
+    void deactivate()
+    {
+        active_ = false;
+    }
+
 
 private:
     std::atomic<bool> active_;
@@ -68,7 +71,9 @@ public:
             std::cout << it->first << std::endl;
             if(it->second->isInputActive())
             {
+                std::cout << "Active " <<it->first << std::endl;
                 it->second->updateInput();
+                it->second->deactivate();
                 break;
             }
         }
