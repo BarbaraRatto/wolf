@@ -12,6 +12,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 #include <sensor_msgs/Joy.h>
 #include <wolf_controller/devices/ros.h>
+#include <wolf_controller/utils.h>
 
 class JoyHandler : public DeviceHandlerRosInterface<sensor_msgs::Joy::ConstPtr>
 {
@@ -187,6 +188,48 @@ public:
 
         JoyHandler::cmdCallback();
     }
+};
+
+class SpaceJoyHandler : public JoyHandler
+{
+public:
+
+    SpaceJoyHandler(ros::NodeHandle& node, wolf_controller::Controller* controller_ptr, const std::string& topic = "/spacenav/joy")
+         :JoyHandler(node,controller_ptr,topic)
+    {
+        th = 0.5;
+    }
+
+    virtual void cmdCallback(const sensor_msgs::Joy::ConstPtr& msg)
+    {
+
+        if(msg.get() && !msg->axes.empty() && !msg->buttons.empty())
+        {
+
+            base_velocity_x_scale_     = wolf_controller::sgn(msg->axes[0]) * (std::abs(static_cast<double>(msg->axes[0])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_y_scale_     = wolf_controller::sgn(msg->axes[1]) * (std::abs(static_cast<double>(msg->axes[1])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_z_scale_     = wolf_controller::sgn(msg->axes[2]) * (std::abs(static_cast<double>(msg->axes[2])) > 0.5 ? 1.0 : 0.0);
+
+            base_velocity_roll_scale_  = wolf_controller::sgn(msg->axes[3]) * (std::abs(static_cast<double>(msg->axes[3])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_pitch_scale_ = wolf_controller::sgn(msg->axes[4]) * (std::abs(static_cast<double>(msg->axes[4])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_yaw_scale_   = wolf_controller::sgn(msg->axes[5]) * (std::abs(static_cast<double>(msg->axes[5])) > 0.5 ? 1.0 : 0.0);
+
+            if(std::abs(base_velocity_x_scale_) > 0.0 || std::abs(base_velocity_y_scale_) > 0.0 || std::abs(base_velocity_yaw_scale_) > 0.0)
+                start_swing_ = true;
+            else
+                start_swing_ = false;
+
+            if(switch_posture_.f_ && switch_posture_.t_.update(static_cast<bool>(msg->buttons[0]))) // Left button
+                switch_posture_.f_();
+
+            if(reset_base_.f_ && reset_base_.t_.update(static_cast<bool>(msg->buttons[1]))) // Right button
+                reset_base_.f_();
+        }
+
+        JoyHandler::cmdCallback();
+    }
+private:
+    double th;
 };
 
 #endif

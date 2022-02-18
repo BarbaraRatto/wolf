@@ -160,13 +160,13 @@ protected:
     bool   start_swing_;
 };
 
-class DeviceHandlers
+class DevicesHandler
 {
 public:
 
     enum priority_t {HIGH=0,MEDIUM=1,LOW=2};
 
-    DeviceHandlers() {}
+    DevicesHandler() {}
 
     void addDevice(priority_t priority, DeviceHandlerInterface::Ptr device)
     {

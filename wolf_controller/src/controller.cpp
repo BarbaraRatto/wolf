@@ -213,12 +213,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
-        devices_.addDevice(DeviceHandlers::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
     else if(input_device == "xbox")
-        devices_.addDevice(DeviceHandlers::priority_t::HIGH,std::make_shared<XboxJoyHandler>(controller_nh,this)); // Xbox joy
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<XboxJoyHandler>(controller_nh,this)); // Xbox joy
+    else if(input_device == "spacemouse")
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<SpaceJoyHandler>(controller_nh,this)); // Space joy
     else if(input_device == "keyboard")
-        devices_.addDevice(DeviceHandlers::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
-    devices_.addDevice(DeviceHandlers::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
+    devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));

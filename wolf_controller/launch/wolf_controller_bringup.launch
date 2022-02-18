@@ -35,6 +35,8 @@
          <param name="autorepeat_rate " value="500" />
          <param name="deadzone" value="0.1"/>
     </node>
+    <!-- Space Mouse Joy node -->
+    <include file="$(find spacenav_node)/launch/classic.launch" if="$(eval arg('input_device') == 'spacemouse')"/>
     <!-- Keyboard node -->
     <group if="$(eval input_device == 'keyboard')">
          <node pkg="wolf_controller" type="keyboard_node" name="keyboard_node" output="screen" respawn="true"/>
