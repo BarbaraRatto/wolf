@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef DEVICES_JOY_H
 #define DEVICES_JOY_H
 
@@ -53,14 +62,29 @@ public:
 
 protected:
 
-    void update()
+    void cmdCallback()
     {
+
+        base_velocity_x_cmd_       = controller_ptr_->getBaseLinearVelocityCmdX();
+        base_velocity_y_cmd_       = controller_ptr_->getBaseLinearVelocityCmdY();
+        base_velocity_z_cmd_       = controller_ptr_->getBaseLinearVelocityCmdZ();
+        base_velocity_roll_cmd_    = controller_ptr_->getBaseAngularVelocityCmdRoll();
+        base_velocity_pitch_cmd_   = controller_ptr_->getBaseAngularVelocityCmdPitch();
+        base_velocity_yaw_cmd_     = controller_ptr_->getBaseAngularVelocityCmdYaw();
+
         if(step_height_.getStatus() == wolf_controller::AxisToTrigger::UP)
             controller_ptr_->getFootholdsPlanner()->increaseStepHeight();
         else if (step_height_.getStatus() == wolf_controller::AxisToTrigger::DOWN)
             controller_ptr_->getFootholdsPlanner()->decreaseStepHeight();
 
-        DeviceHandlerRosInterface::update();
+        if( start_swing_                             ||
+            std::abs(base_velocity_x_scale_)    >0.0 ||
+            std::abs(base_velocity_y_scale_)    >0.0 ||
+            std::abs(base_velocity_z_scale_)    >0.0 ||
+            std::abs(base_velocity_roll_scale_) >0.0 ||
+            std::abs(base_velocity_pitch_scale_)>0.0 ||
+            std::abs(base_velocity_yaw_scale_)  >0.0 )
+            activate();
     }
 
     FunctionTrigger switch_posture_;
@@ -114,7 +138,7 @@ public:
                 reset_base_.f_();
         }
 
-        JoyHandler::update();
+        JoyHandler::cmdCallback();
     }
 };
 
@@ -161,7 +185,7 @@ public:
                 reset_base_.f_();
         }
 
-        JoyHandler::update();
+        JoyHandler::cmdCallback();
     }
 };
 

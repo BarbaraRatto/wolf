@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef ROS_WRAPPERS_CONTROLLER_H
 #define ROS_WRAPPERS_CONTROLLER_H
 
@@ -18,6 +27,7 @@
 #include <wolf_controller/FootHolds.h>
 #include <wolf_controller/TerrainEstimation.h>
 #include <wolf_controller/FrictionCones.h>
+#include <wolf_controller/CapturePoint.h>
 #include <wolf_controller/float32.h>
 
 // WoLF
@@ -55,6 +65,11 @@ public:
         if (!controller_nh.getParam("default_contact_threshold", default_contact_threshold))
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
+        }
+        double default_step_reflex_contact_threshold = default_contact_threshold/3.0; // [N]
+        if (!controller_nh.getParam("default_step_reflex_contact_threshold", default_step_reflex_contact_threshold))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default_step_reflex_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_contact_threshold);
         }
         double default_step_height = 0.05; // [m]
         if (!controller_nh.getParam("default_step_height", default_step_height))
@@ -96,16 +111,31 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
         }
-        double default_base_linear_velocity = 0.5; // [m/s]
+        double default_base_linear_velocity, default_base_linear_velocity_x, default_base_linear_velocity_y, default_base_linear_velocity_z;
+        default_base_linear_velocity = default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = 0.5; // [m/s]
         if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+            ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, looking for default_base_linear_velocity_[x,y,z].", controller_nh.getNamespace().c_str());
+            if(!controller_nh.getParam("default_base_linear_velocity_x", default_base_linear_velocity_x) ||
+               !controller_nh.getParam("default_base_linear_velocity_y", default_base_linear_velocity_y) ||
+               !controller_nh.getParam("default_base_linear_velocity_z", default_base_linear_velocity_z)  )
+               ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity_[x,y,z] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
         }
-        double default_base_angular_velocity = 0.5; // [rad/s]
+        else
+             default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = default_base_linear_velocity;
+        double default_base_angular_velocity, default_base_angular_velocity_roll, default_base_angular_velocity_pitch, default_base_angular_velocity_yaw;
+        default_base_angular_velocity = default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = 0.5; // [rad/s]
         if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
         {
-            ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
-        } 
+            ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, looking for default_base_angular_velocity_[roll,pitch,yaw].", controller_nh.getNamespace().c_str());
+            if(!controller_nh.getParam("default_base_angular_velocity_roll", default_base_angular_velocity_roll)   ||
+               !controller_nh.getParam("default_base_angular_velocity_pitch", default_base_angular_velocity_pitch) ||
+               !controller_nh.getParam("default_base_angular_velocity_yaw", default_base_angular_velocity_yaw)     )
+               ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity_[roll,pitch,yaw] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+        }
+        else
+            default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = default_base_angular_velocity;
+
         double default_friction_cones_mu = 0.7;
         if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
         {
@@ -121,32 +151,6 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
-
-        Eigen::Vector3d k, dynamic_th, static_th;
-        if (!controller_nh.getParam("push_recovery/k/x", k(0)) || // gains
-            !controller_nh.getParam("push_recovery/k/y", k(1)) || // gains
-            !controller_nh.getParam("push_recovery/k/r", k(2))  ) // gains
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/k given, proceeding without...");
-            k = Eigen::Vector3d::Zero();
-        }
-        if (!controller_nh.getParam("push_recovery/dynamic_th/x", dynamic_th(0)) || // [m/s]
-            !controller_nh.getParam("push_recovery/dynamic_th/y", dynamic_th(1)) || // [m/s]
-            !controller_nh.getParam("push_recovery/dynamic_th/r", dynamic_th(2))  ) // [rad/s]
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/dynamic_th given, proceeding without...");
-            dynamic_th = Eigen::Vector3d::Ones() * 1000.0;// dummy
-        }
-        if (!controller_nh.getParam("push_recovery/static_th/x", static_th(0)) || // [m/s]
-            !controller_nh.getParam("push_recovery/static_th/y", static_th(1)) || // [m/s]
-            !controller_nh.getParam("push_recovery/static_th/r", static_th(2))  ) // [rad/s]
-        {
-            ROS_WARN_NAMED(CLASS_NAME,"No default push_recovery/static_th given, proceeding without...");
-            static_th = Eigen::Vector3d::Ones() * 1000.0; // dummy
-        }
-
-        controller_->getFootholdsPlanner()->setPushRecoveryGains(k(0),k(1),k(2));
-        controller_->getFootholdsPlanner()->setPushRecoveryThresholds(static_th,dynamic_th);
 
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
@@ -164,9 +168,10 @@ public:
 
         controller_->getGaitGenerator()->setSwingFrequency(default_swing_frequency);
         controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
+        controller_->getGaitGenerator()->setStepReflexContactThreshold(default_step_reflex_contact_threshold);
 
-        controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity);
-        controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity);
+        controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity_x,default_base_linear_velocity_y,default_base_linear_velocity_z);
+        controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity_roll,default_base_angular_velocity_pitch,default_base_angular_velocity_yaw);
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
         controller_->getFootholdsPlanner()->setMaxStepHeight(max_step_height);
         controller_->getFootholdsPlanner()->setMaxStepLength(max_step_length);
@@ -180,6 +185,21 @@ public:
 
         controller_->setCutoffFreqQdot(default_cutoff_freq_qdot);
         controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
+
+        controller_->setBaseLinearVelocityCmdX(default_base_linear_velocity_x);
+        controller_->setBaseLinearVelocityCmdY(default_base_linear_velocity_y);
+        controller_->setBaseLinearVelocityCmdZ(default_base_linear_velocity_z);
+        controller_->setBaseAngularVelocityCmdRoll(default_base_angular_velocity_roll);
+        controller_->setBaseAngularVelocityCmdPitch(default_base_angular_velocity_pitch);
+        controller_->setBaseAngularVelocityCmdYaw(default_base_angular_velocity_yaw);
+
+        bool activate_push_recovery = false;
+        controller_nh.getParam("activate_push_recovery", activate_push_recovery);
+        controller_->getFootholdsPlanner()->startPushRecovery(activate_push_recovery);
+
+        bool activate_step_reflex = false;
+        controller_nh.getParam("activate_step_reflex", activate_step_reflex);
+        controller_->getGaitGenerator()->startStepReflex(activate_step_reflex);
 
         // Getting Kp and Kd gains
         // Legs
@@ -261,16 +281,27 @@ public:
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
+        // Capture point
+        capture_point_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>(controller_nh, "capture_point", 4));
+        capture_point_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
+        capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
 
         // DDynamic reconfigure
         server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
         server_->registerVariable<bool>("stand_up",false,boost::bind(&wolf_controller::Controller::standUp,controller_,_1),"stand up");
         server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wolf_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
-
+        server_->registerVariable<bool>("activate_step_reflex",controller_->getGaitGenerator()->isStepReflexActive(),boost::bind(&wolf_controller::GaitGenerator::startStepReflex,controller_->getGaitGenerator(),_1),"activate step reflex");
         server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wolf_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
         server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wolf_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);
-        server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
+        server_->registerVariable<double>("set_linear_vel_x",default_base_linear_velocity_x,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdX,controller_,_1),"set linear velocity x",0.0,1.0);
+        server_->registerVariable<double>("set_linear_vel_y",default_base_linear_velocity_y,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdY,controller_,_1),"set linear velocity y",0.0,1.0);
+        server_->registerVariable<double>("set_linear_vel_z",default_base_linear_velocity_z,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdZ,controller_,_1),"set linear velocity z",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel_roll",default_base_angular_velocity_roll,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdRoll,controller_,_1),"set angular velocity roll",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel_pitch",default_base_angular_velocity_pitch,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdPitch,controller_,_1),"set angular velocity pitch",0.0,1.0);
+        server_->registerVariable<double>("set_angular_vel_yaw",default_base_angular_velocity_yaw,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdYaw,controller_,_1),"set angular velocity yaw",0.0,1.0);
+        server_->registerVariable<double>("push_recovery_sensibility",controller_->getFootholdsPlanner()->getPushRecoverySensibility(),boost::bind(&wolf_controller::FootholdsPlanner::setPushRecoverySensibility,controller_->getFootholdsPlanner(),_1),"push recovery sensibility",0.0,1.0);
+        //server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
+        //server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
         server_->registerVariable<double>("set_step_height",default_step_height,boost::bind(&wolf_controller::FootholdsPlanner::setStepHeight,controller_->getFootholdsPlanner(),_1),"set step height",0.0,max_step_height);
         server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wolf_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,100.0);
 
@@ -288,19 +319,36 @@ public:
         server_->publishServicesTopics();
 
         // ROS services
-        switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",    &ControllerRosWrapper::switchControlModeCB,    this);
-        switch_gait_                 = controller_nh.advertiseService("switch_gait",            &ControllerRosWrapper::switchGaitCB,           this);
-        switch_posture_              = controller_nh.advertiseService("switch_posture",         &ControllerRosWrapper::switchPostureCB,        this);
-        stand_up_srv_                = controller_nh.advertiseService("stand_up",               &ControllerRosWrapper::standUpCB,              this);
-        stand_down_srv_              = controller_nh.advertiseService("stand_down",             &ControllerRosWrapper::standDownCB,            this);
-        emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",         &ControllerRosWrapper::emergencyStopCB,        this);
-        reset_base_srv_              = controller_nh.advertiseService("reset_base",             &ControllerRosWrapper::resetBaseCB,            this);
-        decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",   &ControllerRosWrapper::decreaseStepHeightCB,   this);
-        increase_step_height_        = controller_nh.advertiseService("increase_step_height",   &ControllerRosWrapper::increaseStepHeightCB,   this);
-        set_step_height_             = controller_nh.advertiseService("set_step_height",        &ControllerRosWrapper::setStepHeightCB,        this);
-        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery", &ControllerRosWrapper::activatePushRecoveryCB, this);
-        set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",    &ControllerRosWrapper::setSwingFrequencyCB,    this);
-        set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",        &ControllerRosWrapper::setDutyFactorCB,        this);
+        switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",         &ControllerRosWrapper::switchControlModeCB,         this);
+        switch_gait_                 = controller_nh.advertiseService("switch_gait",                 &ControllerRosWrapper::switchGaitCB,                this);
+        switch_posture_              = controller_nh.advertiseService("switch_posture",              &ControllerRosWrapper::switchPostureCB,             this);
+        stand_up_srv_                = controller_nh.advertiseService("stand_up",                    &ControllerRosWrapper::standUpCB,                   this);
+        stand_down_srv_              = controller_nh.advertiseService("stand_down",                  &ControllerRosWrapper::standDownCB,                 this);
+        emergency_stop_srv_          = controller_nh.advertiseService("emergency_stop",              &ControllerRosWrapper::emergencyStopCB,             this);
+        reset_base_srv_              = controller_nh.advertiseService("reset_base",                  &ControllerRosWrapper::resetBaseCB,                 this);
+        decrease_step_height_        = controller_nh.advertiseService("decrease_step_height",        &ControllerRosWrapper::decreaseStepHeightCB,        this);
+        increase_step_height_        = controller_nh.advertiseService("increase_step_height",        &ControllerRosWrapper::increaseStepHeightCB,        this);
+        set_step_height_             = controller_nh.advertiseService("set_step_height",             &ControllerRosWrapper::setStepHeightCB,             this);
+        activate_push_recovery_      = controller_nh.advertiseService("activate_push_recovery",      &ControllerRosWrapper::activatePushRecoveryCB,      this);
+        activate_step_reflex_        = controller_nh.advertiseService("activate_step_reflex",        &ControllerRosWrapper::activateStepReflexCB,        this);
+        increase_swing_frequency_    = controller_nh.advertiseService("increase_swing_frequency",    &ControllerRosWrapper::increaseSwingFrequencyCB,    this);
+        decrease_swing_frequency_    = controller_nh.advertiseService("decrease_swing_frequency",    &ControllerRosWrapper::decreaseSwingFrequencyCB,    this);
+        set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",         &ControllerRosWrapper::setSwingFrequencyCB,         this);
+        set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",             &ControllerRosWrapper::setDutyFactorCB,             this);
+    }
+
+    bool increaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getGaitGenerator()->increaseSwingFrequency();
+        return res.success;
+    }
+
+    bool decreaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getGaitGenerator()->decreaseSwingFrequency();
+        return res.success;
     }
 
     bool setSwingFrequencyCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
@@ -327,6 +375,13 @@ public:
     {
         res.success = true;
         controller_->getFootholdsPlanner()->togglePushRecovery();
+        return res.success;
+    }
+
+    bool activateStepReflexCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        res.success = true;
+        controller_->getGaitGenerator()->toggleStepReflex();
         return res.success;
     }
 
@@ -520,7 +575,25 @@ public:
           friction_cones_pub_->msg_.header.stamp = time;
           friction_cones_pub_->unlockAndPublish();
       }
-    };
+
+      if(capture_point_pub_.get() && capture_point_pub_->trylock())
+      {
+          for(unsigned int i=0; i <N_LEGS; i++)
+          {
+            capture_point_pub_->msg_.support_polygon.points[i].x = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].x();
+            capture_point_pub_->msg_.support_polygon.points[i].y = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].y();
+            capture_point_pub_->msg_.support_polygon.points[i].z = 0.0;
+          }
+          capture_point_pub_->msg_.com.x = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().x();
+          capture_point_pub_->msg_.com.y = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().y();
+          capture_point_pub_->msg_.com.z = 0.0;
+          capture_point_pub_->msg_.capture_point.x = controller_->getFootholdsPlanner()->getPushRecovery()->getCapturePoint().x();
+          capture_point_pub_->msg_.capture_point.y = controller_->getFootholdsPlanner()->getPushRecovery()->getCapturePoint().y();
+          capture_point_pub_->msg_.capture_point.z = 0.0;
+          capture_point_pub_->msg_.header.stamp = time;
+          capture_point_pub_->unlockAndPublish();
+      }
+    }
 
 protected:
 
@@ -532,6 +605,8 @@ protected:
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>> terrain_estimation_pub_;
     /** @brief Real time publisher - friction cones */
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>> friction_cones_pub_;
+    /** @brief Real time publisher - capture point */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>> capture_point_pub_;
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */
@@ -546,8 +621,11 @@ protected:
     ros::ServiceServer decrease_step_height_;
     ros::ServiceServer set_step_height_;
     ros::ServiceServer activate_push_recovery_;
+    ros::ServiceServer activate_step_reflex_;
     ros::ServiceServer set_swing_frequency_;
     ros::ServiceServer set_duty_factor_;
+    ros::ServiceServer increase_swing_frequency_;
+    ros::ServiceServer decrease_swing_frequency_;
 
 };
 

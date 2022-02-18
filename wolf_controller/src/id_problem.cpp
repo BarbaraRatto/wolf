@@ -1,3 +1,10 @@
+/**
+ * @file id_problem.cpp
+ * @author Gennaro Raiola, Enrico Mingo Hoffman, Michele Focchi
+ * @date 12 June, 2019
+ * @brief This file contains the implementation of the Inverse Dynamic problem
+ */
+
 #include <wolf_controller/id_problem.h>
 #include <OpenSoT/utils/Affine.h>
 #include <wolf_controller/utils.h>
@@ -6,7 +13,7 @@ using namespace OpenSoT;
 
 namespace wolf_controller {
 
-IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
+IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& /*dt*/):
   model_(model), control_mode_(WALKING), change_control_mode_(false)
 {
 
@@ -204,7 +211,25 @@ void IDProblem::setFrictionConesMu(const double& mu)
 
 double IDProblem::getFrictionConesMu() const
 {
-   return fc_.second;
+  return fc_.second;
+}
+
+void IDProblem::reset()
+{
+  for (auto& tmp_map : arms_)
+  {
+    tmp_map.second->update(Eigen::VectorXd(1));
+    tmp_map.second->reset();
+  }
+  for (auto& tmp_map : feet_)
+  {
+    tmp_map.second->update(Eigen::VectorXd(1));
+    tmp_map.second->reset();
+  }
+  waistRPY_->update(Eigen::VectorXd(1));
+  waistRPY_->reset();
+  com_->update(Eigen::VectorXd(1));
+  com_->reset();
 }
 
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
@@ -271,7 +296,7 @@ void IDProblem::setControlMode(mode_t mode)
 
 void IDProblem::update()
 {
-  // Update if state changed
+  // Update arm tasks base frame if state changed
   if(change_control_mode_)
   {
 

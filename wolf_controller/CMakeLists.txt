@@ -35,7 +35,8 @@ add_message_files(FILES
                  FootHolds.msg
                  TerrainEstimation.msg
                  FrictionCones.msg
-                 )
+                 CapturePoint.msg
+)
 
 add_service_files(
   FILES
@@ -63,8 +64,9 @@ include_directories(
     ${ModelInterfaceRBDL_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp
-    src/legs_kinematics.cpp src/impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp src/gait_generator.cpp)
+add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
+    src/foot_trajectory_interface.cpp src/legs_kinematics.cpp src/impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp
+    src/gait_generator.cpp src/foot_state_machine.cpp)
 add_dependencies(${PROJECT_NAME} ${wolf_controller_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
 
@@ -105,17 +107,25 @@ if (CATKIN_ENABLE_TESTING)
   find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
+  add_library(robot_dummy test/robot_dummy.cpp)
+  target_link_libraries(robot_dummy ${catkin_LIBRARIES} ${PROJECT_NAME})
+
   add_executable(test_state_estimation test/test_state_estimation.cpp)
   target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
-  add_executable(test_id_problem test/test_id_problem.cpp)
+  #add_executable(test_id_problem test/test_id_problem.cpp)
+  #target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
+
+  #add_executable(test_controller test/test_controller.cpp )
+  #target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest robot_dummy)
+
+  add_rostest_gtest(test_controller
+    test/test_controller.test
+    test/test_controller.cpp)
+  target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest robot_dummy)
+
+  add_rostest_gtest(test_id_problem
+    test/test_id_problem.test
+    test/test_id_problem.cpp)
   target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
-
-  add_executable(test_controller test/test_controller.cpp)
-  target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
-
-  #add_rostest_gtest(wolf_controller_test
-  #  test/wolf_controller_test.test
-  #  test/wolf_controller_test.cpp)
-  #target_link_libraries(wolf_controller_test ${catkin_LIBRARIES})
 endif()

@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef WOLF_CONTROLLER_H
 #define WOLF_CONTROLLER_H
 
@@ -100,6 +109,78 @@ public:
          * @param const ros::time& Time
          */
     void stopping(const ros::Time& time);
+
+    /**
+         * @brief Set the base linear velocity command along X
+         * @param v
+         */
+    void setBaseLinearVelocityCmdX(const double& v);
+
+    /**
+         * @brief Set the base linear velocity command along Y
+         * @param v
+         */
+    void setBaseLinearVelocityCmdY(const double& v);
+
+    /**
+         * @brief Set the base linear velocity command along Z
+         * @param v
+         */
+    void setBaseLinearVelocityCmdZ(const double& v);
+
+    /**
+         * @brief Set the base angular velocity command along roll
+         * @param v
+         */
+    void setBaseAngularVelocityCmdRoll(const double& v);
+
+    /**
+         * @brief Set the base angular velocity command along pitch
+         * @param v
+         */
+    void setBaseAngularVelocityCmdPitch(const double& v);
+
+    /**
+         * @brief Set the base angular velocity command along yaw
+         * @param v
+         */
+    void setBaseAngularVelocityCmdYaw(const double& v);
+
+    /**
+         * @brief Get the base linear velocity command along X
+         * @return x velocity
+         */
+    double getBaseLinearVelocityCmdX();
+
+    /**
+         * @brief Get the base linear velocity command along Y
+         * @return y velocity
+         */
+    double getBaseLinearVelocityCmdY();
+
+    /**
+         * @brief Get the base linear velocity command along Z
+         * @return z velocity
+         */
+    double getBaseLinearVelocityCmdZ();
+
+    /**
+         * @brief Get the base angular velocity command along roll
+         * @return roll velocity
+         */
+    double getBaseAngularVelocityCmdRoll();
+
+    /**
+         * @brief Get the base angular velocity command along pitch
+         * @return pitch velocity
+         */
+    double getBaseAngularVelocityCmdPitch();
+
+    /**
+         * @brief Get the base angular velocity command along yaw
+         * @return yaw velocity
+         */
+    double getBaseAngularVelocityCmdYaw();
 
     /**
          * @brief Set the duty factor for the feet
@@ -295,8 +376,8 @@ private:
     TerrainEstimator::Ptr terrain_estimator_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
-    /** @brief Device handler */
-    DeviceHandlerInterface::Ptr device_handler_;
+    /** @brief Input devices */
+    DeviceHandlers devices_;
     /** @brief Foot holds Planner */
     FootholdsPlanner::Ptr foot_holds_planner_;
     /** @brief CoM Planner */
@@ -313,7 +394,13 @@ private:
     bool use_contact_sensors_;
     /** @brief True if the controller is stopping */
     std::atomic<bool> stopping_;
-
+    /** @brief Linear and angular velocities */
+    std::atomic<double> vel_x_;
+    std::atomic<double> vel_y_;
+    std::atomic<double> vel_z_;
+    std::atomic<double> vel_roll_;
+    std::atomic<double> vel_pitch_;
+    std::atomic<double> vel_yaw_;
     /** @brief Support temporary Affine3d */
     Eigen::Affine3d tmp_affine3d_;
     /** @brief Support temporary Vector3d */
@@ -326,17 +413,14 @@ private:
     Eigen::Matrix3d tmp_matrix3d_;
     /** @brief Support temporary double */
     double tmp_double_;
-
     /** @brief Counters used for checks */
     Counter::Ptr solver_failures_cnt_;
     Counter::Ptr contact_failures_cnt_;
     std::vector<Counter::Ptr> velocity_lims_failures_cnt_;
-
     /** @brief Ramps */
     Ramp::Ptr ramp_stand_up_;
     Ramp::Ptr ramp_stand_down_;
     Ramp::Ptr ramp_impedance_;
-
     /** @brief state machine support variables */
     unsigned int mode_;
     unsigned int previous_mode_;
@@ -346,6 +430,7 @@ private:
     double current_height_;
     double previous_height_;
     Eigen::Vector3d current_rpy_;
+    double desired_yaw_;
 
     /**
          * @brief thread body for the odometry publisher

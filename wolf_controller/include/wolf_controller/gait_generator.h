@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef GAIT_GENERATOR_H
 #define GAIT_GENERATOR_H
 
@@ -9,7 +18,7 @@
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
 #include <wolf_controller/foot_state_machine.h>
-#include <wolf_controller/foot_trajectory.h>
+#include <wolf_controller/foot_trajectory_interface.h>
 
 namespace wolf_controller
 {
@@ -87,6 +96,8 @@ public:
 
   bool isCycleEnded(const std::string& foot_name);
 
+  bool isGaitCycleEnded();
+
   bool isAnyFootInLiftOff();
 
   bool isAnyFootInSwing();
@@ -101,9 +112,11 @@ public:
 
   unsigned int getNumberFeetInSwing();
 
-  void setContactState(const std::string& foot_name, const bool& contact);
+  void setContactState(const std::string& foot_name, const bool& contact, const Eigen::Vector3d& contact_force);
 
-  const bool& getContactState(const std::string& foot_name);
+  const bool& getContact(const std::string& foot_name);
+
+  const Eigen::Vector3d& getContactForce(const std::string& foot_name);
 
   void setInitialPose(const std::string& foot_name, const Eigen::Affine3d& initial_pose);
 
@@ -115,11 +128,23 @@ public:
 
   void setSwingFrequency(const double& swing_frequency);
 
+  void increaseSwingFrequency();
+
+  void decreaseSwingFrequency();
+
+  void increaseDutyFactor();
+
+  void decreaseDutyFactor();
+
   void setSwingFrequency(const std::string& foot_name, const double& swing_frequency);
 
   double getSwingFrequency(const std::string& foot_name);
 
   double getAvgSwingFrequency();
+
+  double getAvgStanceFrequency();
+
+  double getAvgCycleTime();
 
   double getAvgDutyFactor();
 
@@ -159,6 +184,14 @@ public:
 
   void update(const double& period);
 
+  void startStepReflex(bool start);
+
+  void toggleStepReflex();
+
+  bool isStepReflexActive();
+
+  void setStepReflexContactThreshold(const double &th);
+
 private:
 
   void changeGait();
@@ -167,7 +200,8 @@ private:
   {
     std::shared_ptr<FootStateMachine> state_machine;
     std::shared_ptr<TrajectoryInterface> trajectory;
-    bool contact_state;
+    bool contact;
+    Eigen::Vector3d contact_force;
     bool trigger_stance;
     Eigen::Affine3d initial_pose;
   };
@@ -189,6 +223,8 @@ private:
   Trigger next_schedule_;
 
   Gait::gait_t gait_type_;
+
+  std::atomic<bool> step_reflex_active_;
 
 };
 

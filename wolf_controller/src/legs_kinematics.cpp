@@ -1,3 +1,10 @@
+/**
+ * @file legs_kinematics.cpp
+ * @author Gennaro Raiola
+ * @date 1 November, 2021
+ * @brief This file contains the ik for the legs
+ */
+
 #include "wolf_controller/legs_kinematics.h"
 
 namespace wolf_controller {

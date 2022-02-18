@@ -1,9 +1,103 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef DEVICES_INTERFACE_H
 #define DEVICES_INTERFACE_H
 
-#include <memory>
+// WoLF
+#include <wolf_controller/utils.h>
 
-class DeviceHandlerInterface
+// STD
+#include <memory>
+#include <algorithm>
+
+class Input
+{
+public:
+
+    Input(const double& T = 2.0) {active_=false;t_=0.0;T_=T;}
+
+    ~Input() {}
+
+    virtual void updateInput()=0;
+
+    bool isInputActive()
+    {
+        return active_;
+    };
+
+    void increaseTimer(const double& period)
+    {
+        t_+=period;
+    }
+
+    bool isTimerExpired()
+    {
+        if(t_>=T_)
+            return true;
+        else
+            return false;
+    }
+
+    void activate()
+    {
+        // Reset the timer everytime the input is activated
+        t_  = 0.0;
+        active_ = true;
+    }
+
+    void deactivate()
+    {
+        active_ = false;
+    }
+
+
+private:
+    std::atomic<bool> active_;
+    double t_;
+    double T_;
+};
+
+class Mux
+{
+public:
+
+    typedef std::list<std::pair<unsigned int,Input*> > list_t;
+
+    Mux() {}
+
+    void addInput(unsigned int priority, Input* input)
+    {
+        inputs_.push_back(std::make_pair(priority,input));
+        inputs_.sort();
+    }
+
+    void selectInput(const double& period)
+    {
+        list_t::iterator it;
+        for (it=inputs_.begin(); it!=inputs_.end(); it++)
+        {
+            it->second->increaseTimer(period);
+            if(it->second->isInputActive() || !it->second->isTimerExpired())
+            {
+                it->second->updateInput();
+                it->second->deactivate();
+                break;
+            }
+        }
+    }
+
+private:
+    list_t inputs_;
+};
+
+class DeviceHandlerInterface : public Input
 {
 
 public:
@@ -20,23 +114,32 @@ public:
 
     DeviceHandlerInterface()
     {
-        base_velocity_x_scale_     = 0.0;
-        base_velocity_y_scale_     = 0.0;
-        base_velocity_z_scale_     = 0.0;
-        base_velocity_yaw_scale_   = 0.0;
-        base_velocity_pitch_scale_ = 0.0;
-        base_velocity_roll_scale_  = 0.0;
-        base_velocity_x_cmd_       = 0.0;
-        base_velocity_y_cmd_       = 0.0;
-        base_velocity_z_cmd_       = 0.0;
-        base_velocity_yaw_cmd_     = 0.0;
-        base_velocity_pitch_cmd_   = 0.0;
-        base_velocity_roll_cmd_    = 0.0;
-        start_swing_               = false;
-        set_velocities_cmd_        = false;
+      reset();
+    }
+
+    void reset()
+    {
+      base_velocity_x_scale_     = 0.0;
+      base_velocity_y_scale_     = 0.0;
+      base_velocity_z_scale_     = 0.0;
+      base_velocity_yaw_scale_   = 0.0;
+      base_velocity_pitch_scale_ = 0.0;
+      base_velocity_roll_scale_  = 0.0;
+      base_velocity_x_cmd_       = 0.0;
+      base_velocity_y_cmd_       = 0.0;
+      base_velocity_z_cmd_       = 0.0;
+      base_velocity_yaw_cmd_     = 0.0;
+      base_velocity_pitch_cmd_   = 0.0;
+      base_velocity_roll_cmd_    = 0.0;
+      start_swing_               = false;
     }
 
     virtual ~DeviceHandlerInterface() {}
+
+    virtual void updateInput()
+    {
+        update();
+    }
 
 protected:
 
@@ -55,8 +158,30 @@ protected:
     double base_velocity_pitch_cmd_;
     double base_velocity_roll_cmd_;
     bool   start_swing_;
-    bool   set_velocities_cmd_;
+};
 
+class DeviceHandlers
+{
+public:
+
+    enum priority_t {HIGH=0,MEDIUM=1,LOW=2};
+
+    DeviceHandlers() {}
+
+    void addDevice(priority_t priority, DeviceHandlerInterface::Ptr device)
+    {
+        devices_.push_back(device);
+        mux_.addInput(priority,device.get());
+    }
+
+    void writeToOutput(const double& period)
+    {
+        mux_.selectInput(period);
+    }
+
+private:
+    std::vector<DeviceHandlerInterface::Ptr> devices_;
+    Mux mux_;
 };
 
 

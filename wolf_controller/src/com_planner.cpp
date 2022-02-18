@@ -1,3 +1,10 @@
+/**
+ * @file com_planner.cpp
+ * @author Gennaro Raiola
+ * @date 1 November, 2021
+ * @brief This file contains the ComPlanner used to generate the com position and velocity references
+ */
+
 #include <wolf_controller/com_planner.h>
 
 using namespace rt_logger;

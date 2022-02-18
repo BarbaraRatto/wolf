@@ -13,6 +13,7 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <wolf_controller/utils.h>
 #include <wolf_controller/ContactForces.h>
+#include <wolf_controller/CapturePoint.h>
 #include <wolf_controller/CartesianTask.h>
 #include <wolf_controller/ComTask.h>
 #include <wolf_controller/FrictionCones.h>
@@ -193,6 +194,13 @@ protected:
     visual_tools_->trigger();
   }
 
+  // POLYGON
+  void createPolygon(const geometry_msgs::Polygon& poly, rviz_visual_tools::colors color)
+  {
+    visual_tools_->publishPolygon(poly,color,rviz_visual_tools::LARGE);
+    visual_tools_->trigger();
+  }
+
   // SPHERE
   void createSphere(const geometry_msgs::Point& origin, rviz_visual_tools::colors color)
   {
@@ -347,6 +355,35 @@ protected:
   }
 };
 
+class CapturePointVisualizer : public Visualizer<wolf_controller::CapturePoint>
+{
+
+public:
+
+  CapturePointVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
+    :Visualizer<wolf_controller::CapturePoint>(nh,topic_name)
+  {
+  }
+
+  virtual ~CapturePointVisualizer() {}
+
+protected:
+
+  virtual void callback(const wolf_controller::CapturePoint& msg) override
+  {
+    if(cnt_++%decimate_==0 && _mtx.try_lock())
+    {
+      visual_tools_->deleteAllMarkers();
+      visual_tools_->setBaseFrame(msg.header.frame_id);
+      wolf_controller::CapturePoint data = msg;
+      createSphere(data.capture_point,rviz_visual_tools::RED);
+      createSphere(data.com,rviz_visual_tools::GREEN);
+      createPolygon(data.support_polygon,rviz_visual_tools::GREEN);
+      _mtx.unlock();
+    }
+  }
+};
+
 class FootHoldsVisualizer : public Visualizer<wolf_controller::FootHolds>
 {
 
@@ -392,6 +429,7 @@ int main(int argc, char **argv)
   wolf_controller::FootHoldsVisualizer fhv(node,"foot_holds");
   wolf_controller::TerrainEstimationVisualizer tev(node,"terrain_estimation");
   wolf_controller::FrictionConesVisualizer fcv(node,"friction_cones");
+  wolf_controller::CapturePointVisualizer cpv(node,"capture_point");
 
   ros::spin();
 
