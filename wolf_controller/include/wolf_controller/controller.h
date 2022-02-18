@@ -377,7 +377,7 @@ private:
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
     /** @brief Input devices */
-    DeviceHandlers devices_;
+    DevicesHandler devices_;
     /** @brief Foot holds Planner */
     FootholdsPlanner::Ptr foot_holds_planner_;
     /** @brief CoM Planner */
