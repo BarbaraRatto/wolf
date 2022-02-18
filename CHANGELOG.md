@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## wolf_controller - [0.0.9] - 2022-02-18
+ 
+sha ebed0b78179e0ef8a78ca2ec8d2a5eea7d9258eb
+
+### Added
+- Mux with priorities
+- Spacemouse
+
+### Changed
+ 
+### Fixed
+
 ## wolf_controller - [0.0.8] - 2022-02-15
  
 sha 7cbb2f88217efc3c99aa1f7174f230172555d512
