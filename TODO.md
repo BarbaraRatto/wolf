@@ -1,5 +1,6 @@
 # TODO list
 
+- com trajectory (or smooth the com control somehow)
 - transparent walk
 - test push recovery on ramps, FIX PLOT
 - replace filters in foothold planner with splines or ramps
