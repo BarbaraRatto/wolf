@@ -35,6 +35,7 @@ add_message_files(FILES
                  FootHolds.msg
                  TerrainEstimation.msg
                  FrictionCones.msg
+                 CapturePoint.msg
 )
 
 add_service_files(

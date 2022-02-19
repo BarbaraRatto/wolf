@@ -1,3 +1,11 @@
+/**
+ * @file foot_trajectory_interface.cpp
+ * @author Gennaro Raiola, Michele Focchi
+ * @date 12 June, 2019
+ * @brief This file contains the interface for the foot trajectory
+ * and the implementation of the step reflex
+ */
+
 #include <wolf_controller/foot_trajectory_interface.h>
 #include <wolf_controller/geometry.h>
 

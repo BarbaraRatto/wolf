@@ -2,11 +2,8 @@
  * @file controller.cpp
  * @author Gennaro Raiola
  * @date 12 June, 2019
- * @brief WholeBody Controller.
- *
- * This file contains the constructor, destructor, init, stopping and other facilities for the
- * WholeBody Controller.
- * @see todo.git
+ * @brief This file contains the constructor, destructor, init, stopping and other facilities for the
+ * WoLF controller.
  */
 
 #include <wolf_controller/controller.h>
@@ -213,34 +210,17 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     previous_height_ = robot_model_->getStandUpHeight();
 
-    // Device handler selection
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
-    {
-        device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using Ps3JoyHandler input device");
-    }
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
     else if(input_device == "xbox")
-    {
-        device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using XboxJoyHandler input device");
-    }
-    else if(input_device == "twist")
-    {
-        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using TwistHandler input device");
-    }
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<XboxJoyHandler>(controller_nh,this)); // Xbox joy
+    else if(input_device == "spacemouse")
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<SpaceJoyHandler>(controller_nh,this)); // Space joy
     else if(input_device == "keyboard")
-    {
-        device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using KeyboardHandler input device");
-    }
-    else
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
-        return false;
-    }
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
+    devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
     // Spawn the odom publisher thread
     odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
@@ -827,6 +807,9 @@ bool Controller::updateSolver(const double &/*dt*/)
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
+    // Update input devices
+    devices_.writeToOutput(period.toSec());
+
     // Reset control values
     des_joint_efforts_impedance_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
@@ -927,6 +910,72 @@ void Controller::stopping(const ros::Time& /*time*/)
     odom_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
+}
+
+void Controller::setBaseLinearVelocityCmdX(const double &v)
+{
+    vel_x_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdX(vel_x_);
+}
+
+void Controller::setBaseLinearVelocityCmdY(const double &v)
+{
+    vel_y_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdY(vel_y_);
+}
+
+void Controller::setBaseLinearVelocityCmdZ(const double &v)
+{
+    vel_z_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdZ(vel_z_);
+}
+
+void Controller::setBaseAngularVelocityCmdRoll(const double &v)
+{
+    vel_roll_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdRoll(vel_roll_);
+}
+
+void Controller::setBaseAngularVelocityCmdPitch(const double &v)
+{
+    vel_pitch_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdPitch(vel_pitch_);
+}
+
+void Controller::setBaseAngularVelocityCmdYaw(const double &v)
+{
+    vel_yaw_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdYaw(vel_yaw_);
+}
+
+double Controller::getBaseLinearVelocityCmdX()
+{
+    return vel_x_;
+}
+
+double Controller::getBaseLinearVelocityCmdY()
+{
+    return vel_y_;
+}
+
+double Controller::getBaseLinearVelocityCmdZ()
+{
+    return vel_z_;
+}
+
+double Controller::getBaseAngularVelocityCmdRoll()
+{
+    return vel_roll_;
+}
+
+double Controller::getBaseAngularVelocityCmdPitch()
+{
+    return vel_pitch_;
+}
+
+double Controller::getBaseAngularVelocityCmdYaw()
+{
+    return vel_yaw_;
 }
 
 IDProblem* Controller::getIDProblem() const

@@ -157,9 +157,7 @@ if __name__=="__main__":
             twist.angular.z = command[5]
             twist_pub.publish(twist)
 
-        if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
-            exit()
-
+        
         for event in pygame.event.get():
             if event.type == pygame.KEYUP: # these events are triggered only when the button is released!
                 switch_posture_service.reset()

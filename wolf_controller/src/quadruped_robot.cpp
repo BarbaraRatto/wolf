@@ -1,10 +1,8 @@
 /**
- * @file robot_model.cpp
+ * @file quadruped_robot.cpp
  * @author Gennaro Raiola
  * @date 12 June, 2019
- * @brief WholeBody Controller.
- *
- * @see todo.git
+ * @brief Quadruped robot model.
  */
 
 #include <wolf_controller/quadruped_robot.h>

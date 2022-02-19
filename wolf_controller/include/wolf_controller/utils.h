@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -23,7 +32,7 @@ namespace wolf_controller
 #define THREADS_SLEEP_TIME_ms 4
 #define THROTTLE_SEC 3.0
 //#define COMPUTE_COST
-//#define DEBUG
+#define DEBUG
 #define EPS 0.00001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 extern std::string _robot_name;

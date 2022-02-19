@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 
@@ -381,6 +390,13 @@ inline void rpyToEarBaseInv(const Eigen::Vector3d & rpy, Eigen::Matrix3d& EarInv
 inline void computeCartesianInertiaInverse(const Eigen::MatrixXd& J, const Eigen::MatrixXd& Mi, Eigen::Matrix6d& Lambdai)
 {
   Lambdai = J*Mi*J.transpose();
+}
+
+inline double getAngleBetween(Eigen::Vector2d& a, Eigen::Vector2d& b) {
+
+  double angle = 0.0;
+  angle = std::acos((a.dot(b))/(a.norm()*b.norm()));
+  return angle;
 }
 
 }; // namespace
