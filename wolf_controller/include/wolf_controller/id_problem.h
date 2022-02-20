@@ -33,7 +33,10 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // WoLF
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
-#include <wolf_controller/ros_wrappers/tasks.h>
+#include <wolf_controller/ros_wrappers/momentum.h>
+#include <wolf_controller/ros_wrappers/postural.h>
+#include <wolf_controller/ros_wrappers/cartesian.h>
+#include <wolf_controller/ros_wrappers/com.h>
 #include <wolf_controller/quadruped_robot.h>
 
 // STD

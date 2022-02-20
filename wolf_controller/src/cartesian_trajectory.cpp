@@ -1,3 +1,10 @@
+/**
+ * @file com_planner.cpp
+ * @author Gennaro Raiola
+ * @date 1 December, 2021
+ * @brief Cartesian trajectory
+ */
+
 #include <wolf_controller/cartesian_trajectory.h>
 
 using namespace XBot;

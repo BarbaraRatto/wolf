@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef CARTESIAN_TRAJECTORY_H
 #define CARTESIAN_TRAJECTORY_H
 
@@ -22,6 +31,8 @@ public:
     Eigen::Affine3d T_ref;
     double duration;
   };
+
+  typedef std::vector<WayPoint> WayPointVector;
 
   const std::string CLASS_NAME = "CartesianTrajectory";
 
