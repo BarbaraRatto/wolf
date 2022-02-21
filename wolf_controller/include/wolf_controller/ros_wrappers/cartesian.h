@@ -57,42 +57,28 @@ public:
             const bool use_mesh = true)
     :OpenSoT::tasks::acceleration::Cartesian(task_id,robot,distal_link,base_link,qddot)
     ,TaskRosWrapperInterface<wolf_controller::CartesianTask>(task_id,nh)
-    ,_use_mesh(use_mesh)
-    ,_distal_link(distal_link)
-    ,_base_link(base_link)
-    ,_server(wolf_controller::_robot_name+"/wolf_controller/marker/"+_task_id)
+    ,use_mesh_(use_mesh)
+    ,server_(wolf_controller::_robot_name+"/wolf_controller/marker/"+_task_id)
   {
 
-    _urdf = robot.getUrdf();
+    // Get the urdf
+    urdf_ = robot.getUrdf();
 
-    _control_type = visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D;
-    _is_continuous = 1;
-    _task_active = -1;
-    _position_feedback_active = -1;
-    MakeMarker(_distal_link, _base_link, false, _control_type , true);
+    control_type_ = visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D;
+    is_continuous_ = false;
+    MakeMarker(getDistalLink(), getBaseLink(), control_type_ , true);
     //MakeMenu();
+    server_.applyChanges();
 
-    _server.applyChanges();
-
-    // Create the interactive marker
-    //marker_server_.reset(new interactive_markers::InteractiveMarkerServer(wolf_controller::_robot_name+"/wolf_controller/marker/"+_task_id));
-    //visualization_msgs::InteractiveMarker&& marker = createInteractiveMarker(actual_pose,getBaseLink());
-    //marker_server_->insert(marker,boost::bind(&Cartesian::processFeedback, this, _1));
-    //marker_server_->applyChanges();
-    //
-    //// Setup the interpolator
+    // Setup the interpolator
     trj_ = std::make_shared<wolf_controller::CartesianTrajectory>(this);
 
     std::string topic_name = task_id + "/wp";
     _way_points_pub = nh.advertise<geometry_msgs::PoseArray>(topic_name, 1, true);
-
   }
 
-  void MakeMarker(const std::string &distal_link, const std::string &base_link,
-                  bool fixed, unsigned int interaction_mode, bool show)
+  void MakeMarker(const std::string &distal_link, const std::string &base_link, unsigned int interaction_mode, bool show)
   {
-      namespace pl = std::placeholders;
-
       ROS_INFO("Creating marker %s -> %s\n", base_link.c_str(), distal_link.c_str());
       _int_marker.header.frame_id = base_link;
       _int_marker.scale = 0.5;
@@ -112,7 +98,7 @@ public:
       Eigen::Affine3d _start_pose;
       getActualPose(_start_pose);
       EigenAffine3dToVisualizationPose(_start_pose, _int_marker);
-      _server.insert(_int_marker,boost::bind(&Cartesian::processFeedback, this, _1));
+      server_.insert(_int_marker,boost::bind(&Cartesian::processFeedback, this, _1));
   }
 
   void createInteractiveMarkerControl(const double qw, const double qx, const double qy, const double qz,
@@ -151,24 +137,24 @@ public:
     double lambda1 = getLambda();
     double lambda2 = getLambda2();
     double weight  = getWeight()(0,0);
-    server_->registerVariable<double>("set_lambda_1",    lambda1,     boost::bind(&TaskRosWrapperInterface::setLambda1,this,_1)    ,"set lambda 1"   ,0.0,1000.0);
-    server_->registerVariable<double>("set_lambda_2",    lambda2,     boost::bind(&TaskRosWrapperInterface::setLambda2,this,_1)    ,"set lambda 2"   ,0.0,1000.0);
-    server_->registerVariable<double>("set_weight_diag", weight,      boost::bind(&TaskRosWrapperInterface::setWeightDiag,this,_1) ,"set weight diag",0.0,1000.0);
+    ddr_server_->registerVariable<double>("set_lambda_1",    lambda1,     boost::bind(&TaskRosWrapperInterface::setLambda1,this,_1)    ,"set lambda 1"   ,0.0,1000.0);
+    ddr_server_->registerVariable<double>("set_lambda_2",    lambda2,     boost::bind(&TaskRosWrapperInterface::setLambda2,this,_1)    ,"set lambda 2"   ,0.0,1000.0);
+    ddr_server_->registerVariable<double>("set_weight_diag", weight,      boost::bind(&TaskRosWrapperInterface::setWeightDiag,this,_1) ,"set weight diag",0.0,1000.0);
     Eigen::Matrix6d Kp = getKp();
-    server_->registerVariable<double>("kp_x",            Kp(0,0), boost::bind(&TaskRosWrapperInterface::setKpX,this,_1)            ,"Kp(0,0)", 0.0, 10000.0);
-    server_->registerVariable<double>("kp_y",            Kp(1,1), boost::bind(&TaskRosWrapperInterface::setKpY,this,_1)            ,"Kp(1,1)", 0.0, 10000.0);
-    server_->registerVariable<double>("kp_z",            Kp(2,2), boost::bind(&TaskRosWrapperInterface::setKpZ,this,_1)            ,"Kp(2,2)", 0.0, 10000.0);
-    server_->registerVariable<double>("kp_roll",         Kp(3,3), boost::bind(&TaskRosWrapperInterface::setKpRoll,this,_1)         ,"Kp(3,3)", 0.0, 10000.0);
-    server_->registerVariable<double>("kp_pitch",        Kp(4,4), boost::bind(&TaskRosWrapperInterface::setKpPitch,this,_1)        ,"Kp(4,4)", 0.0, 10000.0);
-    server_->registerVariable<double>("kp_yaw",          Kp(5,5), boost::bind(&TaskRosWrapperInterface::setKpYaw,this,_1)          ,"Kp(5,5)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kp_x",            Kp(0,0), boost::bind(&TaskRosWrapperInterface::setKpX,this,_1)            ,"Kp(0,0)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kp_y",            Kp(1,1), boost::bind(&TaskRosWrapperInterface::setKpY,this,_1)            ,"Kp(1,1)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kp_z",            Kp(2,2), boost::bind(&TaskRosWrapperInterface::setKpZ,this,_1)            ,"Kp(2,2)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kp_roll",         Kp(3,3), boost::bind(&TaskRosWrapperInterface::setKpRoll,this,_1)         ,"Kp(3,3)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kp_pitch",        Kp(4,4), boost::bind(&TaskRosWrapperInterface::setKpPitch,this,_1)        ,"Kp(4,4)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kp_yaw",          Kp(5,5), boost::bind(&TaskRosWrapperInterface::setKpYaw,this,_1)          ,"Kp(5,5)", 0.0, 10000.0);
     Eigen::Matrix6d Kd = getKd();
-    server_->registerVariable<double>("kd_x",            Kd(0,0), boost::bind(&TaskRosWrapperInterface::setKdX,this,_1)            ,"Kd(0,0)", 0.0, 10000.0);
-    server_->registerVariable<double>("kd_y",            Kd(1,1), boost::bind(&TaskRosWrapperInterface::setKdY,this,_1)            ,"Kd(1,1)", 0.0, 10000.0);
-    server_->registerVariable<double>("kd_z",            Kd(2,2), boost::bind(&TaskRosWrapperInterface::setKdZ,this,_1)            ,"Kd(2,2)", 0.0, 10000.0);
-    server_->registerVariable<double>("kd_roll",         Kd(3,3), boost::bind(&TaskRosWrapperInterface::setKdRoll,this,_1)         ,"Kd(3,3)", 0.0, 10000.0);
-    server_->registerVariable<double>("kd_pitch",        Kd(4,4), boost::bind(&TaskRosWrapperInterface::setKdPitch,this,_1)        ,"Kd(4,4)", 0.0, 10000.0);
-    server_->registerVariable<double>("kd_yaw",          Kd(5,5), boost::bind(&TaskRosWrapperInterface::setKdYaw,this,_1)          ,"Kd(5,5)", 0.0, 10000.0);
-    server_->publishServicesTopics();
+    ddr_server_->registerVariable<double>("kd_x",            Kd(0,0), boost::bind(&TaskRosWrapperInterface::setKdX,this,_1)            ,"Kd(0,0)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kd_y",            Kd(1,1), boost::bind(&TaskRosWrapperInterface::setKdY,this,_1)            ,"Kd(1,1)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kd_z",            Kd(2,2), boost::bind(&TaskRosWrapperInterface::setKdZ,this,_1)            ,"Kd(2,2)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kd_roll",         Kd(3,3), boost::bind(&TaskRosWrapperInterface::setKdRoll,this,_1)         ,"Kd(3,3)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kd_pitch",        Kd(4,4), boost::bind(&TaskRosWrapperInterface::setKdPitch,this,_1)        ,"Kd(4,4)", 0.0, 10000.0);
+    ddr_server_->registerVariable<double>("kd_yaw",          Kd(5,5), boost::bind(&TaskRosWrapperInterface::setKdYaw,this,_1)          ,"Kd(5,5)", 0.0, 10000.0);
+    ddr_server_->publishServicesTopics();
   }
 
   virtual void loadParams() override
@@ -320,9 +306,6 @@ public:
     }
     if(OPTIONS.set_ext_reference)
     {
-      //tmp_vector6d_.setZero();
-      //tmp_affine3d_.setIdentity();
-      //tmp_affine3d_ = *buffer_pose_reference_.readFromRT();
       // Interpolation
       trj_->update(wolf_controller::_period);
       trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
@@ -336,15 +319,15 @@ public:
     bool res = OpenSoT::tasks::acceleration::Cartesian::reset();
     //getActualPose(tmp_affine3d_);
     ////buffer_pose_reference_.writeFromNonRT(tmp_affine3d_);
-    //_server.clear();
-    //_server.applyChanges();
+    //server_.clear();
+    //server_.applyChanges();
     //visualization_msgs::InteractiveMarker&& marker = createInteractiveMarker(tmp_affine3d_,getBaseLink());
-    //_server.insert(marker,boost::bind(&Cartesian::processFeedback, this, _1));
-    //_server.applyChanges();
+    //server_.insert(marker,boost::bind(&Cartesian::processFeedback, this, _1));
+    //server_.applyChanges();
 
-    MakeMarker(_distal_link, _base_link, false, _control_type , true);
+    MakeMarker(getDistalLink(), getBaseLink(), control_type_ , true);
     MakeMenu();
-    _server.applyChanges();
+    server_.applyChanges();
     trj_->reset();
     return res;
   }
@@ -367,7 +350,7 @@ public:
 
     //buffer_pose_reference_.writeFromNonRT(pose_reference);
 
-    if(_is_continuous == -1)
+    if(is_continuous_ == true)
       trj_->setWayPoint(pose_reference,0.1);
   }
 
@@ -377,7 +360,7 @@ private:
   {
       _control2.always_visible = true;
 
-      if(_use_mesh && _urdf.getLink(_distal_link) != NULL)
+      if(use_mesh_ && urdf_.getLink(getDistalLink()) != nullptr)
           _control2.markers.push_back( makeSTL(msg) );
       else
           _control2.markers.push_back( makeSphere(msg) );
@@ -460,24 +443,19 @@ private:
 
   visualization_msgs::Marker makeSTL( visualization_msgs::InteractiveMarker &msg )
   {
-      auto link = _urdf.getLink(_distal_link);
+      auto distal_link = getDistalLink();
+      auto link = urdf_.getLink(distal_link);
       auto controlled_link = link;
-
-  #if ROS_VERSION_MINOR <= 12
-  #define STATIC_POINTER_CAST boost::static_pointer_cast
-  #else
-  #define STATIC_POINTER_CAST std::static_pointer_cast
-  #endif
 
       KDL::Frame T; T.Identity();
       while(!link->visual)
       {
           if(!link->parent_joint)
           {
-              XBot::Logger::warning("Unable to find mesh for link %s \n", _distal_link.c_str());
+              XBot::Logger::warning("Unable to find mesh for link %s \n", distal_link.c_str());
               return makeSphere(msg);
           }
-          link = _urdf.getLink(link->parent_joint->parent_link_name);
+          link = urdf_.getLink(link->parent_joint->parent_link_name);
       }
 
       T = getPose(controlled_link->name, link->name);
@@ -498,8 +476,7 @@ private:
       {
           _marker.type = visualization_msgs::Marker::MESH_RESOURCE;
 
-          auto mesh =
-                  STATIC_POINTER_CAST<urdf::Mesh>(link->visual->geometry);
+          auto mesh = std::static_pointer_cast<urdf::Mesh>(link->visual->geometry);
 
           _marker.mesh_resource = mesh->filename;
           _marker.scale.x = mesh->scale.x;
@@ -510,11 +487,10 @@ private:
       {
           _marker.type = visualization_msgs::Marker::CUBE;
 
-          auto mesh =
-                  STATIC_POINTER_CAST<urdf::Box>(link->visual->geometry);
+          auto mesh = std::static_pointer_cast<urdf::Box>(link->visual->geometry);
 
-          //KDL::Frame T_marker;
-          //URDFPoseToKDLFrame(link->visual->origin, T_marker);
+          KDL::Frame T_marker;
+          URDFPoseToKDLFrame(link->visual->origin, T_marker);
 
           _marker.scale.x = mesh->dim.x;
           _marker.scale.y = mesh->dim.y;
@@ -525,11 +501,10 @@ private:
       {
           _marker.type = visualization_msgs::Marker::CYLINDER;
 
-          auto mesh =
-                  STATIC_POINTER_CAST<urdf::Cylinder>(link->visual->geometry);
+          auto mesh = std::static_pointer_cast<urdf::Cylinder>(link->visual->geometry);
 
-          //KDL::Frame T_marker;
-          //URDFPoseToKDLFrame(link->visual->origin, T_marker);
+          KDL::Frame T_marker;
+          URDFPoseToKDLFrame(link->visual->origin, T_marker);
 
           _marker.scale.x = _marker.scale.y = mesh->radius;
           _marker.scale.z = mesh->length;
@@ -538,8 +513,7 @@ private:
       {
           _marker.type = visualization_msgs::Marker::SPHERE;
 
-          auto mesh =
-                  STATIC_POINTER_CAST<urdf::Sphere>(link->visual->geometry);
+          auto mesh = std::static_pointer_cast<urdf::Sphere>(link->visual->geometry);
 
           KDL::Frame T_marker;
           URDFPoseToKDLFrame(link->visual->origin, T_marker);
@@ -558,109 +532,72 @@ private:
 
       _menu_entry_counter = 0;
 
-      _continuous_control_entry = _menu_handler.insert("Continuous Ctrl",std::bind(std::mem_fn(&Cartesian::setContinuousCtrl),
+      _continuous_control_entry = menu_handler_.insert("Continuous Ctrl",std::bind(std::mem_fn(&Cartesian::setContinuousCtrl),
                                                                                      this, pl::_1));
-      _menu_handler.setCheckState(_continuous_control_entry, interactive_markers::MenuHandler::UNCHECKED);
+      menu_handler_.setCheckState(_continuous_control_entry, interactive_markers::MenuHandler::UNCHECKED);
       _menu_entry_counter++;
 
-      _way_point_entry = _menu_handler.insert("Add WayPoint");
-      _menu_handler.setVisible(_way_point_entry, true);
+      _way_point_entry = menu_handler_.insert("Add WayPoint");
+      menu_handler_.setVisible(_way_point_entry, true);
       _menu_entry_counter++;
-      _T_entry = _menu_handler.insert(_way_point_entry, "T [sec]");
+      _T_entry = menu_handler_.insert(_way_point_entry, "T [sec]");
       _menu_entry_counter++;
       _offset_menu_entry = _menu_entry_counter;
       for ( int i = 0; i < SECS; i++ )
       {
           std::ostringstream s;
           s <<i+1;
-          _T_last = _menu_handler.insert( _T_entry, s.str(),
+          _T_last = menu_handler_.insert( _T_entry, s.str(),
                                           std::bind(std::mem_fn(&Cartesian::wayPointCallBack),
                                                       this, pl::_1));
           _menu_entry_counter++;
-          _menu_handler.setCheckState(_T_last, interactive_markers::MenuHandler::UNCHECKED );
+          menu_handler_.setCheckState(_T_last, interactive_markers::MenuHandler::UNCHECKED );
       }
-      _reset_all_way_points_entry = _menu_handler.insert(_way_point_entry, "Reset All",std::bind(std::mem_fn(&Cartesian::resetAllWayPoints),
+      _reset_all_way_points_entry = menu_handler_.insert(_way_point_entry, "Reset All",std::bind(std::mem_fn(&Cartesian::resetAllWayPoints),
                                                                                                   this, pl::_1));
       _menu_entry_counter++;
-      _reset_last_way_point_entry = _menu_handler.insert(_way_point_entry, "Reset Last",std::bind(std::mem_fn(&Cartesian::resetLastWayPoints),
+      _reset_last_way_point_entry = menu_handler_.insert(_way_point_entry, "Reset Last",std::bind(std::mem_fn(&Cartesian::resetLastWayPoints),
                                                                                                     this, pl::_1));
       _menu_entry_counter++;
 
-      _send_way_points_entry = _menu_handler.insert(_way_point_entry, "Send",std::bind(std::mem_fn(&Cartesian::sendWayPoints),
+      _send_way_points_entry = menu_handler_.insert(_way_point_entry, "Send",std::bind(std::mem_fn(&Cartesian::sendWayPoints),
                                                                                          this, pl::_1));
       _menu_entry_counter++;
-
-      _properties_entry = _menu_handler.insert("Properties");
-      _menu_entry_counter++;
-      _task_is_active_entry = _menu_handler.insert(_properties_entry, "Task Active",std::bind(std::mem_fn(&Cartesian::activateTask),
-                                                                                                this, pl::_1));
-      _menu_entry_counter++;
-      _menu_handler.setCheckState(_task_is_active_entry, interactive_markers::MenuHandler::CHECKED );
 
       _menu_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::BUTTON;
       _menu_control.always_visible = true;
 
       _int_marker.controls.push_back(_menu_control);
-
-      _menu_handler.apply(_server, _int_marker.name);
+      menu_handler_.apply(server_, _int_marker.name);
   }
 
   void sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
   {
-      if(_waypoints.empty()) return;
+      if(waypoints_.empty()) return;
 
       std::partial_sum(_T.begin(), _T.end(), _T.begin());
 
       wolf_controller::CartesianTrajectory::WayPointVector wpv;
 
-      for(int i = 0; i < _waypoints.size(); i++)
+      for(int i = 0; i < waypoints_.size(); i++)
       {
           wolf_controller::CartesianTrajectory::WayPoint wp;
 
-          tf::poseMsgToEigen(_waypoints[i], wp.T_ref);
+          tf::poseMsgToEigen(waypoints_[i], wp.T_ref);
           wp.duration = _T.at(i);
 
           wpv.push_back(wp);
       }
 
       trj_->setWayPoints(wpv);
-      publishWP(_waypoints);
+      publishWP(waypoints_);
 
-      _waypoints.clear();
+      waypoints_.clear();
       _T.clear();
   }
 
-  void activateTask(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
-  {
-      _task_active *= -1;
-
-      if(_task_active == 1)
-      {
-          _menu_handler.setCheckState(_task_is_active_entry, interactive_markers::MenuHandler::UNCHECKED);
-          setActive(false);
-      }
-      else if(_task_active == -1)
-      {
-          _menu_handler.setCheckState(_task_is_active_entry, interactive_markers::MenuHandler::CHECKED);
-          setActive(true);
-      }
-
-      _menu_handler.reApply(_server);
-      _server.applyChanges();
-  }
-
-
   void resetMarker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
   {
-      if(_task_active)
-      {
-          _activateTask(false);
-      }
-      else
-      {
-          _activateTask(true);
-      }
-
       clearMarker(_req, _res);
       spawnMarker(_req, _res);
   }
@@ -670,36 +607,35 @@ private:
       namespace pl = std::placeholders;
 
       _T.pop_back();
-      _waypoints.pop_back();
+      waypoints_.pop_back();
       clearMarker(_req, _res);
 
       ROS_INFO("RESET LAST WAYPOINT!");
 
-      if(_waypoints.empty())
+      if(waypoints_.empty())
           spawnMarker(_req, _res);
       else{
-          if(_server.empty())
+          if(server_.empty())
           {
-              tf::poseMsgToKDL(_waypoints.back(),_start_pose);
-              //tf::PoseMsgToKDL(_waypoints.back(),_start_pose);
+              tf::poseMsgToKDL(waypoints_.back(),_start_pose);
               _actual_pose = _start_pose;
 
               KDLFrameToVisualizationPose(_start_pose, _int_marker);
 
-              _server.insert(_int_marker, std::bind(std::mem_fn(&Cartesian::processFeedback),this, pl::_1));
-              _menu_handler.apply(_server, _int_marker.name);
-              _server.applyChanges();
+              server_.insert(_int_marker, std::bind(std::mem_fn(&Cartesian::processFeedback),this, pl::_1));
+              menu_handler_.apply(server_, _int_marker.name);
+              server_.applyChanges();
           }
       }
-      publishWP(_waypoints);
+      publishWP(waypoints_);
   }
 
   void resetAllWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
   {
       _T.clear();
-      _waypoints.clear();
+      waypoints_.clear();
       resetMarker(feedback);
-      publishWP(_waypoints);
+      publishWP(waypoints_);
       ROS_INFO("RESETTING ALL WAYPOINTS!");
   }
 
@@ -713,17 +649,17 @@ private:
       double T = double(feedback->menu_entry_id-offset_menu_entry);
 
 
-      if(_is_continuous == 1)
+      if(is_continuous_ == false)
       {
           ROS_INFO("\n %s set waypoint @: \n pos = [%f, %f, %f],\n orient = [%f, %f, %f, %f],\n of %.1f secs",
                    _int_marker.name.c_str(),
                    _actual_pose.p.x(), _actual_pose.p.y(), _actual_pose.p.z(),
                    qx,qy,qz,qw, T);
 
-          _waypoints.push_back(feedback->pose);
+          waypoints_.push_back(feedback->pose);
           _T.push_back(T);
 
-          publishWP(_waypoints);
+          publishWP(waypoints_);
 
       }
   }
@@ -734,7 +670,7 @@ private:
       for(unsigned int i = 0; i < wps.size(); ++i)
           msg.poses.push_back(wps[i]);
 
-      msg.header.frame_id = _base_link;
+      msg.header.frame_id = getBaseLink();
       msg.header.stamp = ros::Time::now();
 
       _way_points_pub.publish(msg);
@@ -754,95 +690,63 @@ private:
       return true;
   }
 
-  void _activateTask(const bool is_active)
-  {
-      if(is_active)
-      {
-          _task_active = -1;
-          _menu_handler.setCheckState(_task_is_active_entry,
-                                      interactive_markers::MenuHandler::CHECKED);
-      }
-      else
-      {
-          _task_active = 1;
-          _menu_handler.setCheckState(_task_is_active_entry,
-                                      interactive_markers::MenuHandler::UNCHECKED);
-      }
-
-      _menu_handler.reApply(_server);
-      _server.applyChanges();
-  }
-
-  void _activatePositionFeedBack(const bool is_active)
-  {
-      if(is_active){
-          _position_feedback_active = -1;
-          _menu_handler.setCheckState(_position_feedback_is_active_entry, interactive_markers::MenuHandler::CHECKED);}
-      else{
-          _position_feedback_active = 1;
-          _menu_handler.setCheckState(_position_feedback_is_active_entry, interactive_markers::MenuHandler::UNCHECKED);}
-
-      _menu_handler.reApply(_server);
-      _server.applyChanges();
-  }
-
   bool clearMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
   {
-      if(!_server.empty())
+      if(!server_.empty())
       {
-          _server.erase(_int_marker.name);
-          _server.applyChanges();
+          server_.erase(_int_marker.name);
+          server_.applyChanges();
       }
       return true;
   }
 
   bool spawnMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
   {
-      namespace pl = std::placeholders;
-
-      if(_server.empty())
+      if(server_.empty())
       {
         Eigen::Affine3d _start_pose;
         getActualPose(_start_pose);
         EigenAffine3dToVisualizationPose(_start_pose, _int_marker);
-        _server.insert(_int_marker,boost::bind(&Cartesian::processFeedback, this, _1));
-        _server.applyChanges();
+        server_.insert(_int_marker,boost::bind(&Cartesian::processFeedback, this, _1));
+        server_.applyChanges();
       }
       return true;
   }
 
   void setContinuousCtrl(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
   {
-      _is_continuous *= -1;
+      is_continuous_ = !is_continuous_;
 
-      if(_is_continuous == 1)
+      if(is_continuous_ == false)
       {
-          _menu_handler.setCheckState(_continuous_control_entry, interactive_markers::MenuHandler::UNCHECKED);
-          _menu_handler.setVisible(_way_point_entry, true);
-          _waypoints.clear();
+          menu_handler_.setCheckState(_continuous_control_entry, interactive_markers::MenuHandler::UNCHECKED);
+          menu_handler_.setVisible(_way_point_entry, true);
+          waypoints_.clear();
           _T.clear();
           setContinuous(_req,_res);
       }
-      else if(_is_continuous == -1)
+      else if(is_continuous_ == true)
       {
-          _menu_handler.setCheckState(_continuous_control_entry, interactive_markers::MenuHandler::CHECKED);
-          _menu_handler.setVisible(_way_point_entry, false);
-          _waypoints.clear();
+          menu_handler_.setCheckState(_continuous_control_entry, interactive_markers::MenuHandler::CHECKED);
+          menu_handler_.setVisible(_way_point_entry, false);
+          waypoints_.clear();
           _T.clear();
           setTrj(_req, _res);
       }
 
-      _menu_handler.reApply(_server);
-      _server.applyChanges();
+      menu_handler_.reApply(server_);
+      server_.applyChanges();
   }
 
   ros::Publisher _way_points_pub;
 
 
+  bool is_continuous_;
+
   /**
-   * @brief _waypoints contains all the waypoints BUT not the initial position!
+   * @brief waypoints_ contains all the waypoints BUT not the initial position!
    */
-  std::vector<geometry_msgs::Pose> _waypoints;
+  std::vector<geometry_msgs::Pose> waypoints_;
 
   /**
    * @brief _T contains the times of each waypoint-trajectory
@@ -861,23 +765,20 @@ private:
 
   int _menu_entry_counter;
   int _offset_menu_entry;
-  int _control_type;
-  int _is_continuous;
+  int control_type_;
   int offset_menu_entry;
-  int _task_active;
-  int _position_feedback_active;
 
   std_srvs::EmptyRequest _req;
   std_srvs::EmptyResponse _res;
 
   visualization_msgs::InteractiveMarker _int_marker;
   /**
-   * @brief _server interactive marker server used by the marker
+   * @brief server_ interactive marker server used by the marker
    */
-  interactive_markers::InteractiveMarkerServer _server;
+  interactive_markers::InteractiveMarkerServer server_;
   visualization_msgs::Marker _marker;
 
-  interactive_markers::MenuHandler _menu_handler;
+  interactive_markers::MenuHandler menu_handler_;
   interactive_markers::MenuHandler::EntryHandle _reset_marker_entry;
   interactive_markers::MenuHandler::EntryHandle _way_point_entry;
   interactive_markers::MenuHandler::EntryHandle _T_entry;
@@ -885,12 +786,7 @@ private:
   interactive_markers::MenuHandler::EntryHandle _reset_last_way_point_entry;
   interactive_markers::MenuHandler::EntryHandle _reset_all_way_points_entry;
   interactive_markers::MenuHandler::EntryHandle _send_way_points_entry;
-  interactive_markers::MenuHandler::EntryHandle _global_control_entry;
   interactive_markers::MenuHandler::EntryHandle _continuous_control_entry;
-  interactive_markers::MenuHandler::EntryHandle _properties_entry;
-  interactive_markers::MenuHandler::EntryHandle _task_is_active_entry;
-  interactive_markers::MenuHandler::EntryHandle _position_feedback_is_active_entry;
-  interactive_markers::MenuHandler::EntryHandle _base_link_entry;
   std::vector<interactive_markers::MenuHandler::EntryHandle> _link_entries;
   visualization_msgs::InteractiveMarkerControl  _menu_control;
 
@@ -898,20 +794,14 @@ private:
   tf::StampedTransform _transform;
 
   /**
-   * @brief _urdf model description of the robot
+   * @brief urdf_ model description of the robot
    */
-  urdf::ModelInterface _urdf;
-
-  bool _use_mesh;
+  urdf::ModelInterface urdf_;
 
   /**
-   * @brief _base_link used by the marker
+   * @brief use_mesh_ true if the end-effector mesh is used for the marker visualization
    */
-  std::string _base_link;
-  /**
-   * @brief _distal_link used by the marker
-   */
-  std::string _distal_link;
+  bool use_mesh_;
 
   /**
    * @brief _start_pose is the starting pose of the marker, taken from the current pose of the robot

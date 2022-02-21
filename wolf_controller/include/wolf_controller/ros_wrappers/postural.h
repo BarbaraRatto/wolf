@@ -41,7 +41,7 @@ public:
     rt_pub_->msg_.velocity_reference.resize(size);
     rt_pub_->msg_.position_error.resize(size);
     rt_pub_->msg_.velocity_error.resize(size);
-    server_->publishServicesTopics();
+    ddr_server_->publishServicesTopics();
   }
 
   virtual void registerReconfigurableVariables() override
@@ -49,10 +49,10 @@ public:
     double lambda1 = getLambda();
     double lambda2 = getLambda2();
     double weight  = getWeight()(0,0);
-    server_->registerVariable<double>("set_lambda_1",    lambda1,     boost::bind(&TaskRosWrapperInterface::setLambda1,this,_1)    ,"set lambda 1"   ,0.0,1000.0);
-    server_->registerVariable<double>("set_lambda_2",    lambda2,     boost::bind(&TaskRosWrapperInterface::setLambda2,this,_1)    ,"set lambda 2"   ,0.0,1000.0);
-    server_->registerVariable<double>("set_weight_diag", weight,      boost::bind(&TaskRosWrapperInterface::setWeightDiag,this,_1) ,"set weight diag",0.0,1000.0);
-    server_->publishServicesTopics();
+    ddr_server_->registerVariable<double>("set_lambda_1",    lambda1,     boost::bind(&TaskRosWrapperInterface::setLambda1,this,_1)    ,"set lambda 1"   ,0.0,1000.0);
+    ddr_server_->registerVariable<double>("set_lambda_2",    lambda2,     boost::bind(&TaskRosWrapperInterface::setLambda2,this,_1)    ,"set lambda 2"   ,0.0,1000.0);
+    ddr_server_->registerVariable<double>("set_weight_diag", weight,      boost::bind(&TaskRosWrapperInterface::setWeightDiag,this,_1) ,"set weight diag",0.0,1000.0);
+    ddr_server_->publishServicesTopics();
   }
 
   virtual void loadParams() override
