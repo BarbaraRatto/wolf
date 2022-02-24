@@ -13,7 +13,7 @@ using namespace OpenSoT;
 
 namespace wolf_controller {
 
-IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& /*dt*/):
+IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt):
   model_(model), control_mode_(WALKING), change_control_mode_(false)
 {
 
@@ -115,21 +115,28 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   tau_max.head(FLOATING_BASE_DOFS).setZero();
   torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
   //   --------------------------
-  //Eigen::VectorXd q_max, q_min, q_home, qddot_max;
-  //Eigen::MatrixXd M;
-  //model_->getJointLimits(q_min,q_max);
-  //q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
-  //q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
-  //model_->getRobotState("standup",q_home);
-  ////model_->getInertiaInverseTimesVector(tau_max,qddot_max);
-  //model_->setJointPosition(q_home);
-  //model_->update();
-  //model_->getInertiaMatrix(M);
-  //qddot_max = M.inverse() * tau_max;
-  //qddot_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * 10000.0;
-  //for(unsigned int i=0; i<qddot_max.size(); i++)
-  //    qddot_max(i) = std::abs(qddot_max(i)); // The acceleration limits have to be positive
-  //q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),q_max,q_min,qddot_max,dt);
+  Eigen::VectorXd q_max, q_min, q_home, qddot_max;
+  Eigen::MatrixXd M;
+  model_->getJointLimits(q_min,q_max);
+//  q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
+//  q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
+  model_->getRobotState("standup",q_home);
+  model_->setJointPosition(q_home);
+  model_->update();
+  model_->getInertiaMatrix(M);
+  M.topRows(6).setZero(); M.leftCols(6).setZero(); M.block(0,0,6,6) = Eigen::MatrixXd(6,6).setIdentity();
+  qddot_max = M.inverse() * tau_max;
+  q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),
+                                                                              q_max,q_min,
+                                                                              qddot_max.cwiseAbs(),dt);
+  std::list<unsigned int> id_q_lims;
+  for(unsigned int i = 0; i < model_->getJointNames().size(); ++i)
+  {
+      std::string joint_name = model_->getJointNames()[i];
+      if(!(model_->getUrdf().getJoint(joint_name)->type == urdf::Joint::CONTINUOUS))
+          id_q_lims.push_back(i+6);
+  }
+
 
   //
   // Here we create some indices for the subtask definitions
@@ -172,6 +179,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   }
 
   stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
+  stack_ << q_lims_%id_q_lims;
 
   // Regularization and first update FIXME CLEANUP!
   Eigen::Index n = id_->getSerializer()->getSize();
