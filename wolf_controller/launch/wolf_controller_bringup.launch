@@ -8,7 +8,7 @@
     <arg name="arm_enabled" default="false" />
     <arg name="arm_name" default="kinova" />
 
-    <!-- Input device argument: ps3/xbox/keyboard -->
+    <!-- Input device argument: ps3/xbox/keyboard/spacemouse -->
     <arg name="input_device" default="keyboard" />
 
     <!-- Gazebo related arguments -->
