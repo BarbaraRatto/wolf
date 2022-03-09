@@ -215,7 +215,7 @@ void TrajectoryInterface::setStepReflexContactThreshold(const double &th)
   reflex_->setContactForceThreshold(th);
 }
 
-void TrajectoryInterface::setStepReflexMaxStepRetraction(const double &max)
+void TrajectoryInterface::setStepReflexMaxRetraction(const double &max)
 {
   reflex_->setMaxStepRetraction(max);
 }

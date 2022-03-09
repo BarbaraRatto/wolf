@@ -133,7 +133,7 @@ public:
 
   void setStepReflexContactThreshold(const double& th);
 
-  void setStepReflexMaxStepRetraction(const double &max);
+  void setStepReflexMaxRetraction(const double &max);
 
 protected:
 
