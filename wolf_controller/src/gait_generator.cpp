@@ -592,6 +592,12 @@ void GaitGenerator::setStepReflexContactThreshold(const double& th)
     it->second.trajectory->setStepReflexContactThreshold(th);
 }
 
+void GaitGenerator::setStepReflexMaxStepRetraction(const double &max)
+{
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->setStepReflexMaxStepRetraction(max);
+}
+
 void GaitGenerator::changeGait()
 {
   current_gait_idx_ = current_gait_idx_ + 1;

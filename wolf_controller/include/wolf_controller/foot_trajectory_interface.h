@@ -44,16 +44,18 @@ public:
 
   void setContactForceAngleLimits(const double& min, const double& max);
   void setContactForceThreshold(const double& th);
+  void setMaxStepRetraction(const double &max);
 
 private:
 
   void init();
 
+  void computeRetractionForce(const double& max_retraction);
+
   TrajectoryInterface* trajectory_interface_ptr_;
   double reflex_duration_;
   double retraction_duration_;
   double retraction_force_angle_;
-  double max_retraction_;
   double Kp_r_;
   double Kd_r_;
   double Fr_max_;
@@ -130,6 +132,8 @@ public:
   void startStepReflex(bool start);
 
   void setStepReflexContactThreshold(const double& th);
+
+  void setStepReflexMaxStepRetraction(const double &max);
 
 protected:
 
