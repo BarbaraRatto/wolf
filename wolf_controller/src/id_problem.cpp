@@ -90,7 +90,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   com_->setWeightIsDiagonalFlag(true);
   com_->loadParams();
   com_->registerReconfigurableVariables();
-
   //
   // Here we create the constraints & bounds
   //
@@ -366,9 +365,9 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   for (auto& tmp_map : arms_)
     tmp_map.second->updateCost(x_);
   waistRPY_->updateCost(x_);
-  waistZ_->updateCost(x_);
+  //waistZ_->updateCost(x_);
   com_->updateCost(x_);
-  postural_->updateCost(x_);
+  //postural_->updateCost(x_);
   angular_momentum_->updateCost(x_);
 #endif
 
