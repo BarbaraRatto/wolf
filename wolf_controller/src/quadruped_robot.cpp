@@ -237,6 +237,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   tau_max_.head(6).setZero();
 
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot total mass is ["<<getMass()<<"]");
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Position limits set to: min=["<<q_min_.transpose()<<"]"<< std::endl<<"max=["<<q_max_.transpose()<<"]");
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: max=["<<qdot_max_.transpose()<<"]");
   ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: max=["<<tau_max_.transpose()<<"]");
