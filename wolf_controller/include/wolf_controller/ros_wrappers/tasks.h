@@ -519,7 +519,7 @@ public:
   typedef std::shared_ptr<Postural> Ptr;
 
   Postural(ros::NodeHandle& nh, const XBot::ModelInterface& robot,
-           OpenSoT::AffineHelper qddot = OpenSoT::AffineHelper(), const std::string task_id = "Postural")
+           OpenSoT::AffineHelper qddot = OpenSoT::AffineHelper(), const std::string task_id = "postural")
     :OpenSoT::tasks::acceleration::Postural(robot,qddot,task_id)
     ,TaskRosWrapperInterface<wolf_controller::PosturalTask>(task_id,nh)
   {
@@ -532,7 +532,6 @@ public:
     rt_pub_->msg_.velocity_reference.resize(size);
     rt_pub_->msg_.position_error.resize(size);
     rt_pub_->msg_.velocity_error.resize(size);
-    server_->publishServicesTopics();
   }
 
   virtual void registerReconfigurableVariables() override

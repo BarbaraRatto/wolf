@@ -79,11 +79,12 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   //waistZ_->loadParams();
   //waistZ_->registerReconfigurableVariables();
   //   --------------------------
-  //postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
-  //postural_->setLambda(1.,1.);
-  //postural_->setWeightIsDiagonalFlag(true);
-  //postural_->loadParams();
-  //postural_->registerReconfigurableVariables();
+  postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
+  postural_->setLambda(1.,1.);
+  postural_->setWeightIsDiagonalFlag(true);
+  postural_->loadParams();
+  postural_->registerReconfigurableVariables();
+  postural_->setReference(model_->getStandUpJointPostion());
   //   --------------------------
   com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
@@ -137,15 +138,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   std::list<unsigned int> id_XY    = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
-  //std::list<unsigned int> id_limbs;
-  //id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
-  //std::list<unsigned int>::iterator it;
-  //unsigned int idx = FLOATING_BASE_DOFS;
-  //for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
-  //{
-  //    *it = idx;
-  //    idx++;
-  //}
+  std::list<unsigned int> id_limbs;
+  id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
+  std::list<unsigned int>::iterator it;
+  unsigned int idx = FLOATING_BASE_DOFS;
+  for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
+  {
+      *it = idx;
+      idx++;
+  }
 
   //
   // Here we create the stack
@@ -155,7 +156,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_);
+  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_ + postural_%id_limbs);
 
   if(ee_names_.size() > 0)
   {
@@ -342,7 +343,7 @@ void IDProblem::publish(const ros::Time& time)
   waistRPY_->publish(time);
   //waistZ_->publish(time);
   com_->publish(time);
-  //postural_->publish(time);
+  postural_->publish(time);
   angular_momentum_->publish(time);
 }
 
