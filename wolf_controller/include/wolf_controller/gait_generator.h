@@ -192,6 +192,8 @@ public:
 
   void setStepReflexContactThreshold(const double &th);
 
+  void setStepReflexMaxRetraction(const double &max);
+
 private:
 
   void changeGait();
