@@ -82,6 +82,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
   postural_->setWeightIsDiagonalFlag(true);
+  postural_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
   postural_->loadParams();
   postural_->registerReconfigurableVariables();
   postural_->setReference(model_->getStandUpJointPostion());
@@ -383,6 +384,12 @@ const std::vector<Eigen::Vector6d>& IDProblem::getContactWrenches() const
 const Eigen::VectorXd& IDProblem::getJointAccelerations() const
 {
   return qddot_;
+}
+
+void IDProblem::setPosture(const Eigen::MatrixXd& Kp, const Eigen::MatrixXd& Kd, const Eigen::VectorXd& q)
+{
+  postural_->setGains(Kp,Kd);
+  postural_->setReference(q);
 }
 
 void IDProblem::swingWithFoot(const string &foot_name)

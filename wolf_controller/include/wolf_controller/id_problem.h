@@ -102,6 +102,14 @@ public:
     void publish(const ros::Time& time);
 
     /**
+     * @brief set the postural reference and gains
+     * @param Kp
+     * @param Kd
+     * @param q
+     */
+    void setPosture(const Eigen::MatrixXd &Kp, const Eigen::MatrixXd &Kd, const Eigen::VectorXd &q);
+
+    /**
      * @brief set the mu parameter for the friction cones
      * @param mu value
      */
