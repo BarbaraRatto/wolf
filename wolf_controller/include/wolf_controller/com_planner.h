@@ -61,6 +61,8 @@ private:
   Eigen::Vector3d support_polygon_center_;
   std::vector<Eigen::Vector3d> support_polygon_edges_;
 
+  bool update_;
+
 };
 
 

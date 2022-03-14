@@ -23,6 +23,8 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
 
   support_polygon_edges_.resize(N_LEGS);
 
+  update_ = true;
+
   computeComPositionReference();
 }
 
@@ -45,17 +47,23 @@ void ComPlanner::computeSupportPolygonCenter()
 void ComPlanner::computeComPositionReference()
 {
   // Update the support polygon everytime there is a touchdown
-  //if(foothold_planner_->isAnyFootInTouchDown())
-  //  update_ = true;
+  // or if the robot is standing up or down (because if we
+  // are using the estimated_z the com reference is calculated wrt the base which is
+  // moving up/down)
+  if(foothold_planner_->isAnyFootInTouchDown()
+     || robot_model_->getState() == QuadrupedRobot::STANDING_UP
+     || robot_model_->getState() == QuadrupedRobot::STANDING_DOWN
+     )
+    update_ = true;
 
   // If all feet in stance then update the support polygon center
   if (foothold_planner_->areAllFeetInStance())
   {
-    //if(update_)
-    //{
+    if(update_)
+    {
       computeSupportPolygonCenter();
-      //update_ = false;
-    //}
+      update_ = false;
+    }
   }
 
   com_position_ref_ << support_polygon_center_(0), support_polygon_center_(1), foothold_planner_->getBaseHeight();
