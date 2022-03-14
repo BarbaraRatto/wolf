@@ -44,6 +44,8 @@ public:
 
   const Eigen::Vector3d& getComPosition() const;
 
+  void resetVelocities();
+
 private:
 
   void computeSupportPolygonCenter();

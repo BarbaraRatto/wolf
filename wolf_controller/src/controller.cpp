@@ -575,6 +575,7 @@ void Controller::updateStateMachine(const double &dt)
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
+          com_planner_->resetVelocities();
           if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
           {
             robot_model_->setState(QuadrupedRobot::ACTIVE);

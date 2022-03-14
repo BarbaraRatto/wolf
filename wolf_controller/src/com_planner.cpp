@@ -97,4 +97,9 @@ const Eigen::Vector3d &ComPlanner::getComPosition() const
   return com_position_ref_;
 }
 
+void ComPlanner::resetVelocities()
+{
+  com_velocity_ref_.setZero();
+}
+
 }; // namespace
