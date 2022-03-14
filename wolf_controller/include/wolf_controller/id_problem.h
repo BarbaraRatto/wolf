@@ -160,7 +160,7 @@ public:
      * @param Rot rotation matrix
      * @param z height
      */
-    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z);
+    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z, const double &z_vel);
 
     /**
      * @brief set the position and velocity reference for the CoM

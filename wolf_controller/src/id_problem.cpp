@@ -71,13 +71,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   waistRPY_->loadParams();
   waistRPY_->registerReconfigurableVariables();
   //   --------------------------
-  //waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
-  //                                      WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  //waistZ_->setLambda(1.,1.);
-  //waistZ_->setWeightIsDiagonalFlag(true);
-  //waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  //waistZ_->loadParams();
-  //waistZ_->registerReconfigurableVariables();
+  waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
+                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
+  waistZ_->setLambda(1.,1.);
+  waistZ_->setWeightIsDiagonalFlag(true);
+  waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  waistZ_->loadParams();
+  waistZ_->registerReconfigurableVariables();
   //   --------------------------
   postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
@@ -157,7 +157,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_ + postural_%id_limbs);
+  stack_ /= (feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_%id_XY + postural_%id_limbs);
 
   if(ee_names_.size() > 0)
   {
@@ -342,7 +342,7 @@ void IDProblem::publish(const ros::Time& time)
   for (auto& tmp_map : arms_)
     tmp_map.second->publish(time);
   waistRPY_->publish(time);
-  //waistZ_->publish(time);
+  waistZ_->publish(time);
   com_->publish(time);
   postural_->publish(time);
   angular_momentum_->publish(time);
@@ -367,9 +367,9 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   for (auto& tmp_map : arms_)
     tmp_map.second->updateCost(x_);
   waistRPY_->updateCost(x_);
-  //waistZ_->updateCost(x_);
+  waistZ_->updateCost(x_);
   com_->updateCost(x_);
-  //postural_->updateCost(x_);
+  postural_->updateCost(x_);
   angular_momentum_->updateCost(x_);
 #endif
 
@@ -408,11 +408,14 @@ void IDProblem::stanceWithFoot(const string &foot_name)
   torque_lims_->enableContact(foot_name);
 }
 
-void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z)
+void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z, const double& z_vel)
 {
+  tmp_vector6d_.setZero();
   tmp_affine3d_.setIdentity();
   tmp_affine3d_.linear() = Rot;
   tmp_affine3d_.translation().z() = z;
+  tmp_vector6d_(2) = z_vel;
+  waistZ_->setReference(tmp_affine3d_,tmp_vector6d_);
   waistRPY_->setReference(tmp_affine3d_);
 }
 
