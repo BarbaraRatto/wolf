@@ -871,9 +871,16 @@ void Controller::odomPublisher()
     Eigen::Matrix3d tmp_R;
     Eigen::Quaterniond tmp_q;
 
-    static tf::TransformBroadcaster br;
-    tf::Transform transform;
+    static tf2_ros::TransformBroadcaster br;
+    geometry_msgs::TransformStamped basefoot_T_world;
+    geometry_msgs::TransformStamped basefoot_T_base;
     tf::Quaternion q;
+
+    basefoot_T_base.header.frame_id = BASE_FOOTPRINT_FRAME;
+    basefoot_T_base.child_frame_id  = robot_model_->getBaseLinkName();
+
+    basefoot_T_world.header.frame_id = BASE_FOOTPRINT_FRAME;
+    basefoot_T_world.child_frame_id  = WORLD_FRAME_NAME;
 
     while(!stopping_)
     {
@@ -888,25 +895,35 @@ void Controller::odomPublisher()
         rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
         tmp_v = - tmp_R * tmp_v;
         tmp_q = tmp_R;
-        // Set
-        transform.setOrigin(tf::Vector3(tmp_v(0),tmp_v(1),tmp_v(2)));
-        q.setX(tmp_q.x());
-        q.setY(tmp_q.y());
-        q.setZ(tmp_q.z());
-        q.setW(tmp_q.w());
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/"  WORLD_FRAME_NAME ));
+        // Set coordinates
+        basefoot_T_world.transform.translation.x = tmp_v(0);
+        basefoot_T_world.transform.translation.y = tmp_v(1);
+        basefoot_T_world.transform.translation.z = tmp_v(2);
+        basefoot_T_world.transform.rotation.w    = tmp_q.w();
+        basefoot_T_world.transform.rotation.x    = tmp_q.x();
+        basefoot_T_world.transform.rotation.y    = tmp_q.y();
+        basefoot_T_world.transform.rotation.z    = tmp_q.z();
+        // Set transform header
+        basefoot_T_world.header.seq++;
+        basefoot_T_world.header.stamp = ros::Time::now();
+
+        br.sendTransform(basefoot_T_world);
 
         // Create the tf transform between base_footprint -> base
         tmp_q = robot_model_->getBaseRotationInHf();
-        // Set
-        transform.setOrigin(tf::Vector3(0.0,0.0,estimated_z));
-        q.setX(tmp_q.x());
-        q.setY(tmp_q.y());
-        q.setZ(tmp_q.z());
-        q.setW(tmp_q.w());
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/" + robot_model_->getBaseLinkName()));
+        // Set coordinates
+        basefoot_T_base.transform.translation.x = 0.0;
+        basefoot_T_base.transform.translation.y = 0.0;
+        basefoot_T_base.transform.translation.z = estimated_z;
+        basefoot_T_base.transform.rotation.w    = tmp_q.w();
+        basefoot_T_base.transform.rotation.x    = tmp_q.x();
+        basefoot_T_base.transform.rotation.y    = tmp_q.y();
+        basefoot_T_base.transform.rotation.z    = tmp_q.z();
+        // Set transform header
+        basefoot_T_base.header.seq++;
+        basefoot_T_base.header.stamp    = ros::Time::now();
+
+        br.sendTransform(basefoot_T_base);
 
         std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
     }
