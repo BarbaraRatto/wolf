@@ -84,7 +84,7 @@ public:
 
     double getContactThreshold();
 
-    string getPositionEstimationType();
+    std::string getPositionEstimationType();
 
     std::string getOrientationEstimationType();
 

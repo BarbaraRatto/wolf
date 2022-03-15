@@ -156,7 +156,7 @@ void StateEstimator::setPositionEstimationType(const std::string& position_t)
 
 void StateEstimator::setOrientationEstimationType(const std::string& orientation_t)
 {
-  setPositionEstimationType(stringToEnum(orientation_t));
+  setOrientationEstimationType(stringToEnum(orientation_t));
 }
 
 void StateEstimator::setEstimationType(estimation_t position_t, estimation_t orientation_t)
@@ -450,8 +450,8 @@ double StateEstimator::estimateZ()
 
 void StateEstimator::updateFloatingBase(const double& period)
 {
-  unsigned int estimation_orientation = estimation_orientation_;
-  unsigned int estimation_position = estimation_position_;
+  estimation_t estimation_orientation = estimation_orientation_;
+  estimation_t estimation_position = estimation_position_;
 
   // Update the joints information of the virtual model
   robot_model_->setJointVelocity(joint_velocities_);
