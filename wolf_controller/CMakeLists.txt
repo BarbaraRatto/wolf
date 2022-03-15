@@ -19,7 +19,7 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface control_toolbox wolf_hardware_interface
+find_package(catkin REQUIRED tf2 controller_interface control_toolbox wolf_hardware_interface
     realtime_tools geometry_msgs sensor_msgs nav_msgs ddynamic_reconfigure message_generation rviz_visual_tools rt_logger)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
