@@ -721,7 +721,7 @@ void Controller::updateComponents(const double &dt)
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
 {
   // Set the pose reference for the waist
-  id_prob_->setWaistReference(orientation_ref,com_pos_ref.z());
+  id_prob_->setWaistReference(orientation_ref,com_pos_ref.z(),com_vel_ref.z());
   // Set the velocity and position reference for the CoM in the solver
   id_prob_->setComReference(com_pos_ref,com_vel_ref);
 }
