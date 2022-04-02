@@ -113,6 +113,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   Eigen::VectorXd tau_max;
   model_->getEffortLimits(tau_max);
   tau_max.head(FLOATING_BASE_DOFS).setZero();
+  tau_max = 0.9 * tau_max; // Il trucco
   torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
   //   --------------------------
   //Eigen::VectorXd q_max, q_min, q_home, qddot_max;
