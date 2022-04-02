@@ -34,7 +34,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   {
 
     feet_[foot_names_[i]] = std::make_shared<Cartesian>(nh,foot_names_[i], *model_, foot_names_[i],
-                                                        model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
+                                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
     feet_[foot_names_[i]]->setLambda(0.,0.);
     feet_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
     feet_[foot_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
@@ -386,7 +386,7 @@ const Eigen::VectorXd& IDProblem::getJointAccelerations() const
 
 void IDProblem::swingWithFoot(const string &foot_name)
 {
-  //feet_[foot_name]->setActive(false);
+  feet_[foot_name]->setBaseLink(model_->getBaseLinkName());
   feet_[foot_name]->setLambda(1.,1.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
   torque_lims_->disableContact(foot_name);
@@ -394,7 +394,7 @@ void IDProblem::swingWithFoot(const string &foot_name)
 
 void IDProblem::stanceWithFoot(const string &foot_name)
 {
-  //feet_[foot_name]->setActive(true);
+  feet_[foot_name]->setBaseLink(WORLD_FRAME_NAME);
   feet_[foot_name]->setLambda(0.,0.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
   torque_lims_->enableContact(foot_name);
