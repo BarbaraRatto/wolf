@@ -12,6 +12,56 @@ using namespace rt_logger;
 
 namespace wolf_controller {
 
+std::string enumToString(const StateEstimator::estimation_t& estimation)
+{
+  std::string ret = "none";
+  switch (estimation)
+  {
+
+  case StateEstimator::estimation_t::NONE:
+    ret = "none";
+    break;
+
+  case StateEstimator::estimation_t::ESTIMATED_Z:
+    ret = "estimated_z";
+    break;
+
+  case StateEstimator::estimation_t::GROUND_TRUTH:
+    ret = "ground_truth";
+    break;
+
+  case StateEstimator::estimation_t::IMU_GYROSCOPE:
+    ret = "imu_gyroscope";
+    break;
+
+  case StateEstimator::estimation_t::IMU_MAGNETOMETER:
+    ret = "imu_magnetometer";
+    break;
+  };
+
+  return ret;
+}
+
+StateEstimator::estimation_t stringToEnum(const std::string& estimation)
+{
+  StateEstimator::estimation_t ret = StateEstimator::estimation_t::NONE;
+
+  if (estimation == "none")
+    ret = StateEstimator::estimation_t::NONE;
+  else if(estimation == "estimated_z")
+    ret = StateEstimator::estimation_t::ESTIMATED_Z;
+  else if(estimation == "ground_truth")
+    ret = StateEstimator::estimation_t::GROUND_TRUTH;
+  else if(estimation == "imu_gyroscope")
+    ret = StateEstimator::estimation_t::IMU_GYROSCOPE;
+  else if(estimation == "imu_magnetometer")
+    ret = StateEstimator::estimation_t::IMU_MAGNETOMETER;
+  else
+    throw std::runtime_error("Wrong estimation type!");
+
+  return ret;
+}
+
 StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
 {
 
@@ -65,12 +115,6 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   estimation_orientation_ = estimation_t::IMU_MAGNETOMETER;
   estimation_position_ = estimation_t::ESTIMATED_Z;
 
-  estimations_["none"] = estimation_t::NONE;
-  estimations_["imu_magnetometer"] = estimation_t::IMU_MAGNETOMETER;
-  estimations_["imu_gyroscope"] = estimation_t::IMU_GYROSCOPE;
-  estimations_["ground_truth"] = estimation_t::GROUND_TRUTH;
-  estimations_["estimated_z"] = estimation_t::ESTIMATED_Z;
-
   reset_gyro_integration_done_ = false;
 
   haptic_contact_loop_active_ = false;
@@ -107,32 +151,26 @@ void StateEstimator::setEstimationType(const std::string& position_t, const std:
 
 void StateEstimator::setPositionEstimationType(const std::string& position_t)
 {
-  if(estimations_.find(position_t) == estimations_.end())
-    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Wrong position estimation type: "<<position_t);
-  else
-    setPositionEstimationType(estimations_[position_t]);
+  setPositionEstimationType(stringToEnum(position_t));
 }
 
 void StateEstimator::setOrientationEstimationType(const std::string& orientation_t)
 {
-  if(estimations_.find(orientation_t) == estimations_.end())
-    ROS_WARN_STREAM_NAMED(CLASS_NAME,"Wrong orientation estimation type: "<<orientation_t);
-  else
-    setOrientationEstimationType(estimations_[orientation_t]);
+  setOrientationEstimationType(stringToEnum(orientation_t));
 }
 
-void StateEstimator::setEstimationType(unsigned int position_t, unsigned int orientation_t)
+void StateEstimator::setEstimationType(estimation_t position_t, estimation_t orientation_t)
 {
   estimation_orientation_ = orientation_t;
   estimation_position_ = position_t;
 }
 
-void StateEstimator::setPositionEstimationType(unsigned int position_t)
+void StateEstimator::setPositionEstimationType(estimation_t position_t)
 {
   estimation_position_ = position_t;
 }
 
-void StateEstimator::setOrientationEstimationType(unsigned int orientation_t)
+void StateEstimator::setOrientationEstimationType(estimation_t orientation_t)
 {
   estimation_orientation_ = orientation_t;
 }
@@ -197,18 +235,14 @@ double StateEstimator::getContactThreshold()
   return contact_force_th_;
 }
 
-const std::string& StateEstimator::getPositionEstimationType()
+std::string StateEstimator::getPositionEstimationType()
 {
-  for (auto& tmp_map : estimations_)
-    if(tmp_map.second == estimation_position_)
-      return tmp_map.first;
+  return enumToString(estimation_position_);
 }
 
-const std::string& StateEstimator::getOrientationEstimationType()
+std::string StateEstimator::getOrientationEstimationType()
 {
-  for (auto& tmp_map : estimations_)
-    if(tmp_map.second == estimation_orientation_)
-      return tmp_map.first;
+  return enumToString(estimation_orientation_);
 }
 
 void StateEstimator::setContactForces(const std::string& name, const Eigen::Vector3d& force)
@@ -416,8 +450,8 @@ double StateEstimator::estimateZ()
 
 void StateEstimator::updateFloatingBase(const double& period)
 {
-  unsigned int estimation_orientation = estimation_orientation_;
-  unsigned int estimation_position = estimation_position_;
+  estimation_t estimation_orientation = estimation_orientation_;
+  estimation_t estimation_position = estimation_position_;
 
   // Update the joints information of the virtual model
   robot_model_->setJointVelocity(joint_velocities_);

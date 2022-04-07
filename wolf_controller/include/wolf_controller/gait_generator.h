@@ -182,6 +182,10 @@ public:
 
   bool isTrajectoryFinished(const std::string& foot_name);
 
+  bool isFirstStep();
+
+  bool isLastStep();
+
   void update(const double& period);
 
   void startStepReflex(bool start);
@@ -191,6 +195,8 @@ public:
   bool isStepReflexActive();
 
   void setStepReflexContactThreshold(const double &th);
+
+  void setStepReflexMaxRetraction(const double &max);
 
 private:
 
@@ -221,6 +227,8 @@ private:
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
   Trigger next_schedule_;
+  Trigger first_step_;
+  Trigger last_step_;
 
   Gait::gait_t gait_type_;
 

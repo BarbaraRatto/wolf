@@ -25,7 +25,8 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   //  This utility internally creates the right variables which later we will use to
   //  create all the tasks and constraints
   //
-  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_, OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT);
+  OpenSoT::utils::InverseDynamics::CONTACT_MODEL id_contact_type = OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT;
+  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_, id_contact_type);
 
   //
   // Here we create all the tasks
@@ -34,7 +35,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   {
 
     feet_[foot_names_[i]] = std::make_shared<Cartesian>(nh,foot_names_[i], *model_, foot_names_[i],
-                                                        model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
+                                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
     feet_[foot_names_[i]]->setLambda(0.,0.);
     feet_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
     feet_[foot_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
@@ -90,7 +91,6 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   com_->setWeightIsDiagonalFlag(true);
   com_->loadParams();
   com_->registerReconfigurableVariables();
-
   //
   // Here we create the constraints & bounds
   //
@@ -113,6 +113,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   Eigen::VectorXd tau_max;
   model_->getEffortLimits(tau_max);
   tau_max.head(FLOATING_BASE_DOFS).setZero();
+  tau_max = 0.9 * tau_max; // Il trucco
   torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
   //   --------------------------
   //Eigen::VectorXd q_max, q_min, q_home, qddot_max;
@@ -180,11 +181,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   Eigen::MatrixXd W_reg;
   A_reg = Eigen::MatrixXd::Identity(n,n);
   b_reg = Eigen::VectorXd::Zero(n);
-  W_reg = Eigen::MatrixXd::Identity(n,n) * 1e-3;
+  W_reg = Eigen::MatrixXd::Identity(n,n) * 1e-4;
   unsigned int n_limbs = model_->getNumberArms() + model_->getNumberLegs();
-  unsigned int n_forces = 6 * n_limbs;
+  unsigned int force_size = 6;
+  if(id_contact_type == OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT)
+    force_size = 3;
+  unsigned int n_forces = force_size * n_limbs;
   regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
-  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-3;
+  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-4;
   regularization_->setWeight(W_reg);
   stack_->setRegularisationTask(regularization_);
   stack_->update(Eigen::VectorXd(1));
@@ -366,9 +370,9 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   for (auto& tmp_map : arms_)
     tmp_map.second->updateCost(x_);
   waistRPY_->updateCost(x_);
-  waistZ_->updateCost(x_);
+  //waistZ_->updateCost(x_);
   com_->updateCost(x_);
-  postural_->updateCost(x_);
+  //postural_->updateCost(x_);
   angular_momentum_->updateCost(x_);
 #endif
 
@@ -387,7 +391,7 @@ const Eigen::VectorXd& IDProblem::getJointAccelerations() const
 
 void IDProblem::swingWithFoot(const string &foot_name)
 {
-  //feet_[foot_name]->setActive(false);
+  feet_[foot_name]->setBaseLink(model_->getBaseLinkName());
   feet_[foot_name]->setLambda(1.,1.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
   torque_lims_->disableContact(foot_name);
@@ -395,7 +399,7 @@ void IDProblem::swingWithFoot(const string &foot_name)
 
 void IDProblem::stanceWithFoot(const string &foot_name)
 {
-  //feet_[foot_name]->setActive(true);
+  feet_[foot_name]->setBaseLink(WORLD_FRAME_NAME);
   feet_[foot_name]->setLambda(0.,0.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
   torque_lims_->enableContact(foot_name);

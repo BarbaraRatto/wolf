@@ -10,4 +10,4 @@ see todo list [here](TODO.md)
 
 ## Changelog
 
-see changelog [here](CHANGELOG.md)
+see changelog [here](https://github.com/graiola/wolf-setup/blob/master/CHANGELOG.md)
