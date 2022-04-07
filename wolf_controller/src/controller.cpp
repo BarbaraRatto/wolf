@@ -223,7 +223,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
     // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+    odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
 
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope)               ,imu_gyroscope_);
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope_filt)          ,imu_gyroscope_filt_);
@@ -846,7 +846,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
 void Controller::odomPublisher()
 {
-    ROS_INFO_NAMED(CLASS_NAME,"Start the odomPublisher");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Start the odomPublisher");
 
     // For base_footprint definition check here:
     // https://www.ros.org/reps/rep-0120.html#base-footprint
@@ -860,46 +860,76 @@ void Controller::odomPublisher()
     Eigen::Matrix3d tmp_R;
     Eigen::Quaterniond tmp_q;
 
-    static tf::TransformBroadcaster br;
-    tf::Transform transform;
-    tf::Quaternion q;
+    ros::Time t_prev;
+    static tf2_ros::TransformBroadcaster br;
+    geometry_msgs::TransformStamped basefoot_T_world;
+    geometry_msgs::TransformStamped basefoot_T_base;
+
+    basefoot_T_base.header.frame_id = BASE_FOOTPRINT_FRAME;
+    basefoot_T_base.child_frame_id  = robot_model_->getBaseLinkName();
+
+    basefoot_T_world.header.frame_id = BASE_FOOTPRINT_FRAME;
+    basefoot_T_world.child_frame_id  = WORLD_FRAME_NAME;
+
+    ros::Rate publishing_rate(250);
 
     while(!stopping_)
     {
-        // Get base wrt the internal world estimation
-        world_T_base = state_estimator_->getFloatingBasePose();
-        // Get the estimated z of the base
-        estimated_z = state_estimator_->getEstimatedBaseHeight();
+        ros::Time t = ros::Time::now();
 
-        // Create the tf transform between base_footprint -> world
-        tmp_v =  world_T_base.translation();
-        tmp_v(2) = tmp_v(2) - estimated_z;
-        rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
-        tmp_v = - tmp_R * tmp_v;
-        tmp_q = tmp_R;
-        // Set
-        transform.setOrigin(tf::Vector3(tmp_v(0),tmp_v(1),tmp_v(2)));
-        q.setX(tmp_q.x());
-        q.setY(tmp_q.y());
-        q.setZ(tmp_q.z());
-        q.setW(tmp_q.w());
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/"  WORLD_FRAME_NAME ));
+        if(t != t_prev) // Avoid publishing duplicated transforms
+        {
 
-        // Create the tf transform between base_footprint -> base
-        tmp_q = robot_model_->getBaseRotationInHf();
-        // Set
-        transform.setOrigin(tf::Vector3(0.0,0.0,estimated_z));
-        q.setX(tmp_q.x());
-        q.setY(tmp_q.y());
-        q.setZ(tmp_q.z());
-        q.setW(tmp_q.w());
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/" + robot_model_->getBaseLinkName()));
+          // Get base wrt the internal world estimation
+          world_T_base = state_estimator_->getFloatingBasePose();
+          // Get the estimated z of the base
+          estimated_z = state_estimator_->getEstimatedBaseHeight();
 
-        std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+          // Create the tf transform between base_footprint -> world
+          tmp_v =  world_T_base.translation();
+          tmp_v(2) = tmp_v(2) - estimated_z;
+          rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
+          tmp_v = - tmp_R * tmp_v;
+          tmp_q = tmp_R;
+          // Set coordinates
+          basefoot_T_world.transform.translation.x = tmp_v(0);
+          basefoot_T_world.transform.translation.y = tmp_v(1);
+          basefoot_T_world.transform.translation.z = tmp_v(2);
+          basefoot_T_world.transform.rotation.w    = tmp_q.w();
+          basefoot_T_world.transform.rotation.x    = tmp_q.x();
+          basefoot_T_world.transform.rotation.y    = tmp_q.y();
+          basefoot_T_world.transform.rotation.z    = tmp_q.z();
+          // Set transform header
+          basefoot_T_world.header.seq++;
+          basefoot_T_world.header.stamp = t;
+
+          br.sendTransform(basefoot_T_world);
+
+          // Create the tf transform between base_footprint -> base
+          tmp_q = robot_model_->getBaseRotationInHf();
+          // Set coordinates
+          basefoot_T_base.transform.translation.x = 0.0;
+          basefoot_T_base.transform.translation.y = 0.0;
+          basefoot_T_base.transform.translation.z = estimated_z;
+          basefoot_T_base.transform.rotation.w    = tmp_q.w();
+          basefoot_T_base.transform.rotation.x    = tmp_q.x();
+          basefoot_T_base.transform.rotation.y    = tmp_q.y();
+          basefoot_T_base.transform.rotation.z    = tmp_q.z();
+          // Set transform header
+          basefoot_T_base.header.seq++;
+          basefoot_T_base.header.stamp = t;
+
+          br.sendTransform(basefoot_T_base);
+
+        }
+
+        //std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+
+        t_prev = t;
+
+        publishing_rate.sleep();
     }
-    ROS_INFO_NAMED(CLASS_NAME,"Stop the odomPublisher");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stop the odomPublisher");
 }
 
 void Controller::stopping(const ros::Time& /*time*/)

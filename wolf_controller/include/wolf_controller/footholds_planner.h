@@ -389,7 +389,7 @@ private:
     Eigen::Vector3d base_orientation_filt_;
 
     Eigen::Vector3d hf_delta_hip_;
-    Eigen::Vector3d hf_delta_heding_;
+    Eigen::Vector3d hf_delta_heading_;
     Eigen::Vector3d hf_delta_foot_;
     Eigen::Vector3d hf_X_current_foothold_;
     Eigen::Vector3d world_delta_hip_;

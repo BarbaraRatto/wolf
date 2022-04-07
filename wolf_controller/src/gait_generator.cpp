@@ -485,6 +485,16 @@ bool GaitGenerator::isTrajectoryFinished(const std::string& foot_name)
   return feet_[foot_name].trajectory->isFinished();
 }
 
+bool GaitGenerator::isFirstStep()
+{
+  return first_step_.update(activate_swing_);
+}
+
+bool GaitGenerator::isLastStep()
+{
+  return last_step_.update(!activate_swing_);
+}
+
 void GaitGenerator::update(const double& period)
 {
   // 1) Check if the scheduled feet are all ready to get triggered and start the swing if this is the case.
@@ -590,6 +600,12 @@ void GaitGenerator::setStepReflexContactThreshold(const double& th)
 {
   for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
     it->second.trajectory->setStepReflexContactThreshold(th);
+}
+
+void GaitGenerator::setStepReflexMaxRetraction(const double &max)
+{
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->setStepReflexMaxRetraction(max);
 }
 
 void GaitGenerator::changeGait()
