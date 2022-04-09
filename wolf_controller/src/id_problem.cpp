@@ -149,14 +149,17 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  OpenSoT::SubTask::Ptr height_z;
+
+  std::list<unsigned int> id_waist = id_RPY;
+  std::list<unsigned int> id_com = id_XY;
   bool use_com_z = nh.param<bool>("use_com_z", "true");
   if(use_com_z)
-      height_z = com_%id_Z;
+      id_com.merge(id_Z);
   else
-      height_z = waist_%id_Z;
+      id_waist.merge(id_Z);
 
-  stack_ /= (feet_aggregated + waist_%id_RPY + height_z + angular_momentum_ + com_%id_XY + postural_%id_limbs);
+
+  stack_ /= (feet_aggregated + waist_%id_waist + angular_momentum_ + com_%id_com + postural_%id_limbs);
 
   if(ee_names_.size() > 0)
   {
