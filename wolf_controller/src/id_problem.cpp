@@ -63,21 +63,13 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   angular_momentum_->loadParams();
   angular_momentum_->registerReconfigurableVariables();
   //   --------------------------
-  waistRPY_ = std::make_shared<Cartesian>(nh,"waistRPY", *model_, model_->getBaseLinkName(),
+  waist_ = std::make_shared<Cartesian>(nh,"waistRPY", *model_, model_->getBaseLinkName(),
                                           WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  waistRPY_->setLambda(1.,1.);
-  waistRPY_->setWeightIsDiagonalFlag(true);
-  waistRPY_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  waistRPY_->loadParams();
-  waistRPY_->registerReconfigurableVariables();
-  //   --------------------------
-  waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
-                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  waistZ_->setLambda(1.,1.);
-  waistZ_->setWeightIsDiagonalFlag(true);
-  waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  waistZ_->loadParams();
-  waistZ_->registerReconfigurableVariables();
+  waist_->setLambda(1.,1.);
+  waist_->setWeightIsDiagonalFlag(true);
+  waist_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  waist_->loadParams();
+  waist_->registerReconfigurableVariables();
   //   --------------------------
   postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
   postural_->setLambda(1.,1.);
@@ -157,7 +149,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + waistZ_%id_Z + angular_momentum_ + com_%id_XY + postural_%id_limbs);
+  OpenSoT::SubTask::Ptr height_z;
+  bool use_com_z = nh.param<bool>("use_com_z", "true");
+  if(use_com_z)
+      height_z = com_%id_Z;
+  else
+      height_z = waist_%id_Z;
+
+  stack_ /= (feet_aggregated + waist_%id_RPY + height_z + angular_momentum_ + com_%id_XY + postural_%id_limbs);
 
   if(ee_names_.size() > 0)
   {
@@ -227,8 +226,8 @@ void IDProblem::reset()
     tmp_map.second->update(Eigen::VectorXd(1));
     tmp_map.second->reset();
   }
-  waistRPY_->update(Eigen::VectorXd(1));
-  waistRPY_->reset();
+  waist_->update(Eigen::VectorXd(1));
+  waist_->reset();
   com_->update(Eigen::VectorXd(1));
   com_->reset();
 }
@@ -341,8 +340,7 @@ void IDProblem::publish(const ros::Time& time)
     tmp_map.second->publish(time);
   for (auto& tmp_map : arms_)
     tmp_map.second->publish(time);
-  waistRPY_->publish(time);
-  waistZ_->publish(time);
+  waist_->publish(time);
   com_->publish(time);
   postural_->publish(time);
   angular_momentum_->publish(time);
@@ -415,8 +413,7 @@ void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z, c
   tmp_affine3d_.linear() = Rot;
   tmp_affine3d_.translation().z() = z;
   tmp_vector6d_(2) = z_vel;
-  waistZ_->setReference(tmp_affine3d_,tmp_vector6d_);
-  waistRPY_->setReference(tmp_affine3d_);
+  waist_->setReference(tmp_affine3d_,tmp_vector6d_);
 }
 
 void IDProblem::setComReference(const Eigen::Vector3d& position, const Eigen::Vector3d& velocity)

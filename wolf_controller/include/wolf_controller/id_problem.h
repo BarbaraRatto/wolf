@@ -191,8 +191,7 @@ private:
      */
     std::map<std::string,Cartesian::Ptr> feet_;
     std::map<std::string,Cartesian::Ptr> arms_;
-    Cartesian::Ptr waistRPY_;
-    Cartesian::Ptr waistZ_;
+    Cartesian::Ptr waist_;
     CoM::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
