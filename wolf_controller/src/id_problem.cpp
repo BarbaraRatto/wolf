@@ -63,7 +63,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   angular_momentum_->loadParams();
   angular_momentum_->registerReconfigurableVariables();
   //   --------------------------
-  waist_ = std::make_shared<Cartesian>(nh,"waistRPY", *model_, model_->getBaseLinkName(),
+  waist_ = std::make_shared<Cartesian>(nh,"waist", *model_, model_->getBaseLinkName(),
                                           WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
   waist_->setLambda(1.,1.);
   waist_->setWeightIsDiagonalFlag(true);
@@ -152,14 +152,21 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
 
   std::list<unsigned int> id_waist = id_RPY;
   std::list<unsigned int> id_com = id_XY;
-  bool use_com_z = nh.param<bool>("use_com_z", "true");
+  bool use_com_z = nh.param<bool>("use_com_z", false);
   if(use_com_z)
       id_com.merge(id_Z);
   else
       id_waist.merge(id_Z);
 
+  stack_ /= (feet_aggregated + waist_%id_waist + com_%id_com);
 
-  stack_ /= (feet_aggregated + waist_%id_waist + angular_momentum_ + com_%id_com + postural_%id_limbs);
+  bool use_angular_momentum = nh.param<bool>("use_angular_momentum", true);
+  if(use_angular_momentum)
+      stack_->getStack()[0] = angular_momentum_ + stack_->getStack()[0];
+
+  bool use_postural = nh.param<bool>("use_postural", false);
+  if(use_postural)
+      stack_->getStack()[0] = postural_%id_limbs + stack_->getStack()[0];
 
   if(ee_names_.size() > 0)
   {
