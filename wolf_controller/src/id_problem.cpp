@@ -13,8 +13,8 @@ using namespace OpenSoT;
 
 namespace wolf_controller {
 
-IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& /*dt*/):
-  model_(model), control_mode_(WALKING), change_control_mode_(false)
+IDProblem::IDProblem(QuadrupedRobot::Ptr model):
+  model_(model), control_mode_(WALKING), activate_com_z_(true), activate_angular_momentum_(true), activate_postural_(false), change_control_mode_(false), regularization_value_(1e-3)
 {
 
   foot_names_          = model_->getFootNames();
@@ -26,7 +26,14 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   //  create all the tasks and constraints
   //
   id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_, OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT);
+}
 
+IDProblem::~IDProblem()
+{
+}
+
+void IDProblem::init(ros::NodeHandle& nh)
+{
   //
   // Here we create all the tasks
   //   --------------------------
@@ -149,23 +156,19 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-
   std::list<unsigned int> id_waist = id_RPY;
   std::list<unsigned int> id_com = id_XY;
-  bool use_com_z = nh.param<bool>("use_com_z", false);
-  if(use_com_z)
+  if(activate_com_z_)
       id_com.merge(id_Z);
   else
       id_waist.merge(id_Z);
 
   stack_ /= (feet_aggregated + waist_%id_waist + com_%id_com);
 
-  bool use_angular_momentum = nh.param<bool>("use_angular_momentum", true);
-  if(use_angular_momentum)
+  if(activate_angular_momentum_)
       stack_->getStack()[0] = angular_momentum_ + stack_->getStack()[0];
 
-  bool use_postural = nh.param<bool>("use_postural", false);
-  if(use_postural)
+  if(activate_postural_)
       stack_->getStack()[0] = postural_%id_limbs + stack_->getStack()[0];
 
   if(ee_names_.size() > 0)
@@ -183,18 +186,18 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
 
   stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
 
-  // Regularization and first update FIXME CLEANUP!
+  // Regularization and first update
   Eigen::Index n = id_->getSerializer()->getSize();
   Eigen::VectorXd b_reg;
   Eigen::MatrixXd A_reg;
   Eigen::MatrixXd W_reg;
   A_reg = Eigen::MatrixXd::Identity(n,n);
   b_reg = Eigen::VectorXd::Zero(n);
-  W_reg = Eigen::MatrixXd::Identity(n,n) * 1e-3;
+  W_reg = Eigen::MatrixXd::Identity(n,n) * regularization_value_;
   unsigned int n_limbs = model_->getNumberArms() + model_->getNumberLegs();
   unsigned int n_forces = 6 * n_limbs;
   regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
-  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-3;
+  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * regularization_value_;
   regularization_->setWeight(W_reg);
   stack_->setRegularisationTask(regularization_);
   stack_->update(Eigen::VectorXd(1));
@@ -207,10 +210,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stack_->getStack(), stack_->getBounds(),1.0);
   // ,OpenSoT::solvers::solver_back_ends::OSQP);
   // ,OpenSoT::solvers::solver_back_ends::eiQuadProg);
-}
 
-IDProblem::~IDProblem()
-{
 }
 
 void IDProblem::setFrictionConesMu(const double& mu)
@@ -240,6 +240,26 @@ void IDProblem::reset()
   waist_->reset();
   com_->update(Eigen::VectorXd(1));
   com_->reset();
+}
+
+void IDProblem::activateComZ(bool active)
+{
+  activate_com_z_ = active;
+}
+
+void IDProblem::activateAngularMomentum(bool active)
+{
+  activate_angular_momentum_ = active;
+}
+
+void IDProblem::activatePostural(bool active)
+{
+  activate_postural_ = active;
+}
+
+void IDProblem::setRegularization(double regularization)
+{
+  regularization_value_ = regularization;
 }
 
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)

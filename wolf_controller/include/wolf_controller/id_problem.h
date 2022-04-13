@@ -61,12 +61,16 @@ public:
 
     /**
      * @brief IDProblem constructor
-     * @param ros node handle
      * @param model pointer to external model
-     * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt);
+    IDProblem(QuadrupedRobot::Ptr model);
     ~IDProblem();
+
+    /**
+     * @brief initialize the IDProblem
+     *  @param ros node handle
+     */
+    void init(ros::NodeHandle& nh);
 
     /**
      * @brief solve call this after update()
@@ -184,6 +188,29 @@ public:
      */
     void reset();
 
+    /**
+     * @brief if true control the height of the robot via the CoM z position, otherwise
+     * use the waist z (default true)
+     */
+    void activateComZ(bool active);
+
+    /**
+     * @brief if true activate the angular momentum task (default true)
+     */
+    void activateAngularMomentum(bool active);
+
+    /**
+     * @brief if true activate the postural task (default false)
+     */
+    void activatePostural(bool active);
+
+    /**
+     * @brief set the regularization value for the solver,
+     * note that the forces regularization value will be calculated as reg*reg
+     * (default 1e-3)
+     */
+    void setRegularization(double regularization);
+
 private:
 
     /**
@@ -284,7 +311,11 @@ private:
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
     std::atomic<unsigned int> control_mode_;
+    bool activate_com_z_;
+    bool activate_angular_momentum_;
+    bool activate_postural_;
     bool change_control_mode_;
+    double regularization_value_;
 
     std::vector<std::string> foot_names_;
     std::vector<std::string> ee_names_;

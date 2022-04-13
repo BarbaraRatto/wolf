@@ -37,7 +37,7 @@ Controller::Controller()
     ,previous_mode_(WALKING)
     ,posture_(DOWN)
 {
-    //XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
+    XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
 }
 
 Controller::~Controller()
@@ -196,8 +196,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     terrain_estimator_->setMinPitch(-M_PI);
 
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
-    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
-
+    id_prob_ = std::make_unique<IDProblem>(robot_model_);
 
     solver_failures_cnt_   = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     contact_failures_cnt_  = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
@@ -239,6 +238,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(TOPIC(period)                      ,period_);
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
+
+    id_prob_->init(nh_);
 
     return true;
 }
