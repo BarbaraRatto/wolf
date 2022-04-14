@@ -165,7 +165,7 @@ public:
         controller_nh.getParam("activate_postural", activate_postural);
         controller_->getIDProblem()->activatePostural(activate_postural);
 
-        bool activate_angular_momentum = false;
+        bool activate_angular_momentum = true;
         controller_nh.getParam("activate_angular_momentum", activate_angular_momentum);
         controller_->getIDProblem()->activateAngularMomentum(activate_angular_momentum);
 

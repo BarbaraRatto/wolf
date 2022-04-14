@@ -16,7 +16,6 @@ namespace wolf_controller {
 IDProblem::IDProblem(QuadrupedRobot::Ptr model):
   model_(model), control_mode_(WALKING), activate_com_z_(true), activate_angular_momentum_(true), activate_postural_(false), change_control_mode_(false), regularization_value_(1e-3)
 {
-
   foot_names_          = model_->getFootNames();
   ee_names_            = model_->getEndEffectorNames();
   contact_names_       = model_->getContactNames();
@@ -162,17 +161,34 @@ void IDProblem::init(ros::NodeHandle& nh)
   std::list<unsigned int> id_waist = id_RPY;
   std::list<unsigned int> id_com = id_XY;
   if(activate_com_z_)
+  {
       id_com.merge(id_Z);
+      ROS_INFO_NAMED(CLASS_NAME,"CoM z is active");
+  }
   else
+  {
       id_waist.merge(id_Z);
+      ROS_INFO_NAMED(CLASS_NAME,"CoM z is NOT active");
+  }
 
   stack_ /= (feet_aggregated + waist_%id_waist + com_%id_com);
 
   if(activate_angular_momentum_)
+  {
       stack_->getStack()[0] = angular_momentum_ + stack_->getStack()[0];
+      ROS_INFO_NAMED(CLASS_NAME,"angular momentum task is active");
+  }
+  else
+      ROS_INFO_NAMED(CLASS_NAME,"angular momentum task is NOT active");
 
   if(activate_postural_)
+  {
       stack_->getStack()[0] = postural_%id_limbs + stack_->getStack()[0];
+      ROS_INFO_NAMED(CLASS_NAME,"postural task is active");
+  }
+  else
+      ROS_INFO_NAMED(CLASS_NAME,"postural task is NOT active");
+
 
   if(ee_names_.size() > 0)
   {
@@ -401,7 +417,6 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   for (auto& tmp_map : arms_)
     tmp_map.second->updateCost(x_);
   waistRPY_->updateCost(x_);
-  waistZ_->updateCost(x_);
   com_->updateCost(x_);
   postural_->updateCost(x_);
   angular_momentum_->updateCost(x_);
