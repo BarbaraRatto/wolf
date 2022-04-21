@@ -466,10 +466,10 @@ private:
 
     /**
          * @brief perform an execution step with the solver
-         * @param dt control period
+         * @param des_joint_positions
          * @return false if the solver failed
          */
-    bool updateSolver(const double &dt);
+    bool updateSolver(const Eigen::VectorXd &des_joint_positions);
 
     /**
          * @brief perform an execution step with the impedance

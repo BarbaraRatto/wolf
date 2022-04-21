@@ -593,8 +593,9 @@ private:
         qw = feedback->pose.orientation.w;
         if(is_continuous_ == false)
         {
-            ROS_INFO("\n %s set waypoint @: \n pos = [%f, %f, %f],\n orient = [%f, %f, %f, %f],\n of %.1f secs",
+            ROS_INFO("\n %s set waypoint wrt %s @: \n pos = [%f, %f, %f],\n orient = [%f, %f, %f, %f],\n of %.1f secs",
                      interactive_marker_.name.c_str(),
+                     getBaseLink().c_str(),
                      x,y,z,
                      qx,qy,qz,qw, T);
 

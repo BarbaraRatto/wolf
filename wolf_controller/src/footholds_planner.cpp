@@ -832,6 +832,11 @@ double FootholdsPlanner::getSwingFrequency()
   return gait_generator_->getAvgSwingFrequency();
 }
 
+double FootholdsPlanner::getCycleTime()
+{
+  return gait_generator_->getAvgCycleTime();
+}
+
 double FootholdsPlanner::getPushRecoverySensibility()
 {
   return (1.0 - push_recovery_->getScaleValue());

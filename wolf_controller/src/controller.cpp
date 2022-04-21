@@ -196,8 +196,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     terrain_estimator_->setMinPitch(-M_PI);
 
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
-    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
-
+    id_prob_ = std::make_unique<IDProblem>(robot_model_);
 
     solver_failures_cnt_   = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     contact_failures_cnt_  = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
@@ -239,6 +238,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(TOPIC(period)                      ,period_);
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
+
+    id_prob_->init(nh_);
 
     return true;
 }
@@ -558,6 +559,7 @@ void Controller::updateStateMachine(const double &dt)
         updateComponents(dt);
         ramp = ramp_stand_up_->update(dt);
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
+        des_joint_positions_ = ramp * robot_model_->getStandUpJointPostion() + (1.0-ramp) * robot_model_->getStandDownJointPostion();
         tmp_vector3d_ << 0.0, 0.0, desired_yaw_;
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_vector3d_.setZero(); // com position
@@ -565,7 +567,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-        if(!updateSolver(dt))
+        if(!updateSolver(des_joint_positions_))
         {
           robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
@@ -574,6 +576,7 @@ void Controller::updateStateMachine(const double &dt)
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
+          com_planner_->resetVelocities();
           if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
           {
             robot_model_->setState(QuadrupedRobot::ACTIVE);
@@ -617,7 +620,8 @@ void Controller::updateStateMachine(const double &dt)
           break;
         };
 
-        if(!updateSolver(dt) || !performSafetyChecks())
+        des_joint_positions_ = robot_model_->getStandUpJointPostion();
+        if(!updateSolver(des_joint_positions_) || !performSafetyChecks())
         {
           robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
@@ -635,6 +639,7 @@ void Controller::updateStateMachine(const double &dt)
         updateComponents(dt);
         ramp = ramp_stand_down_->update(dt);
         desired_height_ = ramp * stand_down_starting_height_;
+        des_joint_positions_ = (1.0-ramp) * robot_model_->getStandUpJointPostion() + (ramp) * robot_model_->getStandDownJointPostion();
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_vector3d_.setZero(); // com position
@@ -642,7 +647,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = -foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-        if(!updateSolver(dt))
+        if(!updateSolver(des_joint_positions_))
         {
           ramp_stand_down_->reset();
           robot_model_->setState(QuadrupedRobot::ANOMALY);
@@ -717,7 +722,7 @@ void Controller::updateComponents(const double &dt)
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
 {
   // Set the pose reference for the waist
-  id_prob_->setWaistReference(orientation_ref,com_pos_ref.z());
+  id_prob_->setWaistReference(orientation_ref,com_pos_ref.z(),com_vel_ref.z());
   // Set the velocity and position reference for the CoM in the solver
   id_prob_->setComReference(com_pos_ref,com_vel_ref);
 }
@@ -773,7 +778,7 @@ void Controller::updateImpedance(const Eigen::VectorXd& des_joint_positions, con
   des_joint_efforts_impedance_ = impedance_->getKp() * (des_joint_positions - joint_positions_) + impedance_->getKd() * ( des_joint_velocities - joint_velocities_);
 }
 
-bool Controller::updateSolver(const double &/*dt*/)
+bool Controller::updateSolver(const Eigen::VectorXd& des_joint_positions)
 {
   // Rotate the friction cones based on the terrain orientation
   id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
@@ -795,6 +800,13 @@ bool Controller::updateSolver(const double &/*dt*/)
           ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
       }
   }
+
+  // Update the postural
+  //impedance_->startInertiaCompensation(true);
+  impedance_->update();
+  id_prob_->setPosture(impedance_->getKp(),impedance_->getKd(),des_joint_positions);
+  //impedance_->startInertiaCompensation(false);
+
   // Get the solver solution
   if(!id_prob_->solve(des_joint_efforts_solver_))
   {

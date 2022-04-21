@@ -64,12 +64,16 @@ public:
 
     /**
      * @brief IDProblem constructor
-     * @param ros node handle
      * @param model pointer to external model
-     * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt);
+    IDProblem(QuadrupedRobot::Ptr model);
     ~IDProblem();
+
+    /**
+     * @brief initialize the IDProblem
+     *  @param ros node handle
+     */
+    void init(ros::NodeHandle& nh);
 
     /**
      * @brief solve call this after update()
@@ -103,6 +107,14 @@ public:
      * @param ros current time
      */
     void publish(const ros::Time& time);
+
+    /**
+     * @brief set the postural reference and gains
+     * @param Kp
+     * @param Kd
+     * @param q
+     */
+    void setPosture(const Eigen::MatrixXd &Kp, const Eigen::MatrixXd &Kd, const Eigen::VectorXd &q);
 
     /**
      * @brief set the mu parameter for the friction cones
@@ -155,7 +167,7 @@ public:
      * @param Rot rotation matrix
      * @param z height
      */
-    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z);
+    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z, const double &z_vel);
 
     /**
      * @brief set the position and velocity reference for the CoM
@@ -179,6 +191,29 @@ public:
      */
     void reset();
 
+    /**
+     * @brief if true control the height of the robot via the CoM z position, otherwise
+     * use the waist z (default true)
+     */
+    void activateComZ(bool active);
+
+    /**
+     * @brief if true activate the angular momentum task (default true)
+     */
+    void activateAngularMomentum(bool active);
+
+    /**
+     * @brief if true activate the postural task (default false)
+     */
+    void activatePostural(bool active);
+
+    /**
+     * @brief set the regularization value for the solver,
+     * note that the forces regularization value will be calculated as reg*reg
+     * (default 1e-3)
+     */
+    void setRegularization(double regularization);
+
 private:
 
     /**
@@ -186,8 +221,7 @@ private:
      */
     std::map<std::string,Cartesian::Ptr> feet_;
     std::map<std::string,Cartesian::Ptr> arms_;
-    Cartesian::Ptr waistRPY_;
-    Cartesian::Ptr waistZ_;
+    Cartesian::Ptr waist_;
     CoM::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
@@ -280,7 +314,11 @@ private:
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
     std::atomic<unsigned int> control_mode_;
+    bool activate_com_z_;
+    bool activate_angular_momentum_;
+    bool activate_postural_;
     bool change_control_mode_;
+    double regularization_value_;
 
     std::vector<std::string> foot_names_;
     std::vector<std::string> ee_names_;

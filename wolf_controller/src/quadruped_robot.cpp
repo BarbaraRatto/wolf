@@ -262,6 +262,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   }
   stand_up_height_ =  -stand_up_height_/N_LEGS;
 
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot stand-up height is ["<<stand_up_height_<<"]");
+
   stand_down_height_ = 0.0;
   for(unsigned int i=0;i<foot_names_.size();i++)
   {

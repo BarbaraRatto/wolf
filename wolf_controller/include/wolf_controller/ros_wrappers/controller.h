@@ -157,6 +157,22 @@ public:
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
 
+        bool activate_com_z = true;
+        controller_nh.getParam("activate_com_z", activate_com_z);
+        controller_->getIDProblem()->activateComZ(activate_com_z);
+
+        bool activate_postural = false;
+        controller_nh.getParam("activate_postural", activate_postural);
+        controller_->getIDProblem()->activatePostural(activate_postural);
+
+        bool activate_angular_momentum = true;
+        controller_nh.getParam("activate_angular_momentum", activate_angular_momentum);
+        controller_->getIDProblem()->activateAngularMomentum(activate_angular_momentum);
+
+        double regularization = 1e-3;
+        controller_nh.getParam("regularization", regularization);
+        controller_->getIDProblem()->setRegularization(regularization);
+
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
             ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
