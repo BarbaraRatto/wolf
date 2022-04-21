@@ -223,14 +223,14 @@ void FootholdsPlanner::calculateFootSteps()
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Linear part): "<<hf_delta_hip_.transpose());
 
       // 2) Compute the displacement of the foot produced by the angular velocity command
-      hf_delta_heding_.setZero(); // \f$\deltaL_{h,0}\f$
-      hf_delta_heding_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(foot_names[i]);
-      hf_delta_heding_ = hf_delta_heding_.cross(hf_X_initial_hips_[i]);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_heding_ (Angular part): "<<hf_delta_heding_.transpose());
+      hf_delta_heading_.setZero(); // \f$\deltaL_{h,0}\f$
+      hf_delta_heading_(2) = hf_base_angular_velocity_(2)*1.0/gait_generator_->getSwingFrequency(foot_names[i]);
+      hf_delta_heading_ = hf_delta_heading_.cross(hf_X_initial_hips_[i]);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_heading_ (Angular part): "<<hf_delta_heading_.transpose());
 
       // 3) Combine the two displacements
-      hf_delta_hip_(0)+= hf_delta_heding_(0);
-      hf_delta_hip_(1)+= hf_delta_heding_(1);
+      hf_delta_hip_(0)+= hf_delta_heading_(0);
+      hf_delta_hip_(1)+= hf_delta_heading_(1);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
       // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
@@ -830,6 +830,11 @@ const std::vector<std::string>& FootholdsPlanner::getFootNames() const
 double FootholdsPlanner::getSwingFrequency()
 {
   return gait_generator_->getAvgSwingFrequency();
+}
+
+double FootholdsPlanner::getCycleTime()
+{
+  return gait_generator_->getAvgCycleTime();
 }
 
 double FootholdsPlanner::getPushRecoverySensibility()

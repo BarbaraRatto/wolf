@@ -257,6 +257,7 @@ public:
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
     const std::vector<std::string>& getFootNames() const;
     double getSwingFrequency();
+    double getCycleTime();
     double getPushRecoverySensibility();
 
     /**
@@ -389,7 +390,7 @@ private:
     Eigen::Vector3d base_orientation_filt_;
 
     Eigen::Vector3d hf_delta_hip_;
-    Eigen::Vector3d hf_delta_heding_;
+    Eigen::Vector3d hf_delta_heading_;
     Eigen::Vector3d hf_delta_foot_;
     Eigen::Vector3d hf_X_current_foothold_;
     Eigen::Vector3d world_delta_hip_;

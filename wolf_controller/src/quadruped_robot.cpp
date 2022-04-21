@@ -237,9 +237,10 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   tau_max_.head(6).setZero();
 
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Position limits set to: min=["<<q_min_.transpose()<<"]"<< std::endl<<"max=["<<q_max_.transpose()<<"]");
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Velocity limits set to: max=["<<qdot_max_.transpose()<<"]");
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Effort limits set to: max=["<<tau_max_.transpose()<<"]");
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot total mass is ["<<getMass()<<"]");
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Joint position limits set to: min=["<<q_min_.transpose()<<"]"<< std::endl<<"max=["<<q_max_.transpose()<<"]");
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Joint velocity limits set to: max=["<<qdot_max_.transpose()<<"]");
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Joint effort limits set to: max=["<<tau_max_.transpose()<<"]");
 
   tmp_jacobian_.setZero(6, virtual_model_.dof_count);
 
@@ -260,6 +261,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     stand_up_height_ = pose.translation().z() + stand_up_height_;
   }
   stand_up_height_ =  -stand_up_height_/N_LEGS;
+
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Robot stand-up height is ["<<stand_up_height_<<"]");
 
   stand_down_height_ = 0.0;
   for(unsigned int i=0;i<foot_names_.size();i++)

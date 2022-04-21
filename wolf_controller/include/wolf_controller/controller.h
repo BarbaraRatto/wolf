@@ -12,7 +12,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 // ROS
 #include <ros/ros.h>
-#include <tf/transform_broadcaster.h>
+#include <tf2_ros/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h>
 // PluginLib
 #include <pluginlib/class_list_macros.hpp>
@@ -466,10 +466,10 @@ private:
 
     /**
          * @brief perform an execution step with the solver
-         * @param dt control period
+         * @param des_joint_positions
          * @return false if the solver failed
          */
-    bool updateSolver(const double &dt);
+    bool updateSolver(const Eigen::VectorXd &des_joint_positions);
 
     /**
          * @brief perform an execution step with the impedance
