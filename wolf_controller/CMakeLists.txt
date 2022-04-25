@@ -19,7 +19,7 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf controller_interface control_toolbox wolf_hardware_interface
+find_package(catkin REQUIRED tf2 controller_interface control_toolbox wolf_hardware_interface
     realtime_tools geometry_msgs sensor_msgs nav_msgs ddynamic_reconfigure message_generation rviz_visual_tools rt_logger)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
@@ -35,6 +35,7 @@ add_message_files(FILES
                  FootHolds.msg
                  TerrainEstimation.msg
                  FrictionCones.msg
+                 CapturePoint.msg
 )
 
 add_service_files(
@@ -65,9 +66,10 @@ include_directories(
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
     src/foot_trajectory_interface.cpp src/legs_kinematics.cpp src/impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp
-    src/gait_generator.cpp src/foot_state_machine.cpp)
+    src/gait_generator.cpp src/foot_state_machine.cpp src/cartesian_trajectory.cpp)
 add_dependencies(${PROJECT_NAME} ${wolf_controller_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 add_dependencies(plot_node ${wolf_controller_EXPORTED_TARGETS})
@@ -117,6 +119,9 @@ if (CATKIN_ENABLE_TESTING)
 
   #add_executable(test_controller test/test_controller.cpp )
   #target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest robot_dummy)
+
+  add_executable(test_trajectory test/test_trajectory.cpp)
+  target_link_libraries(test_trajectory ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} gtest)
 
   add_rostest_gtest(test_controller
     test/test_controller.test

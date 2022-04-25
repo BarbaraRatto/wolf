@@ -1,3 +1,10 @@
+/**
+ * @file impedance.cpp
+ * @author Gennaro Raiola
+ * @date 1 November, 2021
+ * @brief This file contains the impedance gains generator
+ */
+
 #include "wolf_controller/impedance.h"
 
 namespace wolf_controller {

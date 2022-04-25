@@ -1,3 +1,10 @@
+/**
+ * @file foot_state_machine.cpp
+ * @author Gennaro Raiola
+ * @date 12 June, 2019
+ * @brief This file contains the state machine for the foot state
+ */
+
 #include <wolf_controller/foot_state_machine.h>
 #include <ros/ros.h>
 

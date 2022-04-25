@@ -2,11 +2,8 @@
  * @file controller.cpp
  * @author Gennaro Raiola
  * @date 12 June, 2019
- * @brief WholeBody Controller.
- *
- * This file contains the constructor, destructor, init, stopping and other facilities for the
- * WholeBody Controller.
- * @see todo.git
+ * @brief This file contains the constructor, destructor, init, stopping and other facilities for the
+ * WoLF controller.
  */
 
 #include <wolf_controller/controller.h>
@@ -40,7 +37,7 @@ Controller::Controller()
     ,previous_mode_(WALKING)
     ,posture_(DOWN)
 {
-    XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
+   XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
 }
 
 Controller::~Controller()
@@ -199,8 +196,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     terrain_estimator_->setMinPitch(-M_PI);
 
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
-    id_prob_ = std::make_unique<IDProblem>(nh_,robot_model_,period_);
-
+    id_prob_ = std::make_unique<IDProblem>(robot_model_);
 
     solver_failures_cnt_   = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     contact_failures_cnt_  = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
@@ -213,37 +209,20 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     previous_height_ = robot_model_->getStandUpHeight();
 
-    // Device handler selection
     std::string input_device = "ps3";
     root_nh.getParam("/input_device",input_device);
     if(input_device == "ps3")
-    {
-        device_handler_ = std::make_shared<Ps3JoyHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using Ps3JoyHandler input device");
-    }
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
     else if(input_device == "xbox")
-    {
-        device_handler_ = std::make_shared<XboxJoyHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using XboxJoyHandler input device");
-    }
-    else if(input_device == "twist")
-    {
-        device_handler_ = std::make_shared<TwistHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using TwistHandler input device");
-    }
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<XboxJoyHandler>(controller_nh,this)); // Xbox joy
+    else if(input_device == "spacemouse")
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<SpaceJoyHandler>(controller_nh,this)); // Space joy
     else if(input_device == "keyboard")
-    {
-        device_handler_ = std::make_shared<KeyboardHandler>(controller_nh,this);
-        ROS_DEBUG_NAMED(CLASS_NAME,"Using KeyboardHandler input device");
-    }
-    else
-    {
-        ROS_ERROR_NAMED(CLASS_NAME,"Wrong input_device");
-        return false;
-    }
+        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
+    devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
     // Spawn the odom publisher thread
-    odom_publisher_thread_.reset(new std::thread(&Controller::odomPublisher,this));
+    odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
 
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope)               ,imu_gyroscope_);
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope_filt)          ,imu_gyroscope_filt_);
@@ -259,6 +238,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(TOPIC(period)                      ,period_);
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
+
+    id_prob_->init(nh_,period_);
 
     return true;
 }
@@ -578,6 +559,7 @@ void Controller::updateStateMachine(const double &dt)
         updateComponents(dt);
         ramp = ramp_stand_up_->update(dt);
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
+        des_joint_positions_ = ramp * robot_model_->getStandUpJointPostion() + (1.0-ramp) * robot_model_->getStandDownJointPostion();
         tmp_vector3d_ << 0.0, 0.0, desired_yaw_;
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_vector3d_.setZero(); // com position
@@ -585,7 +567,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-        if(!updateSolver(dt))
+        if(!updateSolver(des_joint_positions_))
         {
           robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
@@ -594,6 +576,7 @@ void Controller::updateStateMachine(const double &dt)
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
+          com_planner_->resetVelocities();
           if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
           {
             robot_model_->setState(QuadrupedRobot::ACTIVE);
@@ -637,7 +620,8 @@ void Controller::updateStateMachine(const double &dt)
           break;
         };
 
-        if(!updateSolver(dt) || !performSafetyChecks())
+        des_joint_positions_ = robot_model_->getStandUpJointPostion();
+        if(!updateSolver(des_joint_positions_) || !performSafetyChecks())
         {
           robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
@@ -655,6 +639,7 @@ void Controller::updateStateMachine(const double &dt)
         updateComponents(dt);
         ramp = ramp_stand_down_->update(dt);
         desired_height_ = ramp * stand_down_starting_height_;
+        des_joint_positions_ = (1.0-ramp) * robot_model_->getStandUpJointPostion() + (ramp) * robot_model_->getStandDownJointPostion();
         tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
         rpyToRot(tmp_vector3d_,tmp_matrix3d_);
         tmp_vector3d_.setZero(); // com position
@@ -662,7 +647,7 @@ void Controller::updateStateMachine(const double &dt)
         tmp_vector3d_1_.setZero(); // com velocity
         tmp_vector3d_1_.z() = -foot_holds_planner_->getBaseLinearVelocityCmdZ();
         updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-        if(!updateSolver(dt))
+        if(!updateSolver(des_joint_positions_))
         {
           ramp_stand_down_->reset();
           robot_model_->setState(QuadrupedRobot::ANOMALY);
@@ -737,7 +722,7 @@ void Controller::updateComponents(const double &dt)
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
 {
   // Set the pose reference for the waist
-  id_prob_->setWaistReference(orientation_ref,com_pos_ref.z());
+  id_prob_->setWaistReference(orientation_ref,com_pos_ref.z(),com_vel_ref.z());
   // Set the velocity and position reference for the CoM in the solver
   id_prob_->setComReference(com_pos_ref,com_vel_ref);
 }
@@ -793,7 +778,7 @@ void Controller::updateImpedance(const Eigen::VectorXd& des_joint_positions, con
   des_joint_efforts_impedance_ = impedance_->getKp() * (des_joint_positions - joint_positions_) + impedance_->getKd() * ( des_joint_velocities - joint_velocities_);
 }
 
-bool Controller::updateSolver(const double &/*dt*/)
+bool Controller::updateSolver(const Eigen::VectorXd& des_joint_positions)
 {
   // Rotate the friction cones based on the terrain orientation
   id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
@@ -815,6 +800,13 @@ bool Controller::updateSolver(const double &/*dt*/)
           ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
       }
   }
+
+  // Update the postural
+  //impedance_->startInertiaCompensation(true);
+  impedance_->update();
+  id_prob_->setPosture(impedance_->getKp(),impedance_->getKd(),des_joint_positions);
+  //impedance_->startInertiaCompensation(false);
+
   // Get the solver solution
   if(!id_prob_->solve(des_joint_efforts_solver_))
   {
@@ -827,6 +819,9 @@ bool Controller::updateSolver(const double &/*dt*/)
 
 void Controller::update(const ros::Time& time, const ros::Duration& period)
 {
+    // Update input devices
+    devices_.writeToOutput(period.toSec());
+
     // Reset control values
     des_joint_efforts_impedance_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
@@ -863,7 +858,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
 void Controller::odomPublisher()
 {
-    ROS_INFO_NAMED(CLASS_NAME,"Start the odomPublisher");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Start the odomPublisher");
 
     // For base_footprint definition check here:
     // https://www.ros.org/reps/rep-0120.html#base-footprint
@@ -877,46 +872,76 @@ void Controller::odomPublisher()
     Eigen::Matrix3d tmp_R;
     Eigen::Quaterniond tmp_q;
 
-    static tf::TransformBroadcaster br;
-    tf::Transform transform;
-    tf::Quaternion q;
+    ros::Time t_prev;
+    static tf2_ros::TransformBroadcaster br;
+    geometry_msgs::TransformStamped basefoot_T_world;
+    geometry_msgs::TransformStamped basefoot_T_base;
+
+    basefoot_T_base.header.frame_id = BASE_FOOTPRINT_FRAME;
+    basefoot_T_base.child_frame_id  = robot_model_->getBaseLinkName();
+
+    basefoot_T_world.header.frame_id = BASE_FOOTPRINT_FRAME;
+    basefoot_T_world.child_frame_id  = WORLD_FRAME_NAME;
+
+    ros::Rate publishing_rate(250);
 
     while(!stopping_)
     {
-        // Get base wrt the internal world estimation
-        world_T_base = state_estimator_->getFloatingBasePose();
-        // Get the estimated z of the base
-        estimated_z = state_estimator_->getEstimatedBaseHeight();
+        ros::Time t = ros::Time::now();
 
-        // Create the tf transform between base_footprint -> world
-        tmp_v =  world_T_base.translation();
-        tmp_v(2) = tmp_v(2) - estimated_z;
-        rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
-        tmp_v = - tmp_R * tmp_v;
-        tmp_q = tmp_R;
-        // Set
-        transform.setOrigin(tf::Vector3(tmp_v(0),tmp_v(1),tmp_v(2)));
-        q.setX(tmp_q.x());
-        q.setY(tmp_q.y());
-        q.setZ(tmp_q.z());
-        q.setW(tmp_q.w());
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/"  WORLD_FRAME_NAME ));
+        if(t != t_prev) // Avoid publishing duplicated transforms
+        {
 
-        // Create the tf transform between base_footprint -> base
-        tmp_q = robot_model_->getBaseRotationInHf();
-        // Set
-        transform.setOrigin(tf::Vector3(0.0,0.0,estimated_z));
-        q.setX(tmp_q.x());
-        q.setY(tmp_q.y());
-        q.setZ(tmp_q.z());
-        q.setW(tmp_q.w());
-        transform.setRotation(q);
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/" BASE_FOOTPRINT_FRAME, "/" + robot_model_->getBaseLinkName()));
+          // Get base wrt the internal world estimation
+          world_T_base = state_estimator_->getFloatingBasePose();
+          // Get the estimated z of the base
+          estimated_z = state_estimator_->getEstimatedBaseHeight();
 
-        std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+          // Create the tf transform between base_footprint -> world
+          tmp_v =  world_T_base.translation();
+          tmp_v(2) = tmp_v(2) - estimated_z;
+          rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
+          tmp_v = - tmp_R * tmp_v;
+          tmp_q = tmp_R;
+          // Set coordinates
+          basefoot_T_world.transform.translation.x = tmp_v(0);
+          basefoot_T_world.transform.translation.y = tmp_v(1);
+          basefoot_T_world.transform.translation.z = tmp_v(2);
+          basefoot_T_world.transform.rotation.w    = tmp_q.w();
+          basefoot_T_world.transform.rotation.x    = tmp_q.x();
+          basefoot_T_world.transform.rotation.y    = tmp_q.y();
+          basefoot_T_world.transform.rotation.z    = tmp_q.z();
+          // Set transform header
+          basefoot_T_world.header.seq++;
+          basefoot_T_world.header.stamp = t;
+
+          br.sendTransform(basefoot_T_world);
+
+          // Create the tf transform between base_footprint -> base
+          tmp_q = robot_model_->getBaseRotationInHf();
+          // Set coordinates
+          basefoot_T_base.transform.translation.x = 0.0;
+          basefoot_T_base.transform.translation.y = 0.0;
+          basefoot_T_base.transform.translation.z = estimated_z;
+          basefoot_T_base.transform.rotation.w    = tmp_q.w();
+          basefoot_T_base.transform.rotation.x    = tmp_q.x();
+          basefoot_T_base.transform.rotation.y    = tmp_q.y();
+          basefoot_T_base.transform.rotation.z    = tmp_q.z();
+          // Set transform header
+          basefoot_T_base.header.seq++;
+          basefoot_T_base.header.stamp = t;
+
+          br.sendTransform(basefoot_T_base);
+
+        }
+
+        //std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
+
+        t_prev = t;
+
+        publishing_rate.sleep();
     }
-    ROS_INFO_NAMED(CLASS_NAME,"Stop the odomPublisher");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stop the odomPublisher");
 }
 
 void Controller::stopping(const ros::Time& /*time*/)
@@ -927,6 +952,72 @@ void Controller::stopping(const ros::Time& /*time*/)
     odom_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
+}
+
+void Controller::setBaseLinearVelocityCmdX(const double &v)
+{
+    vel_x_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdX(vel_x_);
+}
+
+void Controller::setBaseLinearVelocityCmdY(const double &v)
+{
+    vel_y_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdY(vel_y_);
+}
+
+void Controller::setBaseLinearVelocityCmdZ(const double &v)
+{
+    vel_z_ = v;
+    foot_holds_planner_->setBaseLinearVelocityCmdZ(vel_z_);
+}
+
+void Controller::setBaseAngularVelocityCmdRoll(const double &v)
+{
+    vel_roll_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdRoll(vel_roll_);
+}
+
+void Controller::setBaseAngularVelocityCmdPitch(const double &v)
+{
+    vel_pitch_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdPitch(vel_pitch_);
+}
+
+void Controller::setBaseAngularVelocityCmdYaw(const double &v)
+{
+    vel_yaw_ = v;
+    foot_holds_planner_->setBaseAngularVelocityCmdYaw(vel_yaw_);
+}
+
+double Controller::getBaseLinearVelocityCmdX()
+{
+    return vel_x_;
+}
+
+double Controller::getBaseLinearVelocityCmdY()
+{
+    return vel_y_;
+}
+
+double Controller::getBaseLinearVelocityCmdZ()
+{
+    return vel_z_;
+}
+
+double Controller::getBaseAngularVelocityCmdRoll()
+{
+    return vel_roll_;
+}
+
+double Controller::getBaseAngularVelocityCmdPitch()
+{
+    return vel_pitch_;
+}
+
+double Controller::getBaseAngularVelocityCmdYaw()
+{
+    return vel_yaw_;
 }
 
 IDProblem* Controller::getIDProblem() const

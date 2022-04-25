@@ -1,3 +1,11 @@
+/**
+ * @file foot_trajectory_interface.cpp
+ * @author Gennaro Raiola, Michele Focchi
+ * @date 12 June, 2019
+ * @brief This file contains the interface for the foot trajectory
+ * and the implementation of the step reflex
+ */
+
 #include <wolf_controller/foot_trajectory_interface.h>
 #include <wolf_controller/geometry.h>
 
@@ -200,12 +208,16 @@ double TrajectoryInterface::getCompletion()
 void TrajectoryInterface::startStepReflex(bool start)
 {
   activate_step_reflex_ = start;
-
 }
 
 void TrajectoryInterface::setStepReflexContactThreshold(const double &th)
 {
   reflex_->setContactForceThreshold(th);
+}
+
+void TrajectoryInterface::setStepReflexMaxRetraction(const double &max)
+{
+  reflex_->setMaxStepRetraction(max);
 }
 
 TrajectoryReflex::TrajectoryReflex(TrajectoryInterface* const trajectory_interface_ptr)
@@ -231,13 +243,9 @@ void TrajectoryReflex::init()
   retraction_duration_ = 0.5 * reflex_duration_;
   Kd_r_ = 10.0 / reflex_duration_;
   Kp_r_ = 0.25 * (Kd_r_*Kd_r_);
-  double lambda = 5.0/(reflex_duration_);
-  double t_max = (-retraction_duration_*lambda*lambda*std::exp(retraction_duration_ * lambda))/(lambda*lambda*(1.0-std::exp(retraction_duration_*lambda)));
-  double tmp = (1-(1+t_max*lambda)*std::exp(-t_max*lambda)) - (1-(1+(t_max-retraction_duration_)*lambda)*std::exp(-(t_max-retraction_duration_)*lambda));
-  //max_retraction = height/sin(retraction_force_angle);
-  max_retraction_ = trajectory_interface_ptr_->getStepHeight(); // FIXME
-  //force intensity to have that max_retraction in the retractionDuration time interval
-  Fr_max_ = max_retraction_ * Kp_r_ / tmp;
+
+  computeRetractionForce(trajectory_interface_ptr_->getStepHeight()); // Internal default Value
+
   r0_     = std::sqrt(trajectory_interface_ptr_->xyz_(0)*trajectory_interface_ptr_->xyz_(0) + trajectory_interface_ptr_->xyz_(2)*trajectory_interface_ptr_->xyz_(2));
   t0_     = trajectory_interface_ptr_->time_;
 
@@ -246,6 +254,16 @@ void TrajectoryReflex::init()
   Fr_ = 0.0;
 
   contact_force_swing_frame_.setZero();
+}
+
+void TrajectoryReflex::computeRetractionForce(const double& max_retraction)
+{
+  double lambda = 5.0/(reflex_duration_);
+  double t_max = (-retraction_duration_*lambda*lambda*std::exp(retraction_duration_ * lambda))/(lambda*lambda*(1.0-std::exp(retraction_duration_*lambda)));
+  double tmp = (1-(1+t_max*lambda)*std::exp(-t_max*lambda)) - (1-(1+(t_max-retraction_duration_)*lambda)*std::exp(-(t_max-retraction_duration_)*lambda));
+  //max_retraction = height/sin(retraction_force_angle);
+  //force intensity to have that max_retraction in the retractionDuration time interval
+  Fr_max_ = max_retraction * Kp_r_ / tmp;
 }
 
 void TrajectoryReflex::update(const double& period)
@@ -326,4 +344,12 @@ void TrajectoryReflex::setContactForceThreshold(const double &th)
     force_th_ = th;
   else
     ROS_WARN_NAMED(CLASS_NAME,"Contact force threshold must be positive!");
+}
+
+void TrajectoryReflex::setMaxStepRetraction(const double &max)
+{
+  if(max>=0.0)
+    computeRetractionForce(max);
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Max step retraction must be positive!");
 }

@@ -1,3 +1,10 @@
+/**
+ * @file terrain_estimator.cpp
+ * @author Gennaro Raiola, Michele Focchi
+ * @date 12 June, 2019
+ * @brief Terrain estimator based on foot position fitting
+ */
+
 #include <wolf_controller/terrain_estimator.h>
 #include <wolf_controller/utils.h>
 

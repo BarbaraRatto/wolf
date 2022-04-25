@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef GAIT_GENERATOR_H
 #define GAIT_GENERATOR_H
 
@@ -87,6 +96,8 @@ public:
 
   bool isCycleEnded(const std::string& foot_name);
 
+  bool isGaitCycleEnded();
+
   bool isAnyFootInLiftOff();
 
   bool isAnyFootInSwing();
@@ -121,15 +132,19 @@ public:
 
   void decreaseSwingFrequency();
 
-  void increaseDutyCycle();
+  void increaseDutyFactor();
 
-  void decreaseDutyCycle();
+  void decreaseDutyFactor();
 
   void setSwingFrequency(const std::string& foot_name, const double& swing_frequency);
 
   double getSwingFrequency(const std::string& foot_name);
 
   double getAvgSwingFrequency();
+
+  double getAvgStanceFrequency();
+
+  double getAvgCycleTime();
 
   double getAvgDutyFactor();
 
@@ -167,6 +182,10 @@ public:
 
   bool isTrajectoryFinished(const std::string& foot_name);
 
+  bool isFirstStep();
+
+  bool isLastStep();
+
   void update(const double& period);
 
   void startStepReflex(bool start);
@@ -176,6 +195,8 @@ public:
   bool isStepReflexActive();
 
   void setStepReflexContactThreshold(const double &th);
+
+  void setStepReflexMaxRetraction(const double &max);
 
 private:
 
@@ -206,6 +227,8 @@ private:
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
   Trigger next_schedule_;
+  Trigger first_step_;
+  Trigger last_step_;
 
   Gait::gait_t gait_type_;
 

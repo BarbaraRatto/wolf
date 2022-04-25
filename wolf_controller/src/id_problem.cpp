@@ -1,3 +1,10 @@
+/**
+ * @file id_problem.cpp
+ * @author Gennaro Raiola, Enrico Mingo Hoffman, Michele Focchi
+ * @date 12 June, 2019
+ * @brief This file contains the implementation of the Inverse Dynamic problem
+ */
+
 #include <wolf_controller/id_problem.h>
 #include <OpenSoT/utils/Affine.h>
 #include <wolf_controller/utils.h>
@@ -6,19 +13,35 @@ using namespace OpenSoT;
 
 namespace wolf_controller {
 
-IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& /*dt*/):
-  model_(model), control_mode_(WALKING), change_control_mode_(false)
-{
 
+IDProblem::IDProblem(QuadrupedRobot::Ptr model):
+  model_(model),
+  control_mode_(WALKING),
+  activate_com_z_(true),
+  activate_angular_momentum_(true),
+  activate_postural_(false),
+  activate_joint_position_limits_(false),
+  change_control_mode_(false),
+  regularization_value_(1e-3)
+{
   foot_names_          = model_->getFootNames();
   ee_names_            = model_->getEndEffectorNames();
   contact_names_       = model_->getContactNames();
+}
+
+IDProblem::~IDProblem()
+{
+}
+
+void IDProblem::init(ros::NodeHandle& nh, const double& dt)
+{
 
   //
   //  This utility internally creates the right variables which later we will use to
   //  create all the tasks and constraints
   //
-  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_, OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT);
+  OpenSoT::utils::InverseDynamics::CONTACT_MODEL id_contact_type = OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT;
+  id_ = std::make_shared<OpenSoT::utils::InverseDynamics>(foot_names_, *model_, id_contact_type);
 
   //
   // Here we create all the tasks
@@ -27,7 +50,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   {
 
     feet_[foot_names_[i]] = std::make_shared<Cartesian>(nh,foot_names_[i], *model_, foot_names_[i],
-                                                        model_->getBaseLinkName(), id_->getJointsAccelerationAffine());
+                                                        WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
     feet_[foot_names_[i]]->setLambda(0.,0.);
     feet_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
     feet_[foot_names_[i]]->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
@@ -56,34 +79,27 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   angular_momentum_->loadParams();
   angular_momentum_->registerReconfigurableVariables();
   //   --------------------------
-  waistRPY_ = std::make_shared<Cartesian>(nh,"waistRPY", *model_, model_->getBaseLinkName(),
+  waist_ = std::make_shared<Cartesian>(nh,"waist", *model_, model_->getBaseLinkName(),
                                           WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  waistRPY_->setLambda(1.,1.);
-  waistRPY_->setWeightIsDiagonalFlag(true);
-  waistRPY_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  waistRPY_->loadParams();
-  waistRPY_->registerReconfigurableVariables();
+  waist_->setLambda(1.,1.);
+  waist_->setWeightIsDiagonalFlag(true);
+  waist_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  waist_->loadParams();
+  waist_->registerReconfigurableVariables();
   //   --------------------------
-  //waistZ_ = std::make_shared<Cartesian>(nh,"waistZ", *model_, model_->getBaseLinkName(),
-  //                                      WORLD_FRAME_NAME, id_->getJointsAccelerationAffine());
-  //waistZ_->setLambda(1.,1.);
-  //waistZ_->setWeightIsDiagonalFlag(true);
-  //waistZ_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
-  //waistZ_->loadParams();
-  //waistZ_->registerReconfigurableVariables();
-  //   --------------------------
-  //postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
-  //postural_->setLambda(1.,1.);
-  //postural_->setWeightIsDiagonalFlag(true);
-  //postural_->loadParams();
-  //postural_->registerReconfigurableVariables();
+  postural_ = std::make_shared<Postural>(nh,*model_, id_->getJointsAccelerationAffine());
+  postural_->setLambda(1.,1.);
+  postural_->setWeightIsDiagonalFlag(true);
+  postural_->setGainType(OpenSoT::tasks::acceleration::GainType::Force);
+  postural_->loadParams();
+  postural_->registerReconfigurableVariables();
+  postural_->setReference(model_->getStandUpJointPostion());
   //   --------------------------
   com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
   com_->setWeightIsDiagonalFlag(true);
   com_->loadParams();
   com_->registerReconfigurableVariables();
-
   //
   // Here we create the constraints & bounds
   //
@@ -106,23 +122,31 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   Eigen::VectorXd tau_max;
   model_->getEffortLimits(tau_max);
   tau_max.head(FLOATING_BASE_DOFS).setZero();
+  tau_max = 0.9 * tau_max; // Il trucco
   torque_lims_ = std::make_shared<OpenSoT::constraints::acceleration::TorqueLimits>(*model_,id_->getJointsAccelerationAffine(),id_->getContactsWrenchAffine(),foot_names_,tau_max);
   //   --------------------------
-  //Eigen::VectorXd q_max, q_min, q_home, qddot_max;
-  //Eigen::MatrixXd M;
-  //model_->getJointLimits(q_min,q_max);
-  //q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
-  //q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
-  //model_->getRobotState("standup",q_home);
-  ////model_->getInertiaInverseTimesVector(tau_max,qddot_max);
-  //model_->setJointPosition(q_home);
-  //model_->update();
-  //model_->getInertiaMatrix(M);
-  //qddot_max = M.inverse() * tau_max;
-  //qddot_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * 10000.0;
-  //for(unsigned int i=0; i<qddot_max.size(); i++)
-  //    qddot_max(i) = std::abs(qddot_max(i)); // The acceleration limits have to be positive
-  //q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),q_max,q_min,qddot_max,dt);
+  Eigen::VectorXd q_max, q_min, q_home, qddot_max;
+  Eigen::MatrixXd M;
+  model_->getJointLimits(q_min,q_max);
+//  q_min.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() * -10000.0;
+//  q_max.head(FLOATING_BASE_DOFS) = Eigen::Vector6d::Ones() *  10000.0;
+  model_->getRobotState("standup",q_home);
+  model_->setJointPosition(q_home);
+  model_->update();
+  model_->getInertiaMatrix(M);
+  M.topRows(6).setZero(); M.leftCols(6).setZero(); M.block(0,0,6,6) = Eigen::MatrixXd(6,6).setIdentity();
+  qddot_max = M.inverse() * tau_max;
+  q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),
+                                                                              q_max,q_min,
+                                                                              qddot_max.cwiseAbs(),dt);
+  std::list<unsigned int> id_q_lims;
+  for(unsigned int i = 0; i < model_->getJointNames().size(); ++i)
+  {
+      std::string joint_name = model_->getJointNames()[i];
+      if(!(model_->getUrdf().getJoint(joint_name)->type == urdf::Joint::CONTINUOUS))
+          id_q_lims.push_back(i+6);
+  }
+
 
   //
   // Here we create some indices for the subtask definitions
@@ -131,15 +155,15 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   std::list<unsigned int> id_XY    = {0,1};   //xy
   std::list<unsigned int> id_Z     = {2};     //z
   std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
-  //std::list<unsigned int> id_limbs;
-  //id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
-  //std::list<unsigned int>::iterator it;
-  //unsigned int idx = FLOATING_BASE_DOFS;
-  //for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
-  //{
-  //    *it = idx;
-  //    idx++;
-  //}
+  std::list<unsigned int> id_limbs;
+  id_limbs.resize(postural_->getTaskSize()-FLOATING_BASE_DOFS);
+  std::list<unsigned int>::iterator it;
+  unsigned int idx = FLOATING_BASE_DOFS;
+  for (it = id_limbs.begin(); it != id_limbs.end(); ++it)
+  {
+      *it = idx;
+      idx++;
+  }
 
   //
   // Here we create the stack
@@ -149,7 +173,37 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
 
-  stack_ /= (feet_aggregated + waistRPY_%id_RPY + angular_momentum_ + com_);
+  std::list<unsigned int> id_waist = id_RPY;
+  std::list<unsigned int> id_com = id_XY;
+  if(activate_com_z_)
+  {
+      id_com.merge(id_Z);
+      ROS_INFO_NAMED(CLASS_NAME,"CoM z is active");
+  }
+  else
+  {
+      id_waist.merge(id_Z);
+      ROS_INFO_NAMED(CLASS_NAME,"CoM z is NOT active");
+  }
+
+  stack_ /= (feet_aggregated + waist_%id_waist + com_%id_com);
+
+  if(activate_angular_momentum_)
+  {
+      stack_->getStack()[0] = angular_momentum_ + stack_->getStack()[0];
+      ROS_INFO_NAMED(CLASS_NAME,"angular momentum task is active");
+  }
+  else
+      ROS_INFO_NAMED(CLASS_NAME,"angular momentum task is NOT active");
+
+  if(activate_postural_)
+  {
+      stack_->getStack()[0] = postural_%id_limbs + stack_->getStack()[0];
+      ROS_INFO_NAMED(CLASS_NAME,"postural task is active");
+  }
+  else
+      ROS_INFO_NAMED(CLASS_NAME,"postural task is NOT active");
+
 
   if(ee_names_.size() > 0)
   {
@@ -166,18 +220,29 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
 
   stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
 
-  // Regularization and first update FIXME CLEANUP!
+  if(activate_joint_position_limits_)
+  {
+    stack_ << q_lims_%id_q_lims;
+    ROS_INFO_NAMED(CLASS_NAME,"joint position limits constraint is active");
+  }
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"joint position limits constraint is NOT active");
+
+  // Regularization and first update
   Eigen::Index n = id_->getSerializer()->getSize();
   Eigen::VectorXd b_reg;
   Eigen::MatrixXd A_reg;
   Eigen::MatrixXd W_reg;
   A_reg = Eigen::MatrixXd::Identity(n,n);
   b_reg = Eigen::VectorXd::Zero(n);
-  W_reg = Eigen::MatrixXd::Identity(n,n) * 1e-3;
+  W_reg = Eigen::MatrixXd::Identity(n,n) * regularization_value_;
   unsigned int n_limbs = model_->getNumberArms() + model_->getNumberLegs();
-  unsigned int n_forces = 6 * n_limbs;
+  unsigned int force_size = 6;
+  if(id_contact_type == OpenSoT::utils::InverseDynamics::CONTACT_MODEL::POINT_CONTACT)
+    force_size = 3;
+  unsigned int n_forces = force_size * n_limbs;
   regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
-  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * 1e-3;
+  W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * regularization_value_;
   regularization_->setWeight(W_reg);
   stack_->setRegularisationTask(regularization_);
   stack_->update(Eigen::VectorXd(1));
@@ -190,10 +255,7 @@ IDProblem::IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const doubl
   solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stack_->getStack(), stack_->getBounds(),1.0);
   // ,OpenSoT::solvers::solver_back_ends::OSQP);
   // ,OpenSoT::solvers::solver_back_ends::eiQuadProg);
-}
 
-IDProblem::~IDProblem()
-{
 }
 
 void IDProblem::setFrictionConesMu(const double& mu)
@@ -219,10 +281,38 @@ void IDProblem::reset()
     tmp_map.second->update(Eigen::VectorXd(1));
     tmp_map.second->reset();
   }
-  waistRPY_->update(Eigen::VectorXd(1));
-  waistRPY_->reset();
+  waist_->update(Eigen::VectorXd(1));
+  waist_->reset();
   com_->update(Eigen::VectorXd(1));
   com_->reset();
+}
+
+void IDProblem::activateComZ(bool active)
+{
+  activate_com_z_ = active;
+}
+
+void IDProblem::activateAngularMomentum(bool active)
+{
+  activate_angular_momentum_ = active;
+}
+
+void IDProblem::activateJointPositionLimits(bool active)
+{
+  activate_joint_position_limits_ = active;
+}
+
+void IDProblem::activatePostural(bool active)
+{
+  activate_postural_ = active;
+}
+
+void IDProblem::setRegularization(double regularization)
+{
+  if(regularization > 0.0 && regularization < 1.0)
+    regularization_value_ = regularization;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Regularization value has to be set between 0 and 1!");
 }
 
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)
@@ -333,10 +423,9 @@ void IDProblem::publish(const ros::Time& time)
     tmp_map.second->publish(time);
   for (auto& tmp_map : arms_)
     tmp_map.second->publish(time);
-  waistRPY_->publish(time);
-  //waistZ_->publish(time);
+  waist_->publish(time);
   com_->publish(time);
-  //postural_->publish(time);
+  postural_->publish(time);
   angular_momentum_->publish(time);
 }
 
@@ -359,7 +448,6 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   for (auto& tmp_map : arms_)
     tmp_map.second->updateCost(x_);
   waistRPY_->updateCost(x_);
-  waistZ_->updateCost(x_);
   com_->updateCost(x_);
   postural_->updateCost(x_);
   angular_momentum_->updateCost(x_);
@@ -378,9 +466,15 @@ const Eigen::VectorXd& IDProblem::getJointAccelerations() const
   return qddot_;
 }
 
+void IDProblem::setPosture(const Eigen::MatrixXd& Kp, const Eigen::MatrixXd& Kd, const Eigen::VectorXd& q)
+{
+  postural_->setGains(Kp,Kd);
+  postural_->setReference(q);
+}
+
 void IDProblem::swingWithFoot(const string &foot_name)
 {
-  //feet_[foot_name]->setActive(false);
+  feet_[foot_name]->setBaseLink(model_->getBaseLinkName());
   feet_[foot_name]->setLambda(1.,1.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
   torque_lims_->disableContact(foot_name);
@@ -388,18 +482,20 @@ void IDProblem::swingWithFoot(const string &foot_name)
 
 void IDProblem::stanceWithFoot(const string &foot_name)
 {
-  //feet_[foot_name]->setActive(true);
+  feet_[foot_name]->setBaseLink(WORLD_FRAME_NAME);
   feet_[foot_name]->setLambda(0.,0.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
   torque_lims_->enableContact(foot_name);
 }
 
-void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z)
+void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z, const double& z_vel)
 {
+  tmp_vector6d_.setZero();
   tmp_affine3d_.setIdentity();
   tmp_affine3d_.linear() = Rot;
   tmp_affine3d_.translation().z() = z;
-  waistRPY_->setReference(tmp_affine3d_);
+  tmp_vector6d_(2) = z_vel;
+  waist_->setReference(tmp_affine3d_,tmp_vector6d_);
 }
 
 void IDProblem::setComReference(const Eigen::Vector3d& position, const Eigen::Vector3d& velocity)

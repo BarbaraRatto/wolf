@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef STATE_ESTIMATOR_H
 #define STATE_ESTIMATOR_H
 
@@ -75,9 +84,9 @@ public:
 
     double getContactThreshold();
 
-    const std::string& getPositionEstimationType();
+    std::string getPositionEstimationType();
 
-    const std::string& getOrientationEstimationType();
+    std::string getOrientationEstimationType();
 
     void setContactForces(const std::string &name, const Eigen::Vector3d &force);
 
@@ -113,19 +122,17 @@ public:
 
 private:
 
-    void setEstimationType(unsigned int position_t, unsigned int orientation_t);
+    void setEstimationType(estimation_t position_t, estimation_t orientation_t);
 
-    void setPositionEstimationType(unsigned int position_t);
+    void setPositionEstimationType(estimation_t position_t);
 
-    void setOrientationEstimationType(unsigned int orientation_t);
+    void setOrientationEstimationType(estimation_t orientation_t);
 
     void updateFloatingBase(const double& period);
 
     void updateContactState();
 
     double estimateZ();
-
-    std::map<std::string,unsigned int> estimations_;
 
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
@@ -200,9 +207,9 @@ private:
 
     GaitGenerator::Ptr gait_generator_;
 
-    std::atomic<unsigned int> estimation_orientation_;
+    estimation_t estimation_orientation_;
 
-    std::atomic<unsigned int> estimation_position_;
+    estimation_t estimation_position_;
 
     std::atomic<bool> use_external_forces_;
 

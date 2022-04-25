@@ -1,3 +1,12 @@
+/**
+WoLF: WoLF: Whole-body Locomotion Framework for quadruped robots (c) by Gennaro Raiola
+
+WoLF is licensed under a license Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+**/
+
 #ifndef COM_PLANNER_H
 #define COM_PLANNER_H
 
@@ -35,6 +44,8 @@ public:
 
   const Eigen::Vector3d& getComPosition() const;
 
+  void resetVelocities();
+
 private:
 
   void computeSupportPolygonCenter();
@@ -49,6 +60,8 @@ private:
   Eigen::Vector3d base_velocity_;
   Eigen::Vector3d support_polygon_center_;
   std::vector<Eigen::Vector3d> support_polygon_edges_;
+
+  bool update_;
 
 };
 

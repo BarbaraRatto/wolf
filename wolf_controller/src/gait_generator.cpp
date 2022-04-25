@@ -1,3 +1,10 @@
+/**
+ * @file gait_generator.cpp
+ * @author Gennaro Raiola
+ * @date 12 June, 2019
+ * @brief This file contains the Gait and GaitGenerator
+ */
+
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/foot_trajectory_ellipse.h>
 
@@ -200,6 +207,11 @@ bool GaitGenerator::isCycleEnded(const std::string& foot_name)
   return feet_[foot_name].state_machine->isCycleEnded();
 }
 
+bool GaitGenerator::isGaitCycleEnded()
+{
+  return gait_buffer_[current_gait_idx_]->isCycleEnded();
+}
+
 bool GaitGenerator::isAnyFootInLiftOff()
 {
   bool result = false;
@@ -269,7 +281,7 @@ const bool& GaitGenerator::getContact(const std::string& foot_name)
   return feet_[foot_name].contact;
 }
 
-const Eigen::Vector3d&  GaitGenerator::getContactForce(const std::string& foot_name)
+const Eigen::Vector3d& GaitGenerator::getContactForce(const std::string& foot_name)
 {
   return feet_[foot_name].contact_force;
 }
@@ -295,12 +307,12 @@ void GaitGenerator::setDutyFactor(const std::string& foot_name, const double& du
   feet_[foot_name].state_machine->setDutyFactor(duty_factor);
 }
 
-void GaitGenerator::increaseDutyCycle()
+void GaitGenerator::increaseDutyFactor()
 {
     setDutyFactor(getAvgDutyFactor()+0.1);
 }
 
-void GaitGenerator::decreaseDutyCycle()
+void GaitGenerator::decreaseDutyFactor()
 {
     setDutyFactor(getAvgDutyFactor()-0.1);
 }
@@ -340,6 +352,24 @@ double GaitGenerator::getAvgSwingFrequency()
   double avg = 0.0;
   for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
     avg = avg + it->second.trajectory->getSwingFrequency();
+  avg = avg / feet_.size();
+  return avg;
+}
+
+double GaitGenerator::getAvgStanceFrequency()
+{
+  double avg = 0.0;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    avg = avg + 1.0/it->second.state_machine->getStancePeriod();
+  avg = avg / feet_.size();
+  return avg;
+}
+
+double GaitGenerator::getAvgCycleTime()
+{
+  double avg = 0.0;
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    avg = avg + (it->second.state_machine->getStancePeriod() + it->second.state_machine->getSwingPeriod());
   avg = avg / feet_.size();
   return avg;
 }
@@ -455,6 +485,16 @@ bool GaitGenerator::isTrajectoryFinished(const std::string& foot_name)
   return feet_[foot_name].trajectory->isFinished();
 }
 
+bool GaitGenerator::isFirstStep()
+{
+  return first_step_.update(activate_swing_);
+}
+
+bool GaitGenerator::isLastStep()
+{
+  return last_step_.update(!activate_swing_);
+}
+
 void GaitGenerator::update(const double& period)
 {
   // 1) Check if the scheduled feet are all ready to get triggered and start the swing if this is the case.
@@ -560,6 +600,12 @@ void GaitGenerator::setStepReflexContactThreshold(const double& th)
 {
   for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
     it->second.trajectory->setStepReflexContactThreshold(th);
+}
+
+void GaitGenerator::setStepReflexMaxRetraction(const double &max)
+{
+  for(feet_t::iterator it = feet_.begin(); it!=feet_.end(); ++it)
+    it->second.trajectory->setStepReflexMaxRetraction(max);
 }
 
 void GaitGenerator::changeGait()

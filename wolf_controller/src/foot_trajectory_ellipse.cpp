@@ -1,3 +1,10 @@
+/**
+ * @file foot_trajectory_ellipse.cpp
+ * @author Gennaro Raiola
+ * @date 12 June, 2019
+ * @brief This file contains the ellipse implementation of the foot trajectory
+ */
+
 #include <wolf_controller/foot_trajectory_ellipse.h>
 
 using namespace wolf_controller;
