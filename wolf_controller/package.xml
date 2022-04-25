@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>wolf_controller</name>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <description>WoLF: Whole-body Locomotion Framework for quadruped robots. This package contains the whole-body controller.</description>
 
   <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>
