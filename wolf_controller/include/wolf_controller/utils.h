@@ -32,7 +32,7 @@ namespace wolf_controller
 #define THREADS_SLEEP_TIME_ms 4
 #define THROTTLE_SEC 3.0
 //#define COMPUTE_COST
-#define DEBUG
+//#define DEBUG
 #define EPS 0.00001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 extern std::string _robot_name;
@@ -267,6 +267,50 @@ private:
 
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
+}
+
+inline void writeTxtFile(const std::string filename, Eigen::VectorXd& values) {
+    std::ofstream myfile (filename.c_str());
+    std::size_t row = 0;
+    std::size_t nb_rows = values.size();
+    if (myfile.is_open())
+    {
+        while(row < nb_rows) {
+        myfile << values(row) << "\n";
+            row++;
+        }
+    std::cout << "File ["<<filename<<"] write with success  ["<<nb_rows<<" rows ] "<<std::endl;
+    }
+    else{
+     std::cout << "Unable to open file : ["<<filename<<"]"<<std::endl;
+    }
+    myfile.close();
+}
+
+inline void writeTxtFile(const std::string filename, Eigen::MatrixXd& values) {
+    std::ofstream myfile (filename.c_str());
+    std::size_t row = 0;
+    std::size_t nb_rows = values.rows();
+    std::size_t col = 0;
+    std::size_t nb_cols = values.cols();
+
+    if (myfile.is_open())
+    {
+        while(row < nb_rows) {
+            while(col < nb_cols) {
+                myfile << values(row,col) << " ";
+                col++;
+            }
+            col = 0;
+            row++;
+            myfile << "\n";
+        }
+    std::cout << "File ["<<filename<<"] write with success  ["<<nb_rows<<" rows ]["<<nb_cols<<" cols ] "<<std::endl;
+    }
+    else{
+     std::cerr << "Unable to open file : ["<<filename<<"]"<<std::endl;
+    }
+    myfile.close();
 }
 
 } // namespace

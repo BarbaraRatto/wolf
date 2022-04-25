@@ -23,6 +23,8 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
 
   support_polygon_edges_.resize(N_LEGS);
 
+  update_ = true;
+
   computeComPositionReference();
 }
 
@@ -45,7 +47,13 @@ void ComPlanner::computeSupportPolygonCenter()
 void ComPlanner::computeComPositionReference()
 {
   // Update the support polygon everytime there is a touchdown
-  //if(foothold_planner_->isAnyFootInTouchDown())
+  // or if the robot is standing up or down (because if we
+  // are using the estimated_z the com reference is calculated wrt the base which is
+  // moving up/down)
+  //if(foothold_planner_->isAnyFootInTouchDown()
+  //   || robot_model_->getState() == QuadrupedRobot::STANDING_UP
+  //   || robot_model_->getState() == QuadrupedRobot::STANDING_DOWN
+  //   )
   //  update_ = true;
 
   // If all feet in stance then update the support polygon center
@@ -54,7 +62,7 @@ void ComPlanner::computeComPositionReference()
     //if(update_)
     //{
       computeSupportPolygonCenter();
-      //update_ = false;
+     // update_ = false;
     //}
   }
 
@@ -95,6 +103,11 @@ const Eigen::Vector3d &ComPlanner::getComVelocity() const
 const Eigen::Vector3d &ComPlanner::getComPosition() const
 {
   return com_position_ref_;
+}
+
+void ComPlanner::resetVelocities()
+{
+  com_velocity_ref_.setZero();
 }
 
 }; // namespace

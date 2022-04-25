@@ -25,6 +25,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // STD
 #include <atomic>
 
+// WoLF
+#include <wolf_controller/cartesian_trajectory.h>
+
 class RosWrapperInterface
 {
 
@@ -39,7 +42,7 @@ public:
 protected:
 
   std::shared_ptr<ros::AsyncSpinner> spinner_;
-  std::shared_ptr<ddynamic_reconfigure::DDynamicReconfigure> server_;
+  std::shared_ptr<ddynamic_reconfigure::DDynamicReconfigure> ddr_server_;
 };
 
 template<class Msg_type>
@@ -63,7 +66,7 @@ public:
     nh_ = nh;
     rt_pub_.reset(new realtime_tools::RealtimePublisher<Msg_type>(nh_,task_name_, 4));
     ros::NodeHandle task_nh(nh_.getNamespace()+"/"+task_name_);
-    server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(task_nh));
+    ddr_server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(task_nh));
   }
 
   virtual ~TaskRosWrapperInterface(){}
@@ -106,7 +109,7 @@ protected:
   Eigen::Matrix3d       tmp_matrix3d_;
   Eigen::Quaterniond    tmp_quaterniond_;
 
-  realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_pose_reference_;
+  //realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_pose_reference_;
 
   std::atomic<double> buffer_lambda1_;
   std::atomic<double> buffer_lambda2_;
@@ -127,6 +130,7 @@ protected:
   std::atomic<double> buffer_kd_yaw_;
 
   std::shared_ptr<realtime_tools::RealtimePublisher<Msg_type>> rt_pub_;
+  wolf_controller::CartesianTrajectory::Ptr trj_;
 
   double cost_;
 
