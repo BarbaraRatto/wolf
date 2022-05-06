@@ -134,7 +134,7 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   model_->setJointPosition(q_home);
   model_->update();
   model_->getInertiaMatrix(M);
-  M.topRows(6).setZero(); M.leftCols(6).setZero(); M.block(0,0,6,6) = Eigen::MatrixXd(6,6).setIdentity();
+  M.topRows(FLOATING_BASE_DOFS).setZero(); M.leftCols(FLOATING_BASE_DOFS).setZero(); M.block(0,0,FLOATING_BASE_DOFS,FLOATING_BASE_DOFS) = Eigen::MatrixXd(FLOATING_BASE_DOFS,FLOATING_BASE_DOFS).setIdentity();
   qddot_max = M.inverse() * tau_max;
   q_lims_ = std::make_shared<OpenSoT::constraints::acceleration::JointLimits>(*model_,id_->getJointsAccelerationAffine(),
                                                                               q_max,q_min,
@@ -144,7 +144,7 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   {
       std::string joint_name = model_->getJointNames()[i];
       if(!(model_->getUrdf().getJoint(joint_name)->type == urdf::Joint::CONTINUOUS))
-          id_q_lims.push_back(i+6);
+          id_q_lims.push_back(i+FLOATING_BASE_DOFS);
   }
 
 
@@ -382,7 +382,6 @@ void IDProblem::update()
   // Update arm tasks base frame if state changed
   if(change_control_mode_)
   {
-
     if(ee_names_.size()>0)
     {
       std::string frame;
