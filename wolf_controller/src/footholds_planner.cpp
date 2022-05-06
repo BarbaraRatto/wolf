@@ -921,16 +921,23 @@ bool PushRecovery::update(const double& period)
   //com_pos_ = tmp_vector3d_; // Do not integrate
   com_pos_xy_ = com_pos_.head(2); // To export only
 
-  // Update the support polygon
+  // Get the foot positions wrt world
   feet_pos_ = footholds_planner_ptr_->robot_model_->getFeetPositionInWorld();
+
+  // Calculate the center of the support polygon wrt world to compute the scaling
+  tmp_vector3d_.setZero();
+  for(unsigned int i=0; i <feet_pos_.size(); i++)
+    tmp_vector3d_ = feet_pos_[ordered_foot_names_[i]] + tmp_vector3d_;
+  tmp_vector3d_ = tmp_vector3d_/feet_pos_.size();
+
+  // Update the support polygon
   if(footholds_planner_ptr_->gait_generator_->areAllFeetInStance())
   {
-    float scale = static_cast<float>(scale_); // Note: I use that to shrink the support polygon
     for(unsigned int i=0;i<ordered_foot_names_.size();i++)
     {
-      vertx_[i] = scale * static_cast<float>(feet_pos_[ordered_foot_names_[i]].x());
-      verty_[i] = scale * static_cast<float>(feet_pos_[ordered_foot_names_[i]].y());
-      support_polygon_edges_[i] = scale * feet_pos_[ordered_foot_names_[i]].head(2); // To export only
+      support_polygon_edges_[i] = tmp_vector3d_.head(2) + scale_ * (feet_pos_[ordered_foot_names_[i]].head(2) - tmp_vector3d_.head(2));
+      vertx_[i] = static_cast<float>(support_polygon_edges_[i].x());
+      verty_[i] = static_cast<float>(support_polygon_edges_[i].y());
     }
   }
 
