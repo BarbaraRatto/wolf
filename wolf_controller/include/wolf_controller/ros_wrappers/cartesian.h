@@ -261,6 +261,8 @@ public:
         MakeMarker(getDistalLink(),getBaseLink(),control_type_,true);
         menu_handler_.reApply(interactive_marker_server_);
         interactive_marker_server_.applyChanges();
+        waypoints_.clear();
+        publishWP(waypoints_);
         trj_->reset();
         return res;
     }
