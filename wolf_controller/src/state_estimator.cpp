@@ -37,6 +37,10 @@ std::string enumToString(const StateEstimator::estimation_t& estimation)
   case StateEstimator::estimation_t::IMU_MAGNETOMETER:
     ret = "imu_magnetometer";
     break;
+
+  case StateEstimator::estimation_t::INTEGRATED_LINEAR_VELOCITIES:
+    ret = "integrated_linear_velocities";
+    break;
   };
 
   return ret;
@@ -56,6 +60,8 @@ StateEstimator::estimation_t stringToEnum(const std::string& estimation)
     ret = StateEstimator::estimation_t::IMU_GYROSCOPE;
   else if(estimation == "imu_magnetometer")
     ret = StateEstimator::estimation_t::IMU_MAGNETOMETER;
+  else if(estimation == "integrated_linear_velocities")
+    ret = StateEstimator::estimation_t::INTEGRATED_LINEAR_VELOCITIES;
   else
     throw std::runtime_error("Wrong estimation type!");
 
@@ -114,13 +120,6 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   estimation_orientation_ = estimation_t::IMU_MAGNETOMETER;
   estimation_position_ = estimation_t::ESTIMATED_Z;
-
-  estimations_["none"] = estimation_t::NONE;
-  estimations_["imu_magnetometer"] = estimation_t::IMU_MAGNETOMETER;
-  estimations_["imu_gyroscope"] = estimation_t::IMU_GYROSCOPE;
-  estimations_["ground_truth"] = estimation_t::GROUND_TRUTH;
-  estimations_["estimated_z"] = estimation_t::ESTIMATED_Z;
-  estimations_["integrated_linear_velocities"] = estimation_t::INTEGRATED_LINEAR_VELOCITIES;
 
   reset_gyro_integration_done_ = false;
 
@@ -563,12 +562,12 @@ void StateEstimator::updateFloatingBase(const double& period)
     qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
-    floating_base_position_.head(2) = floating_base_position_.head(2) + floating_base_velocity_.segment(0,2) * period;  // Integrate x and y
+    floating_base_position_.head(2) = floating_base_position_.head(2) + floating_base_velocity_.head(2) * period;  // Integrate x and y
     floating_base_position_(2) = estimated_z_; // Use estimated z
-    if(gait_cycle_ended_.update(gait_generator_->isGaitCycleEnded()))
-    {
-      floating_base_position_.head(2).setZero();
-    }
+    //if(gait_cycle_ended_.update(gait_generator_->isGaitCycleEnded()))
+    //{
+    //  floating_base_position_.head(2).setZero();
+    //}
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
