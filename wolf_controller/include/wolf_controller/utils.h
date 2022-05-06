@@ -117,9 +117,9 @@ inline QuadrupedRobot* createRobotModel(ros::NodeHandle& root_nh)
   {
       throw std::runtime_error("No robot_description given in namespace /");
   }
-  if(!root_nh.getParam("/robot_semantic_description",srdf)) // Get the robot semantic description from the global namespace "/"
+  if(!root_nh.getParam("/robot_description_semantic",srdf)) // Get the robot semantic description from the global namespace "/"
   {
-      throw std::runtime_error("No robot_semantic_description given in namespace /");
+      throw std::runtime_error("No robot_description_semantic given in namespace /");
   }
 
   return new wolf_controller::QuadrupedRobot(urdf,srdf);
