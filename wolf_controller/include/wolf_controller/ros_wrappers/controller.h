@@ -36,6 +36,15 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
 
+// RT GUI
+#ifdef RT_GUI
+#include <rt_gui/rt_gui_client.h>
+using namespace rt_gui;
+#endif
+
+// System
+#include <functional>
+
 
 class ControllerRosWrapper : public RosWrapperInterface
 {
@@ -361,6 +370,17 @@ public:
         decrease_swing_frequency_    = controller_nh.advertiseService("decrease_swing_frequency",    &ControllerRosWrapper::decreaseSwingFrequencyCB,    this);
         set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",         &ControllerRosWrapper::setSwingFrequencyCB,         this);
         set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",             &ControllerRosWrapper::setDutyFactorCB,             this);
+
+        // RT GUI
+#ifdef RT_GUI
+        // create interface
+        if(RtGuiClient::getIstance().init("wolf_panel","controller",ros::Duration(10.0)))
+        {
+          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
+          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
+          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
+        }
+#endif
     }
 
     bool increaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)

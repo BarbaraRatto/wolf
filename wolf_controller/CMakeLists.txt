@@ -26,6 +26,15 @@ find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(XBotInterface REQUIRED)
 find_package(ModelInterfaceRBDL REQUIRED)
+# RT gui
+find_package(rt_gui QUIET)
+
+if(${rt_gui_FOUND})
+    message("Found rt_gui, creating interface for wolf_controller.")
+    add_definitions(-DRT_GUI)
+else()
+    message("rt_gui not found.")
+endif()
 
 add_message_files(FILES
                  CartesianTask.msg
@@ -62,6 +71,7 @@ include_directories(
     ${cartesian_interface_INCLUDE_DIRS}
     ${XBotInterface_INCLUDE_DIRS}
     ${ModelInterfaceRBDL_INCLUDE_DIRS}
+    ${rt_gui_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
@@ -69,7 +79,7 @@ add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_
     src/gait_generator.cpp src/foot_state_machine.cpp src/cartesian_trajectory.cpp)
 add_dependencies(${PROJECT_NAME} ${wolf_controller_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
-    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
+    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 add_dependencies(plot_node ${wolf_controller_EXPORTED_TARGETS})
