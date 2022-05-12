@@ -42,7 +42,6 @@ public:
     rt_pub_->msg_.velocity_reference.resize(size);
     rt_pub_->msg_.position_error.resize(size);
     rt_pub_->msg_.velocity_error.resize(size);
-    ddr_server_->publishServicesTopics();
   }
 
   virtual void registerReconfigurableVariables() override
