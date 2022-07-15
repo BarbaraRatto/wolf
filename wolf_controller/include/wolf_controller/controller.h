@@ -332,6 +332,8 @@ private:
     std::map<std::string,hardware_interface::ContactSwitchSensorHandle> contact_sensors_;
     /** @brief Joint positions */
     Eigen::VectorXd joint_positions_;
+    /** @brief Initial joint positions */
+    Eigen::VectorXd joint_positions_init_;
     /** @brief Joint velocities */
     Eigen::VectorXd joint_velocities_;
     /** @brief Joint velocities */
@@ -420,7 +422,7 @@ private:
     /** @brief Ramps */
     Ramp::Ptr ramp_stand_up_;
     Ramp::Ptr ramp_stand_down_;
-    Ramp::Ptr ramp_impedance_;
+    Ramp::Ptr ramp_init_;
     /** @brief state machine support variables */
     unsigned int mode_;
     unsigned int previous_mode_;

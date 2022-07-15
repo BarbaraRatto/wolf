@@ -158,6 +158,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     // Resize the variables
     joint_positions_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
+    joint_positions_init_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_velocities_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_velocities_filt_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     joint_accellerations_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
@@ -205,7 +206,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     ramp_stand_up_    = std::make_shared<Ramp>(5.0,Ramp::UP);
     ramp_stand_down_  = std::make_shared<Ramp>(5.0,Ramp::DOWN);
-    ramp_impedance_   = std::make_shared<Ramp>(3.0,Ramp::UP);
+    ramp_init_        = std::make_shared<Ramp>(3.0,Ramp::UP);
 
     previous_height_ = robot_model_->getStandUpHeight();
 
@@ -542,15 +543,15 @@ void Controller::updateStateMachine(const double &dt)
       case(QuadrupedRobot::INIT):
         des_joint_positions_ = robot_model_->getStandDownJointPostion();
         des_joint_velocities_.fill(0.0);
-        des_joint_efforts_solver_.fill(0.0);
+        ramp = ramp_init_->update(dt);
+        // Linear interpolation between initial joint positions and desired (stand down)
+        des_joint_positions_ = ramp * robot_model_->getStandDownJointPostion() + (1.0-ramp) * joint_positions_init_;
         updateImpedance(des_joint_positions_,des_joint_velocities_);
-        ramp = ramp_impedance_->update(dt);
-        des_joint_efforts_impedance_ = ramp * des_joint_efforts_impedance_;
         if(ramp >= 1.0)
         {
           desired_yaw_ = robot_model_->getBaseRotationInWorldRPY().z();
           id_prob_->reset();
-          ramp_impedance_->reset();
+          ramp_init_->reset();
           robot_model_->setState(QuadrupedRobot::STANDING_UP);
         }
         break;
@@ -620,8 +621,7 @@ void Controller::updateStateMachine(const double &dt)
           break;
         };
 
-        des_joint_positions_ = robot_model_->getStandUpJointPostion();
-        if(!updateSolver(des_joint_positions_) || !performSafetyChecks())
+        if(!updateSolver(robot_model_->getStandUpJointPostion()) || !performSafetyChecks())
         {
           robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
@@ -664,7 +664,7 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::ANOMALY):
         updateComponents(dt);
-        des_joint_positions_.fill(0.0);
+        des_joint_positions_ = robot_model_->getStandDownJointPostion();
         des_joint_velocities_.fill(0.0);
         updateImpedance(des_joint_positions_,des_joint_velocities_);
         if((current_height_ - previous_height_)/dt <= EPS)
@@ -707,6 +707,8 @@ void Controller::init()
     des_joint_efforts_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
     des_joint_efforts_impedance_.fill(0.0);
+    // Fill initial joint positions
+    joint_positions_init_ = joint_positions_;
 }
 
 void Controller::updateComponents(const double &dt)
