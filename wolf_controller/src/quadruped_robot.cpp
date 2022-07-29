@@ -134,6 +134,14 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       else
         throw std::runtime_error("There can be only one base defined in the SRDF file!");
     }
+    // Parse the imu link name from the SRDF file
+    if(srdf_model.getGroups()[i].name_.find("imu") != std::string::npos)
+    {
+      if(links.size()==1)
+        imu_name_ = links[0];
+      else
+        throw std::runtime_error("There can be only one imu defined in the SRDF file!");
+    }
   }
 
   n_legs_ = leg_names_.size();
