@@ -95,6 +95,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   const srdf_advr::Model& srdf_model = getSrdf();
 
+  robot_name_ = srdf_model.getName();
+
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
@@ -728,6 +730,11 @@ const double &QuadrupedRobot::getStandDownHeight()
 const std::string& QuadrupedRobot::getImuSensorName() const
 {
   return imu_name_;
+}
+
+const std::string &QuadrupedRobot::getRobotName() const
+{
+  return robot_name_;
 }
 
 
