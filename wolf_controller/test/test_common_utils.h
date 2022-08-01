@@ -15,6 +15,6 @@
 #include <Eigen/Dense>
 #include <wolf_controller/quadruped_robot.h>
 #include <wolf_controller/utils.h>
-
+#include <wolf_controller/geometry.h>
 
 #endif

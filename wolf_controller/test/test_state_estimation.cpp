@@ -25,15 +25,15 @@ Eigen::VectorXd _q(18);
 Eigen::VectorXd _qdot(18);
 Eigen::VectorXd _fbq(6);
 
-wolf_controller::QuadrupedRobot::Ptr _robot;
-OpenSoT::AutoStack::Ptr _stack;
-std::shared_ptr<OpenSoT::solvers::iHQP> _solver;
-std::map<std::string,OpenSoT::tasks::velocity::Cartesian::Ptr> _contact_tasks;
-OpenSoT::tasks::velocity::Postural::Ptr _postural;
-OpenSoT::tasks::velocity::Cartesian::Ptr _imu_task;
-OpenSoT::tasks::Aggregated::Ptr _aggregated_contacts;
-Eigen::VectorXd _x;
-std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces>> _state_sub;
+static wolf_controller::QuadrupedRobot::Ptr _robot;
+static OpenSoT::AutoStack::Ptr _stack;
+static std::unique_ptr<OpenSoT::solvers::iHQP> _solver;
+static std::map<std::string,OpenSoT::tasks::velocity::Cartesian::Ptr> _contact_tasks;
+static OpenSoT::tasks::velocity::Postural::Ptr _postural;
+static OpenSoT::tasks::velocity::Cartesian::Ptr _imu_task;
+static OpenSoT::tasks::Aggregated::Ptr _aggregated_contacts;
+static Eigen::VectorXd _x;
+static std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces>> _state_sub;
 
 void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
             const sensor_msgs::Imu::ConstPtr& imu_msg,
@@ -64,6 +64,9 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
 
   for(unsigned int i=0; i<cf_msg->name.size(); i++)
   {
+    if(cf_msg->contact[i])
+      ROS_INFO_STREAM("Contact active: "<< cf_msg->name[i]);
+
     _contact_tasks[cf_msg->name[i]]->setActive(cf_msg->contact[i]);
     _contact_tasks[cf_msg->name[i]]->update(Eigen::VectorXd(1));
   }
@@ -72,6 +75,15 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     ROS_INFO_STREAM("Solution: "<< _x.segment(0,6).transpose());
   else
     ROS_WARN("Can not solve!");
+
+  // Update the FB
+  //Eigen::Affine3d fb_pose;
+  //Eigen::Matrix3d fb_R;
+  //fb_pose.translation() << _x.segment(0,3);
+  //wolf_controller::rpyToRot(_x.segment(3,3),fb_R);
+  //fb_pose.linear() << fb_R;
+  //_robot->setFloatingBaseState(fb_pose,Eigen::Vector6d::Zero());
+  //_robot->update();
 
 }
 
@@ -82,16 +94,17 @@ int main(int argc, char **argv)
 
   _robot.reset(wolf_controller::createRobotModel(root_nh));
 
-  std::list<unsigned int> id_legs;
-  id_legs.resize(12);
+  std::list<unsigned int> id_joints;
+  id_joints.resize(12);
   std::list<unsigned int>::iterator it;
   unsigned int idx = FLOATING_BASE_DOFS;
-  for (it = id_legs.begin(); it != id_legs.end(); ++it)
+  for (it = id_joints.begin(); it != id_joints.end(); ++it)
   {
       *it = idx;
       idx++;
   }
   std::list<unsigned int> id_XYZ   = {0,1,2}; //xyz
+  std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
 
   _q.fill(0.0);
   _qdot.fill(0.0);
@@ -114,11 +127,11 @@ int main(int argc, char **argv)
   _postural = std::make_shared<OpenSoT::tasks::velocity::Postural>(_q);
   _postural->setLambda(0.001);
 
-  _stack = std::make_shared<OpenSoT::AutoStack>(_imu_task+_aggregated_contacts);
-  _stack << _postural%id_legs;
+  _stack /= _imu_task%id_RPY + _aggregated_contacts;
+  _stack << _postural%id_joints;
   _stack->update(Eigen::VectorXd(1));
 
-  _solver = std::make_shared<OpenSoT::solvers::iHQP>(_stack->getStack(),_stack->getBounds(),1e6);
+  _solver = std::make_unique<OpenSoT::solvers::iHQP>(_stack->getStack(),_stack->getBounds(),1e6);
   _solver->setSolverID("FloatingBaseEstimation");
 
   message_filters::Subscriber<sensor_msgs::JointState> joint_state_sub;
@@ -130,6 +143,7 @@ int main(int argc, char **argv)
   cf_sub.subscribe(root_nh,_robot->getRobotName()+"/wolf_controller/contact_forces",20);
   _state_sub = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces> >(joint_state_sub,imu_sub,cf_sub,20);
   _state_sub->registerCallback(update);
+
 
   //ros::Subscriber sub = root_nh.subscribe(_robot->getRobotName()+"/joint_states", 1000, update);
 
