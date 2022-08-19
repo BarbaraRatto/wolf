@@ -63,7 +63,7 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     _robot->setJointVelocity(_qdot);
     _robot->update();
 
-    _postural->setReference(_q,_qdot);
+    _postural->setReference(_q,_qdot/dt);
 
     Eigen::Quaterniond q;
     q.w() = imu_msg->orientation.w;
