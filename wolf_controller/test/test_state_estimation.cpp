@@ -25,6 +25,7 @@ static Eigen::VectorXd _q(18);
 static Eigen::VectorXd _qdot(18);
 static Eigen::VectorXd _fbq(6);
 static Eigen::VectorXd _fbqdot(6);
+static Eigen::VectorXd _x(18);
 
 static wolf_controller::QuadrupedRobot::Ptr _robot;
 static OpenSoT::AutoStack::Ptr _stack;
@@ -33,7 +34,6 @@ static std::map<std::string,OpenSoT::tasks::velocity::Cartesian::Ptr> _contact_t
 static OpenSoT::tasks::velocity::Postural::Ptr _postural;
 static OpenSoT::tasks::velocity::Cartesian::Ptr _imu_task;
 static OpenSoT::tasks::Aggregated::Ptr _aggregated_contacts;
-static Eigen::VectorXd _x;
 static std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces>> _state_sub;
 static double _t = 0.0;
 static double _t_prev = 0.0;
@@ -142,6 +142,7 @@ int main(int argc, char **argv)
   _qdot.fill(0.0);
   _fbq.fill(0.0);
   _fbqdot.fill(0.0);
+  _x.fill(0.0);
 
   _robot->getJointPosition(_q);
 
