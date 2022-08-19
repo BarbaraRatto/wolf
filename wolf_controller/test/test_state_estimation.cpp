@@ -63,9 +63,6 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     _robot->setJointVelocity(_qdot);
     _robot->update();
 
-    ROS_INFO_STREAM("q: "<< _q.transpose());
-    ROS_INFO_STREAM("qdot: "<< _qdot.transpose());
-
     _postural->setReference(_q,_qdot);
 
     Eigen::Quaterniond q;
@@ -74,8 +71,15 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     q.y() = imu_msg->orientation.y;
     q.z() = imu_msg->orientation.z;
     Eigen::Affine3d imu_pose;
+    Eigen::Vector3d rpy;
+
     imu_pose.linear() = q.toRotationMatrix();
     _imu_task->setReference(imu_pose); // FIXME missing linear and angular velocities
+
+    wolf_controller::rotToRpy(imu_pose.linear(),rpy);
+    ROS_INFO_STREAM("q: "<< _q.transpose());
+    ROS_INFO_STREAM("qdot: "<< _qdot.transpose());
+    ROS_INFO_STREAM("imu: "<< rpy.transpose());
 
     for(unsigned int i=0; i<cf_msg->name.size(); i++)
     {
