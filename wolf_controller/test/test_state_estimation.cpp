@@ -90,7 +90,7 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       _contact_tasks[cf_msg->name[i]]->update(Eigen::VectorXd(1));
     }
 
-    _stack->update(Eigen::VectorXd(1));
+    _stack->update(_q);
     if(_solver->solve(_x))
     {
       _fbqdot = _x.segment(0,6);
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
   _postural->setWeight(w);
 
   _stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
-  _stack->update(Eigen::VectorXd(1));
+  _stack->update(_q);
 
   _solver = std::make_unique<OpenSoT::solvers::iHQP>(_stack->getStack(),_stack->getBounds(),1e6);
   _solver->setSolverID("FloatingBaseEstimation");
