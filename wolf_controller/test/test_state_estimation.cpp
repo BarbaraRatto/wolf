@@ -150,7 +150,7 @@ int main(int argc, char **argv)
   for(unsigned int i = 0; i < contact_links.size(); ++i)
   {
     _contact_tasks[contact_links[i]] = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(contact_links[i],_q,*_robot,contact_links[i],WORLD_FRAME_NAME);
-    _contact_tasks[contact_links[i]]->setLambda(0.0001);
+    _contact_tasks[contact_links[i]]->setLambda(0.1);
   }
 
   _aggregated_contacts = std::make_shared<OpenSoT::tasks::Aggregated>(_contact_tasks[contact_links[0]]%id_XYZ,_q.size());
@@ -160,10 +160,13 @@ int main(int argc, char **argv)
   _imu_task = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(_robot->getImuSensorName(),_q,*_robot,_robot->getImuSensorName(),WORLD_FRAME_NAME);
 
   _postural = std::make_shared<OpenSoT::tasks::velocity::Postural>(_q);
-  //_postural->setLambda(0.001);
+  _postural->setLambda(0.0);
+  Eigen::MatrixXd w(_x.size(),_x.size());
+  w.setIdentity();
+  w.block(0,0,6,6).setZero();
+  _postural->setWeight(w);
 
-  _stack /= _aggregated_contacts + _imu_task%id_RPY;
-  _stack << _postural%id_joints;
+  _stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
   _stack->update(Eigen::VectorXd(1));
 
   _solver = std::make_unique<OpenSoT::solvers::iHQP>(_stack->getStack(),_stack->getBounds(),1e6);
@@ -178,7 +181,6 @@ int main(int argc, char **argv)
   cf_sub.subscribe(root_nh,_robot->getRobotName()+"/wolf_controller/contact_forces",100);
   _state_sub = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces> >(joint_state_sub,imu_sub,cf_sub,100);
   _state_sub->registerCallback(update);
-
 
   //ros::Subscriber sub = root_nh.subscribe(_robot->getRobotName()+"/joint_states", 1000, update);
 
