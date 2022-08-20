@@ -161,8 +161,12 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       //if(cf_msg->contact[i])
       //  ROS_INFO_STREAM("Active contact: "<< cf_msg->name[i]);
       _contact_tasks[cf_msg->name[i]]->setActive(cf_msg->contact[i]);
-      _contact_tasks[cf_msg->name[i]]->update(Eigen::VectorXd(1));
     }
+
+    // Update robot's joint states
+    _robot->setJointPosition(_q);
+    _robot->setJointVelocity(_qdot);
+    _robot->update();
 
     // Solve ik
     _stack->update(_q);
@@ -181,15 +185,13 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       ROS_INFO_STREAM("FB pos: "<<_fbq.transpose());
       ROS_INFO_STREAM("FB vel: "<<_fbqdot.transpose());
 
-      // Update the robot model
+      // Update FB
       Eigen::Affine3d fb_pose;
       Eigen::Matrix3d fb_R;
       fb_pose.translation() << _fbq.segment(0,3);
       rpyToRot(_fbq.segment(3,3),fb_R);
       fb_pose.linear() << fb_R;
       _robot->setFloatingBaseState(fb_pose,_fbqdot);
-      _robot->setJointPosition(_q);
-      _robot->setJointVelocity(_qdot);
       _robot->update();
     }
     else
