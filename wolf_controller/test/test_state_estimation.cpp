@@ -153,7 +153,7 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     //ROS_INFO_STREAM("imu_rpy: "<< imu_rpy.transpose());
 
     // set joint velocities to postural task
-    _postural->setReference(_q_meas,_qdot_meas/dt);
+    _postural->setReference(_q_meas,_qdot_meas * dt);
 
     // set contact state
     for(unsigned int i=0; i<cf_msg->name.size(); i++)
