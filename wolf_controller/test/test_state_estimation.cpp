@@ -186,13 +186,13 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       ROS_INFO_STREAM("FB vel: "<<_fbqdot.transpose());
 
       // Update FB
-      Eigen::Affine3d fb_pose;
-      Eigen::Matrix3d fb_R;
-      fb_pose.translation() << _fbq.segment(0,3);
-      rpyToRot(_fbq.segment(3,3),fb_R);
-      fb_pose.linear() << fb_R;
-      _robot->setFloatingBaseState(fb_pose,_fbqdot);
-      _robot->update();
+      //Eigen::Affine3d fb_pose;
+      //Eigen::Matrix3d fb_R;
+      //fb_pose.translation() << _fbq.segment(0,3);
+      //rpyToRot(_fbq.segment(3,3),fb_R);
+      //fb_pose.linear() << fb_R;
+      //_robot->setFloatingBaseState(fb_pose,_fbqdot);
+      //_robot->update();
     }
     else
       ROS_WARN("Can not solve!");
