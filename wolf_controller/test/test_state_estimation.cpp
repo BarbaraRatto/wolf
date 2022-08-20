@@ -42,6 +42,70 @@ static OpenSoT::tasks::Aggregated::Ptr _aggregated_contacts;
 static std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,ContactForces>> _state_sub;
 static double _t = 0.0;
 static double _t_prev = 0.0;
+static bool _init = true;
+
+void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
+{
+  // reset
+  _q_meas.fill(0.0);
+  _qdot_meas.fill(0.0);
+  _q.fill(0.0);
+  _qdot.fill(0.0);
+  _fbq.fill(0.0);
+  _fbqdot.fill(0.0);
+
+  // initialize the q
+  _q_meas = _q = q_init;
+  _qdot_meas = _qdot = qdot_init;
+
+  // update robot's state
+  _robot->setJointPosition(_q);
+  _robot->setJointVelocity(_qdot);
+  _robot->update();
+
+  // define indices for the tasks
+  std::list<unsigned int> id_joints;
+  id_joints.resize(12);
+  std::list<unsigned int>::iterator it;
+  unsigned int idx = FLOATING_BASE_DOFS;
+  for (it = id_joints.begin(); it != id_joints.end(); ++it)
+  {
+    *it = idx;
+    idx++;
+  }
+  std::list<unsigned int> id_XYZ   = {0,1,2}; //xyz
+  std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
+
+  // contact tasks
+  auto contact_links = _robot->getFootNames();
+  for(unsigned int i = 0; i < contact_links.size(); ++i)
+  {
+    _contact_tasks[contact_links[i]] = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(contact_links[i],_q,*_robot,contact_links[i],WORLD_FRAME_NAME);
+    _contact_tasks[contact_links[i]]->setLambda(0.1);
+  }
+  _aggregated_contacts = std::make_shared<OpenSoT::tasks::Aggregated>(_contact_tasks[contact_links[0]]%id_XYZ,_q.size());
+  for(unsigned int i=1;i<contact_links.size();i++)
+    _aggregated_contacts = _aggregated_contacts + _contact_tasks[contact_links[i]]%id_XYZ;
+
+  // imu task
+  _imu_task = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(_robot->getImuSensorName(),_q,*_robot,_robot->getImuSensorName(),WORLD_FRAME_NAME);
+
+  // postural task
+  _postural = std::make_shared<OpenSoT::tasks::velocity::Postural>(_q);
+  _postural->setLambda(0.0);
+  Eigen::MatrixXd w(N_JOINTS,N_JOINTS);
+  w.setIdentity();
+  w.block(0,0,6,6).setZero();
+  _postural->setWeight(w);
+
+  // define the stack
+  _stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
+  _stack->update(_q);
+
+  // create the solver
+  _solver = std::make_unique<OpenSoT::solvers::iHQP>(_stack->getStack(),_stack->getBounds(),1e6);
+  _solver->setSolverID("FloatingBaseEstimation");
+}
 
 void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
             const sensor_msgs::Imu::ConstPtr& imu_msg,
@@ -50,7 +114,9 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
 
   _t = ros::Time::now().toSec();
 
-  double dt = _t - _t_prev;
+  //double dt = _t - _t_prev;
+
+  double dt = 0.001;
 
   if(dt > 0.0)
   {
@@ -59,6 +125,13 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     {
       _q_meas(i+FLOATING_BASE_DOFS) = joints_msg->position[i];
       _qdot_meas(i+FLOATING_BASE_DOFS) = joints_msg->velocity[i];
+    }
+
+    // Initialize
+    if(_init)
+    {
+      init(_q_meas,_qdot_meas);
+      _init = false;
     }
 
     // Update imu state
@@ -78,12 +151,6 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     //ROS_INFO_STREAM("q_meas: "<< _q_meas.transpose());
     //ROS_INFO_STREAM("qdot_meas: "<< _qdot_meas.transpose());
     //ROS_INFO_STREAM("imu_rpy: "<< imu_rpy.transpose());
-
-    //_q.segment(0,6) = _fbq;
-    //_qdot.segment(0,6) = _fbqdot;
-    //_robot->setJointPosition(_q_meas);
-    //_robot->setJointVelocity(_qdot_meas);
-    //_robot->update();
 
     // set joint velocities to postural task
     _postural->setReference(_q_meas,_qdot_meas/dt);
@@ -124,20 +191,14 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       _robot->setJointPosition(_q);
       _robot->setJointVelocity(_qdot);
       _robot->update();
-
-      //_q.segment(0,6)    = _fbq;
-      //_qdot.segment(0,6) = _fbqdot;
-      //_robot->setJointPosition(_q);
-      //_robot->setJointVelocity(_qdot);
-      //_robot->update();
-
     }
     else
       ROS_WARN("Can not solve!");
   }
-
   _t_prev = _t;
 }
+
+
 
 int main(int argc, char **argv)
 {
@@ -145,53 +206,6 @@ int main(int argc, char **argv)
   ros::NodeHandle root_nh;
 
   _robot.reset(createRobotModel(root_nh));
-
-  std::list<unsigned int> id_joints;
-  id_joints.resize(12);
-  std::list<unsigned int>::iterator it;
-  unsigned int idx = FLOATING_BASE_DOFS;
-  for (it = id_joints.begin(); it != id_joints.end(); ++it)
-  {
-    *it = idx;
-    idx++;
-  }
-  std::list<unsigned int> id_XYZ   = {0,1,2}; //xyz
-  std::list<unsigned int> id_RPY   = {3,4,5}; //r,p,y
-
-  _q_meas.fill(0.0);
-  _qdot_meas.fill(0.0);
-  _q.fill(0.0);
-  _qdot.fill(0.0);
-  _fbq.fill(0.0);
-  _fbqdot.fill(0.0);
-
-  _robot->getJointPosition(_q);
-
-  auto contact_links = _robot->getFootNames();
-  for(unsigned int i = 0; i < contact_links.size(); ++i)
-  {
-    _contact_tasks[contact_links[i]] = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(contact_links[i],_q,*_robot,contact_links[i],WORLD_FRAME_NAME);
-    _contact_tasks[contact_links[i]]->setLambda(0.1);
-  }
-
-  _aggregated_contacts = std::make_shared<OpenSoT::tasks::Aggregated>(_contact_tasks[contact_links[0]]%id_XYZ,_q.size());
-  for(unsigned int i=1;i<contact_links.size();i++)
-    _aggregated_contacts = _aggregated_contacts + _contact_tasks[contact_links[i]]%id_XYZ;
-
-  _imu_task = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(_robot->getImuSensorName(),_q,*_robot,_robot->getImuSensorName(),WORLD_FRAME_NAME);
-
-  _postural = std::make_shared<OpenSoT::tasks::velocity::Postural>(_q);
-  _postural->setLambda(0.0);
-  Eigen::MatrixXd w(N_JOINTS,N_JOINTS);
-  w.setIdentity();
-  w.block(0,0,6,6).setZero();
-  _postural->setWeight(w);
-
-  _stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
-  _stack->update(_q);
-
-  _solver = std::make_unique<OpenSoT::solvers::iHQP>(_stack->getStack(),_stack->getBounds(),1e6);
-  _solver->setSolverID("FloatingBaseEstimation");
 
   message_filters::Subscriber<sensor_msgs::JointState> joint_state_sub;
   message_filters::Subscriber<sensor_msgs::Imu> imu_sub;
