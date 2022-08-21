@@ -81,6 +81,7 @@ void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
 
   // imu task
   _imu_task = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(_robot->getImuSensorName(),_q,*_robot,_robot->getImuSensorName(),WORLD_FRAME_NAME);
+  _imu_task->setLambda(10.0);
 
   // postural task
   _postural = std::make_shared<OpenSoT::tasks::velocity::Postural>(_q);
@@ -91,6 +92,7 @@ void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
   _postural->setWeight(w);
 
   // define the stack
+  //_stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
   _stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
   _stack->update(_q);
 
@@ -131,18 +133,17 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     Eigen::Vector6d imu_vel_ref;
     Eigen::Affine3d imu_pose;
     Eigen::Vector3d imu_rpy;
+    Eigen::Matrix3d imu_R;
     imu_quat.w() = imu_msg->orientation.w;
     imu_quat.x() = imu_msg->orientation.x;
     imu_quat.y() = imu_msg->orientation.y;
     imu_quat.z() = imu_msg->orientation.z;
-    imu_pose.linear() = imu_quat.toRotationMatrix();
+    quatToRot(imu_quat.normalized(),imu_R);
+    imu_pose.setIdentity();
+    imu_pose.linear() = imu_R.transpose();
     imu_vel_ref << 0., 0., 0., imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z;
-    _imu_task->setReference(imu_pose,imu_vel_ref);
-
-    //rotToRpy(imu_pose.linear(),imu_rpy);
-    //ROS_INFO_STREAM("q_meas: "<< _q_meas.transpose());
-    //ROS_INFO_STREAM("qdot_meas: "<< _qdot_meas.transpose());
-    //ROS_INFO_STREAM("imu_rpy: "<< imu_rpy.transpose());
+    //_imu_task->setReference(imu_pose,imu_vel_ref);
+    _imu_task->setReference(imu_pose);
 
     // set joint velocities to postural task
     _postural->setReference(_q_meas,_qdot_meas * dt);
@@ -171,11 +172,15 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       _fbqdot = _qdot.segment(0,6);
       _fbq = _q.segment(0,6);
 
-      ROS_INFO_STREAM("DT: "<<dt);
-      ROS_INFO_STREAM("qdot: "<<_qdot.transpose());
+      //ROS_INFO_STREAM("DT: "<<dt);
       ROS_INFO_STREAM("q: "<<_q.transpose());
+      ROS_INFO_STREAM("q_meas: "<< _q_meas.transpose());
+      ROS_INFO_STREAM("qdot: "<<_qdot.transpose());
+      ROS_INFO_STREAM("qdot_meas: "<< _qdot_meas.transpose());
       ROS_INFO_STREAM("FB pos: "<<_fbq.transpose());
       ROS_INFO_STREAM("FB vel: "<<_fbqdot.transpose());
+      rotToRpy(imu_R,imu_rpy);
+      ROS_INFO_STREAM("imu_rpy: "<< imu_rpy.transpose());
 
       // Update FB
       //Eigen::Affine3d fb_pose;
@@ -191,8 +196,6 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
   }
   _t_prev = _t;
 }
-
-
 
 int main(int argc, char **argv)
 {
