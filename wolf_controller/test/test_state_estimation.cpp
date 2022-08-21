@@ -46,14 +46,6 @@ static bool _init = true;
 
 void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
 {
-  // reset
-  _q_meas.fill(0.0);
-  _qdot_meas.fill(0.0);
-  _q.fill(0.0);
-  _qdot.fill(0.0);
-  _fbq.fill(0.0);
-  _fbqdot.fill(0.0);
-
   // initialize the q
   _q_meas = _q = q_init;
   _qdot_meas = _qdot = qdot_init;
@@ -206,6 +198,14 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "test_state_estimation");
   ros::NodeHandle root_nh;
+
+  // reset
+  _q_meas.fill(0.0);
+  _qdot_meas.fill(0.0);
+  _q.fill(0.0);
+  _qdot.fill(0.0);
+  _fbq.fill(0.0);
+  _fbqdot.fill(0.0);
 
   _robot.reset(createRobotModel(root_nh));
 
