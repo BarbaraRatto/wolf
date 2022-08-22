@@ -87,13 +87,13 @@ void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
   _postural = std::make_shared<OpenSoT::tasks::velocity::Postural>(_q);
   _postural->setLambda(0.0);
   Eigen::MatrixXd w(N_JOINTS,N_JOINTS);
-  w.setIdentity();
+  w.setIdentity() * 10.0;
   w.block(0,0,6,6).setZero();
   _postural->setWeight(w);
 
   // define the stack
-  //_stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
-  _stack /= _aggregated_contacts + _imu_task%id_RPY << _postural;
+  _stack /= _aggregated_contacts + _imu_task%id_RPY + _postural;
+  //_stack /= _aggregated_contacts  + _postural;
   _stack->update(_q);
 
   // create the solver
