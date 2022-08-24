@@ -171,9 +171,9 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       //if(cf_msg->contact[i])
       //  ROS_INFO_STREAM("Active contact: "<< cf_msg->name[i]);
       //_contact_tasks[cf_msg->name[i]]->setActive(cf_msg->contact[i]);
-      _contact_force.x() = cf_msg->des_contact_forces[i].force.x;
-      _contact_force.y() = cf_msg->des_contact_forces[i].force.y;
-      _contact_force.z() = cf_msg->des_contact_forces[i].force.z;
+      _contact_force.x() = cf_msg->contact_forces[i].force.x;
+      _contact_force.y() = cf_msg->contact_forces[i].force.y;
+      _contact_force.z() = cf_msg->contact_forces[i].force.z;
       _contact_tasks[cf_msg->name[i]]->setWeight(_contact_force.norm());
     }
 
