@@ -19,30 +19,53 @@
 // WoLF
 #include <wolf_controller/ContactForces.h>
 
+// Rt logger
+#include <rt_logger/rt_logger.h>
+
+// Test utils goodies
 #include "test_common_utils.h"
 
 #define N_JOINTS 18
-
-using namespace wolf_controller;
 
 static Eigen::VectorXd _q_meas(N_JOINTS);
 static Eigen::VectorXd _qdot_meas(N_JOINTS);
 static Eigen::VectorXd _q(N_JOINTS);
 static Eigen::VectorXd _qdot(N_JOINTS);
-static Eigen::VectorXd _fbq(FLOATING_BASE_DOFS);
-static Eigen::VectorXd _fbqdot(FLOATING_BASE_DOFS);
+static Eigen::VectorXd _postural_error(N_JOINTS);
+static Eigen::VectorXd _postural_reference(N_JOINTS);
+static Eigen::VectorXd _postural_reference_dot(N_JOINTS);
 
-static QuadrupedRobot::Ptr _robot;
+static wolf_controller::QuadrupedRobot::Ptr _robot;
 static OpenSoT::AutoStack::Ptr _stack;
 static std::unique_ptr<OpenSoT::solvers::iHQP> _solver;
 static std::map<std::string,OpenSoT::tasks::velocity::Cartesian::Ptr> _contact_tasks;
 static OpenSoT::tasks::velocity::Postural::Ptr _postural;
 static OpenSoT::tasks::velocity::Cartesian::Ptr _imu_task;
 static OpenSoT::tasks::Aggregated::Ptr _aggregated_contacts;
-static std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,ContactForces>> _state_sub;
+static std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces>> _state_sub;
 static double _t = 0.0;
 static double _t_prev = 0.0;
-static bool _init = true;
+static bool _initialize = true;
+
+static Eigen::Quaterniond _imu_quat;
+static Eigen::Vector6d _imu_vel_ref;
+static Eigen::Affine3d _imu_pose;
+static Eigen::Vector3d _imu_rpy;
+static Eigen::Matrix3d _imu_R;
+
+static Eigen::Affine3d _fb_pose;
+static Eigen::Vector3d _fb_rpy;
+static Eigen::Vector3d _fb_xyz;
+static Eigen::Vector6d _fbq;
+static Eigen::Vector6d _fbqdot;
+static Eigen::Vector3d _contact_force;
+
+// TODO:
+// fix fb position!
+// initialize with the odom from the tracking camera
+// add tracking camera odom
+// weight contact by forces and imu by covariance
+// add height
 
 void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
 {
@@ -73,7 +96,7 @@ void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
   for(unsigned int i = 0; i < contact_links.size(); ++i)
   {
     _contact_tasks[contact_links[i]] = std::make_shared<OpenSoT::tasks::velocity::Cartesian>(contact_links[i],_q,*_robot,contact_links[i],WORLD_FRAME_NAME);
-    _contact_tasks[contact_links[i]]->setLambda(0.1);
+    _contact_tasks[contact_links[i]]->setLambda(0.0);
   }
   _aggregated_contacts = std::make_shared<OpenSoT::tasks::Aggregated>(_contact_tasks[contact_links[0]]%id_XYZ,_q.size());
   for(unsigned int i=1;i<contact_links.size();i++)
@@ -93,7 +116,6 @@ void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
 
   // define the stack
   _stack /= _aggregated_contacts + _imu_task%id_RPY + _postural;
-  //_stack /= _aggregated_contacts  + _postural;
   _stack->update(_q);
 
   // create the solver
@@ -103,14 +125,12 @@ void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
 
 void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
             const sensor_msgs::Imu::ConstPtr& imu_msg,
-            const ContactForces::ConstPtr& cf_msg)
+            const wolf_controller::ContactForces::ConstPtr& cf_msg)
 {
 
   _t = ros::Time::now().toSec();
 
-  //double dt = _t - _t_prev;
-
-  double dt = 0.001;
+  double dt = _t - _t_prev;
 
   if(dt > 0.0)
   {
@@ -122,38 +142,39 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     }
 
     // Initialize
-    if(_init)
+    if(_initialize)
     {
       init(_q_meas,_qdot_meas);
-      _init = false;
+      _initialize = false;
     }
 
     // Update imu state
-    Eigen::Quaterniond imu_quat;
-    Eigen::Vector6d imu_vel_ref;
-    Eigen::Affine3d imu_pose;
-    Eigen::Vector3d imu_rpy;
-    Eigen::Matrix3d imu_R;
-    imu_quat.w() = imu_msg->orientation.w;
-    imu_quat.x() = imu_msg->orientation.x;
-    imu_quat.y() = imu_msg->orientation.y;
-    imu_quat.z() = imu_msg->orientation.z;
-    quatToRot(imu_quat.normalized(),imu_R);
-    imu_pose.setIdentity();
-    imu_pose.linear() = imu_R.transpose();
-    imu_vel_ref << 0., 0., 0., imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z;
-    //_imu_task->setReference(imu_pose,imu_vel_ref);
-    _imu_task->setReference(imu_pose);
+    _imu_quat.w() = imu_msg->orientation.w;
+    _imu_quat.x() = imu_msg->orientation.x;
+    _imu_quat.y() = imu_msg->orientation.y;
+    _imu_quat.z() = imu_msg->orientation.z;
+    wolf_controller::quatToRot(_imu_quat.normalized(),_imu_R);
+    _imu_pose.translation().setZero();
+    _imu_pose.linear() = _imu_R;
+    _imu_vel_ref << 0., 0., 0., imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z;
+    //_imu_task->setReference(imu_pose,imu_vel_ref); // TODO
+    _imu_task->setReference(_imu_pose);
 
     // set joint velocities to postural task
-    _postural->setReference(_q_meas,_qdot_meas * dt);
+    _postural->setReference(_q_meas,_qdot_meas);
+    _postural_error = _postural->getError();
+    _postural->getReference(_postural_reference,_postural_reference_dot);
 
     // set contact state
     for(unsigned int i=0; i<cf_msg->name.size(); i++)
     {
       //if(cf_msg->contact[i])
       //  ROS_INFO_STREAM("Active contact: "<< cf_msg->name[i]);
-      _contact_tasks[cf_msg->name[i]]->setActive(cf_msg->contact[i]);
+      //_contact_tasks[cf_msg->name[i]]->setActive(cf_msg->contact[i]);
+      _contact_force.x() = cf_msg->des_contact_forces[i].force.x;
+      _contact_force.y() = cf_msg->des_contact_forces[i].force.y;
+      _contact_force.z() = cf_msg->des_contact_forces[i].force.z;
+      _contact_tasks[cf_msg->name[i]]->setWeight(_contact_force.norm());
     }
 
     // Update robot's joint states
@@ -167,34 +188,22 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     {
 
       // integrate solution
-      _q += _qdot * dt;
+      _q = _qdot * dt + _q;
 
-      _fbqdot = _qdot.segment(0,6);
-      _fbq = _q.segment(0,6);
+      // Get FB pose
+      _robot->getFloatingBasePose(_fb_pose);
+      _robot->getFloatingBaseTwist(_fbqdot);
+      wolf_controller::rotToRpy(_fb_pose.linear(),_fb_rpy);
+      _fb_xyz = _fb_pose.translation();
+      _fbq << _fb_xyz, _fb_rpy;
 
-      //ROS_INFO_STREAM("DT: "<<dt);
-      ROS_INFO_STREAM("q: "<<_q.transpose());
-      ROS_INFO_STREAM("q_meas: "<< _q_meas.transpose());
-      ROS_INFO_STREAM("qdot: "<<_qdot.transpose());
-      ROS_INFO_STREAM("qdot_meas: "<< _qdot_meas.transpose());
-      ROS_INFO_STREAM("FB pos: "<<_fbq.transpose());
-      ROS_INFO_STREAM("FB vel: "<<_fbqdot.transpose());
-      rotToRpy(imu_R,imu_rpy);
-      ROS_INFO_STREAM("imu_rpy: "<< imu_rpy.transpose());
-
-      // Update FB
-      //Eigen::Affine3d fb_pose;
-      //Eigen::Matrix3d fb_R;
-      //fb_pose.translation() << _fbq.segment(0,3);
-      //rpyToRot(_fbq.segment(3,3),fb_R);
-      //fb_pose.linear() << fb_R;
-      //_robot->setFloatingBaseState(fb_pose,_fbqdot);
-      //_robot->update();
     }
     else
       ROS_WARN("Can not solve!");
   }
   _t_prev = _t;
+
+  rt_logger::RtLogger::getLogger().publish(ros::Time::now());
 }
 
 int main(int argc, char **argv)
@@ -209,17 +218,30 @@ int main(int argc, char **argv)
   _qdot.fill(0.0);
   _fbq.fill(0.0);
   _fbqdot.fill(0.0);
+  _postural_error.fill(0.0);
+  _postural_reference.fill(0.0);
+  _postural_reference_dot.fill(0.0);
 
-  _robot.reset(createRobotModel(root_nh));
+  _robot.reset(wolf_controller::createRobotModel(root_nh));
+
+  rt_logger::RtLogger::getLogger().addPublisher("q_meas",_q_meas);
+  rt_logger::RtLogger::getLogger().addPublisher("qdot_meas",_qdot_meas);
+  rt_logger::RtLogger::getLogger().addPublisher("q",_q);
+  rt_logger::RtLogger::getLogger().addPublisher("qdot",_qdot);
+  rt_logger::RtLogger::getLogger().addPublisher("fbq",_fbq);
+  rt_logger::RtLogger::getLogger().addPublisher("fbqdot",_fbqdot);
+  rt_logger::RtLogger::getLogger().addPublisher("postural_error",_postural_error);
+  rt_logger::RtLogger::getLogger().addPublisher("postural_reference",_postural_reference);
+  rt_logger::RtLogger::getLogger().addPublisher("postural_reference_dot",_postural_reference_dot);
 
   message_filters::Subscriber<sensor_msgs::JointState> joint_state_sub;
   message_filters::Subscriber<sensor_msgs::Imu> imu_sub;
-  message_filters::Subscriber<ContactForces> cf_sub;
+  message_filters::Subscriber<wolf_controller::ContactForces> cf_sub;
 
   joint_state_sub.subscribe(root_nh,_robot->getRobotName()+"/joint_states",100);
   imu_sub.subscribe(root_nh,"/trunk_imu/data",100);
   cf_sub.subscribe(root_nh,_robot->getRobotName()+"/wolf_controller/contact_forces",100);
-  _state_sub = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,ContactForces> >(joint_state_sub,imu_sub,cf_sub,100);
+  _state_sub = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces> >(joint_state_sub,imu_sub,cf_sub,100);
   _state_sub->registerCallback(update);
 
   //ros::Subscriber sub = root_nh.subscribe(_robot->getRobotName()+"/joint_states", 1000, update);
