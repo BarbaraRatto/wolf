@@ -121,9 +121,6 @@ if (CATKIN_ENABLE_TESTING)
   add_library(robot_dummy test/robot_dummy.cpp)
   target_link_libraries(robot_dummy ${catkin_LIBRARIES} ${PROJECT_NAME})
 
-  add_executable(test_qp_estimation test/test_qp_estimation.cpp)
-  target_link_libraries(test_qp_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
-
   add_executable(test_state_estimation test/test_state_estimation.cpp)
   target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
 
