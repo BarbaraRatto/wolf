@@ -23,12 +23,12 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/utils.h>
 
 // Generated
-#include <wolf_controller/ContactForces.h>
-#include <wolf_controller/FootHolds.h>
-#include <wolf_controller/TerrainEstimation.h>
-#include <wolf_controller/FrictionCones.h>
-#include <wolf_controller/CapturePoint.h>
-#include <wolf_controller/float32.h>
+#include <wolf_msgs/ContactForces.h>
+#include <wolf_msgs/FootHolds.h>
+#include <wolf_msgs/TerrainEstimation.h>
+#include <wolf_msgs/FrictionCones.h>
+#include <wolf_msgs/CapturePoint.h>
+#include <wolf_msgs/float32.h>
 
 // WoLF
 #include <wolf_controller/controller.h>
@@ -293,7 +293,7 @@ public:
         // Real time publishers
         // Contact forces
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
-        contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::ContactForces>(controller_nh, "contact_forces", 4));
+        contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         contact_forces_pub_->msg_.name.resize(n_contacts);
         contact_forces_pub_->msg_.contact.resize(n_contacts);
@@ -302,22 +302,22 @@ public:
         contact_forces_pub_->msg_.des_contact_forces.resize(n_contacts);
         // Foot holds
         unsigned int n_feet = controller_->getRobotModel()->getNumberLegs();
-        foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FootHolds>(controller_nh, "foot_holds", 4));
+        foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::FootHolds>(controller_nh, "foot_holds", 4));
         foot_holds_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         foot_holds_pub_->msg_.name.resize(n_feet);
         foot_holds_pub_->msg_.desired_foothold.resize(n_feet);
         foot_holds_pub_->msg_.virtual_foothold.resize(n_feet);
         // Terrain estimation
-        terrain_estimation_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>(controller_nh, "terrain_estimation", 4));
+        terrain_estimation_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::TerrainEstimation>(controller_nh, "terrain_estimation", 4));
         terrain_estimation_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
         // Friciton cones
-        friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>(controller_nh, "friction_cones", 4));
+        friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::FrictionCones>(controller_nh, "friction_cones", 4));
         friction_cones_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
         // Capture point
-        capture_point_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>(controller_nh, "capture_point", 4));
+        capture_point_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::CapturePoint>(controller_nh, "capture_point", 4));
         capture_point_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
         capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
 
@@ -397,7 +397,7 @@ public:
         return res.success;
     }
 
-    bool setSwingFrequencyCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    bool setSwingFrequencyCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
     {
         res.success = true;
         if(req.data >= 0)
@@ -407,7 +407,7 @@ public:
         return res.success;
     }
 
-    bool setDutyFactorCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    bool setDutyFactorCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
     {
         res.success = true;
         if(req.data >= 0)
@@ -431,7 +431,7 @@ public:
         return res.success;
     }
 
-    bool setStepHeightCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    bool setStepHeightCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
     {
         res.success = true;
         if(req.data >= 0)
@@ -644,15 +644,15 @@ public:
 protected:
 
     /** @brief Real time publisher - contact forces */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::ContactForces>> contact_forces_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::ContactForces>> contact_forces_pub_;
     /** @brief Real time publisher - foot holds */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::FootHolds>> foot_holds_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::FootHolds>> foot_holds_pub_;
     /** @brief Real time publisher - terrain estimation */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>> terrain_estimation_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::TerrainEstimation>> terrain_estimation_pub_;
     /** @brief Real time publisher - friction cones */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>> friction_cones_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::FrictionCones>> friction_cones_pub_;
     /** @brief Real time publisher - capture point */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>> capture_point_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::CapturePoint>> capture_point_pub_;
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */

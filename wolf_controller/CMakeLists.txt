@@ -20,7 +20,7 @@ endif()
 
 # ROS
 find_package(catkin REQUIRED tf2 controller_interface control_toolbox wolf_hardware_interface
-    realtime_tools geometry_msgs sensor_msgs nav_msgs ddynamic_reconfigure message_generation rviz_visual_tools rt_logger)
+    realtime_tools ddynamic_reconfigure rviz_visual_tools rt_logger)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
@@ -36,32 +36,10 @@ else()
     message("rt_gui not found.")
 endif()
 
-add_message_files(FILES
-                 CartesianTask.msg
-                 PosturalTask.msg
-                 ComTask.msg
-                 ContactForces.msg
-                 FootHolds.msg
-                 TerrainEstimation.msg
-                 FrictionCones.msg
-                 CapturePoint.msg
-)
-
-add_service_files(
-  FILES
-  float32.srv
-)
-
-generate_messages(
-    DEPENDENCIES
-    geometry_msgs
-    std_msgs
-)
-
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS wolf_msgs
 )
 
 include_directories(
@@ -77,12 +55,10 @@ include_directories(
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
     src/foot_trajectory_interface.cpp src/legs_kinematics.cpp src/impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp
     src/gait_generator.cpp src/foot_state_machine.cpp src/cartesian_trajectory.cpp)
-add_dependencies(${PROJECT_NAME} ${wolf_controller_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
-add_dependencies(plot_node ${wolf_controller_EXPORTED_TARGETS})
 target_link_libraries(plot_node ${catkin_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/

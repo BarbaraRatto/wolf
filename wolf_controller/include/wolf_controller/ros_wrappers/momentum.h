@@ -14,6 +14,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/Task.h>
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 
+// ROS
+#include <wolf_msgs/CartesianTask.h>
+
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
 #include <wolf_controller/ros_wrappers/cartesian.h>
@@ -21,7 +24,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/utils.h>
 
 // AngularMomentum
-class AngularMomentum : public OpenSoT::tasks::acceleration::AngularMomentum, public TaskRosWrapperInterface<wolf_controller::CartesianTask>
+class AngularMomentum : public OpenSoT::tasks::acceleration::AngularMomentum, public TaskRosWrapperInterface<wolf_msgs::CartesianTask>
 {
 
 public:
@@ -30,7 +33,7 @@ public:
 
   AngularMomentum(ros::NodeHandle& nh, XBot::ModelInterface& robot, const OpenSoT::AffineHelper& qddot)
     :OpenSoT::tasks::acceleration::AngularMomentum(robot,qddot)
-    ,TaskRosWrapperInterface<wolf_controller::CartesianTask>(_task_id,nh)
+    ,TaskRosWrapperInterface<wolf_msgs::CartesianTask>(_task_id,nh)
   {
   }
 

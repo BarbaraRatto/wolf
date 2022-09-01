@@ -15,7 +15,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/tasks/acceleration/CoM.h>
 
 // ROS
-#include <wolf_controller/ComTask.h>
+#include <wolf_msgs/ComTask.h>
 
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
@@ -23,7 +23,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/utils.h>
 
 // CoM
-class CoM : public OpenSoT::tasks::acceleration::CoM, public TaskRosWrapperInterface<wolf_controller::ComTask>
+class CoM : public OpenSoT::tasks::acceleration::CoM, public TaskRosWrapperInterface<wolf_msgs::ComTask>
 {
 
 public:
@@ -32,7 +32,7 @@ public:
 
   CoM(ros::NodeHandle& nh, const XBot::ModelInterface& robot, const OpenSoT::AffineHelper& qddot)
     :OpenSoT::tasks::acceleration::CoM(robot,qddot)
-    ,TaskRosWrapperInterface<wolf_controller::ComTask>(_task_id,nh)
+    ,TaskRosWrapperInterface<wolf_msgs::ComTask>(_task_id,nh)
   {
   }
 

@@ -18,7 +18,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 
 // ROS
-#include <wolf_controller/CartesianTask.h>
+#include <wolf_msgs/CartesianTask.h>
 #include <interactive_markers/menu_handler.h>
 #include <urdf/model.h>
 #include <tf_conversions/tf_eigen.h>
@@ -36,7 +36,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <numeric>
 
 // CARTESIAN
-class Cartesian : public OpenSoT::tasks::acceleration::Cartesian, public TaskRosWrapperInterface<wolf_controller::CartesianTask>
+class Cartesian : public OpenSoT::tasks::acceleration::Cartesian, public TaskRosWrapperInterface<wolf_msgs::CartesianTask>
 {
 
 public:
@@ -51,7 +51,7 @@ public:
               const OpenSoT::AffineHelper& qddot,
               const bool use_mesh = true)
         :OpenSoT::tasks::acceleration::Cartesian(task_id,robot,distal_link,base_link,qddot)
-        ,TaskRosWrapperInterface<wolf_controller::CartesianTask>(task_id,nh)
+        ,TaskRosWrapperInterface<wolf_msgs::CartesianTask>(task_id,nh)
         ,use_mesh_(use_mesh)
         ,interactive_marker_server_(wolf_controller::_robot_name+"/wolf_controller/marker/"+_task_id)
     {

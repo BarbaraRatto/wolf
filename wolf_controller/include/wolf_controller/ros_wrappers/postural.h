@@ -14,14 +14,16 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/Task.h>
 #include <OpenSoT/tasks/acceleration/Postural.h>
 
+// ROS
+#include <wolf_msgs/PosturalTask.h>
+
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
-#include <wolf_controller/PosturalTask.h>
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
 
 // POSTURAL
-class Postural : public OpenSoT::tasks::acceleration::Postural, public TaskRosWrapperInterface<wolf_controller::PosturalTask>
+class Postural : public OpenSoT::tasks::acceleration::Postural, public TaskRosWrapperInterface<wolf_msgs::PosturalTask>
 {
 
 public:
@@ -31,7 +33,7 @@ public:
   Postural(ros::NodeHandle& nh, const XBot::ModelInterface& robot,
            OpenSoT::AffineHelper qddot = OpenSoT::AffineHelper(), const std::string task_id = "Postural")
     :OpenSoT::tasks::acceleration::Postural(robot,qddot,task_id)
-    ,TaskRosWrapperInterface<wolf_controller::PosturalTask>(task_id,nh)
+    ,TaskRosWrapperInterface<wolf_msgs::PosturalTask>(task_id,nh)
   {
     const unsigned int& size = getActualPositions().size();
     tmp_vectorXd_.resize(size);
