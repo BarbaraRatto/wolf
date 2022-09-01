@@ -47,7 +47,7 @@
         <include file="$(find wolf_description_utils)/launch/world.launch">
             <arg name="sensors" value="$(arg sensors)" />
             <arg name="robot_name" value="$(arg robot_name)" />
-            <arg name="world_name" value="$(eval find('wolf_gazebo_resources') + '/worlds/' + arg('world_name') + '.world')" />
+            <arg name="world_name" value="$(arg world_name)" />
             <arg name="task_period" value="$(arg task_period)" />
             <arg name="gui" value="$(arg gazebo_gui)"/>
             <arg name="arm_enabled" value="$(arg arm_enabled)"/>

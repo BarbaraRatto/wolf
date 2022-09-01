@@ -1,9 +1,0 @@
-std_msgs/Header header
-string[] name
-float64[] position_actual
-float64[] position_reference
-float64[] velocity_actual
-float64[] velocity_reference
-float64[] position_error
-float64[] velocity_error
-float64 cost

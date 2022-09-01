@@ -25,3 +25,6 @@
 [submodule "wolf_rviz_plugin"]
 	path = wolf_rviz_plugin
 	url = git@github.com:graiola/wolf_rviz_plugin.git
+[submodule "wolf_msgs"]
+	path = wolf_msgs
+	url = git@github.com:graiola/wolf_msgs.git

@@ -12,13 +12,13 @@
 #include <Eigen/Dense>
 #include <geometry_msgs/WrenchStamped.h>
 #include <wolf_controller/utils.h>
-#include <wolf_controller/ContactForces.h>
-#include <wolf_controller/CapturePoint.h>
-#include <wolf_controller/CartesianTask.h>
-#include <wolf_controller/ComTask.h>
-#include <wolf_controller/FrictionCones.h>
-#include <wolf_controller/TerrainEstimation.h>
-#include <wolf_controller/FootHolds.h>
+#include <wolf_msgs/ContactForces.h>
+#include <wolf_msgs/CapturePoint.h>
+#include <wolf_msgs/CartesianTask.h>
+#include <wolf_msgs/ComTask.h>
+#include <wolf_msgs/FrictionCones.h>
+#include <wolf_msgs/TerrainEstimation.h>
+#include <wolf_msgs/FootHolds.h>
 #include <rviz_visual_tools/rviz_visual_tools.h>
 #include <mutex>
 
@@ -236,7 +236,7 @@ protected:
 };
 
 
-class FrictionConesVisualizer : public Visualizer<wolf_controller::FrictionCones>
+class FrictionConesVisualizer : public Visualizer<wolf_msgs::FrictionCones>
 {
 
 public:
@@ -244,7 +244,7 @@ public:
   typedef std::shared_ptr<FrictionConesVisualizer> Ptr;
 
   FrictionConesVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
-    :Visualizer<wolf_controller::FrictionCones>(nh,topic_name)
+    :Visualizer<wolf_msgs::FrictionCones>(nh,topic_name)
   {
   }
 
@@ -252,7 +252,7 @@ public:
 
 protected:
 
-  virtual void callback(const wolf_controller::FrictionCones &msg) override
+  virtual void callback(const wolf_msgs::FrictionCones &msg) override
   {
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
@@ -266,7 +266,7 @@ protected:
   }
 };
 
-class TerrainEstimationVisualizer : public Visualizer<wolf_controller::TerrainEstimation>
+class TerrainEstimationVisualizer : public Visualizer<wolf_msgs::TerrainEstimation>
 {
 
 public:
@@ -274,14 +274,14 @@ public:
   typedef std::shared_ptr<TerrainEstimationVisualizer> Ptr;
 
   TerrainEstimationVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
-    :Visualizer<wolf_controller::TerrainEstimation>(nh,topic_name)
+    :Visualizer<wolf_msgs::TerrainEstimation>(nh,topic_name)
   {
   }
 
   virtual ~TerrainEstimationVisualizer() {}
 
 protected:
-  virtual void callback(const wolf_controller::TerrainEstimation &msg) override
+  virtual void callback(const wolf_msgs::TerrainEstimation &msg) override
   {
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
@@ -294,13 +294,13 @@ protected:
   }
 };
 
-class ContactForcesVisualizer : public Visualizer<wolf_controller::ContactForces>
+class ContactForcesVisualizer : public Visualizer<wolf_msgs::ContactForces>
 {
 
 public:
 
   ContactForcesVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
-    :Visualizer<wolf_controller::ContactForces>(nh,topic_name)
+    :Visualizer<wolf_msgs::ContactForces>(nh,topic_name)
   {
   }
 
@@ -308,7 +308,7 @@ public:
 
 protected:
 
-  virtual void callback(const wolf_controller::ContactForces &msg) override
+  virtual void callback(const wolf_msgs::ContactForces &msg) override
   {
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
@@ -325,13 +325,13 @@ protected:
   }
 };
 
-class CoMVisualizer : public Visualizer<wolf_controller::ComTask>
+class CoMVisualizer : public Visualizer<wolf_msgs::ComTask>
 {
 
 public:
 
   CoMVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
-    :Visualizer<wolf_controller::ComTask>(nh,topic_name)
+    :Visualizer<wolf_msgs::ComTask>(nh,topic_name)
   {
   }
 
@@ -339,13 +339,13 @@ public:
 
 protected:
 
-  virtual void callback(const wolf_controller::ComTask& msg) override
+  virtual void callback(const wolf_msgs::ComTask& msg) override
   {
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
       visual_tools_->deleteAllMarkers();
       visual_tools_->setBaseFrame(msg.header.frame_id);
-      wolf_controller::ComTask com_projection = msg;
+      wolf_msgs::ComTask com_projection = msg;
       com_projection.position_actual.z = 0.0;
       createSphere(com_projection.position_actual,rviz_visual_tools::RED);
       createSphere(msg.position_actual,rviz_visual_tools::GREEN);
@@ -355,13 +355,13 @@ protected:
   }
 };
 
-class CapturePointVisualizer : public Visualizer<wolf_controller::CapturePoint>
+class CapturePointVisualizer : public Visualizer<wolf_msgs::CapturePoint>
 {
 
 public:
 
   CapturePointVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
-    :Visualizer<wolf_controller::CapturePoint>(nh,topic_name)
+    :Visualizer<wolf_msgs::CapturePoint>(nh,topic_name)
   {
   }
 
@@ -369,13 +369,13 @@ public:
 
 protected:
 
-  virtual void callback(const wolf_controller::CapturePoint& msg) override
+  virtual void callback(const wolf_msgs::CapturePoint& msg) override
   {
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
       visual_tools_->deleteAllMarkers();
       visual_tools_->setBaseFrame(msg.header.frame_id);
-      wolf_controller::CapturePoint data = msg;
+      wolf_msgs::CapturePoint data = msg;
       createSphere(data.capture_point,rviz_visual_tools::RED);
       createSphere(data.com,rviz_visual_tools::GREEN);
       createPolygon(data.support_polygon,rviz_visual_tools::GREEN);
@@ -384,20 +384,20 @@ protected:
   }
 };
 
-class FootHoldsVisualizer : public Visualizer<wolf_controller::FootHolds>
+class FootHoldsVisualizer : public Visualizer<wolf_msgs::FootHolds>
 {
 
 public:
 
   FootHoldsVisualizer(ros::NodeHandle& nh, const std::string& topic_name)
-    :Visualizer<wolf_controller::FootHolds>(nh,topic_name)
+    :Visualizer<wolf_msgs::FootHolds>(nh,topic_name)
   {
   }
 
   virtual ~FootHoldsVisualizer() {}
 
 protected:
-  virtual void callback(const wolf_controller::FootHolds& msg) override
+  virtual void callback(const wolf_msgs::FootHolds& msg) override
   {
     if(cnt_++%decimate_==0 && _mtx.try_lock())
     {
