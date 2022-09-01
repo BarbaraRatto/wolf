@@ -2,8 +2,11 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 // OpenSoT
 #include <OpenSoT/utils/AutoStack.h>
@@ -17,7 +20,7 @@
 #include <OpenSoT/tasks/velocity/Postural.h>
 
 // WoLF
-#include <wolf_controller/ContactForces.h>
+#include <wolf_msgs/ContactForces.h>
 
 // Rt logger
 #include <rt_logger/rt_logger.h>
@@ -42,7 +45,7 @@ static std::map<std::string,OpenSoT::tasks::velocity::Cartesian::Ptr> _contact_t
 static OpenSoT::tasks::velocity::Postural::Ptr _postural;
 static OpenSoT::tasks::velocity::Cartesian::Ptr _imu_task;
 static OpenSoT::tasks::Aggregated::Ptr _aggregated_contacts;
-static std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces>> _state_sub;
+static std::shared_ptr<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_msgs::ContactForces>> _state_sub;
 static double _t = 0.0;
 static double _t_prev = 0.0;
 static bool _initialize = true;
@@ -60,12 +63,8 @@ static Eigen::Vector6d _fbq;
 static Eigen::Vector6d _fbqdot;
 static Eigen::Vector3d _contact_force;
 
-// TODO:
-// initialize with the odom from the tracking camera
-// add tracking camera odom
-// weight imu by covariance
-// add height
-// use measured contact forces
+static nav_msgs::Odometry _odom_msg;
+static ros::Publisher _odom_pub;
 
 void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
 {
@@ -125,7 +124,7 @@ void init(Eigen::VectorXd& q_init, Eigen::VectorXd& qdot_init)
 
 void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
             const sensor_msgs::Imu::ConstPtr& imu_msg,
-            const wolf_controller::ContactForces::ConstPtr& cf_msg)
+            const wolf_msgs::ContactForces::ConstPtr& cf_msg)
 {
 
   _t = ros::Time::now().toSec();
@@ -200,6 +199,21 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     }
     else
       ROS_WARN("Can not solve!");
+
+    // Publish odometry
+    // The nav_msgs/Odometry message stores an estimate of the position and velocity of a robot in free space:
+    // This represents an estimate of a position and velocity in free space.
+    // The pose in this message should be specified in the coordinate frame given by header.frame_id (in our case odom)
+    // The twist in this message should be specified in the coordinate frame given by the child_frame_id (in our case the basefootprint)
+    _odom_msg.header.seq              ++;
+    _odom_msg.header.stamp            = ros::Time::now();
+    _odom_msg.header.frame_id         = "world"; // FIXME
+    _odom_msg.child_frame_id          = "base_link"; // FIXME
+    _odom_msg.pose.pose               = tf2::toMsg(_fb_pose);
+    _odom_msg.twist.twist             = tf2::toMsg(_fbqdot);
+    //tf2::eigenToCovariance(pose_cov,odom_msg_out_.pose.covariance);
+    //tf2::eigenToCovariance(twist_cov,odom_msg_out_.twist.covariance);
+    _odom_pub.publish(_odom_msg);
   }
   _t_prev = _t;
 
@@ -236,12 +250,14 @@ int main(int argc, char **argv)
 
   message_filters::Subscriber<sensor_msgs::JointState> joint_state_sub;
   message_filters::Subscriber<sensor_msgs::Imu> imu_sub;
-  message_filters::Subscriber<wolf_controller::ContactForces> cf_sub;
+  message_filters::Subscriber<wolf_msgs::ContactForces> cf_sub;
+
+  _odom_pub = root_nh.advertise<nav_msgs::Odometry>("/spot/wolf_estimation/odom",100); // FIXME
 
   joint_state_sub.subscribe(root_nh,_robot->getRobotName()+"/joint_states",100);
-  imu_sub.subscribe(root_nh,"/trunk_imu/data",100);
+  imu_sub.subscribe(root_nh,_robot->getRobotName()+"/trunk_imu/data",100);
   cf_sub.subscribe(root_nh,_robot->getRobotName()+"/wolf_controller/contact_forces",100);
-  _state_sub = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_controller::ContactForces> >(joint_state_sub,imu_sub,cf_sub,100);
+  _state_sub = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_msgs::ContactForces> >(joint_state_sub,imu_sub,cf_sub,100);
   _state_sub->registerCallback(update);
 
   //ros::Subscriber sub = root_nh.subscribe(_robot->getRobotName()+"/joint_states", 1000, update);
