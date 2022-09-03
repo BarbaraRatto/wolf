@@ -19,7 +19,7 @@
   <depend>message_runtime</depend>
   <depend>rt_logger</depend>
   <depend>wolf_msgs</depend>
-  <depend condition="$rt_gui_FOUND == true">rt_gui</depend>
+  <depend condition="$rt_gui_FOUND == True">rt_gui</depend>
   <depend>rospy</depend>
 
   <test_depend>controller_manager</test_depend>
