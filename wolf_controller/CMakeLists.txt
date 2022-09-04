@@ -20,7 +20,7 @@ endif()
 
 # ROS
 find_package(catkin REQUIRED tf2 controller_interface control_toolbox wolf_hardware_interface
-    realtime_tools ddynamic_reconfigure rviz_visual_tools rt_logger)
+    realtime_tools ddynamic_reconfigure rviz_visual_tools rt_logger wolf_msgs)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
