@@ -6,12 +6,11 @@
 static wolf_controller::QuadrupedRobot::Ptr _robot;
 static wolf_controller::IDProblem::Ptr _id_problem;
 static std::unique_ptr<ros::NodeHandle> _root_nh_ptr;
-static double _period = 0.001;
 
 // TEST CASES
 TEST(IDProblem, Constructor)
 {
-  _id_problem.reset(new wolf_controller::IDProblem(*_root_nh_ptr,_robot,_period));
+  _id_problem.reset(new wolf_controller::IDProblem(_robot));
 }
 
 TEST(IDProblem, Solve)

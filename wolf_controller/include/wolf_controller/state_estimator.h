@@ -38,7 +38,7 @@ public:
      */
     typedef std::shared_ptr<const StateEstimator> ConstPtr;
 
-    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z};
+    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z,INTEGRATED_LINEAR_VELOCITIES};
 
     StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
 
@@ -218,6 +218,8 @@ private:
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
+
+    Trigger gait_cycle_ended_;
 
 };
 

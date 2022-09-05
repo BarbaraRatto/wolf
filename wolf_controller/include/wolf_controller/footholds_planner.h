@@ -257,6 +257,7 @@ public:
     Eigen::Vector3d& getDesiredFoothold(const std::string& foot_name) ;
     const std::vector<std::string>& getFootNames() const;
     double getSwingFrequency();
+    double getCycleTime();
     double getPushRecoverySensibility();
 
     /**

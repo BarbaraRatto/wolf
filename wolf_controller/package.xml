@@ -1,7 +1,8 @@
-<?xml version="1.0"?>
-<package format="2">
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>wolf_controller</name>
-  <version>0.1.0</version>
+  <version>0.1.2</version>
   <description>WoLF: Whole-body Locomotion Framework for quadruped robots. This package contains the whole-body controller.</description>
 
   <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>
@@ -13,14 +14,12 @@
   <depend>tf</depend>
   <depend>controller_interface</depend>
   <depend>wolf_hardware_interface</depend>
-  <depend>geometry_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>nav_msgs</depend>
   <depend>realtime_tools</depend>
   <depend>ddynamic_reconfigure</depend>
-  <depend>message_generation</depend>
   <depend>message_runtime</depend>
   <depend>rt_logger</depend>
+  <depend>wolf_msgs</depend>
+  <depend condition="$rt_gui_FOUND == True">rt_gui</depend>
   <depend>rospy</depend>
 
   <test_depend>controller_manager</test_depend>

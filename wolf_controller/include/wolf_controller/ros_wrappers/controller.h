@@ -23,18 +23,27 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/utils.h>
 
 // Generated
-#include <wolf_controller/ContactForces.h>
-#include <wolf_controller/FootHolds.h>
-#include <wolf_controller/TerrainEstimation.h>
-#include <wolf_controller/FrictionCones.h>
-#include <wolf_controller/CapturePoint.h>
-#include <wolf_controller/float32.h>
+#include <wolf_msgs/ContactForces.h>
+#include <wolf_msgs/FootHolds.h>
+#include <wolf_msgs/TerrainEstimation.h>
+#include <wolf_msgs/FrictionCones.h>
+#include <wolf_msgs/CapturePoint.h>
+#include <wolf_msgs/float32.h>
 
 // WoLF
 #include <wolf_controller/controller.h>
 #include <wolf_controller/ros_wrappers/interface.h>
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
+
+// RT GUI
+#ifdef RT_GUI
+#include <rt_gui/rt_gui_client.h>
+using namespace rt_gui;
+#endif
+
+// System
+#include <functional>
 
 
 class ControllerRosWrapper : public RosWrapperInterface
@@ -46,7 +55,7 @@ public:
 
     typedef std::shared_ptr<ControllerRosWrapper> Ptr;
 
-    ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh, wolf_controller::Controller* controller_ptr)
+    ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh, wolf_controller::Controller* const controller_ptr)
     {
         controller_ = controller_ptr;
 
@@ -157,6 +166,26 @@ public:
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
         }
 
+        bool activate_com_z = true;
+        controller_nh.getParam("activate_com_z", activate_com_z);
+        controller_->getIDProblem()->activateComZ(activate_com_z);
+
+        bool activate_postural = false;
+        controller_nh.getParam("activate_postural", activate_postural);
+        controller_->getIDProblem()->activatePostural(activate_postural);
+
+        bool activate_angular_momentum = true;
+        controller_nh.getParam("activate_angular_momentum", activate_angular_momentum);
+        controller_->getIDProblem()->activateAngularMomentum(activate_angular_momentum);
+
+        bool activate_joint_position_limits = false;
+        controller_nh.getParam("activate_joint_position_limits", activate_joint_position_limits);
+        controller_->getIDProblem()->activateJointPositionLimits(activate_joint_position_limits);
+
+        double regularization = 1e-3;
+        controller_nh.getParam("regularization", regularization);
+        controller_->getIDProblem()->setRegularization(regularization);
+
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
             ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
@@ -264,7 +293,7 @@ public:
         // Real time publishers
         // Contact forces
         unsigned int n_contacts = controller_->getRobotModel()->getContactNames().size();
-        contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::ContactForces>(controller_nh, "contact_forces", 4));
+        contact_forces_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::ContactForces>(controller_nh, "contact_forces", 4));
         contact_forces_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         contact_forces_pub_->msg_.name.resize(n_contacts);
         contact_forces_pub_->msg_.contact.resize(n_contacts);
@@ -273,56 +302,56 @@ public:
         contact_forces_pub_->msg_.des_contact_forces.resize(n_contacts);
         // Foot holds
         unsigned int n_feet = controller_->getRobotModel()->getNumberLegs();
-        foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FootHolds>(controller_nh, "foot_holds", 4));
+        foot_holds_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::FootHolds>(controller_nh, "foot_holds", 4));
         foot_holds_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         foot_holds_pub_->msg_.name.resize(n_feet);
         foot_holds_pub_->msg_.desired_foothold.resize(n_feet);
         foot_holds_pub_->msg_.virtual_foothold.resize(n_feet);
         // Terrain estimation
-        terrain_estimation_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>(controller_nh, "terrain_estimation", 4));
+        terrain_estimation_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::TerrainEstimation>(controller_nh, "terrain_estimation", 4));
         terrain_estimation_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
         // Friciton cones
-        friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>(controller_nh, "friction_cones", 4));
+        friction_cones_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::FrictionCones>(controller_nh, "friction_cones", 4));
         friction_cones_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         friction_cones_pub_->msg_.foot_positions.resize(n_feet);
         friction_cones_pub_->msg_.cone_axis.resize(n_feet);
         friction_cones_pub_->msg_.mus.resize(n_feet);
         // Capture point
-        capture_point_pub_.reset(new realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>(controller_nh, "capture_point", 4));
+        capture_point_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::CapturePoint>(controller_nh, "capture_point", 4));
         capture_point_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
         capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
 
         // DDynamic reconfigure
-        server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
-        server_->registerVariable<bool>("stand_up",false,boost::bind(&wolf_controller::Controller::standUp,controller_,_1),"stand up");
-        server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wolf_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
-        server_->registerVariable<bool>("activate_step_reflex",controller_->getGaitGenerator()->isStepReflexActive(),boost::bind(&wolf_controller::GaitGenerator::startStepReflex,controller_->getGaitGenerator(),_1),"activate step reflex");
-        server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wolf_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
-        server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wolf_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);
-        server_->registerVariable<double>("set_linear_vel_x",default_base_linear_velocity_x,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdX,controller_,_1),"set linear velocity x",0.0,1.0);
-        server_->registerVariable<double>("set_linear_vel_y",default_base_linear_velocity_y,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdY,controller_,_1),"set linear velocity y",0.0,1.0);
-        server_->registerVariable<double>("set_linear_vel_z",default_base_linear_velocity_z,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdZ,controller_,_1),"set linear velocity z",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel_roll",default_base_angular_velocity_roll,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdRoll,controller_,_1),"set angular velocity roll",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel_pitch",default_base_angular_velocity_pitch,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdPitch,controller_,_1),"set angular velocity pitch",0.0,1.0);
-        server_->registerVariable<double>("set_angular_vel_yaw",default_base_angular_velocity_yaw,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdYaw,controller_,_1),"set angular velocity yaw",0.0,1.0);
-        server_->registerVariable<double>("push_recovery_sensibility",controller_->getFootholdsPlanner()->getPushRecoverySensibility(),boost::bind(&wolf_controller::FootholdsPlanner::setPushRecoverySensibility,controller_->getFootholdsPlanner(),_1),"push recovery sensibility",0.0,1.0);
-        //server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
-        //server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
-        server_->registerVariable<double>("set_step_height",default_step_height,boost::bind(&wolf_controller::FootholdsPlanner::setStepHeight,controller_->getFootholdsPlanner(),_1),"set step height",0.0,max_step_height);
-        server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wolf_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,100.0);
+        ddr_server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
+        ddr_server_->registerVariable<bool>("stand_up",false,boost::bind(&wolf_controller::Controller::standUp,controller_,_1),"stand up");
+        ddr_server_->registerVariable<bool>("activate_push_recovery",controller_->getFootholdsPlanner()->isPushRecoveryActive(),boost::bind(&wolf_controller::FootholdsPlanner::startPushRecovery,controller_->getFootholdsPlanner(),_1),"activate push recovery");
+        ddr_server_->registerVariable<bool>("activate_step_reflex",controller_->getGaitGenerator()->isStepReflexActive(),boost::bind(&wolf_controller::GaitGenerator::startStepReflex,controller_->getGaitGenerator(),_1),"activate step reflex");
+        ddr_server_->registerVariable<double>("set_duty_factor",default_duty_factor,boost::bind(&wolf_controller::Controller::setDutyFactor,controller_,_1),"set duty factor",0.0,1.0);
+        ddr_server_->registerVariable<double>("set_swing_frequency",default_swing_frequency,boost::bind(&wolf_controller::Controller::setSwingFrequency,controller_,_1),"set swing frequency",0.0,6.0);
+        ddr_server_->registerVariable<double>("set_linear_vel_x",default_base_linear_velocity_x,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdX,controller_,_1),"set linear velocity x",0.0,1.0);
+        ddr_server_->registerVariable<double>("set_linear_vel_y",default_base_linear_velocity_y,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdY,controller_,_1),"set linear velocity y",0.0,1.0);
+        ddr_server_->registerVariable<double>("set_linear_vel_z",default_base_linear_velocity_z,boost::bind(&wolf_controller::Controller::setBaseLinearVelocityCmdZ,controller_,_1),"set linear velocity z",0.0,1.0);
+        ddr_server_->registerVariable<double>("set_angular_vel_roll",default_base_angular_velocity_roll,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdRoll,controller_,_1),"set angular velocity roll",0.0,1.0);
+        ddr_server_->registerVariable<double>("set_angular_vel_pitch",default_base_angular_velocity_pitch,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdPitch,controller_,_1),"set angular velocity pitch",0.0,1.0);
+        ddr_server_->registerVariable<double>("set_angular_vel_yaw",default_base_angular_velocity_yaw,boost::bind(&wolf_controller::Controller::setBaseAngularVelocityCmdYaw,controller_,_1),"set angular velocity yaw",0.0,1.0);
+        ddr_server_->registerVariable<double>("push_recovery_sensibility",controller_->getFootholdsPlanner()->getPushRecoverySensibility(),boost::bind(&wolf_controller::FootholdsPlanner::setPushRecoverySensibility,controller_->getFootholdsPlanner(),_1),"push recovery sensibility",0.0,1.0);
+        //ddr_server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
+        //ddr_server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
+        ddr_server_->registerVariable<double>("set_step_height",default_step_height,boost::bind(&wolf_controller::FootholdsPlanner::setStepHeight,controller_->getFootholdsPlanner(),_1),"set step height",0.0,max_step_height);
+        ddr_server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wolf_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,100.0);
 
-        server_->registerEnumVariable<std::string>("select_gait","TROT",
+        ddr_server_->registerEnumVariable<std::string>("select_gait","TROT",
                                                    boost::bind(&wolf_controller::Controller::selectGait,controller_,_1),
                                                    "select gait", {{"TROT","TROT"},{"CRAWL","CRAWL"}});
 
-        server_->registerEnumVariable<std::string>("select_control_mode","WALKING",
+        ddr_server_->registerEnumVariable<std::string>("select_control_mode","WALKING",
                                                    boost::bind(&wolf_controller::Controller::selectControlMode,controller_,_1),
                                                    "select mode", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
 
-        server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wolf_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
-        server_->registerVariable<double>("set_cutoff_freq_qdot",default_cutoff_freq_qdot,boost::bind(&wolf_controller::Controller::setCutoffFreqQdot,controller_,_1),"set cutoff frequency for the joint velocities",0,1000.0);
-        server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
-        server_->publishServicesTopics();
+        ddr_server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wolf_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
+        ddr_server_->registerVariable<double>("set_cutoff_freq_qdot",default_cutoff_freq_qdot,boost::bind(&wolf_controller::Controller::setCutoffFreqQdot,controller_,_1),"set cutoff frequency for the joint velocities",0,1000.0);
+        ddr_server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
+        ddr_server_->publishServicesTopics();
 
         // ROS services
         switch_control_mode_         = controller_nh.advertiseService("switch_control_mode",         &ControllerRosWrapper::switchControlModeCB,         this);
@@ -341,6 +370,17 @@ public:
         decrease_swing_frequency_    = controller_nh.advertiseService("decrease_swing_frequency",    &ControllerRosWrapper::decreaseSwingFrequencyCB,    this);
         set_swing_frequency_         = controller_nh.advertiseService("set_swing_frequency",         &ControllerRosWrapper::setSwingFrequencyCB,         this);
         set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",             &ControllerRosWrapper::setDutyFactorCB,             this);
+
+        // RT GUI
+#ifdef RT_GUI
+        // create interface
+        if(RtGuiClient::getIstance().init("wolf_panel","controller",ros::Duration(10.0)))
+        {
+          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
+          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
+          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
+        }
+#endif
     }
 
     bool increaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -357,7 +397,7 @@ public:
         return res.success;
     }
 
-    bool setSwingFrequencyCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    bool setSwingFrequencyCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
     {
         res.success = true;
         if(req.data >= 0)
@@ -367,7 +407,7 @@ public:
         return res.success;
     }
 
-    bool setDutyFactorCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    bool setDutyFactorCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
     {
         res.success = true;
         if(req.data >= 0)
@@ -391,7 +431,7 @@ public:
         return res.success;
     }
 
-    bool setStepHeightCB(wolf_controller::float32Request& req, wolf_controller::float32Response& res)
+    bool setStepHeightCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
     {
         res.success = true;
         if(req.data >= 0)
@@ -604,15 +644,15 @@ public:
 protected:
 
     /** @brief Real time publisher - contact forces */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::ContactForces>> contact_forces_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::ContactForces>> contact_forces_pub_;
     /** @brief Real time publisher - foot holds */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::FootHolds>> foot_holds_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::FootHolds>> foot_holds_pub_;
     /** @brief Real time publisher - terrain estimation */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::TerrainEstimation>> terrain_estimation_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::TerrainEstimation>> terrain_estimation_pub_;
     /** @brief Real time publisher - friction cones */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::FrictionCones>> friction_cones_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::FrictionCones>> friction_cones_pub_;
     /** @brief Real time publisher - capture point */
-    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_controller::CapturePoint>> capture_point_pub_;
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::CapturePoint>> capture_point_pub_;
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */

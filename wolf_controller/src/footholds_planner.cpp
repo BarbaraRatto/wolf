@@ -115,8 +115,6 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 {
   unsigned int cmd = cmd_;
 
-  ROS_DEBUG_NAMED(CLASS_NAME,"update");
-
   world_R_hf_ = robot_model_->getHfRotationInWorld();
   hf_R_base_  = robot_model_->getBaseRotationInHf();
 
@@ -167,15 +165,17 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
   else
     push_detected_ = false;
 
-  calculateFootSteps();
-
   const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
-  {
     // Set the initial pose for the next swing
     if(gait_generator_->isLiftOff(foot_names[i]))
       initializeFootPosition(foot_names[i]);
 
+  calculateFootSteps();
+
+
+  for(unsigned int i=0; i<foot_names.size(); i++)
+  {
     gait_generator_->setStepLength(foot_names[i], steps_length_[foot_names[i]]);
     gait_generator_->setStepHeading(foot_names[i], steps_heading_[foot_names[i]]);
     gait_generator_->setStepHeight(foot_names[i], steps_height_[foot_names[i]]);
@@ -204,17 +204,18 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
 
 void FootholdsPlanner::calculateFootSteps()
 {
-  const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
 
   for(unsigned int i=0; i<foot_names.size(); i++)
   {
-    if(gait_generator_->isLiftOff(foot_names[i]))
-      capture_point_delta_[foot_names[i]] = push_recovery_->getDelta(foot_names[i]);
 
-    if(gait_generator_->isSwinging(foot_names[i]))
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"*********");
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"CalculateFootSteps for foot "<<foot_names[i]);
+
+    if(gait_generator_->isLiftOff(foot_names[i]))
     {
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"*********");
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"CalculateFootSteps for foot "<<foot_names[i]);
+
+      capture_point_delta_[foot_names[i]] = push_recovery_->getDelta(foot_names[i]);
 
       // 1) Compute the displacement of the foot produced by the linear velocity command
       hf_delta_hip_.setZero(); // \f$\deltaL_{x,y,0}\f$
@@ -233,6 +234,10 @@ void FootholdsPlanner::calculateFootSteps()
       hf_delta_hip_(1)+= hf_delta_heading_(1);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"hf_delta_hip_ (Combined): "<<hf_delta_hip_.transpose());
 
+    }
+    else if(gait_generator_->isSwinging(foot_names[i]))
+    {
+
       // 4) Calculate the foothold offset based on the initial feet position (virtual foothold offset)
       robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),base_T_foot_);
       // current foot position in the horizontal frame
@@ -241,7 +246,7 @@ void FootholdsPlanner::calculateFootSteps()
 
       // 5) Sum everything to obtain the new foothold displacement w.r.t hf
       hf_delta_foot_.setZero();
-      hf_delta_foot_.head(2) =  hf_delta_hip_.head(2)  + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
+      hf_delta_foot_.head(2) =  hf_delta_hip_.head(2) + (hf_X_initial_footholds_[i] - hf_X_current_foothold_).head(2);
 
       //6) Sum the delta for the push recovery
       hf_delta_foot_.head(2) =  hf_delta_foot_.head(2) + capture_point_delta_[foot_names[i]];
@@ -276,7 +281,7 @@ void FootholdsPlanner::calculateFootSteps()
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height_["<<foot_names[i]<<"]: "<<steps_height_[foot_names[i]]);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate_["<<foot_names[i]<<"]: "<<steps_heading_rate_[foot_names[i]]);
     }
-    else // if(gait_generator_->isTouchDown(feet_names[i]))
+    else if(gait_generator_->isInStance(foot_names[i]))
     {
       steps_length_[foot_names[i]]         = 0.0;
       steps_heading_[foot_names[i]]        = 0.0;
@@ -447,9 +452,9 @@ void FootholdsPlanner::setInitialOffsets()
       // initial hip positions, we assume the base starts horizontal (TODO)
       tmp_matrix3d_.setIdentity();
       // initial feet offsets in the horizontal frame
-      hf_X_initial_footholds_[i] = tmp_matrix3d_ * tmp_affine3d_1_.translation();
+      hf_X_initial_footholds_[i] = tmp_matrix3d_ * tmp_affine3d_1_.translation(); // base_X_foot
       // initial hip positions, we assume the base starts horizontal (TODO)
-      hf_X_initial_hips_[i] = tmp_affine3d_.translation();
+      hf_X_initial_hips_[i] = tmp_affine3d_.translation(); //base_X_hip
     }
 
     offsets_applied_ = true;
@@ -832,6 +837,11 @@ double FootholdsPlanner::getSwingFrequency()
   return gait_generator_->getAvgSwingFrequency();
 }
 
+double FootholdsPlanner::getCycleTime()
+{
+  return gait_generator_->getAvgCycleTime();
+}
+
 double FootholdsPlanner::getPushRecoverySensibility()
 {
   return (1.0 - push_recovery_->getScaleValue());
@@ -916,16 +926,23 @@ bool PushRecovery::update(const double& period)
   //com_pos_ = tmp_vector3d_; // Do not integrate
   com_pos_xy_ = com_pos_.head(2); // To export only
 
-  // Update the support polygon
+  // Get the foot positions wrt world
   feet_pos_ = footholds_planner_ptr_->robot_model_->getFeetPositionInWorld();
+
+  // Calculate the center of the support polygon wrt world to compute the scaling
+  tmp_vector3d_.setZero();
+  for(unsigned int i=0; i <feet_pos_.size(); i++)
+    tmp_vector3d_ = feet_pos_[ordered_foot_names_[i]] + tmp_vector3d_;
+  tmp_vector3d_ = tmp_vector3d_/feet_pos_.size();
+
+  // Update the support polygon
   if(footholds_planner_ptr_->gait_generator_->areAllFeetInStance())
   {
-    float scale = static_cast<float>(scale_); // Note: I use that to shrink the support polygon
     for(unsigned int i=0;i<ordered_foot_names_.size();i++)
     {
-      vertx_[i] = scale * static_cast<float>(feet_pos_[ordered_foot_names_[i]].x());
-      verty_[i] = scale * static_cast<float>(feet_pos_[ordered_foot_names_[i]].y());
-      support_polygon_edges_[i] = scale * feet_pos_[ordered_foot_names_[i]].head(2); // To export only
+      support_polygon_edges_[i] = tmp_vector3d_.head(2) + scale_ * (feet_pos_[ordered_foot_names_[i]].head(2) - tmp_vector3d_.head(2));
+      vertx_[i] = static_cast<float>(support_polygon_edges_[i].x());
+      verty_[i] = static_cast<float>(support_polygon_edges_[i].y());
     }
   }
 

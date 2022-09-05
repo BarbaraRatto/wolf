@@ -33,7 +33,10 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // WoLF
 #include <wolf_controller/geometry.h>
 #include <wolf_controller/utils.h>
-#include <wolf_controller/ros_wrappers/tasks.h>
+#include <wolf_controller/ros_wrappers/momentum.h>
+#include <wolf_controller/ros_wrappers/postural.h>
+#include <wolf_controller/ros_wrappers/cartesian.h>
+#include <wolf_controller/ros_wrappers/com.h>
 #include <wolf_controller/quadruped_robot.h>
 
 // STD
@@ -44,7 +47,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 namespace wolf_controller{
 
 /**
- * @brief The IDProblem class wraps the tasks, constraints and the solver used to solve the ID
+ * @brief The IDProblem class wraps the tasks, constraints and the solver used to solve the inverse dynamic problem (ID)
  */
 class IDProblem
 {
@@ -61,12 +64,20 @@ public:
 
     /**
      * @brief IDProblem constructor
-     * @param ros node handle
      * @param model pointer to external model
-     * @param vector of contact links name
      */
-    IDProblem(ros::NodeHandle& nh, QuadrupedRobot::Ptr model, const double& dt);
+    IDProblem(QuadrupedRobot::Ptr model);
+
+    /**
+     * @brief IDProblem destructor
+     */
     ~IDProblem();
+
+    /**
+     * @brief initialize the IDProblem
+     * @param ros node handle
+     */
+    void init(ros::NodeHandle& nh, const double& dt);
 
     /**
      * @brief solve call this after update()
@@ -100,6 +111,14 @@ public:
      * @param ros current time
      */
     void publish(const ros::Time& time);
+
+    /**
+     * @brief set the postural reference and gains
+     * @param Kp
+     * @param Kd
+     * @param q
+     */
+    void setPosture(const Eigen::MatrixXd &Kp, const Eigen::MatrixXd &Kd, const Eigen::VectorXd &q);
 
     /**
      * @brief set the mu parameter for the friction cones
@@ -152,7 +171,7 @@ public:
      * @param Rot rotation matrix
      * @param z height
      */
-    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z);
+    void setWaistReference(const Eigen::Matrix3d &Rot, const double &z, const double &z_vel);
 
     /**
      * @brief set the position and velocity reference for the CoM
@@ -176,6 +195,34 @@ public:
      */
     void reset();
 
+    /**
+     * @brief if true control the height of the robot via the CoM z position, otherwise
+     * use the waist z (default true)
+     */
+    void activateComZ(bool active);
+
+    /**
+     * @brief if true activate the angular momentum task (default true)
+     */
+    void activateAngularMomentum(bool active);
+
+    /**
+     * @brief if true activate the postural task (default false)
+     */
+    void activatePostural(bool active);
+
+    /**
+     * @brief if true activate the joint position limits constraint (default false)
+     */
+    void activateJointPositionLimits(bool active);
+
+    /**
+     * @brief set the regularization value for the solver,
+     * note that the forces regularization value will be calculated as reg*reg
+     * (default 1e-3)
+     */
+    void setRegularization(double regularization);
+
 private:
 
     /**
@@ -183,8 +230,7 @@ private:
      */
     std::map<std::string,Cartesian::Ptr> feet_;
     std::map<std::string,Cartesian::Ptr> arms_;
-    Cartesian::Ptr waistRPY_;
-    Cartesian::Ptr waistZ_;
+    Cartesian::Ptr waist_;
     CoM::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
@@ -273,16 +319,32 @@ private:
     double y_force_lower_lim_;
     double z_force_lower_lim_;
 
-
+    /**
+     * @brief Friction cones
+     */
     OpenSoT::constraints::force::FrictionCone::friction_cone fc_;
 
+    /**
+     * @brief Flags and variables
+     */
     std::atomic<unsigned int> control_mode_;
+    bool activate_com_z_;
+    bool activate_angular_momentum_;
+    bool activate_postural_;
+    bool activate_joint_position_limits_;
     bool change_control_mode_;
+    double regularization_value_;
 
+    /**
+     * @brief Various names
+     */
     std::vector<std::string> foot_names_;
     std::vector<std::string> ee_names_;
     std::vector<std::string> contact_names_;
 
+    /**
+     * @brief Temporary variables
+     */
     Eigen::Affine3d tmp_affine3d_;
     Eigen::Vector6d tmp_vector6d_;
     Eigen::Vector3d tmp_vector3d_;

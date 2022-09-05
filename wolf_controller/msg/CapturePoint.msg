@@ -1,4 +1,0 @@
-std_msgs/Header header
-geometry_msgs/Point capture_point
-geometry_msgs/Point com
-geometry_msgs/Polygon support_polygon

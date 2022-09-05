@@ -20,39 +20,26 @@ endif()
 
 # ROS
 find_package(catkin REQUIRED tf2 controller_interface control_toolbox wolf_hardware_interface
-    realtime_tools geometry_msgs sensor_msgs nav_msgs ddynamic_reconfigure message_generation rviz_visual_tools rt_logger)
+    realtime_tools ddynamic_reconfigure rviz_visual_tools rt_logger wolf_msgs)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(cartesian_interface REQUIRED)
 find_package(XBotInterface REQUIRED)
 find_package(ModelInterfaceRBDL REQUIRED)
+# RT gui
+find_package(rt_gui QUIET)
 
-add_message_files(FILES
-                 CartesianTask.msg
-                 PosturalTask.msg
-                 ComTask.msg
-                 ContactForces.msg
-                 FootHolds.msg
-                 TerrainEstimation.msg
-                 FrictionCones.msg
-                 CapturePoint.msg
-)
-
-add_service_files(
-  FILES
-  float32.srv
-)
-
-generate_messages(
-    DEPENDENCIES
-    geometry_msgs
-    std_msgs
-)
+if(${rt_gui_FOUND})
+    message("Found rt_gui, creating interface for wolf_controller.")
+    add_definitions(-DRT_GUI)
+else()
+    message("rt_gui not found.")
+endif()
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS wolf_msgs
 )
 
 include_directories(
@@ -62,16 +49,16 @@ include_directories(
     ${cartesian_interface_INCLUDE_DIRS}
     ${XBotInterface_INCLUDE_DIRS}
     ${ModelInterfaceRBDL_INCLUDE_DIRS}
+    ${rt_gui_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
     src/foot_trajectory_interface.cpp src/legs_kinematics.cpp src/impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp
-    src/gait_generator.cpp src/foot_state_machine.cpp)
-add_dependencies(${PROJECT_NAME} ${wolf_controller_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES})
+    src/gait_generator.cpp src/foot_state_machine.cpp src/cartesian_trajectory.cpp)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
-add_dependencies(plot_node ${wolf_controller_EXPORTED_TARGETS})
 target_link_libraries(plot_node ${catkin_LIBRARIES})
 
 install(DIRECTORY include/${PROJECT_NAME}/
@@ -118,6 +105,9 @@ if (CATKIN_ENABLE_TESTING)
 
   #add_executable(test_controller test/test_controller.cpp )
   #target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest robot_dummy)
+
+  add_executable(test_trajectory test/test_trajectory.cpp)
+  target_link_libraries(test_trajectory ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} gtest)
 
   add_rostest_gtest(test_controller
     test/test_controller.test
