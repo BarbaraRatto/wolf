@@ -28,3 +28,6 @@
 [submodule "wolf_msgs"]
 	path = wolf_msgs
 	url = git@github.com:graiola/wolf_msgs.git
+[submodule "wolf_estimation"]
+	path = wolf_estimation
+	url = git@github.com:graiola/wolf_estimation.git
