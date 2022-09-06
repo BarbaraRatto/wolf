@@ -144,9 +144,10 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
     force_torque_sensors_[contact_names[i]] = force_estimation_->add_link(contact_names[i],dofs,chain);
   }
 
-  RtLogger::getLogger().addPublisher(TOPIC(floating_base_position),floating_base_position_);
-  RtLogger::getLogger().addPublisher(TOPIC(floating_base_velocity),floating_base_velocity_);
-  RtLogger::getLogger().addPublisher(TOPIC(base_height           ),floating_base_position_(2));
+  RtLogger::getLogger().addPublisher(TOPIC(floating_base_position)   ,floating_base_position_);
+  RtLogger::getLogger().addPublisher(TOPIC(floating_base_orientation),base_rpy_);
+  RtLogger::getLogger().addPublisher(TOPIC(floating_base_velocity)   ,floating_base_velocity_);
+  RtLogger::getLogger().addPublisher(TOPIC(base_height           )   ,floating_base_position_(2));
 }
 
 void StateEstimator::setEstimationType(const std::string& position_t, const std::string& orientation_t)
