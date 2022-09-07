@@ -19,6 +19,7 @@
   <depend>message_runtime</depend>
   <depend>rt_logger</depend>
   <depend>wolf_msgs</depend>
+  <depend>wolf_estimation</depend>
   <depend condition="$rt_gui_FOUND == True">rt_gui</depend>
   <depend>rospy</depend>
 
