@@ -12,6 +12,9 @@
 #include <wolf_controller/devices/twist.h>
 #include <wolf_controller/devices/keyboard.h>
 
+#include <tf2/transform_datatypes.h>
+#include <tf2_eigen/tf2_eigen.h>
+
 using namespace XBot;
 using namespace Cartesian;
 using namespace rt_logger;
@@ -143,7 +146,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
           auto contact_sensor_names = cs_hw->getNames();
           if(contact_sensor_names.size() != N_LEGS)
           {
-            ROS_ERROR_NAMED(CLASS_NAME,"Wrong number of contact sensors! The magic number is 4");
+            ROS_ERROR_NAMED(CLASS_NAME,"Wrong number of contact sensors! only (4) are supported. Did you specify the contacts in the SRDF file?");
             return false;
           }
           auto foot_names = robot_model_->getFootNames();
@@ -222,6 +225,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     else if(input_device == "keyboard")
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
     devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
+
+    //estimator_ = std::make_shared<wolf_estimation::BaseEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
+    //                                                              robot_model_->getFootNames(),robot_model_->getImuSensorName(),
+    //                                                              robot_model_->getBaseLinkName());
 
     // Spawn the odom publisher thread
     odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
@@ -522,6 +529,17 @@ void Controller::updateStateEstimator(const double &dt)
         }
 
     state_estimator_->update(dt);
+
+    // HACK
+    //estimator_->setMeasuredJointVelocity(joint_velocities_filt_);
+    //estimator_->setMeasuredJointPosition(joint_positions_);
+    //estimator_->setMeasuredImuOrientation(imu_orientation_);
+    //estimator_->setMeasuredImuAngularVelocities(imu_gyroscope_filt_);
+    //imu_linear_vel_ = imu_accelerometer_ * dt + imu_linear_vel_;
+    //estimator_->setMeasuredImuLinearVelocities(imu_linear_vel_);
+    //estimator_->setContactStates(state_estimator_->getContacts());
+    //estimator_->setMeasuredContactForces(state_estimator_->getContactForces());
+    //estimator_->update(dt);
 }
 
 void Controller::updateStateMachine(const double &dt)
@@ -583,6 +601,8 @@ void Controller::updateStateMachine(const double &dt)
           if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
           {
             robot_model_->setState(QuadrupedRobot::ACTIVE);
+            // HACK
+            //estimator_->init(joint_positions_,joint_velocities_filt_);
             break;
           }
         }
@@ -711,6 +731,10 @@ void Controller::init()
     des_joint_efforts_impedance_.fill(0.0);
     // Fill initial joint positions
     joint_positions_init_ = joint_positions_;
+
+    // HACK
+    imu_linear_vel_.setZero();
+    imu_accelerometer_.setZero();
 }
 
 void Controller::updateComponents(const double &dt)
@@ -875,11 +899,15 @@ void Controller::odomPublisher()
     double estimated_z;
     Eigen::Matrix3d tmp_R;
     Eigen::Quaterniond tmp_q;
+    nav_msgs::Odometry odom;
+    Eigen::Vector6d twist;
 
     ros::Time t_prev;
     static tf2_ros::TransformBroadcaster br;
     geometry_msgs::TransformStamped basefoot_T_world;
     geometry_msgs::TransformStamped basefoot_T_base;
+    static ros::Publisher odom_pub;
+    odom_pub = root_nh_.advertise<nav_msgs::Odometry>("/spot/wolf_estimation/odom",100);
 
     basefoot_T_base.header.frame_id = BASE_FOOTPRINT_FRAME;
     basefoot_T_base.child_frame_id  = robot_model_->getBaseLinkName();
@@ -936,6 +964,18 @@ void Controller::odomPublisher()
           basefoot_T_base.header.stamp = t;
 
           br.sendTransform(basefoot_T_base);
+
+          world_T_base = estimator_->getEstimatedBasePose();
+          twist = estimator_->getEstimatedBaseTwist();
+          odom.header.seq              ++;
+          odom.header.stamp            = t;
+          odom.header.frame_id         = "world"; // FIXME
+          odom.child_frame_id          = "base_link"; // FIXME
+          odom.pose.pose               = tf2::toMsg(world_T_base);
+          odom.twist.twist             = tf2::toMsg(twist);
+          //tf2::eigenToCovariance(pose_cov,odom_msg_out_.pose.covariance);
+          //tf2::eigenToCovariance(twist_cov,odom_msg_out_.twist.covariance);
+          odom_pub.publish(odom);
 
         }
 

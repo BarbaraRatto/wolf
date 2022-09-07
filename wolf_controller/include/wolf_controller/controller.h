@@ -41,6 +41,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/devices/interface.h>
 #include <wolf_hardware_interface/ground_truth_interface.h>
 #include <wolf_hardware_interface/contact_switch_sensor_interface.h>
+#include <wolf_estimation/wolf_estimation.h>
 
 // Eigen
 #include <Eigen/Geometry>
@@ -362,6 +363,10 @@ private:
     std::vector<Eigen::Vector6d> des_contact_forces_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
+    /** @brief IMU Accelerometer filtered */
+    Eigen::Vector3d imu_accelerometer_filt_;
+    /** @brief IMU Linear velocities */
+    Eigen::Vector3d imu_linear_vel_;
     /** @brief IMU Gyroscope */
     Eigen::Vector3d imu_gyroscope_;
     /** @brief IMU Gyroscope filtered */
@@ -435,6 +440,9 @@ private:
     double previous_height_;
     Eigen::Vector3d current_rpy_;
     double desired_yaw_;
+
+    wolf_estimation::BaseEstimator::Ptr estimator_;
+
 
     /**
          * @brief thread body for the odometry publisher
