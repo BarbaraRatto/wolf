@@ -51,6 +51,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ROS_DEBUG_NAMED(CLASS_NAME,"Initialize");
 
     nh_ = controller_nh;
+    root_nh_ = root_nh;
 
     assert(robot_hw);
 

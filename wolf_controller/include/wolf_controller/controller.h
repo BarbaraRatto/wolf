@@ -378,6 +378,8 @@ private:
     TerrainEstimator::Ptr terrain_estimator_;
     /** @brief Ros node handle */
     ros::NodeHandle nh_;
+    /** @brief Ros node handle */
+    ros::NodeHandle root_nh_;
     /** @brief Input devices */
     DevicesHandler devices_;
     /** @brief Foot holds Planner */
