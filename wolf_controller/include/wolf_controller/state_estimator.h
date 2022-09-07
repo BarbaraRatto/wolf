@@ -72,7 +72,9 @@ public:
 
     void setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt_angular_velocity);
 
-    void setContactState(const std::string& foot_name, const bool& contact_state);
+    void setContactState(const std::string& name, const bool& state);
+
+    void setContactForce(const std::string &name, const Eigen::Vector3d &force);
 
     void setContactThreshold(const double& th);
 
@@ -87,8 +89,6 @@ public:
     std::string getPositionEstimationType();
 
     std::string getOrientationEstimationType();
-
-    void setContactForces(const std::string &name, const Eigen::Vector3d &force);
 
     const std::map<std::string,Eigen::Vector3d>& getContactForces() const;
 
@@ -170,8 +170,8 @@ private:
     std::map<std::string,Eigen::Vector3d> world_X_contact_;
     /** @brief Contact positions w.r.t base */
     std::map<std::string,Eigen::Vector3d> base_X_contact_;
-    /** @brief GRF contacts */
-    std::map<std::string,bool> contacts_;
+    /** @brief GRF contact states */
+    std::map<std::string,bool> contact_states_;
     /** @brief GRF contact forces */
     std::map<std::string,Eigen::Vector3d> contact_forces_;
     /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
@@ -211,7 +211,9 @@ private:
 
     estimation_t estimation_position_;
 
-    std::atomic<bool> use_external_forces_;
+    std::atomic<bool> use_external_contact_forces_;
+
+    std::atomic<bool> use_external_contact_states_;
 
     /** @brief Base estimation */
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;

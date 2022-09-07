@@ -127,7 +127,8 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   contact_force_th_ = 0.0; // [N]
 
-  use_external_forces_ = false;
+  use_external_contact_forces_ = false;
+  use_external_contact_states_ = false;
 
   // Contact force estimation reset
   force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimationMomentumBased>(robot_model_,1.0/_period);
@@ -232,6 +233,21 @@ void StateEstimator::setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt
   gt_angular_velocity_ = gt_angular_velocity;
 }
 
+void StateEstimator::setContactState(const std::string &name, const bool &state)
+{
+  if(use_external_contact_states_ == false)
+    use_external_contact_states_ = true;
+
+  if(contact_states_.count(name)> 0)
+  {
+    contact_states_[name] = state;
+  }
+  else
+  {
+    ROS_WARN_NAMED(CLASS_NAME,"Wrong contact name!");
+  }
+}
+
 void StateEstimator::setContactThreshold(const double& th)
 {
   contact_force_th_ = th;
@@ -252,10 +268,10 @@ std::string StateEstimator::getOrientationEstimationType()
   return enumToString(estimation_orientation_);
 }
 
-void StateEstimator::setContactForces(const std::string& name, const Eigen::Vector3d& force)
+void StateEstimator::setContactForce(const std::string& name, const Eigen::Vector3d& force)
 {
-  if(use_external_forces_ == false)
-    use_external_forces_ = true;
+  if(use_external_contact_forces_ == false)
+    use_external_contact_forces_ = true;
 
   if(contact_forces_.count(name)> 0)
   {
@@ -289,7 +305,7 @@ const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactForces() 
 
 const std::map<std::string,bool>& StateEstimator::getContacts() const
 {
-  return contacts_;
+  return contact_states_;
 }
 
 const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionInWorld() const
@@ -391,7 +407,8 @@ void StateEstimator::updateContactState()
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
   {
-    if(!use_external_forces_)
+    // If we don't have a measurement of the contact forces, estimate them
+    if(!use_external_contact_forces_)
     {
       tmp_vector3d_.setZero();
       force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
@@ -399,14 +416,20 @@ void StateEstimator::updateContactState()
     }
 
     if(contact_computation_active_)
-      contacts_[foot_names[i]] = (contact_forces_[foot_names[i]].dot(terrain_normal_) >= contact_force_th_ ? true : false);
+    {
+      // If we don't have a measurement of the contact states, estimate them with a threshold
+      if(!use_external_contact_states_)
+        contact_states_[foot_names[i]] = (contact_forces_[foot_names[i]].dot(terrain_normal_) >= contact_force_th_ ? true : false);
+    }
     else
-      contacts_[foot_names[i]] = true;
+    {
+      contact_states_[foot_names[i]] = true;
+    }
 
     if(haptic_contact_loop_active_)
     {
-      qp_estimation_->setContactState(foot_names[i],contacts_[foot_names[i]]);
-      gait_generator_->setContactState(foot_names[i],contacts_[foot_names[i]],contact_forces_[foot_names[i]]);
+      qp_estimation_->setContactState(foot_names[i],contact_states_[foot_names[i]]);
+      gait_generator_->setContactState(foot_names[i],contact_states_[foot_names[i]],contact_forces_[foot_names[i]]);
     }
     else
     {
@@ -426,9 +449,9 @@ void StateEstimator::updateContactState()
     tmp_vector3d_ = robot_model_->getEndEffectorPoseInWorld(ee_names[i]) * tmp_vector3d_; // contact_force_world = world_T_ee * contact_force_ee
 
     if(contact_computation_active_)
-      contacts_[ee_names[i]] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
+      contact_states_[ee_names[i]] = (tmp_vector3d_.norm() >= contact_force_th_ ? true : false);
     else
-      contacts_[ee_names[i]] = false;
+      contact_states_[ee_names[i]] = false;
 
     contact_forces_[ee_names[i]] = tmp_vector3d_;
   }
