@@ -212,9 +212,14 @@ public:
     void setCutoffFreqQdot(const double& hz);
 
     /**
-         * @brief set cutoff frequency for the gyroscope filter
+         * @brief set cutoff frequency for the imu gyroscope filter
          */
-    void setCutoffFreqGyro(const double& hz);
+    void setCutoffFreqGyroscope(const double& hz);
+
+    /**
+         * @brief set cutoff frequency for the imu accelerometer filter
+         */
+    void setCutoffFreqAccelerometer(const double& hz);
 
     /**
          * @brief Select the control mode to use [WALKING|MANIPULATION]
@@ -362,6 +367,8 @@ private:
     std::vector<Eigen::Vector6d> des_contact_forces_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
+    /** @brief IMU Accelerometer filtered */
+    Eigen::Vector3d imu_accelerometer_filt_;
     /** @brief IMU Gyroscope */
     Eigen::Vector3d imu_gyroscope_;
     /** @brief IMU Gyroscope filtered */
@@ -392,6 +399,8 @@ private:
     XBot::Utils::SecondOrderFilter<Eigen::VectorXd> qdot_filter_;
     /** @brief imu_gyroscope_filter */
     XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_gyroscope_filter_;
+    /** @brief imu_accelerometer filter */
+    XBot::Utils::SecondOrderFilter<Eigen::Vector3d> imu_accelerometer_filter_;
     /** @brief True if the controller uses the external contact sensors */
     bool use_contact_sensors_;
     /** @brief True if the controller is stopping */

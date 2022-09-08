@@ -107,7 +107,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
 
   for(unsigned int i=0;i<contact_names.size();i++)
   {
-    contacts_[contact_names[i]] = true;
+    contact_states_[contact_names[i]]   = true;
     contact_forces_[contact_names[i]]  = Eigen::Vector3d::Zero();
     world_X_contact_[contact_names[i]] = Eigen::Vector3d::Zero();
     base_X_contact_[contact_names[i]]  = Eigen::Vector3d::Zero();
