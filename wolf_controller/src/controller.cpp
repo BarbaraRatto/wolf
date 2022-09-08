@@ -230,9 +230,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
     devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
-    //estimator_ = std::make_shared<wolf_estimation::BaseEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
-    //                                                              robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-    //                                                              robot_model_->getBaseLinkName());
+    // HACK
+    estimator_ = std::make_shared<wolf_estimation::BaseEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
+                                                                  robot_model_->getFootNames(),robot_model_->getImuSensorName(),
+                                                                  robot_model_->getBaseLinkName());
 
     // Spawn the odom publisher thread
     odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
@@ -547,15 +548,14 @@ void Controller::updateStateEstimator(const double &dt)
     state_estimator_->update(dt);
 
     // HACK
-    //estimator_->setMeasuredJointVelocity(joint_velocities_filt_);
-    //estimator_->setMeasuredJointPosition(joint_positions_);
-    //estimator_->setMeasuredImuOrientation(imu_orientation_);
-    //estimator_->setMeasuredImuAngularVelocities(imu_gyroscope_filt_);
-    //imu_linear_vel_ = imu_accelerometer_ * dt + imu_linear_vel_;
-    //estimator_->setMeasuredImuLinearVelocities(imu_linear_vel_);
-    //estimator_->setContactStates(state_estimator_->getContacts());
-    //estimator_->setMeasuredContactForces(state_estimator_->getContactForces());
-    //estimator_->update(dt);
+    estimator_->setJointVelocity(joint_velocities_filt_);
+    estimator_->setJointPosition(joint_positions_);
+    estimator_->setImuOrientation(imu_orientation_);
+    estimator_->setImuAngularVelocities(imu_gyroscope_filt_);
+    estimator_->setImuLinearAcceleration(imu_accelerometer_filt_);
+    estimator_->setContactStates(state_estimator_->getContacts());
+    estimator_->setContactForces(state_estimator_->getContactForces());
+    estimator_->update(dt);
 }
 
 void Controller::updateStateMachine(const double &dt)
@@ -618,7 +618,7 @@ void Controller::updateStateMachine(const double &dt)
           {
             robot_model_->setState(QuadrupedRobot::ACTIVE);
             // HACK
-            //estimator_->init(joint_positions_,joint_velocities_filt_);
+            estimator_->init(joint_positions_,joint_velocities_filt_);
             break;
           }
         }
@@ -670,7 +670,6 @@ void Controller::updateStateMachine(const double &dt)
           robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
           break;
         }
-
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
@@ -748,10 +747,6 @@ void Controller::init()
     des_joint_efforts_impedance_.fill(0.0);
     // Fill initial joint positions
     joint_positions_init_ = joint_positions_;
-
-    // HACK
-    imu_linear_vel_.setZero();
-    imu_accelerometer_.setZero();
 }
 
 void Controller::updateComponents(const double &dt)
@@ -982,8 +977,9 @@ void Controller::odomPublisher()
 
           br.sendTransform(basefoot_T_base);
 
-          world_T_base = estimator_->getEstimatedBasePose();
-          twist = estimator_->getEstimatedBaseTwist();
+          // HACK
+          world_T_base = estimator_->getBasePose();
+          twist = estimator_->getBaseTwist();
           odom.header.seq              ++;
           odom.header.stamp            = t;
           odom.header.frame_id         = "world"; // FIXME
