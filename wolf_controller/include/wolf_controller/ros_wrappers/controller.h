@@ -160,6 +160,11 @@ public:
         {
             ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
         }
+        double default_cutoff_freq_accelerometer = 300.; // [Hz]
+        if (!controller_nh.getParam("default_cutoff_freq_accelerometer", default_cutoff_freq_accelerometer))
+        {
+            ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_accelerometer given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_accelerometer);
+        }
         double default_cutoff_freq_qdot = 300.; // [Hz]
         if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
         {
@@ -200,11 +205,13 @@ public:
 
         controller_->getStateEstimator()->setContactThreshold(default_contact_threshold);
 
+        // Gait Generator
         controller_->getGaitGenerator()->setSwingFrequency(default_swing_frequency);
         controller_->getGaitGenerator()->setDutyFactor(default_duty_factor);
         controller_->getGaitGenerator()->setStepReflexContactThreshold(default_step_reflex_contact_threshold);
         controller_->getGaitGenerator()->setStepReflexMaxRetraction(default_step_reflex_max_retraction);
 
+        // Footholds planner
         controller_->getFootholdsPlanner()->setBaseLinearVelocityCmd(default_base_linear_velocity_x,default_base_linear_velocity_y,default_base_linear_velocity_z);
         controller_->getFootholdsPlanner()->setBaseAngularVelocityCmd(default_base_angular_velocity_roll,default_base_angular_velocity_pitch,default_base_angular_velocity_yaw);
         controller_->getFootholdsPlanner()->setStepHeight(default_step_height);
@@ -216,11 +223,15 @@ public:
         controller_->getFootholdsPlanner()->setMinBaseRoll(min_base_roll);
         controller_->getFootholdsPlanner()->setMinBasePitch(min_base_pitch);
 
+        // ID problem
         controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
 
+        // Filters
         controller_->setCutoffFreqQdot(default_cutoff_freq_qdot);
-        controller_->setCutoffFreqGyro(default_cutoff_freq_gyroscope);
+        controller_->setCutoffFreqGyroscope(default_cutoff_freq_gyroscope);
+        controller_->setCutoffFreqAccelerometer(default_cutoff_freq_accelerometer);
 
+        // CMD interface
         controller_->setBaseLinearVelocityCmdX(default_base_linear_velocity_x);
         controller_->setBaseLinearVelocityCmdY(default_base_linear_velocity_y);
         controller_->setBaseLinearVelocityCmdZ(default_base_linear_velocity_z);
@@ -350,7 +361,8 @@ public:
 
         ddr_server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wolf_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
         ddr_server_->registerVariable<double>("set_cutoff_freq_qdot",default_cutoff_freq_qdot,boost::bind(&wolf_controller::Controller::setCutoffFreqQdot,controller_,_1),"set cutoff frequency for the joint velocities",0,1000.0);
-        ddr_server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyro,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
+        ddr_server_->registerVariable<double>("set_cutoff_freq_gyroscope",default_cutoff_freq_gyroscope,boost::bind(&wolf_controller::Controller::setCutoffFreqGyroscope,controller_,_1),"set cutoff frequency for the imu gyroscope",0,1000.0);
+        ddr_server_->registerVariable<double>("set_cutoff_freq_accelerometer",default_cutoff_freq_accelerometer,boost::bind(&wolf_controller::Controller::setCutoffFreqAccelerometer,controller_,_1),"set cutoff frequency for the imu accelerometer",0,1000.0);
         ddr_server_->publishServicesTopics();
 
         // ROS services

@@ -186,6 +186,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_impedance_.fill(0.0);
     des_joint_efforts_solver_.fill(0.0);
     imu_orientation_.normalize();
+    imu_gyroscope_.fill(0.0);
+    imu_accelerometer_.fill(0.0);
+    imu_gyroscope_filt_.fill(0.0);
+    imu_accelerometer_filt_.fill(0.0);
 
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
@@ -289,12 +293,23 @@ void Controller::setCutoffFreqQdot(const double &hz)
         ROS_WARN_NAMED(CLASS_NAME,"Cutoff frequency has to be >= 0.0 [Hz]!");
 }
 
-void Controller::setCutoffFreqGyro(const double &hz)
+void Controller::setCutoffFreqGyroscope(const double &hz)
 {
     if(hz >= 0.0)
     {
         imu_gyroscope_filter_.setOmega(2.0*M_PI*hz);
         ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for imu gyroscope filter at "<< hz);
+    }
+    else
+        ROS_WARN_NAMED(CLASS_NAME,"Cutoff frequency has to be >= 0.0 [Hz]!");
+}
+
+void Controller::setCutoffFreqAccelerometer(const double &hz)
+{
+    if(hz >= 0.0)
+    {
+        imu_accelerometer_filter_.setOmega(2.0*M_PI*hz);
+        ROS_INFO_STREAM_NAMED(CLASS_NAME,"Set cutoff frequency for imu accelerometer filter at "<< hz);
     }
     else
         ROS_WARN_NAMED(CLASS_NAME,"Cutoff frequency has to be >= 0.0 [Hz]!");
@@ -470,14 +485,15 @@ void Controller::readJoints()
 void Controller::readImu()
 {
     imu_accelerometer_ = Eigen::Map<const Eigen::Vector3d>(imu_sensor_.getLinearAcceleration());
-    imu_gyroscope_ = Eigen::Map<const Eigen::Vector3d>(imu_sensor_.getAngularVelocity());
+    imu_gyroscope_     = Eigen::Map<const Eigen::Vector3d>(imu_sensor_.getAngularVelocity());
     imu_orientation_.w() = imu_sensor_.getOrientation()[0];
     imu_orientation_.x() = imu_sensor_.getOrientation()[1];
     imu_orientation_.y() = imu_sensor_.getOrientation()[2];
     imu_orientation_.z() = imu_sensor_.getOrientation()[3];
 
-    // Filter the imu velocities
+    // Filter the imu gyroscope and accelerometer
     imu_gyroscope_filt_ = imu_gyroscope_filter_.process(imu_gyroscope_);
+    imu_accelerometer_filt_ = imu_accelerometer_filter_.process(imu_accelerometer_);
 }
 
 void Controller::starting(const ros::Time&  /*time*/)
@@ -719,6 +735,7 @@ void Controller::init()
     foot_holds_planner_->initializeFeetPosition();
     // Filters
     imu_gyroscope_filter_.setTimeStep(period_);
+    imu_accelerometer_filter_.setTimeStep(period_);
     qdot_filter_.setTimeStep(period_);
     // Counters for safety checks
     contact_failures_cnt_->reset();
