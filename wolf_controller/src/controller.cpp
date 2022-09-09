@@ -617,6 +617,7 @@ void Controller::updateStateMachine(const double &dt)
           if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
           {
             robot_model_->setState(QuadrupedRobot::ACTIVE);
+            state_estimator_->startContactComputation();
             // HACK
             estimator_->init(joint_positions_,joint_velocities_filt_);
             break;
@@ -695,6 +696,7 @@ void Controller::updateStateMachine(const double &dt)
           ramp_stand_down_->reset();
           //posture_ = Controller::posture_t::DOWN;
           robot_model_->setState(QuadrupedRobot::IDLE);
+          state_estimator_->stopContactComputation();
           break;
         }
         break;
@@ -709,6 +711,7 @@ void Controller::updateStateMachine(const double &dt)
           posture_ = Controller::posture_t::DOWN;
           terrain_estimator_->reset();
           robot_model_->setState(QuadrupedRobot::IDLE);
+          state_estimator_->stopContactComputation();
           break;
         }
         break;
@@ -721,7 +724,7 @@ void Controller::init()
     // State estimator
     // Be sure to start the solver and the contact estimation when the robot is grounded.
     state_estimator_->resetGyroscopeIntegration();
-    state_estimator_->startContactComputation();
+    //state_estimator_->startContactComputation();
     state_estimator_->startHapticContactLoop();
     // Terrain Estimator
     //terrain_estimator_->reset();
