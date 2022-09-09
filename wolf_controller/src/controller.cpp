@@ -985,8 +985,8 @@ void Controller::odomPublisher()
           twist = estimator_->getBaseTwist();
           odom.header.seq              ++;
           odom.header.stamp            = t;
-          odom.header.frame_id         = "world"; // FIXME
-          odom.child_frame_id          = "base_link"; // FIXME
+          odom.header.frame_id         = WORLD_FRAME_NAME;
+          odom.child_frame_id          = robot_model_->getBaseLinkName();
           odom.pose.pose               = tf2::toMsg(world_T_base);
           odom.twist.twist             = tf2::toMsg(twist);
           //tf2::eigenToCovariance(pose_cov,odom_msg_out_.pose.covariance);
