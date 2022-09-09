@@ -161,7 +161,7 @@ private:
     /** @brief Floating base velocity, computed by the QP */
     Eigen::VectorXd floating_base_velocity_qp_;
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
-    Eigen::Vector3d base_rpy_;
+    Eigen::Vector3d floating_base_rpy_;
     /** @brief Contact estimation */
     XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
     /** @brief Contact estimation */

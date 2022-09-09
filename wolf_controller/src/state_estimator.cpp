@@ -91,7 +91,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
   joint_velocities_.resize(static_cast<Eigen::Index>(n_dofs));
   joint_efforts_.resize(static_cast<Eigen::Index>(n_dofs));
-  base_rpy_ = Eigen::Vector3d::Zero();
+  floating_base_rpy_ = Eigen::Vector3d::Zero();
   floating_base_position_      = Eigen::Vector3d::Zero();
   floating_base_velocity_ = Eigen::Vector6d::Zero();
   floating_base_pose_ = Eigen::Affine3d::Identity();
@@ -146,7 +146,7 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   }
 
   RtLogger::getLogger().addPublisher(TOPIC(floating_base_position)   ,floating_base_position_);
-  RtLogger::getLogger().addPublisher(TOPIC(floating_base_orientation),base_rpy_);
+  RtLogger::getLogger().addPublisher(TOPIC(floating_base_rpy     )   ,floating_base_rpy_);
   RtLogger::getLogger().addPublisher(TOPIC(floating_base_velocity)   ,floating_base_velocity_);
   RtLogger::getLogger().addPublisher(TOPIC(base_height           )   ,floating_base_position_(2));
 }
@@ -295,7 +295,7 @@ const Eigen::Vector3d& StateEstimator::getFloatingBasePosition() const
 
 const Eigen::Vector3d& StateEstimator::getFloatingBaseOrientationRPY() const
 {
-  return base_rpy_;
+  return floating_base_rpy_;
 }
 
 const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactForces() const
@@ -407,13 +407,15 @@ void StateEstimator::updateContactState()
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
   {
+    tmp_vector3d_.setZero(); // contact_force_foot
     // If we don't have a measurement of the contact forces, estimate them
     if(!use_external_contact_forces_)
-    {
-      tmp_vector3d_.setZero();
-      force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_); // tmp_vector3d_ = contact_force_foot
-      contact_forces_[foot_names[i]] = robot_model_->getFootPoseInWorld(foot_names[i]) * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
-    }
+      force_torque_sensors_[foot_names[i]]->getForce(tmp_vector3d_);
+    else
+      tmp_vector3d_ = contact_forces_[foot_names[i]];
+
+    // Transform the local foot force in world
+    contact_forces_[foot_names[i]] = robot_model_->getFootPoseInWorld(foot_names[i]) * tmp_vector3d_; // contact_force_world = world_T_foot * contact_force_foot
 
     if(contact_computation_active_)
     {
@@ -502,7 +504,7 @@ void StateEstimator::updateFloatingBase(const double& period)
   case estimation_t::IMU_MAGNETOMETER: // Use directly the orientation information from the IMU
     //use this with the real robot only if the magnetometer is not drifting
     quatToRot(imu_orientation_.normalized(),world_R_base_);
-    rotToRpy(world_R_base_,base_rpy_);
+    rotToRpy(world_R_base_,floating_base_rpy_);
     floating_base_pose_.linear() = world_R_base_;
 #ifdef ANGULAR_VELOCITIES_WRT_BASE
     floating_base_velocity_.segment(3,3) = floating_base_pose_.linear() * imu_gyroscope_;
@@ -515,22 +517,22 @@ void StateEstimator::updateFloatingBase(const double& period)
     {
       // Initialization for the integration
       quatToRot(imu_orientation_.normalized(),world_R_base_);
-      rotToRpy(world_R_base_,base_rpy_);
+      rotToRpy(world_R_base_,floating_base_rpy_);
       reset_gyro_integration_done_ = true;
     }
 #ifdef ANGULAR_VELOCITIES_WRT_BASE
-    rpyToEarBase(base_rpy_,mapRPYderivativesToOmega_);
+    rpyToEarBase(floating_base_rpy_,mapRPYderivativesToOmega_);
 #else
     rpyToEarWorld(base_rpy_,mapRPYderivativesToOmega_);
 #endif
     // Map the omegas in the base into rpy derivatives and integrate
-    base_rpy_ += (mapRPYderivativesToOmega_.inverse() * imu_gyroscope_) * period;
+    floating_base_rpy_ += (mapRPYderivativesToOmega_.inverse() * imu_gyroscope_) * period;
     // Overwrite measures if one of them is more noisy (e.g. only yaw is noisy)
     //quatToRotMat(imu_orientation_.normalized(),raw_base_R_world_);
     //rotTorpy(raw_base_R_world_,raw_base_rpy_);
     //base_rpy_.head(2) = raw_base_rpy_.head(2);
     //set the affine transformation for angular position
-    rpyToRot(base_rpy_, world_R_base_);
+    rpyToRot(floating_base_rpy_, world_R_base_);
     floating_base_pose_.linear() = world_R_base_;
     // Set the affine transformation for angular velocity
 #ifdef ANGULAR_VELOCITIES_WRT_BASE
@@ -542,7 +544,7 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::GROUND_TRUTH:
     quatToRot(gt_orientation_.normalized(),world_R_base_);
-    rotToRpy(world_R_base_,base_rpy_);
+    rotToRpy(world_R_base_,floating_base_rpy_);
     floating_base_pose_.linear() = world_R_base_;
     floating_base_velocity_.segment(3,3) = gt_angular_velocity_;
     break;
