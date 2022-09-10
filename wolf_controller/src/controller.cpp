@@ -134,7 +134,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         ground_truth_ = gt_hw->getHandle(gt_hw->getNames()[0]);
 
     use_contact_sensors_ = false;
-    if(controller_nh.getParam("use_contact_sensors",use_contact_sensors_))
+    controller_nh.getParam("use_contact_sensors",use_contact_sensors_);
+    if(use_contact_sensors_)
     {
       if(!cs_hw)
       {
