@@ -28,6 +28,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_msgs/TerrainEstimation.h>
 #include <wolf_msgs/FrictionCones.h>
 #include <wolf_msgs/CapturePoint.h>
+#include <wolf_msgs/ControllerState.h>
 #include <wolf_msgs/float32.h>
 
 // WoLF
@@ -331,6 +332,11 @@ public:
         capture_point_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::CapturePoint>(controller_nh, "capture_point", 4));
         capture_point_pub_->msg_.header.frame_id = WORLD_FRAME_NAME;
         capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
+        // Controller state
+        controller_state_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::ControllerState>(controller_nh, "controller_state", 4));
+        unsigned int n_states = wolf_controller::QuadrupedRobot::N_STATES;
+        controller_state_pub_->msg_.states = controller_->getRobotModel()->getStatesAsString();
+        controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
 
         // DDynamic reconfigure
         ddr_server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
@@ -556,6 +562,13 @@ public:
       if(controller_->getIDProblem())
           controller_->getIDProblem()->publish(time);
 
+      if(controller_state_pub_.get() && controller_state_pub_->trylock())
+      {
+          controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
+          controller_state_pub_->msg_.header.stamp = time;
+          controller_state_pub_->unlockAndPublish();
+      }
+
       const std::vector<std::string>& contact_names = controller_->getRobotModel()->getContactNames();
       std::string current_contact_name;
       if(contact_forces_pub_.get() && contact_forces_pub_->trylock())
@@ -655,6 +668,8 @@ public:
 
 protected:
 
+    /** @brief Real time publisher - controller state */
+    std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::ControllerState>> controller_state_pub_;
     /** @brief Real time publisher - contact forces */
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::ContactForces>> contact_forces_pub_;
     /** @brief Real time publisher - foot holds */

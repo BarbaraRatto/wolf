@@ -685,6 +685,20 @@ QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
   return robot_state_;
 }
 
+std::string QuadrupedRobot::getStateAsString()
+{
+  return enumToString(robot_state_);
+}
+
+std::vector<std::string> QuadrupedRobot::getStatesAsString()
+{
+  std::vector<std::string> states;
+  for(unsigned int i=0; i< N_STATES; i++)
+    states.push_back(enumToString(static_cast<robot_states_t>(i)));
+
+  return states;
+}
+
 QuadrupedRobot::robot_states_t QuadrupedRobot::getPreviousState()
 {
   return robot_state_prev_;
