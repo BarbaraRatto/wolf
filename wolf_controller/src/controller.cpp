@@ -232,11 +232,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
     devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
-    // HACK
-    estimator_ = std::make_shared<wolf_estimation::BaseEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
-                                                                  robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                                  robot_model_->getBaseLinkName());
-
     // Spawn the odom publisher thread
     odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
 
@@ -548,16 +543,6 @@ void Controller::updateStateEstimator(const double &dt)
         }
 
     state_estimator_->update(dt);
-
-    // HACK
-    estimator_->setJointVelocity(joint_velocities_filt_);
-    estimator_->setJointPosition(joint_positions_);
-    estimator_->setImuOrientation(imu_orientation_);
-    estimator_->setImuAngularVelocities(imu_gyroscope_filt_);
-    estimator_->setImuLinearAcceleration(imu_accelerometer_filt_);
-    estimator_->setContactStates(state_estimator_->getContacts());
-    estimator_->setContactForces(state_estimator_->getContactForces());
-    estimator_->update(dt);
 }
 
 void Controller::updateStateMachine(const double &dt)
@@ -620,8 +605,6 @@ void Controller::updateStateMachine(const double &dt)
           {
             robot_model_->setState(QuadrupedRobot::ACTIVE);
             state_estimator_->startContactComputation();
-            // HACK
-            estimator_->init(joint_positions_,joint_velocities_filt_);
             break;
           }
         }
@@ -905,32 +888,37 @@ void Controller::odomPublisher()
 {
     ROS_DEBUG_NAMED(CLASS_NAME,"Start the odomPublisher");
 
-    // For base_footprint definition check here:
-    // https://www.ros.org/reps/rep-0120.html#base-footprint
+    auto odom_estimator = wolf_estimation::OdomEstimator(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
+                                                         robot_model_->getFootNames(),robot_model_->getImuSensorName(),
+                                                         robot_model_->getBaseLinkName());
+    // Set some params
+    odom_estimator.setTwistInLocalFrame(false);
+
     // Create the following transformations:
-    // base_footprint --> base
-    //               `--> world (position available only if using ground_truth)
+    // odom --> base_footprint --> base
+    //                   `--> world (position available only if using ground_truth)
+    // odom: represents the odometry of the robot, i.e. how far the robot moved
+    // base_footprint: check here https://www.ros.org/reps/rep-0120.html#base-footprint
+    // world: the fixed frame in which the floating base pose is represented
 
     Eigen::Affine3d world_T_base;
+    Eigen::Affine3d odom_T_base;
+    Eigen::Affine3d odom_T_basefoot;
+    Eigen::Affine3d basefoot_T_world;
+    Eigen::Affine3d basefoot_T_base;
     Eigen::Vector3d tmp_v;
     double estimated_z;
     Eigen::Matrix3d tmp_R;
-    Eigen::Quaterniond tmp_q;
-    nav_msgs::Odometry odom;
-    Eigen::Vector6d twist;
 
     ros::Time t_prev;
     static tf2_ros::TransformBroadcaster br;
-    geometry_msgs::TransformStamped basefoot_T_world;
-    geometry_msgs::TransformStamped basefoot_T_base;
+    nav_msgs::Odometry odom_msg;
+    geometry_msgs::TransformStamped basefoot_T_world_msg;
+    geometry_msgs::TransformStamped basefoot_T_base_msg;
+    geometry_msgs::TransformStamped odom_T_basefoot_msg;
+    geometry_msgs::TransformStamped odom_T_base_msg;
     static ros::Publisher odom_pub;
-    odom_pub = root_nh_.advertise<nav_msgs::Odometry>("/spot/wolf_estimation/odom",100);
-
-    basefoot_T_base.header.frame_id = BASE_FOOTPRINT_FRAME;
-    basefoot_T_base.child_frame_id  = robot_model_->getBaseLinkName();
-
-    basefoot_T_world.header.frame_id = BASE_FOOTPRINT_FRAME;
-    basefoot_T_world.child_frame_id  = WORLD_FRAME_NAME;
+    odom_pub = nh_.advertise<nav_msgs::Odometry>("odom",100);
 
     ros::Rate publishing_rate(250);
 
@@ -938,9 +926,10 @@ void Controller::odomPublisher()
     {
         ros::Time t = ros::Time::now();
 
-        if(t != t_prev) // Avoid publishing duplicated transforms
-        {
+        double dt = t.toSec() - t_prev.toSec();
 
+        if(dt > 0.0) // Avoid publishing duplicated transforms
+        {
           // Get base wrt the internal world estimation
           world_T_base = state_estimator_->getFloatingBasePose();
           // Get the estimated z of the base
@@ -951,50 +940,77 @@ void Controller::odomPublisher()
           tmp_v(2) = tmp_v(2) - estimated_z;
           rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
           tmp_v = - tmp_R * tmp_v;
-          tmp_q = tmp_R;
+          basefoot_T_world.translation() = tmp_v;
+          basefoot_T_world = tmp_R;
           // Set coordinates
-          basefoot_T_world.transform.translation.x = tmp_v(0);
-          basefoot_T_world.transform.translation.y = tmp_v(1);
-          basefoot_T_world.transform.translation.z = tmp_v(2);
-          basefoot_T_world.transform.rotation.w    = tmp_q.w();
-          basefoot_T_world.transform.rotation.x    = tmp_q.x();
-          basefoot_T_world.transform.rotation.y    = tmp_q.y();
-          basefoot_T_world.transform.rotation.z    = tmp_q.z();
+          basefoot_T_world_msg = tf2::eigenToTransform(basefoot_T_world);
           // Set transform header
-          basefoot_T_world.header.seq++;
-          basefoot_T_world.header.stamp = t;
-
-          br.sendTransform(basefoot_T_world);
+          basefoot_T_world_msg.header.frame_id = BASE_FOOTPRINT_FRAME;
+          basefoot_T_world_msg.child_frame_id  = WORLD_FRAME_NAME;
+          basefoot_T_world_msg.header.seq++;
+          basefoot_T_world_msg.header.stamp = t;
+          br.sendTransform(basefoot_T_world_msg);
 
           // Create the tf transform between base_footprint -> base
-          tmp_q = robot_model_->getBaseRotationInHf();
+          basefoot_T_base.linear() = robot_model_->getBaseRotationInHf();
+          basefoot_T_base.translation().x() = 0.0;
+          basefoot_T_base.translation().y() = 0.0;
+          basefoot_T_base.translation().z() = estimated_z;
           // Set coordinates
-          basefoot_T_base.transform.translation.x = 0.0;
-          basefoot_T_base.transform.translation.y = 0.0;
-          basefoot_T_base.transform.translation.z = estimated_z;
-          basefoot_T_base.transform.rotation.w    = tmp_q.w();
-          basefoot_T_base.transform.rotation.x    = tmp_q.x();
-          basefoot_T_base.transform.rotation.y    = tmp_q.y();
-          basefoot_T_base.transform.rotation.z    = tmp_q.z();
+          basefoot_T_base_msg = tf2::eigenToTransform(basefoot_T_base);
           // Set transform header
-          basefoot_T_base.header.seq++;
-          basefoot_T_base.header.stamp = t;
+          basefoot_T_base_msg.header.frame_id = BASE_FOOTPRINT_FRAME;
+          basefoot_T_base_msg.child_frame_id  = robot_model_->getBaseLinkName();
+          basefoot_T_base_msg.header.seq++;
+          basefoot_T_base_msg.header.stamp = t;
+          br.sendTransform(basefoot_T_base_msg);
 
-          br.sendTransform(basefoot_T_base);
-
-          // HACK
-          world_T_base = estimator_->getBasePose();
-          twist = estimator_->getBaseTwist();
-          odom.header.seq              ++;
-          odom.header.stamp            = t;
-          odom.header.frame_id         = WORLD_FRAME_NAME;
-          odom.child_frame_id          = robot_model_->getBaseLinkName();
-          odom.pose.pose               = tf2::toMsg(world_T_base);
-          odom.twist.twist             = tf2::toMsg(twist);
-          //tf2::eigenToCovariance(pose_cov,odom_msg_out_.pose.covariance);
-          //tf2::eigenToCovariance(twist_cov,odom_msg_out_.twist.covariance);
-          odom_pub.publish(odom);
-
+          // if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
+          // {
+          //   // Odom estimator
+          //   if(!odom_estimator.isInitialized())
+          //     odom_estimator.init(joint_positions_,joint_velocities_filt_);
+          //
+          //   // Create the transform between odom -> base_footprint
+          //   odom_estimator.setJointVelocity(joint_velocities_filt_);
+          //   odom_estimator.setJointPosition(joint_positions_);
+          //   odom_estimator.setImuOrientation(imu_orientation_);
+          //   odom_estimator.setImuAngularVelocities(imu_gyroscope_filt_);
+          //   odom_estimator.setImuLinearAccelerations(imu_accelerometer_filt_);
+          //   odom_estimator.setContactStates(state_estimator_->getContacts());
+          //   odom_estimator.setContactForces(state_estimator_->getContactForces());
+          //   odom_estimator.update(dt);
+          // }
+          // //else
+          // //{
+          // //  if(robot_model_->getPreviousState() != robot_model_->getState()) // State changed
+          // //    odom_estimator.reset();
+          // //}
+          //
+          // odom_T_base = odom_estimator.getBasePose();
+          // odom_T_basefoot = odom_T_base * basefoot_T_base.inverse();
+          // // Set coordinates
+          // odom_T_basefoot_msg = tf2::eigenToTransform(odom_T_basefoot);
+          // // Set transform header
+          // odom_T_basefoot_msg.header.frame_id = ODOM_FRAME;
+          // odom_T_basefoot_msg.child_frame_id  = BASE_FOOTPRINT_FRAME;
+          // odom_T_basefoot_msg.header.seq++;
+          // odom_T_basefoot_msg.header.stamp = t;
+          // br.sendTransform(odom_T_basefoot_msg);
+          //
+          // // Create the odom message
+          // odom_msg.header.seq                 ++;
+          // odom_msg.header.stamp               = t;
+          // odom_msg.header.frame_id            = odom_T_basefoot_msg.header.frame_id;
+          // odom_msg.child_frame_id             = odom_T_basefoot_msg.child_frame_id;
+          // odom_msg.pose.pose.position.x       = odom_T_basefoot_msg.transform.translation.x;
+          // odom_msg.pose.pose.position.y       = odom_T_basefoot_msg.transform.translation.y;
+          // odom_msg.pose.pose.position.z       = odom_T_basefoot_msg.transform.translation.z;
+          // odom_msg.pose.pose.orientation      = odom_T_basefoot_msg.transform.rotation;
+          // odom_msg.twist.twist                = tf2::toMsg(odom_estimator.getBaseTwist());
+          // //tf2::eigenToCovariance(...);
+          // //tf2::eigenToCovariance(...);
+          // odom_pub.publish(odom_msg);
         }
 
         //std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );

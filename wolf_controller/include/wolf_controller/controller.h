@@ -442,7 +442,7 @@ private:
     Ramp::Ptr ramp_stand_up_;
     Ramp::Ptr ramp_stand_down_;
     Ramp::Ptr ramp_init_;
-    /** @brief state machine support variables */
+    /** @brief State machine support variables */
     unsigned int mode_;
     unsigned int previous_mode_;
     unsigned int posture_;
@@ -452,9 +452,6 @@ private:
     double previous_height_;
     Eigen::Vector3d current_rpy_;
     double desired_yaw_;
-
-    wolf_estimation::BaseEstimator::Ptr estimator_;
-
 
     /**
          * @brief thread body for the odometry publisher
