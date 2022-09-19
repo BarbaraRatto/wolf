@@ -27,6 +27,8 @@ public:
 
     virtual void updateInput()=0;
 
+    virtual void resetInput()=0;
+
     bool isInputActive()
     {
         return active_;
@@ -90,6 +92,12 @@ public:
                 it->second->deactivate();
                 break;
             }
+            else
+            {
+                it->second->resetInput();
+                it->second->updateInput();
+                it->second->deactivate();
+            }
         }
     }
 
@@ -139,6 +147,11 @@ public:
     virtual void updateInput()
     {
         update();
+    }
+
+    virtual void resetInput()
+    {
+        reset();
     }
 
 protected:

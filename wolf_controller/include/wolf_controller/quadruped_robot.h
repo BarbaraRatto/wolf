@@ -36,7 +36,7 @@ public:
   typedef std::map<std::string,std::vector<unsigned int>>         limb_joint_idxs_map_t;
   typedef std::map<std::string,unsigned int>                      joint_idxs_map_t;
 
-  enum robot_states_t {IDLE,INIT,ANOMALY,STANDING_UP,STANDING_DOWN,ACTIVE};
+  enum robot_states_t {IDLE,INIT,ANOMALY,STANDING_UP,STANDING_DOWN,ACTIVE,N_STATES=7};
 
   QuadrupedRobot(const std::string& urdf, const std::string& srdf);
 
@@ -64,6 +64,8 @@ public:
   const double& getBaseLength() const;
   const double& getBaseWidth() const;
 
+  std::string getStateAsString();
+  std::vector<std::string> getStatesAsString();
   robot_states_t getState();
   robot_states_t getPreviousState();
   bool setState(robot_states_t robot_state);
