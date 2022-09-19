@@ -277,6 +277,11 @@ public:
     std::vector<Eigen::Vector6d>& getDesiredContactForces();
 
     /**
+         * @brief Get desired contact states
+         */
+    std::vector<bool>& getDesiredContactStates();
+
+    /**
          * @brief Get desired joint efforts
          */
     const Eigen::VectorXd& getDesiredJointEfforts() const;
@@ -365,6 +370,8 @@ private:
     IDProblem::UniquePtr id_prob_;
     /** @brief Desired contact forces */
     std::vector<Eigen::Vector6d> des_contact_forces_;
+    /** @brief Desired contact forces */
+    std::vector<bool> des_contact_states_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Accelerometer filtered */

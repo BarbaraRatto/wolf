@@ -309,6 +309,7 @@ public:
         contact_forces_pub_->msg_.header.frame_id = controller_ptr->getRobotModel()->getBaseLinkName();
         contact_forces_pub_->msg_.name.resize(n_contacts);
         contact_forces_pub_->msg_.contact.resize(n_contacts);
+        contact_forces_pub_->msg_.des_contact.resize(n_contacts);
         contact_forces_pub_->msg_.contact_positions.resize(n_contacts);
         contact_forces_pub_->msg_.contact_forces.resize(n_contacts);
         contact_forces_pub_->msg_.des_contact_forces.resize(n_contacts);
@@ -569,31 +570,6 @@ public:
           controller_state_pub_->unlockAndPublish();
       }
 
-      const std::vector<std::string>& contact_names = controller_->getRobotModel()->getContactNames();
-      std::string current_contact_name;
-      if(contact_forces_pub_.get() && contact_forces_pub_->trylock())
-      {
-          for(unsigned int i=0; i <contact_names.size(); i++)
-          {
-              current_contact_name = contact_names[i];
-              contact_forces_pub_->msg_.name[i] = current_contact_name;
-              contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(current_contact_name);
-              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(0);
-              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(1);
-              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(2);
-
-              contact_forces_pub_->msg_.contact_forces[i].force.x = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(0);
-              contact_forces_pub_->msg_.contact_forces[i].force.y = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(1);
-              contact_forces_pub_->msg_.contact_forces[i].force.z = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(2);
-
-              contact_forces_pub_->msg_.des_contact_forces[i].force.x = controller_->getDesiredContactForces()[i](0);
-              contact_forces_pub_->msg_.des_contact_forces[i].force.y = controller_->getDesiredContactForces()[i](1);
-              contact_forces_pub_->msg_.des_contact_forces[i].force.z = controller_->getDesiredContactForces()[i](2);
-          }
-          contact_forces_pub_->msg_.header.stamp = time;
-          contact_forces_pub_->unlockAndPublish();
-      }
-
       const std::vector<std::string>& foot_names = controller_->getRobotModel()->getFootNames();
       std::string current_foot_names;
       if(foot_holds_pub_.get() && foot_holds_pub_->trylock())
@@ -611,6 +587,36 @@ public:
           }
           foot_holds_pub_->msg_.header.stamp = time;
           foot_holds_pub_->unlockAndPublish();
+      }
+
+      // Note: des_contact is defined only for the feet at the moment (imagine des_contact as the planned contact state, which
+      // for the feet is given by the state machine). For this reason we are using only the feet at the moment
+      //const std::vector<std::string>& contact_names = controller_->getRobotModel()->getContactNames();
+      //std::string current_contact_name;
+      const std::vector<std::string>& contact_names = controller_->getRobotModel()->getContactNames();
+      std::string current_contact_name;
+      if(contact_forces_pub_.get() && contact_forces_pub_->trylock())
+      {
+          for(unsigned int i=0; i <contact_names.size(); i++)
+          {
+              current_contact_name = contact_names[i];
+              contact_forces_pub_->msg_.name[i] = current_contact_name;
+              contact_forces_pub_->msg_.contact[i] = controller_->getStateEstimator()->getContacts().at(current_contact_name);
+              contact_forces_pub_->msg_.des_contact[i] = controller_->getDesiredContactStates()[i];
+              contact_forces_pub_->msg_.contact_positions[i].x = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(0);
+              contact_forces_pub_->msg_.contact_positions[i].y = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(1);
+              contact_forces_pub_->msg_.contact_positions[i].z = controller_->getStateEstimator()->getContactPositionInBase().at(current_contact_name)(2);
+
+              contact_forces_pub_->msg_.contact_forces[i].force.x = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(0);
+              contact_forces_pub_->msg_.contact_forces[i].force.y = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(1);
+              contact_forces_pub_->msg_.contact_forces[i].force.z = controller_->getStateEstimator()->getContactForces().at(current_contact_name)(2);
+
+              contact_forces_pub_->msg_.des_contact_forces[i].force.x = controller_->getDesiredContactForces()[i](0);
+              contact_forces_pub_->msg_.des_contact_forces[i].force.y = controller_->getDesiredContactForces()[i](1);
+              contact_forces_pub_->msg_.des_contact_forces[i].force.z = controller_->getDesiredContactForces()[i](2);
+          }
+          contact_forces_pub_->msg_.header.stamp = time;
+          contact_forces_pub_->unlockAndPublish();
       }
 
       if(terrain_estimation_pub_.get() && terrain_estimation_pub_->trylock())

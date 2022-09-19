@@ -170,6 +170,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     des_joint_efforts_solver_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_joint_efforts_impedance_.resize(static_cast<Eigen::Index>(joint_states_.size()+FLOATING_BASE_DOFS));
     des_contact_forces_.resize(robot_model_->getContactNames().size(),Eigen::Vector6d::Zero());
+    des_contact_states_.resize(robot_model_->getContactNames().size(),false);
 
     // Initializations
     joint_positions_.fill(0.0);
@@ -1081,6 +1082,17 @@ std::vector<Eigen::Vector6d>& Controller::getDesiredContactForces()
     if(id_prob_)
         des_contact_forces_ = id_prob_->getContactWrenches();
     return des_contact_forces_;
+}
+
+std::vector<bool> &Controller::getDesiredContactStates()
+{
+  auto foot_names = robot_model_->getFootNames();
+  for(unsigned int i=0; i<foot_names.size(); i++)
+    des_contact_states_[i] = gait_generator_->isInStance(foot_names[i]);
+  //auto ee_names = robot_model_->getEndEffectorNames();
+  //for(unsigned int i=foot_names.size(); i<ee_names.size()+foot_names.size(); i++)
+  //  des_contact_states_[i] = false;
+  return des_contact_states_;
 }
 
 } //namespace

@@ -170,9 +170,9 @@ private:
     std::map<std::string,Eigen::Vector3d> world_X_contact_;
     /** @brief Contact positions w.r.t base */
     std::map<std::string,Eigen::Vector3d> base_X_contact_;
-    /** @brief GRF contact states */
+    /** @brief Contact states */
     std::map<std::string,bool> contact_states_;
-    /** @brief GRF contact forces */
+    /** @brief Contact forces */
     std::map<std::string,Eigen::Vector3d> contact_forces_;
     /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
     is consired true */
