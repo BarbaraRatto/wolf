@@ -476,7 +476,8 @@ double StateEstimator::estimateZ()
       estimated_z +=  tmp_affine3d_.translation().z();
     }
   }
-  estimated_z /= feet_in_stance;
+  if(feet_in_stance!=0)
+    estimated_z /= feet_in_stance;
   return estimated_z;
 }
 
