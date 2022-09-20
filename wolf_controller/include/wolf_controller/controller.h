@@ -112,6 +112,12 @@ public:
     void stopping(const ros::Time& time);
 
     /**
+         * @brief Compute the odometry on/off
+         * @param activate
+         */
+    void computeOdom(const bool& activate);
+
+    /**
          * @brief Set the base linear velocity command along X
          * @param v
          */
@@ -438,6 +444,10 @@ private:
     Counter::Ptr solver_failures_cnt_;
     Counter::Ptr contact_failures_cnt_;
     std::vector<Counter::Ptr> velocity_lims_failures_cnt_;
+    /** @brief Compute odometry flag, if true compute the odometry via qp estimation */
+    bool compute_odom_;
+    /** @brief Odom publisher rate */
+    double odom_pub_rate_;
     /** @brief Ramps */
     Ramp::Ptr ramp_stand_up_;
     Ramp::Ptr ramp_stand_down_;

@@ -36,6 +36,8 @@ Controller::Controller()
                               hardware_interface::GroundTruthInterface,
                               hardware_interface::ContactSwitchSensorInterface> (true) // allow_optional_interfaces = true
     ,stopping_(false)
+    ,compute_odom_(false)
+    ,odom_pub_rate_(250)
     ,mode_(WALKING)
     ,previous_mode_(WALKING)
     ,posture_(DOWN)
@@ -232,6 +234,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
     devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
+    bool compute_odom = false; // On/Off
+    controller_nh.getParam("compute_odom", compute_odom);
+    compute_odom_ = compute_odom;
     // Spawn the odom publisher thread
     odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
 
@@ -918,9 +923,11 @@ void Controller::odomPublisher()
     geometry_msgs::TransformStamped odom_T_basefoot_msg;
     geometry_msgs::TransformStamped odom_T_base_msg;
     static ros::Publisher odom_pub;
-    odom_pub = nh_.advertise<nav_msgs::Odometry>("odom",100);
 
-    ros::Rate publishing_rate(250);
+    if(compute_odom_)
+      odom_pub = nh_.advertise<nav_msgs::Odometry>("odom",100);
+
+    ros::Rate publishing_rate(odom_pub_rate_);
 
     while(!stopping_)
     {
@@ -965,60 +972,63 @@ void Controller::odomPublisher()
           basefoot_T_base_msg.header.stamp = t;
           br.sendTransform(basefoot_T_base_msg);
 
-          // Create the transform between odom -> base_footprint
-          if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
+          if(compute_odom_)
           {
+            // Create the transform between odom -> base_footprint
+            if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
+            {
 
-            if(!odom_estimator.isInitialized())
-              odom_estimator.init(joint_positions_,joint_velocities_filt_,world_T_base);
+              if(!odom_estimator.isInitialized())
+                odom_estimator.init(joint_positions_,joint_velocities_filt_,world_T_base);
 
-            odom_estimator.setJointVelocity(joint_velocities_filt_);
-            odom_estimator.setJointPosition(joint_positions_);
-            odom_estimator.setImuOrientation(imu_orientation_);
-            odom_estimator.setImuAngularVelocities(imu_gyroscope_filt_);
-            odom_estimator.setImuLinearAccelerations(imu_accelerometer_filt_);
-            odom_estimator.setContactForces(state_estimator_->getContactForces());
-            const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-            for(unsigned int i = 0; i<foot_names.size(); i++)
-              odom_estimator.setContactState(foot_names[i],des_contact_states_[i]);
+              odom_estimator.setJointVelocity(joint_velocities_);
+              odom_estimator.setJointPosition(joint_positions_);
+              odom_estimator.setImuOrientation(imu_orientation_);
+              odom_estimator.setImuAngularVelocities(imu_gyroscope_);
+              odom_estimator.setImuLinearAccelerations(imu_accelerometer_);
+              odom_estimator.setContactForces(state_estimator_->getContactForces());
+              const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+              for(unsigned int i = 0; i<foot_names.size(); i++)
+                odom_estimator.setContactState(foot_names[i],des_contact_states_[i]);
 
-            odom_estimator.update(dt);
+              odom_estimator.update(dt);
 
-            odom_T_base = odom_estimator.getBasePose();
+              odom_T_base = odom_estimator.getBasePose();
+            }
+            else
+            {
+              if(robot_model_->getPreviousState() != robot_model_->getState()) // State changed
+                odom_estimator.reset();
+
+              odom_T_base = world_T_base;
+            }
+
+
+            odom_T_basefoot = odom_T_base * basefoot_T_base.inverse();
+
+            // Set coordinates
+            odom_T_basefoot_msg = tf2::eigenToTransform(odom_T_basefoot);
+            // Set transform header
+            odom_T_basefoot_msg.header.frame_id = ODOM_FRAME;
+            odom_T_basefoot_msg.child_frame_id  = BASE_FOOTPRINT_FRAME;
+            odom_T_basefoot_msg.header.seq++;
+            odom_T_basefoot_msg.header.stamp = t;
+            br.sendTransform(odom_T_basefoot_msg);
+
+            // Create the odom message
+            odom_msg.header.seq                 ++;
+            odom_msg.header.stamp               = t;
+            odom_msg.header.frame_id            = odom_T_basefoot_msg.header.frame_id;
+            odom_msg.child_frame_id             = odom_T_basefoot_msg.child_frame_id;
+            odom_msg.pose.pose.position.x       = odom_T_basefoot_msg.transform.translation.x;
+            odom_msg.pose.pose.position.y       = odom_T_basefoot_msg.transform.translation.y;
+            odom_msg.pose.pose.position.z       = odom_T_basefoot_msg.transform.translation.z;
+            odom_msg.pose.pose.orientation      = odom_T_basefoot_msg.transform.rotation;
+            odom_msg.twist.twist                = tf2::toMsg(odom_estimator.getBaseTwist());
+            //tf2::eigenToCovariance(...);
+            //tf2::eigenToCovariance(...);
+            odom_pub.publish(odom_msg);
           }
-          else
-          {
-            if(robot_model_->getPreviousState() != robot_model_->getState()) // State changed
-              odom_estimator.reset();
-
-            odom_T_base = world_T_base;
-          }
-
-
-          odom_T_basefoot = odom_T_base * basefoot_T_base.inverse();
-
-          // Set coordinates
-          odom_T_basefoot_msg = tf2::eigenToTransform(odom_T_basefoot);
-          // Set transform header
-          odom_T_basefoot_msg.header.frame_id = ODOM_FRAME;
-          odom_T_basefoot_msg.child_frame_id  = BASE_FOOTPRINT_FRAME;
-          odom_T_basefoot_msg.header.seq++;
-          odom_T_basefoot_msg.header.stamp = t;
-          br.sendTransform(odom_T_basefoot_msg);
-
-          // Create the odom message
-          odom_msg.header.seq                 ++;
-          odom_msg.header.stamp               = t;
-          odom_msg.header.frame_id            = odom_T_basefoot_msg.header.frame_id;
-          odom_msg.child_frame_id             = odom_T_basefoot_msg.child_frame_id;
-          odom_msg.pose.pose.position.x       = odom_T_basefoot_msg.transform.translation.x;
-          odom_msg.pose.pose.position.y       = odom_T_basefoot_msg.transform.translation.y;
-          odom_msg.pose.pose.position.z       = odom_T_basefoot_msg.transform.translation.z;
-          odom_msg.pose.pose.orientation      = odom_T_basefoot_msg.transform.rotation;
-          odom_msg.twist.twist                = tf2::toMsg(odom_estimator.getBaseTwist());
-          //tf2::eigenToCovariance(...);
-          //tf2::eigenToCovariance(...);
-          odom_pub.publish(odom_msg);
         }
 
         //std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
@@ -1038,6 +1048,11 @@ void Controller::stopping(const ros::Time& /*time*/)
     odom_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
+}
+
+void Controller::computeOdom(const bool &activate)
+{
+    compute_odom_ = activate;
 }
 
 void Controller::setBaseLinearVelocityCmdX(const double &v)
