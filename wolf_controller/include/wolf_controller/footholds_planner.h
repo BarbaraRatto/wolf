@@ -258,6 +258,7 @@ public:
     const std::vector<std::string>& getFootNames() const;
     double getSwingFrequency();
     double getCycleTime();
+    double getVelocityFactor();
     double getPushRecoverySensibility();
 
     /**

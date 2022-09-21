@@ -43,6 +43,8 @@ public:
 
   bool isCycleEnded();
 
+  double getVelocityFactor(const gait_t& gait_type);
+
 private:
 
   typedef std::pair<std::string,unsigned int> foot_priority_t;
@@ -157,6 +159,8 @@ public:
   double getSwingPeriod(const std::string& foot_name);
 
   Gait::gait_t getGaitType();
+
+  double getVelocityFactor();
 
   void setTerrainRotation(const Eigen::Matrix3d& world_R_terrain);
 

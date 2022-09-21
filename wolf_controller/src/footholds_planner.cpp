@@ -359,8 +359,10 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
 {
   base_position_ = base_position;
 
-  hf_base_linear_velocity_ref_(0) = base_linear_velocity_cmd_x_ * base_linear_velocity_scale_x_;
-  hf_base_linear_velocity_ref_(1) = base_linear_velocity_cmd_y_ * base_linear_velocity_scale_y_;
+  double f = gait_generator_->getVelocityFactor();
+
+  hf_base_linear_velocity_ref_(0) = f * base_linear_velocity_cmd_x_ * base_linear_velocity_scale_x_;
+  hf_base_linear_velocity_ref_(1) = f * base_linear_velocity_cmd_y_ * base_linear_velocity_scale_y_;
   hf_base_linear_velocity_ref_(2) = base_linear_velocity_cmd_z_ * base_linear_velocity_scale_z_;
 
   for(unsigned int i=0;i<3;i++)
@@ -840,6 +842,11 @@ double FootholdsPlanner::getSwingFrequency()
 double FootholdsPlanner::getCycleTime()
 {
   return gait_generator_->getAvgCycleTime();
+}
+
+double FootholdsPlanner::getVelocityFactor()
+{
+  return gait_generator_->getVelocityFactor();
 }
 
 double FootholdsPlanner::getPushRecoverySensibility()

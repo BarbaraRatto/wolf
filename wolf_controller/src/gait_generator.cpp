@@ -104,6 +104,18 @@ bool Gait::isCycleEnded()
   return cycle_ended_;
 }
 
+double Gait::getVelocityFactor(const gait_t& gait_type)
+{
+  switch(gait_type)
+  {
+    case gait_t::TROT:
+      return 2.0;
+    case gait_t::CRAWL:
+      return 4.0;
+  };
+  return 1.0;
+}
+
 GaitGenerator::GaitGenerator(const std::vector<std::string>& foot_names, const Gait::gait_t& gait_type, const Gait::trajectory_t& trajectory_type)
 {
   assert(foot_names.size()==N_LEGS);// We assume we are working with a dog
@@ -418,6 +430,11 @@ double GaitGenerator::getSwingPeriod(const std::string& foot_name)
 Gait::gait_t GaitGenerator::getGaitType()
 {
   return gait_type_;
+}
+
+double GaitGenerator::getVelocityFactor()
+{
+  return gait_buffer_[current_gait_idx_]->getVelocityFactor(gait_type_);
 }
 
 void GaitGenerator::setTerrainRotation(const Eigen::Matrix3d& world_R_terrain)
