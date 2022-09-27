@@ -948,7 +948,7 @@ void Controller::odomPublisher()
           rpyToRotTranspose(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_R);
           tmp_v = - tmp_R * tmp_v;
           basefoot_T_world.translation() = tmp_v;
-          basefoot_T_world = tmp_R;
+          basefoot_T_world.linear() = tmp_R;
           // Set coordinates
           basefoot_T_world_msg = tf2::eigenToTransform(basefoot_T_world);
           // Set transform header
