@@ -192,6 +192,14 @@ public:
         controller_nh.getParam("regularization", regularization);
         controller_->getIDProblem()->setRegularization(regularization);
 
+        double min_forces_weight = 0.0;
+        controller_nh.getParam("min_forces_weight", min_forces_weight);
+        controller_->getIDProblem()->setForcesMinimizationWeight(min_forces_weight);
+
+        double min_qddot_weight = 0.0;
+        controller_nh.getParam("min_qddot_weight", min_qddot_weight);
+        controller_->getIDProblem()->setJointAccelerationMinimizationWeight(min_qddot_weight);
+
         std::string estimation_position_type;
         if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
             ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());

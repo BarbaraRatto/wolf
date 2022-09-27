@@ -22,7 +22,9 @@ IDProblem::IDProblem(QuadrupedRobot::Ptr model):
   activate_postural_(false),
   activate_joint_position_limits_(false),
   change_control_mode_(false),
-  regularization_value_(1e-3)
+  regularization_value_(1e-3),
+  min_forces_weight_(0.0),
+  min_qddot_weight_(0.0)
 {
   foot_names_          = model_->getFootNames();
   ee_names_            = model_->getEndEffectorNames();
@@ -100,6 +102,10 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   com_->setWeightIsDiagonalFlag(true);
   com_->loadParams();
   com_->registerReconfigurableVariables();
+  //   --------------------------
+  for(unsigned int i = 0; i < id_->getContactsWrenchAffine().size(); i++)
+      min_forces_.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_force_"+std::to_string(i), id_->getContactsWrenchAffine()[i])));
+  min_qddot_ = std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_qddot", id_->getJointsAccelerationAffine());
   //
   // Here we create the constraints & bounds
   //
@@ -218,6 +224,25 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
     stack_->getStack()[0] = arm_aggregated + stack_->getStack()[0];
   }
 
+  // Add the minimization tasks if their weight is greated than zero (if not changed externally, by default it is 0.0)
+  if(min_forces_weight_>0.0)
+  {
+    for(unsigned int i=0;i<min_forces_.size();i++)
+      stack_->getStack()[0] = min_forces_weight_ * min_forces_[i] + stack_->getStack()[0];
+    ROS_INFO_NAMED(CLASS_NAME,"force minimization tasks are active");
+  }
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"force minimization tasks are NOT active");
+
+  if(min_qddot_weight_>0.0)
+  {
+    stack_->getStack()[0] = min_qddot_weight_ * min_qddot_ + stack_->getStack()[0];
+    ROS_INFO_NAMED(CLASS_NAME,"joint accelerations minimization task is active");
+  }
+  else
+    ROS_INFO_NAMED(CLASS_NAME,"joint accelerations minimization task is NOT active");
+
+
   stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
 
   if(activate_joint_position_limits_)
@@ -313,6 +338,22 @@ void IDProblem::setRegularization(double regularization)
     regularization_value_ = regularization;
   else
     ROS_WARN_NAMED(CLASS_NAME,"Regularization value has to be set between 0 and 1!");
+}
+
+void IDProblem::setForcesMinimizationWeight(double weight)
+{
+  if(weight>=0.0)
+    min_forces_weight_ = weight;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Weight value has to be greater equal than 0!");
+}
+
+void IDProblem::setJointAccelerationMinimizationWeight(double weight)
+{
+  if(weight>=0.0)
+    min_qddot_weight_ = weight;
+  else
+    ROS_WARN_NAMED(CLASS_NAME,"Weight value has to be greater equal than 0!");
 }
 
 void IDProblem::setFrictionConesR(const Eigen::Matrix3d& R)

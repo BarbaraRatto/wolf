@@ -17,6 +17,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
 #include <OpenSoT/tasks/acceleration/DynamicFeasibility.h>
+#include <OpenSoT/tasks/MinimizeVariable.h>
 #include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/constraints/acceleration/TorqueLimits.h>
 #include <OpenSoT/utils/AutoStack.h>
@@ -223,6 +224,16 @@ public:
      */
     void setRegularization(double regularization);
 
+    /**
+     * @brief set the weight for the force minimization tasks, i.e. higher values will keep the contact forces as lower as possible
+     */
+    void setForcesMinimizationWeight(double weight);
+
+    /**
+     * @brief set the weight for the joint acceleration minimization tasks, i.e. higher values will keep the qddot as lower as possible
+     */
+    void setJointAccelerationMinimizationWeight(double weight);
+
 private:
 
     /**
@@ -234,6 +245,8 @@ private:
     CoM::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
+    std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> min_forces_;
+    OpenSoT::tasks::MinimizeVariable::Ptr min_qddot_;
 
     /**
      * @brief postural_ a postural task
@@ -334,6 +347,8 @@ private:
     bool activate_joint_position_limits_;
     bool change_control_mode_;
     double regularization_value_;
+    double min_forces_weight_;
+    double min_qddot_weight_;
 
     /**
      * @brief Various names
