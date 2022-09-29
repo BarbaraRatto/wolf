@@ -312,6 +312,11 @@ public:
     bool isAnyFootInSwing();
 
     /**
+     * @brief true if a complete gait cycle is ended
+     */
+    bool isGaitCycleEnded();
+
+    /**
          * @brief Get Push Recovery
          */
     PushRecovery* getPushRecovery() const;

@@ -266,15 +266,17 @@ void FootholdsPlanner::calculateFootSteps()
         ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Step length is greater than: "<<step_length_max_);
       }
 
-      //desired_foothold_[foot_names[i]] = base_T_foot_ * hf_delta_foot_; // FIXME
-      virtual_foothold_[foot_names[i]]    = hf_X_initial_footholds_[i];
-      current_foothold_[foot_names[i]]    = base_T_foot_.translation();
-      current_foothold_hf_[foot_names[i]] = hf_X_current_foothold_;
-
       steps_length_[foot_names[i]]         = step_length_;
       steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getBaseYawInWorld();
       steps_height_[foot_names[i]]         = step_height_;
       steps_heading_rate_[foot_names[i]]   = hf_base_angular_velocity_(2);
+
+
+      virtual_foothold_[foot_names[i]]        = hf_X_initial_footholds_[i];
+      current_foothold_[foot_names[i]]        = base_T_foot_.translation();
+      current_foothold_hf_[foot_names[i]]     = hf_X_current_foothold_;
+      desired_foothold_[foot_names[i]].x()    = current_foothold_[foot_names[i]].x() + steps_length_[foot_names[i]] * std::cos(steps_heading_[foot_names[i]]);
+      desired_foothold_[foot_names[i]].y()    = current_foothold_[foot_names[i]].y() + steps_length_[foot_names[i]] * std::sin(steps_heading_[foot_names[i]]);
 
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_length["<<foot_names[i]<<"]: "<<steps_length_[foot_names[i]]);
       ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_["<<foot_names[i]<<"]: "<<steps_heading_[foot_names[i]]);
@@ -817,6 +819,11 @@ bool FootholdsPlanner::isAnyFootInTouchDown()
 bool FootholdsPlanner::isAnyFootInSwing()
 {
   return gait_generator_->isAnyFootInSwing();
+}
+
+bool FootholdsPlanner::isGaitCycleEnded()
+{
+  return gait_generator_->isGaitCycleEnded();
 }
 
 PushRecovery* FootholdsPlanner::getPushRecovery() const
