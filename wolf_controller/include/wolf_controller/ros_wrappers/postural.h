@@ -31,7 +31,7 @@ public:
   typedef std::shared_ptr<Postural> Ptr;
 
   Postural(ros::NodeHandle& nh, const XBot::ModelInterface& robot,
-           OpenSoT::AffineHelper qddot = OpenSoT::AffineHelper(), const std::string task_id = "Postural")
+           OpenSoT::AffineHelper qddot = OpenSoT::AffineHelper(), const std::string task_id = "postural")
     :OpenSoT::tasks::acceleration::Postural(robot,qddot,task_id)
     ,TaskRosWrapperInterface<wolf_msgs::PosturalTask>(task_id,nh)
   {
