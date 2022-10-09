@@ -64,6 +64,7 @@ void FootholdsPlanner::reset()
   {
     steps_length_[foot_names[i]] = step_length_;
     steps_heading_[foot_names[i]] = 0.0;
+    steps_heading_rate_[foot_names[i]] = 0.0;
     steps_height_[foot_names[i]] = step_height_;
 
     robot_model_->getPose(foot_names[i],robot_model_->getBaseLinkName(),tmp_affine3d_); // base_T_foot
@@ -275,11 +276,6 @@ void FootholdsPlanner::calculateFootSteps()
       steps_heading_[foot_names[i]]        = std::atan2(hf_delta_foot_(1),hf_delta_foot_(0)) + robot_model_->getBaseYawInWorld();
       steps_height_[foot_names[i]]         = step_height_;
       steps_heading_rate_[foot_names[i]]   = hf_base_angular_velocity_(2);
-
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_length["<<foot_names[i]<<"]: "<<steps_length_[foot_names[i]]);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_["<<foot_names[i]<<"]: "<<steps_heading_[foot_names[i]]);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height_["<<foot_names[i]<<"]: "<<steps_height_[foot_names[i]]);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate_["<<foot_names[i]<<"]: "<<steps_heading_rate_[foot_names[i]]);
     }
     else if(gait_generator_->isInStance(foot_names[i]))
     {
@@ -289,6 +285,17 @@ void FootholdsPlanner::calculateFootSteps()
       steps_heading_rate_[foot_names[i]]   = 0.0;
       capture_point_delta_[foot_names[i]]  = Eigen::Vector2d::Zero();
     }
+
+    virtual_foothold_[foot_names[i]]        = hf_X_initial_footholds_[i];
+    current_foothold_[foot_names[i]]        = base_T_foot_.translation();
+    current_foothold_hf_[foot_names[i]]     = hf_X_current_foothold_;
+    desired_foothold_[foot_names[i]].x()    = current_foothold_[foot_names[i]].x() + steps_length_[foot_names[i]] * std::cos(steps_heading_[foot_names[i]]);
+    desired_foothold_[foot_names[i]].y()    = current_foothold_[foot_names[i]].y() + steps_length_[foot_names[i]] * std::sin(steps_heading_[foot_names[i]]);
+
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_length["<<foot_names[i]<<"]: "<<steps_length_[foot_names[i]]);
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading["<<foot_names[i]<<"]: "<<steps_heading_[foot_names[i]]);
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_height["<<foot_names[i]<<"]: "<<steps_height_[foot_names[i]]);
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"steps_heading_rate["<<foot_names[i]<<"]: "<<steps_heading_rate_[foot_names[i]]);
   }
 }
 
