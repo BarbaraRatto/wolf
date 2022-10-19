@@ -986,10 +986,13 @@ void Controller::odomPublisher()
               odom_estimator.setImuOrientation(imu_orientation_);
               odom_estimator.setImuAngularVelocities(imu_gyroscope_);
               odom_estimator.setImuLinearAccelerations(imu_accelerometer_);
-              odom_estimator.setContactForces(state_estimator_->getContactForces());
+              //odom_estimator.setContactForces(state_estimator_->getContactForces());
               const std::vector<std::string>& foot_names = robot_model_->getFootNames();
               for(unsigned int i = 0; i<foot_names.size(); i++)
+              {
+                odom_estimator.setContactForce(foot_names[i],des_contact_forces_[i].head(3));
                 odom_estimator.setContactState(foot_names[i],des_contact_states_[i]);
+              }
 
               odom_estimator.update(dt);
 
