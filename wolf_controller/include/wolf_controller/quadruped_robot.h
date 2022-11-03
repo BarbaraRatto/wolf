@@ -295,6 +295,7 @@ private:
 
   std::atomic<robot_states_t> robot_state_;
   std::atomic<robot_states_t> robot_state_prev_;
+  std::string robot_state_string_;
 
   mutable RigidBodyDynamics::Model virtual_model_;
 

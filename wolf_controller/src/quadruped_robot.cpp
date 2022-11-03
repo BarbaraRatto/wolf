@@ -10,6 +10,12 @@
 #include <wolf_controller/geometry.h>
 #include <stdexcept>
 
+// RT GUI
+#ifdef RT_GUI
+#include <rt_gui/rt_gui_client.h>
+using namespace rt_gui;
+#endif
+
 using namespace XBot;
 
 namespace wolf_controller {
@@ -49,7 +55,7 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
 }
 
 QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
-  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE), robot_state_prev_(robot_states_t::IDLE)
+  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE), robot_state_prev_(robot_states_t::IDLE),robot_state_string_("IDLE")
 {
 
   // Create the ModelInterface from XBot
@@ -281,6 +287,13 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
     stand_down_height_ = pose.translation().z() + stand_down_height_;
   }
   stand_down_height_ =  -stand_down_height_/N_LEGS;
+
+#ifdef RT_GUI
+        // create interface
+        if(RtGuiClient::getIstance().init("wolf_panel","controller",ros::Duration(10.0)))
+          RtGuiClient::getIstance().addLabel(std::string("controller"),std::string("Status"),&robot_state_string_);
+#endif
+
 }
 
 bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)
@@ -475,6 +488,9 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     getPose(ee_names_[i],base_name_,base_T_ee_[ee_names_[i]]);
     base_X_ee_[ee_names_[i]] = base_T_ee_[ee_names_[i]].translation();
   }
+
+  // save the state as string
+  robot_state_string_ = enumToString(robot_state_);
 
   return res;
 }
