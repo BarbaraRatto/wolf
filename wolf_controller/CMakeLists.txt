@@ -30,10 +30,10 @@ find_package(ModelInterfaceRBDL REQUIRED)
 find_package(rt_gui QUIET)
 
 if(${rt_gui_FOUND})
-    message("Found rt_gui, creating interface for wolf_controller.")
+    message(STATUS "Found rt_gui, creating interface for wolf_controller.")
     add_definitions(-DRT_GUI)
 else()
-    message("rt_gui not found.")
+    message(STATUS "rt_gui not found.")
 endif()
 
 catkin_package(
