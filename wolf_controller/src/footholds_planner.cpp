@@ -1064,4 +1064,9 @@ double PushRecovery::getScaleValue()
   return scale_;
 }
 
+const std::vector<std::string> &PushRecovery::getOrderedFootNames()
+{
+  return ordered_foot_names_;
+}
+
 }; // namespace

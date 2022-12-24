@@ -95,6 +95,11 @@ public:
    */
   double getScaleValue();
 
+  /**
+   * @brief get the ordered foot names associated with the polygon vertex
+   */
+  const std::vector<std::string>& getOrderedFootNames();
+
 private:
 
   FootholdsPlanner* footholds_planner_ptr_;

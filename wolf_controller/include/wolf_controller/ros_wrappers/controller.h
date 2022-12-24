@@ -663,11 +663,13 @@ public:
 
       if(capture_point_pub_.get() && capture_point_pub_->trylock())
       {
+          const std::vector<std::string>& ordered_foot_names = controller_->getFootholdsPlanner()->getPushRecovery()->getOrderedFootNames();
+
           for(unsigned int i=0; i <N_LEGS; i++)
           {
             capture_point_pub_->msg_.support_polygon.points[i].x = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].x();
             capture_point_pub_->msg_.support_polygon.points[i].y = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].y();
-            capture_point_pub_->msg_.support_polygon.points[i].z = controller_->getTerrainEstimator()->getTerrainPositionWorld().z();
+            capture_point_pub_->msg_.support_polygon.points[i].z = controller_->getRobotModel()->getFootPositionInWorld(ordered_foot_names[i]).z();
           }
           capture_point_pub_->msg_.com.x = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().x();
           capture_point_pub_->msg_.com.y = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().y();
