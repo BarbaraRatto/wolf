@@ -406,8 +406,10 @@ private:
     Eigen::Matrix3d hf_R_base_;
 
     Eigen::Affine3d world_T_terrain_;
+    Eigen::Affine3d world_T_terrain_init_;
 
     bool offsets_applied_;
+    bool terrain_transform_init_;
 
     typedef std::map<std::string,double> map_t;
     map_t steps_length_;

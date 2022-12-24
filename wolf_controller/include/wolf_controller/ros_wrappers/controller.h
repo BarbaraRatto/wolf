@@ -667,14 +667,14 @@ public:
           {
             capture_point_pub_->msg_.support_polygon.points[i].x = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].x();
             capture_point_pub_->msg_.support_polygon.points[i].y = controller_->getFootholdsPlanner()->getPushRecovery()->getSupportPolygonEdges()[i].y();
-            capture_point_pub_->msg_.support_polygon.points[i].z = 0.0;
+            capture_point_pub_->msg_.support_polygon.points[i].z = controller_->getTerrainEstimator()->getTerrainPositionWorld().z();
           }
           capture_point_pub_->msg_.com.x = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().x();
           capture_point_pub_->msg_.com.y = controller_->getFootholdsPlanner()->getPushRecovery()->getComPositionXY().y();
-          capture_point_pub_->msg_.com.z = 0.0;
+          capture_point_pub_->msg_.com.z = controller_->getTerrainEstimator()->getTerrainPositionWorld().z();
           capture_point_pub_->msg_.capture_point.x = controller_->getFootholdsPlanner()->getPushRecovery()->getCapturePoint().x();
           capture_point_pub_->msg_.capture_point.y = controller_->getFootholdsPlanner()->getPushRecovery()->getCapturePoint().y();
-          capture_point_pub_->msg_.capture_point.z = 0.0;
+          capture_point_pub_->msg_.capture_point.z = controller_->getTerrainEstimator()->getTerrainPositionWorld().z();
           capture_point_pub_->msg_.header.stamp = time;
           capture_point_pub_->unlockAndPublish();
       }

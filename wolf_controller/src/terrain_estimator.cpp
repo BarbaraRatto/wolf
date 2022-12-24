@@ -138,7 +138,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 
 void TerrainEstimator::reset()
 {
-  update_ = false;
+  update_ = true; // true to have a first update
 
   roll_ = roll_filt_ = roll_out_world_ = roll_out_hf_ = estimated_roll_ = 0.0;
   pitch_ = pitch_filt_ = pitch_out_world_ = pitch_out_hf_ = estimated_pitch_ = 0.0;

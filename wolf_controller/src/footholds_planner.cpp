@@ -35,7 +35,7 @@ FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedR
 
   offsets_applied_ = false;
 
-  world_T_terrain_ = Eigen::Affine3d::Identity();
+  world_T_terrain_ = world_T_terrain_init_ = Eigen::Affine3d::Identity();
 
   push_recovery_ = std::make_shared<PushRecovery>(this);
   push_detected_ = false;
@@ -84,6 +84,8 @@ void FootholdsPlanner::reset()
   base_position_ = tmp_affine3d_.translation();
 
   gait_generator_->reset();
+
+  terrain_transform_init_ = false;
 
   cmd_ = cmd_t::HOLD;
 }
@@ -374,27 +376,28 @@ void FootholdsPlanner::calculateBasePosition(const double& period, const Eigen::
 
   base_position_ = base_linear_velocity_reference_ * period + base_position_;
 
-  //base_position_reference_ = base_position_;
-
   // This is the base height reference computed w.r.t terrain ( reference = reference_world - reference_terrain )
   base_position_reference_.head(2) = base_position_.head(2);
 
+  double terrain_delta = (world_T_terrain_.translation().z() - world_T_terrain_init_.translation().z());
+  double base_height_max_wrt_terrain = base_height_max_ + world_T_terrain_.translation().z();
+  double base_height_min_wrt_terrain = world_T_terrain_.translation().z();
+
+  base_position_reference_(2) = base_position_(2) + terrain_delta;
+
   // Clamp the z value
-  if(base_position_(2) > base_height_max_)
+  if(base_position_reference_(2) > base_height_max_wrt_terrain)
   {
-    base_position_(2) = base_height_max_;
+    base_position_reference_(2) = base_height_max_wrt_terrain;
     base_linear_velocity_reference_(2) = hf_base_linear_velocity_ref_(2) = 0.0;
     ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base height limit reached: "<<base_height_max_);
   }
-  else if (base_position_(2) < 0.0)
+  else if (base_position_reference_(2) < base_height_min_wrt_terrain)
   {
-    base_position_(2) = 0.0;
+    base_position_reference_(2) = base_height_min_wrt_terrain;
     base_linear_velocity_reference_(2) = hf_base_linear_velocity_ref_(2) = 0.0;
     ROS_WARN_STREAM_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Desired base height limit reached: "<<0.0);
   }
-
-  base_position_reference_(2) = base_position_(2) + world_T_terrain_.translation().z();
-
 }
 
 void FootholdsPlanner::calculateBaseOrientation(const double& period, const Eigen::Vector3d& base_orientation)
@@ -556,6 +559,12 @@ void FootholdsPlanner::decreaseStepHeight()
 
 void FootholdsPlanner::setTerrainTransform(const Eigen::Affine3d &world_T_terrain)
 {
+  if(!terrain_transform_init_)
+  {
+    world_T_terrain_init_ = world_T_terrain;
+    terrain_transform_init_ = true;
+  }
+
   world_T_terrain_ = world_T_terrain;
 }
 

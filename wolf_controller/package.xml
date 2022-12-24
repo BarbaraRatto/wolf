@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>wolf_controller</name>
-  <version>0.1.3</version>
+  <version>0.1.4</version>
   <description>WoLF: Whole-body Locomotion Framework for quadruped robots. This package contains the whole-body controller.</description>
 
   <maintainer email="gennaro.raiola@gmail.com">Gennaro Raiola</maintainer>
