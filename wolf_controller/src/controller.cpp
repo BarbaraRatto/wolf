@@ -553,7 +553,7 @@ void Controller::updateStateEstimator(const double &dt)
 void Controller::updateStateMachine(const double &dt)
 {
     desired_height_ = 0.0;
-    current_height_ = robot_model_->getCurrentHeight();
+    current_height_ = state_estimator_->getEstimatedBaseHeight();
     current_rpy_ = robot_model_->getBaseRotationInWorldRPY();
     unsigned int current_state = robot_model_->getState();
     double ramp;
@@ -601,7 +601,7 @@ void Controller::updateStateMachine(const double &dt)
           robot_model_->setState(QuadrupedRobot::ANOMALY);
           break;
         }
-        if(current_height_ >= terrain_estimator_->getTerrainPositionWorld().z() + robot_model_->getStandUpHeight())
+        if(current_height_ >= robot_model_->getStandUpHeight())
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
