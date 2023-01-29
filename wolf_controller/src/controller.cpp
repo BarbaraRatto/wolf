@@ -36,7 +36,8 @@ Controller::Controller()
                               hardware_interface::GroundTruthInterface,
                               hardware_interface::ContactSwitchSensorInterface> (true) // allow_optional_interfaces = true
     ,stopping_(false)
-    ,compute_odom_(false)
+    ,publish_odom_tf_(false)
+    ,publish_odom_msg_(false)
     ,odom_pub_rate_(250)
     ,mode_(WALKING)
     ,previous_mode_(WALKING)
@@ -234,9 +235,13 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
     devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
 
-    bool compute_odom = false; // On/Off
-    controller_nh.getParam("compute_odom", compute_odom);
-    compute_odom_ = compute_odom;
+    bool publish_odom_tf = false; // On/Off
+    controller_nh.getParam("publish_odom_tf", publish_odom_tf);
+    bool publish_odom_msg = false; // On/Off
+    controller_nh.getParam("publish_odom_msg", publish_odom_msg);
+
+    publish_odom_tf_ = publish_odom_tf;
+    publish_odom_msg_ = publish_odom_msg;
     // Spawn the odom publisher thread
     odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
 
@@ -924,7 +929,7 @@ void Controller::odomPublisher()
     geometry_msgs::TransformStamped odom_T_base_msg;
     static ros::Publisher odom_pub;
 
-    if(compute_odom_)
+    if(publish_odom_msg_)
       odom_pub = nh_.advertise<nav_msgs::Odometry>("odom",100);
 
     ros::Rate publishing_rate(odom_pub_rate_);
@@ -972,7 +977,7 @@ void Controller::odomPublisher()
           basefoot_T_base_msg.header.stamp = t;
           br.sendTransform(basefoot_T_base_msg);
 
-          if(compute_odom_)
+          if(publish_odom_msg_ || publish_odom_tf_)
           {
             // Create the transform between odom -> base_footprint
             if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
@@ -1016,7 +1021,8 @@ void Controller::odomPublisher()
             odom_T_basefoot_msg.child_frame_id  = BASE_FOOTPRINT_FRAME;
             odom_T_basefoot_msg.header.seq++;
             odom_T_basefoot_msg.header.stamp = t;
-            br.sendTransform(odom_T_basefoot_msg);
+            if(publish_odom_tf_)
+              br.sendTransform(odom_T_basefoot_msg);
 
             // Create the odom message
             odom_msg.header.seq                 ++;
@@ -1028,9 +1034,10 @@ void Controller::odomPublisher()
             odom_msg.pose.pose.position.z       = odom_T_basefoot_msg.transform.translation.z;
             odom_msg.pose.pose.orientation      = odom_T_basefoot_msg.transform.rotation;
             odom_msg.twist.twist                = tf2::toMsg(odom_estimator.getBaseTwist());
-            //tf2::eigenToCovariance(...);
-            //tf2::eigenToCovariance(...);
-            odom_pub.publish(odom_msg);
+            wolf_estimation::eigenToCovariance(odom_estimator.getPoseCovariance(),odom_msg.pose.covariance);
+            wolf_estimation::eigenToCovariance(odom_estimator.getTwistCovariance(),odom_msg.twist.covariance);
+            if(publish_odom_msg_)
+              odom_pub.publish(odom_msg);
           }
         }
 
@@ -1051,11 +1058,6 @@ void Controller::stopping(const ros::Time& /*time*/)
     odom_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
-}
-
-void Controller::computeOdom(const bool &activate)
-{
-    compute_odom_ = activate;
 }
 
 void Controller::setBaseLinearVelocityCmdX(const double &v)
