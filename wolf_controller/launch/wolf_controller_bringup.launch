@@ -25,6 +25,10 @@
     <arg name="plot_node_gui" default="false" />
     <arg name="full_gui" default="false" />
 
+    <!-- Odometry arguments -->
+    <arg name="publish_odom_msg" default="true"/>
+    <arg name="publish_odom_tf"  default="true"/>
+
     <!-- Export some params to the param server -->
     <param name="task_period" value="$(arg task_period)"/>
     <param name="robot_name" type="str"  value="$(arg robot_name)" />
@@ -71,10 +75,10 @@
 
     <!-- Load controller config -->
     <group if="$(arg arm_enabled)">
-          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_'+arg('arm_name')+'_params.yaml')" ns="$(arg robot_name)"/>
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_'+arg('arm_name')+'_params.yaml')" subst_value="true" ns="$(arg robot_name)"/>
     </group>
     <group unless="$(arg arm_enabled)">
-          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_params.yaml')" ns="$(arg robot_name)"/>
+          <rosparam command="load" file="$(eval find(arg('robot_name')+'_description')+'/params/'+arg('robot_name')+'_params.yaml')" subst_value="true" ns="$(arg robot_name)"/>
     </group>
 
     <!-- Spawn wolf controller and joint state publisher -->

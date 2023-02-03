@@ -930,7 +930,7 @@ void Controller::odomPublisher()
     static ros::Publisher odom_pub;
 
     if(publish_odom_msg_)
-      odom_pub = nh_.advertise<nav_msgs::Odometry>("odom",100);
+      odom_pub = nh_.advertise<nav_msgs::Odometry>("/odometry/robot",100);
 
     ros::Rate publishing_rate(odom_pub_rate_);
 
@@ -1034,8 +1034,9 @@ void Controller::odomPublisher()
             odom_msg.pose.pose.position.z       = odom_T_basefoot_msg.transform.translation.z;
             odom_msg.pose.pose.orientation      = odom_T_basefoot_msg.transform.rotation;
             odom_msg.twist.twist                = tf2::toMsg(odom_estimator.getBaseTwist());
-            wolf_estimation::eigenToCovariance(odom_estimator.getPoseCovariance(),odom_msg.pose.covariance);
-            wolf_estimation::eigenToCovariance(odom_estimator.getTwistCovariance(),odom_msg.twist.covariance);
+            // FIXME This is causing issues:
+            //wolf_estimation::eigenToCovariance(odom_estimator.getPoseCovariance(),odom_msg.pose.covariance);
+            //wolf_estimation::eigenToCovariance(odom_estimator.getTwistCovariance(),odom_msg.twist.covariance);
             if(publish_odom_msg_)
               odom_pub.publish(odom_msg);
           }
