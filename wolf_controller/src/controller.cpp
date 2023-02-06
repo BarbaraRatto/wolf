@@ -898,9 +898,9 @@ void Controller::odomPublisher()
 {
     ROS_DEBUG_NAMED(CLASS_NAME,"Start the odomPublisher");
 
-    auto odom_estimator = wolf_estimation::OdomEstimator(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
-                                                         robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                         robot_model_->getBaseLinkName());
+    auto odom_estimator = wolf_estimation::RobotOdomEstimator(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
+                                                              robot_model_->getFootNames(),robot_model_->getImuSensorName(),
+                                                              robot_model_->getBaseLinkName());
     // Set some params
     odom_estimator.setTwistInLocalFrame(false);
 
