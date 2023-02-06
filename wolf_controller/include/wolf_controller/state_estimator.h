@@ -19,6 +19,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/quadruped_robot.h>
 
+// WoLF utils
+#include <wolf_controller_utils/tools.h>
+
 namespace wolf_controller
 {
 
@@ -221,7 +224,7 @@ private:
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
 
-    Trigger gait_cycle_ended_;
+    wolf_controller_utils::Trigger gait_cycle_ended_;
 
 };
 

@@ -11,7 +11,7 @@
 #include <sensor_msgs/JointState.h>
 #include <Eigen/Dense>
 #include <geometry_msgs/WrenchStamped.h>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 #include <wolf_msgs/ContactForces.h>
 #include <wolf_msgs/CapturePoint.h>
 #include <wolf_msgs/CartesianTask.h>

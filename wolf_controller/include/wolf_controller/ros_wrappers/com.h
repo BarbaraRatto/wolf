@@ -19,8 +19,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
-#include <wolf_controller/geometry.h>
-#include <wolf_controller/utils.h>
+
+// WoLF utils
+#include <wolf_controller_utils/converters.h>
 
 // CoM
 class CoM : public OpenSoT::tasks::acceleration::CoM, public TaskRosWrapperInterface<wolf_msgs::ComTask>
@@ -139,15 +140,15 @@ public:
       // ACTUAL VALUES
       getActualPose(tmp_vector3d_);
       // Pose - Translation
-      wolf_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.position_actual);
+      wolf_controller_utils::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.position_actual);
       // Velocity reference
       tmp_vector3d_ = getCachedVelocityReference();
-      wolf_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.velocity_reference);
+      wolf_controller_utils::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.velocity_reference);
 
       // REFERENCE VALUES
       getReference(tmp_vector3d_);
       // Pose - Translation
-      wolf_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.position_reference);
+      wolf_controller_utils::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.position_reference);
 
       // COST
       rt_pub_->msg_.cost = cost_;

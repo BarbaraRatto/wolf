@@ -20,7 +20,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // Eigen
 #include <Eigen/Core>
 #include <Eigen/Dense>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 
 // Generated
 #include <wolf_msgs/ContactForces.h>
@@ -34,8 +34,6 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // WoLF
 #include <wolf_controller/controller.h>
 #include <wolf_controller/ros_wrappers/interface.h>
-#include <wolf_controller/geometry.h>
-#include <wolf_controller/utils.h>
 
 // RT GUI
 #ifdef RT_GUI

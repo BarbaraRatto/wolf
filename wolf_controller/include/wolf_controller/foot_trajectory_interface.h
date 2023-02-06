@@ -12,7 +12,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 #include <atomic>
 #include <Eigen/Dense>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 
 namespace wolf_controller
 {

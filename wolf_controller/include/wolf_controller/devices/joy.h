@@ -12,7 +12,8 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 #include <sensor_msgs/Joy.h>
 #include <wolf_controller/devices/ros.h>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
+#include <wolf_controller_utils/tools.h>
 
 class JoyHandler : public DeviceHandlerRosInterface<sensor_msgs::Joy::ConstPtr>
 {
@@ -33,7 +34,7 @@ public:
 
     struct FunctionTrigger
     {
-        wolf_controller::Trigger t_;
+        wolf_controller_utils::Trigger t_;
         funct_t f_;
     };
 
@@ -73,9 +74,9 @@ protected:
         base_velocity_pitch_cmd_   = controller_ptr_->getBaseAngularVelocityCmdPitch();
         base_velocity_yaw_cmd_     = controller_ptr_->getBaseAngularVelocityCmdYaw();
 
-        if(step_height_.getStatus() == wolf_controller::AxisToTrigger::UP)
+        if(step_height_.getStatus() == wolf_controller_utils::AxisToTrigger::UP)
             controller_ptr_->getFootholdsPlanner()->increaseStepHeight();
-        else if (step_height_.getStatus() == wolf_controller::AxisToTrigger::DOWN)
+        else if (step_height_.getStatus() == wolf_controller_utils::AxisToTrigger::DOWN)
             controller_ptr_->getFootholdsPlanner()->decreaseStepHeight();
 
         if( start_swing_                             ||
@@ -93,7 +94,7 @@ protected:
     FunctionTrigger switch_control_mode_;
     FunctionTrigger emergency_stop_;
     FunctionTrigger reset_base_;
-    wolf_controller::AxisToTrigger step_height_;
+    wolf_controller_utils::AxisToTrigger step_height_;
 };
 
 class Ps3JoyHandler : public JoyHandler
@@ -206,13 +207,13 @@ public:
         if(msg.get() && !msg->axes.empty() && !msg->buttons.empty())
         {
 
-            base_velocity_x_scale_     = wolf_controller::sgn(msg->axes[0]) * (std::abs(static_cast<double>(msg->axes[0])) > 0.5 ? 1.0 : 0.0);
-            base_velocity_y_scale_     = wolf_controller::sgn(msg->axes[1]) * (std::abs(static_cast<double>(msg->axes[1])) > 0.5 ? 1.0 : 0.0);
-            base_velocity_z_scale_     = wolf_controller::sgn(msg->axes[2]) * (std::abs(static_cast<double>(msg->axes[2])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_x_scale_     = wolf_controller_utils::sgn(msg->axes[0]) * (std::abs(static_cast<double>(msg->axes[0])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_y_scale_     = wolf_controller_utils::sgn(msg->axes[1]) * (std::abs(static_cast<double>(msg->axes[1])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_z_scale_     = wolf_controller_utils::sgn(msg->axes[2]) * (std::abs(static_cast<double>(msg->axes[2])) > 0.5 ? 1.0 : 0.0);
 
-            base_velocity_roll_scale_  = wolf_controller::sgn(msg->axes[3]) * (std::abs(static_cast<double>(msg->axes[3])) > 0.5 ? 1.0 : 0.0);
-            base_velocity_pitch_scale_ = wolf_controller::sgn(msg->axes[4]) * (std::abs(static_cast<double>(msg->axes[4])) > 0.5 ? 1.0 : 0.0);
-            base_velocity_yaw_scale_   = wolf_controller::sgn(msg->axes[5]) * (std::abs(static_cast<double>(msg->axes[5])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_roll_scale_  = wolf_controller_utils::sgn(msg->axes[3]) * (std::abs(static_cast<double>(msg->axes[3])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_pitch_scale_ = wolf_controller_utils::sgn(msg->axes[4]) * (std::abs(static_cast<double>(msg->axes[4])) > 0.5 ? 1.0 : 0.0);
+            base_velocity_yaw_scale_   = wolf_controller_utils::sgn(msg->axes[5]) * (std::abs(static_cast<double>(msg->axes[5])) > 0.5 ? 1.0 : 0.0);
 
             if(std::abs(base_velocity_x_scale_) > 0.0 || std::abs(base_velocity_y_scale_) > 0.0 || std::abs(base_velocity_yaw_scale_) > 0.0)
                 start_swing_ = true;

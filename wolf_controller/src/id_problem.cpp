@@ -7,7 +7,7 @@
 
 #include <wolf_controller/id_problem.h>
 #include <OpenSoT/utils/Affine.h>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 
 using namespace OpenSoT;
 

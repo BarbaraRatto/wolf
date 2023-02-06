@@ -6,8 +6,8 @@
  */
 
 #include <wolf_controller/quadruped_robot.h>
-#include <wolf_controller/utils.h>
-#include <wolf_controller/geometry.h>
+#include <wolf_controller/common.h>
+#include <wolf_controller_utils/geometry.h>
 #include <stdexcept>
 
 // RT GUI
@@ -17,6 +17,7 @@ using namespace rt_gui;
 #endif
 
 using namespace XBot;
+using namespace wolf_controller_utils;
 
 namespace wolf_controller {
 

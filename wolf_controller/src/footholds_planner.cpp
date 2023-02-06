@@ -7,9 +7,11 @@
  */
 
 #include <wolf_controller/footholds_planner.h>
+#include <wolf_controller_utils/filters.h>
 #include <OpenSoT/utils/cartesian_utils.h>
 
 using namespace rt_logger;
+using namespace wolf_controller_utils;
 
 namespace wolf_controller {
 

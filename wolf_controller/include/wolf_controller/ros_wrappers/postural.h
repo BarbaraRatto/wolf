@@ -19,8 +19,6 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
-#include <wolf_controller/geometry.h>
-#include <wolf_controller/utils.h>
 
 // POSTURAL
 class Postural : public OpenSoT::tasks::acceleration::Postural, public TaskRosWrapperInterface<wolf_msgs::PosturalTask>

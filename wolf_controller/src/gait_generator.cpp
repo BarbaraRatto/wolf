@@ -9,6 +9,7 @@
 #include <wolf_controller/foot_trajectory_ellipse.h>
 
 using namespace wolf_controller;
+using namespace wolf_controller_utils;
 
 Gait::Gait(const std::vector<std::string>& foot_names, const gait_t& gait_type)
 {

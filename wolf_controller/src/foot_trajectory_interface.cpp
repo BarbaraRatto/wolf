@@ -7,9 +7,10 @@
  */
 
 #include <wolf_controller/foot_trajectory_interface.h>
-#include <wolf_controller/geometry.h>
+#include <wolf_controller_utils/geometry.h>
 
 using namespace wolf_controller;
+using namespace wolf_controller_utils;
 
 TrajectoryInterface::TrajectoryInterface()
   :trajectory_id(_id++)

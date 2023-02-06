@@ -42,6 +42,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_hardware_interface/ground_truth_interface.h>
 #include <wolf_hardware_interface/contact_switch_sensor_interface.h>
 #include <wolf_estimation/robot_odom.h>
+#include <wolf_controller_utils/tools.h>
 
 // Eigen
 #include <Eigen/Geometry>
@@ -435,9 +436,9 @@ private:
     /** @brief Support temporary double */
     double tmp_double_;
     /** @brief Counters used for checks */
-    Counter::Ptr solver_failures_cnt_;
-    Counter::Ptr contact_failures_cnt_;
-    std::vector<Counter::Ptr> velocity_lims_failures_cnt_;
+    wolf_controller_utils::Counter::Ptr solver_failures_cnt_;
+    wolf_controller_utils::Counter::Ptr contact_failures_cnt_;
+    std::vector<wolf_controller_utils::Counter::Ptr> velocity_lims_failures_cnt_;
     /** @brief Publish odom tf */
     bool publish_odom_tf_;
     /** @brief Publish odom msg */
@@ -445,9 +446,9 @@ private:
     /** @brief Odom publisher rate */
     double odom_pub_rate_;
     /** @brief Ramps */
-    Ramp::Ptr ramp_stand_up_;
-    Ramp::Ptr ramp_stand_down_;
-    Ramp::Ptr ramp_init_;
+    wolf_controller_utils::Ramp::Ptr ramp_stand_up_;
+    wolf_controller_utils::Ramp::Ptr ramp_stand_down_;
+    wolf_controller_utils::Ramp::Ptr ramp_init_;
     /** @brief State machine support variables */
     unsigned int mode_;
     unsigned int previous_mode_;

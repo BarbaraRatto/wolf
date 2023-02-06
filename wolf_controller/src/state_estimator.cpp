@@ -6,9 +6,10 @@
  */
 
 #include <wolf_controller/state_estimator.h>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 
 using namespace rt_logger;
+using namespace wolf_controller_utils;
 
 namespace wolf_controller {
 

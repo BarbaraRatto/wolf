@@ -16,6 +16,8 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <atomic>
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/quadruped_robot.h>
+// WoLF utils
+#include <wolf_controller_utils/tools.h>
 
 namespace wolf_controller
 {
@@ -121,7 +123,7 @@ private:
 
   Eigen::Vector3d tmp_vector3d_;
 
-  Trigger gait_cycle_ended_;
+  wolf_controller_utils::Trigger gait_cycle_ended_;
 };
 
 /**

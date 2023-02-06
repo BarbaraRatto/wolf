@@ -14,7 +14,7 @@
 #include <ros/ros.h>
 #include <Eigen/Dense>
 #include <wolf_controller/quadruped_robot.h>
-#include <wolf_controller/utils.h>
-#include <wolf_controller/geometry.h>
+#include <wolf_controller/common.h>
+#include <wolf_controller_utils/geometry.h>
 
 #endif

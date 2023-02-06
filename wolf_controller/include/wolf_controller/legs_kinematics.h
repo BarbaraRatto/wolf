@@ -12,10 +12,12 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 #include <ros/ros.h>
 #include <Eigen/Dense>
-#include <wolf_controller/geometry.h>
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/quadruped_robot.h>
 #include <wolf_controller/terrain_estimator.h>
+
+// WoLF utils
+#include <wolf_controller_utils/geometry.h>
 
 namespace wolf_controller
 {

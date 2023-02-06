@@ -11,7 +11,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #define DEVICES_INTERFACE_H
 
 // WoLF
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 
 // STD
 #include <memory>

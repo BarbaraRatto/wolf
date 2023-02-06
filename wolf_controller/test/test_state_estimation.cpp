@@ -152,7 +152,7 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
     _imu_quat.x() = imu_msg->orientation.x;
     _imu_quat.y() = imu_msg->orientation.y;
     _imu_quat.z() = imu_msg->orientation.z;
-    wolf_controller::quatToRot(_imu_quat.normalized(),_imu_R);
+    wolf_controller_utils::quatToRot(_imu_quat.normalized(),_imu_R);
     _imu_pose.translation().setZero();
     _imu_pose.linear() = _imu_R;
     _imu_vel_ref << 0., 0., 0., imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z;
@@ -192,7 +192,7 @@ void update(const sensor_msgs::JointState::ConstPtr& joints_msg,
       // Get FB pose
       _robot->getFloatingBasePose(_fb_pose);
       _robot->getFloatingBaseTwist(_fbqdot);
-      wolf_controller::rotToRpy(_fb_pose.linear(),_fb_rpy);
+      wolf_controller_utils::rotToRpy(_fb_pose.linear(),_fb_rpy);
       _fb_xyz = _fb_pose.translation();
       _fbq << _fb_xyz, _fb_rpy;
 

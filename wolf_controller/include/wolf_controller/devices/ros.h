@@ -12,7 +12,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 #include <ros/ros.h>
 #include <wolf_controller/devices/interface.h>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 #include <wolf_controller/controller.h>
 #include <wolf_controller/gait_generator.h>
 #include <wolf_controller/footholds_planner.h>

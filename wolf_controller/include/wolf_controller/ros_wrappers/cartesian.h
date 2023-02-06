@@ -29,8 +29,10 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
-#include <wolf_controller/geometry.h>
-#include <wolf_controller/utils.h>
+
+// WoLF utils
+#include <wolf_controller_utils/geometry.h>
+#include <wolf_controller_utils/converters.h>
 
 // STD
 #include <numeric>
@@ -199,18 +201,18 @@ public:
             // ACTUAL VALUES
             getActualPose(tmp_affine3d_);
             getActualTwist(tmp_vector6d_);
-            wolf_controller::rotToRpy(tmp_affine3d_.linear(),tmp_vector3d_);
-            wolf_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_actual);
-            wolf_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_actual);
-            wolf_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_actual);
+            wolf_controller_utils::rotToRpy(tmp_affine3d_.linear(),tmp_vector3d_);
+            wolf_controller_utils::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_actual);
+            wolf_controller_utils::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_actual);
+            wolf_controller_utils::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_actual);
 
             // REFERENCE VALUES
             getReference(tmp_affine3d_);
             tmp_vector6d_ = getCachedVelocityReference();
-            wolf_controller::rotToRpy(tmp_affine3d_.linear(),tmp_vector3d_);
-            wolf_controller::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_reference);
-            wolf_controller::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_reference);
-            wolf_controller::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_reference);
+            wolf_controller_utils::rotToRpy(tmp_affine3d_.linear(),tmp_vector3d_);
+            wolf_controller_utils::affine3dToPose(tmp_affine3d_,rt_pub_->msg_.pose_reference);
+            wolf_controller_utils::vector6dToTwist(tmp_vector6d_,rt_pub_->msg_.twist_reference);
+            wolf_controller_utils::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.rpy_reference);
 
             // COST
             rt_pub_->msg_.cost = cost_;
@@ -335,7 +337,7 @@ public:
         Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
         Eigen::Matrix3d R;
 
-        wolf_controller::quatToRot(orientation_reference,R);
+        wolf_controller_utils::quatToRot(orientation_reference,R);
 
         pose_reference.translation() = translation_reference;
         pose_reference.linear() = R;

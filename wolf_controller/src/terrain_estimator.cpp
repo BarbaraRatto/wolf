@@ -6,9 +6,11 @@
  */
 
 #include <wolf_controller/terrain_estimator.h>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
+#include <wolf_controller_utils/filters.h>
 
 using namespace rt_logger;
+using namespace wolf_controller_utils;
 
 namespace wolf_controller {
 

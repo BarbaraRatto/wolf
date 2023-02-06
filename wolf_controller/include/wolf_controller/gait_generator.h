@@ -15,10 +15,12 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 #include <atomic>
-#include <wolf_controller/geometry.h>
-#include <wolf_controller/utils.h>
+#include <wolf_controller/common.h>
 #include <wolf_controller/foot_state_machine.h>
 #include <wolf_controller/foot_trajectory_interface.h>
+
+#include <wolf_controller_utils/geometry.h>
+#include <wolf_controller_utils/tools.h>
 
 namespace wolf_controller
 {
@@ -230,9 +232,9 @@ private:
   std::atomic<unsigned int> next_gait_idx_;
   std::atomic<bool> change_gait_;
   std::atomic<bool> activate_swing_;
-  Trigger next_schedule_;
-  Trigger first_step_;
-  Trigger last_step_;
+  wolf_controller_utils::Trigger next_schedule_;
+  wolf_controller_utils::Trigger first_step_;
+  wolf_controller_utils::Trigger last_step_;
 
   Gait::gait_t gait_type_;
 
