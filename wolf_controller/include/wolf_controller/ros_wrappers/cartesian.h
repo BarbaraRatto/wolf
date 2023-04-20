@@ -335,15 +335,18 @@ public:
                           << feedback->pose.position.x << ", " << feedback->pose.position.y
                           << ", " << feedback->pose.position.z << " frame " << feedback->header.frame_id );
 
-        Eigen::Vector3d translation_reference(feedback->pose.position.x,feedback->pose.position.y,feedback->pose.position.z);
-        Eigen::Quaterniond orientation_reference(feedback->pose.orientation.w,feedback->pose.orientation.x,feedback->pose.orientation.y,feedback->pose.orientation.z);
+        //Eigen::Vector3d translation_reference(feedback->pose.position.x,feedback->pose.position.y,feedback->pose.position.z);
+        //Eigen::Quaterniond orientation_reference(feedback->pose.orientation.w,feedback->pose.orientation.x,feedback->pose.orientation.y,feedback->pose.orientation.z);
+        //Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
+        //Eigen::Matrix3d R;
+        //
+        //wolf_controller_utils::quatToRot(orientation_reference,R);
+        //
+        //pose_reference.translation() = translation_reference;
+        //pose_reference.linear() = R;
+
         Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
-        Eigen::Matrix3d R;
-
-        wolf_controller_utils::quatToRot(orientation_reference,R);
-
-        pose_reference.translation() = translation_reference;
-        pose_reference.linear() = R;
+        tf::poseMsgToEigen(feedback->pose,pose_reference);
 
         if(is_continuous_ == true)
             trj_->setWayPoint(pose_reference,0.1);
