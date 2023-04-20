@@ -63,6 +63,7 @@ public:
 
   TaskRosWrapperInterface(const std::string& task_name, ros::NodeHandle& nh)
   {
+    last_time_ = 0.0;
     task_name_ = task_name;
     nh_ = nh;
     rt_pub_.reset(new realtime_tools::RealtimePublisher<Msg_type>(nh_,task_name_, 4));
@@ -105,6 +106,7 @@ protected:
   Eigen::VectorXd       tmp_vectorXd_;
   Eigen::Affine3d       tmp_affine3d_;
   Eigen::Vector6d       tmp_vector6d_;
+  Eigen::Vector6d       tmp_vector6d_1_;
   Eigen::Vector3d       tmp_vector3d_;
   Eigen::Matrix6d       tmp_matrix6d_;
   Eigen::Matrix3d       tmp_matrix3d_;
@@ -132,6 +134,10 @@ protected:
 
   std::shared_ptr<realtime_tools::RealtimePublisher<Msg_type>> rt_pub_;
   wolf_controller::CartesianTrajectory::Ptr trj_;
+
+  double last_time_;
+
+  ros::Subscriber reference_sub_;
 
   double cost_;
 

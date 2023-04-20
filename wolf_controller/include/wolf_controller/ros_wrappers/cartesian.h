@@ -67,7 +67,7 @@ public:
         // Create the marker
         control_type_ = visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D;
         is_continuous_ = false;
-        MakeMarker(getDistalLink(),getBaseLink(),control_type_,true);
+        makeMarker(getDistalLink(),getBaseLink(),control_type_,true);
         MakeMenu();
         interactive_marker_server_.applyChanges();
 
@@ -76,6 +76,9 @@ public:
 
         // Create the waypoints publisher
         waypoints_pub_ = nh.advertise<geometry_msgs::PoseArray>(task_id + "/wp", 1, true);
+
+        // Create the reference subscriber
+        reference_sub_ = nh.subscribe("reference/"+_task_id, 1000, &Cartesian::referenceCallback, this);
     }
 
     virtual void registerReconfigurableVariables() override
@@ -263,7 +266,7 @@ public:
     virtual bool reset() override
     {
         bool res = OpenSoT::tasks::acceleration::Cartesian::reset(); // Task's reset
-        MakeMarker(getDistalLink(),getBaseLink(),control_type_,true);
+        makeMarker(getDistalLink(),getBaseLink(),control_type_,true);
         menu_handler_.reApply(interactive_marker_server_);
         interactive_marker_server_.applyChanges();
         waypoints_.clear();
@@ -272,7 +275,7 @@ public:
         return res;
     }
 
-    void MakeMarker(const std::string &distal_link, const std::string &base_link, unsigned int interaction_mode, bool show)
+    void makeMarker(const std::string &distal_link, const std::string &base_link, unsigned int interaction_mode, bool show)
     {
         ROS_DEBUG("Creating marker %s -> %s\n", base_link.c_str(), distal_link.c_str());
 
@@ -353,6 +356,21 @@ public:
     }
 
 private:
+
+    void referenceCallback(const wolf_msgs::CartesianTask::ConstPtr& msg)
+    {
+        double period = wolf_controller::_period;
+
+        if(last_time_ != 0.0)
+          period = msg->header.stamp.toSec() - last_time_;
+
+        Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
+        tf::poseMsgToEigen(msg->pose_reference,pose_reference);
+
+        trj_->setWayPoint(pose_reference,period);
+
+        last_time_ = msg->header.stamp.toSec();
+    }
 
     visualization_msgs::InteractiveMarkerControl& makeSTLControl(visualization_msgs::InteractiveMarker& msg)
     {
@@ -806,6 +824,11 @@ private:
    * @brief listener_ TF listener
    */
     tf::TransformListener listener_;
+
+    /**
+   * @brief listener_ TF listener
+   */
+
 };
 
 #endif // ROS_WRAPPERS_CARTESIAN_H

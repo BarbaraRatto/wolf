@@ -35,6 +35,11 @@ public:
     :OpenSoT::tasks::acceleration::CoM(robot,qddot)
     ,TaskRosWrapperInterface<wolf_msgs::ComTask>(_task_id,nh)
   {
+    // Setup the interpolator
+    //trj_ = std::make_shared<wolf_controller::CartesianTrajectory>(this);
+
+    // Create the reference subscriber
+    reference_sub_ = nh.subscribe("reference/"+_task_id, 1000, &CoM::referenceCallback, this);
   }
 
   virtual void registerReconfigurableVariables() override
@@ -176,7 +181,32 @@ public:
       tmp_matrix3d_(2,2) = buffer_kd_z_;
       setKd(tmp_matrix3d_);
     }
+    if(OPTIONS.set_ext_reference)
+    {
+        // Interpolation
+        //trj_->update(wolf_controller::_period);
+        //trj_->getReference(tmp_affine3d_,&tmp_vector6d_,&tmp_vector6d_1_);
+        //setReference(tmp_affine3d_.translation(),tmp_vector6d_.head(3),tmp_vector6d_1_.head(3));
+    }
     OpenSoT::tasks::acceleration::CoM::_update(x);
+  }
+
+private:
+
+  void referenceCallback(const wolf_msgs::ComTask::ConstPtr& msg)
+  {
+      double period = wolf_controller::_period;
+
+      if(last_time_ != 0.0)
+        period = msg->header.stamp.toSec() - last_time_;
+
+      Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
+      pose_reference.translation().x() = msg->position_reference.x;
+      pose_reference.translation().y() = msg->position_reference.y;
+      pose_reference.translation().z() = msg->position_reference.z;
+      //trj_->setWayPoint(pose_reference,period);
+
+      last_time_ = msg->header.stamp.toSec();
   }
 
 };
