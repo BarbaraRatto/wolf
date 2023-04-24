@@ -560,6 +560,12 @@ void Controller::updateStateEstimator(const double &dt)
     state_estimator_->update(dt);
 }
 
+void Controller::updateTerrainEstimator(const double &dt)
+{
+  // Update the terrain estimator
+  terrain_estimator_->computeTerrainEstimation(dt);
+}
+
 void Controller::updateStateMachine(const double &dt)
 {
     desired_height_ = 0.0;
@@ -595,7 +601,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_UP):
-        updateComponents(dt);
         ramp = ramp_stand_up_->update(dt);
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
         des_joint_positions_ = ramp * robot_model_->getStandUpJointPostion() + (1.0-ramp) * robot_model_->getStandDownJointPostion();
@@ -616,12 +621,9 @@ void Controller::updateStateMachine(const double &dt)
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
           com_planner_->resetVelocities();
-          //if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
-          //{
           robot_model_->setState(QuadrupedRobot::ACTIVE);
           state_estimator_->startContactComputation();
           break;
-          //}
         }
         break;
 
@@ -630,8 +632,7 @@ void Controller::updateStateMachine(const double &dt)
         switch(mode_)
         {
         case Controller::mode_t::WPG:
-          updateComponents(dt);
-          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+          updateWpg(dt);
           id_prob_->setControlMode(IDProblem::mode_t::WPG);
           previous_mode_ = Controller::mode_t::WPG;
           break;
@@ -647,7 +648,7 @@ void Controller::updateStateMachine(const double &dt)
           break;
         case Controller::mode_t::RESET:
           foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
-          updateComponents(dt);
+          updateWpg(dt);
           tmp_vector3d_1_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // base position
           tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference(); // base orientation
           rotToRpy(tmp_matrix3d_,tmp_vector3d_);
@@ -678,7 +679,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
-        updateComponents(dt);
         ramp = ramp_stand_down_->update(dt);
         desired_height_ = ramp * stand_down_starting_height_;
         des_joint_positions_ = (1.0-ramp) * robot_model_->getStandUpJointPostion() + (ramp) * robot_model_->getStandDownJointPostion();
@@ -706,7 +706,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::ANOMALY):
-        updateComponents(dt);
         des_joint_positions_ = robot_model_->getStandDownJointPostion();
         des_joint_velocities_.fill(0.0);
         updateImpedance(des_joint_positions_,des_joint_velocities_);
@@ -756,14 +755,34 @@ void Controller::init()
     joint_positions_init_ = joint_positions_;
 }
 
-void Controller::updateComponents(const double &dt)
+void Controller::updateWpg(const double &dt)
 {
   // Update the footholds planner
   foot_holds_planner_->update(dt);
-  // Update the terrain estimator
-  terrain_estimator_->computeTerrainEstimation(dt);
+
   // Update the CoM position and velocity reference
   com_planner_->update();
+
+  // Update the base references based on the com desired position
+  updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+
+  // Set the references to the feet based on their current state: Stance/Swing
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+  {
+      id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
+                                 WORLD_FRAME_NAME);
+      if(gait_generator_->isSwinging(foot_names[i]))
+      {
+          id_prob_->swingWithFoot(foot_names[i]);
+          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
+      }
+      else
+      {
+          id_prob_->stanceWithFoot(foot_names[i]);
+          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
+      }
+  }
 }
 
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
@@ -830,24 +849,6 @@ bool Controller::updateSolver(const Eigen::VectorXd& des_joint_positions)
   // Rotate the friction cones based on the terrain orientation
   id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
-  // Set the references to the feet based on their current state: Stance/Swing
-  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  for(unsigned int i = 0; i<foot_names.size(); i++)
-  {
-      id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
-                                 WORLD_FRAME_NAME);
-      if(gait_generator_->isSwinging(foot_names[i]))
-      {
-          id_prob_->swingWithFoot(foot_names[i]);
-          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
-      }
-      else
-      {
-          id_prob_->stanceWithFoot(foot_names[i]);
-          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
-      }
-  }
-
   // Update the postural
   //impedance_->startInertiaCompensation(true);
   impedance_->update();
@@ -884,6 +885,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
 
     // Update state estimator
     updateStateEstimator(period_);
+
+    // Update terrain estimator
+    updateTerrainEstimator(period_);
 
     // Update state machine
     updateStateMachine(period_);

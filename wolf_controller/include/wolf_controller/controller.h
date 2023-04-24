@@ -482,6 +482,12 @@ private:
     void updateStateEstimator(const double& dt);
 
     /**
+         * @brief update the terrain estimator
+         * @param dt control period
+         */
+    void updateTerrainEstimator(const double& dt);
+
+    /**
          * @brief update the state machine
          * @param dt control period
          */
@@ -507,11 +513,10 @@ private:
     void updateImpedance(const Eigen::VectorXd& des_joint_positions, const Eigen::VectorXd& des_joint_velocities);
 
     /**
-         * @brief perform an execution step with the controller's components
-         * such as foot holds planner, com planner and terrain estimator
+         * @brief perform an execution step with the controller's walking pattern generator
          * @param dt control period
          */
-    void updateComponents(const double &dt);
+    void updateWpg(const double &dt);
 
     /**
          * @brief update base references
