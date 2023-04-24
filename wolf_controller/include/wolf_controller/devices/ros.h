@@ -55,7 +55,7 @@ protected:
         unsigned int current_robot_state = controller_ptr_->getRobotModel()->getState();
 
         if(current_robot_state == wolf_controller::QuadrupedRobot::ACTIVE)
-          if(start_swing_ && current_control_mode == wolf_controller::Controller::WALKING)
+          if(start_swing_ && current_control_mode == wolf_controller::Controller::WPG)
           {
               controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing
               controller_ptr_->getFootholdsPlanner()->setBaseVelocityScaleX(base_velocity_x_scale_);

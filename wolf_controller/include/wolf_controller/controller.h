@@ -58,7 +58,7 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 public:
 
      enum posture_t {UP=0,DOWN};
-     enum mode_t {WALKING=0,MANIPULATION,RESET};
+     enum mode_t {WPG=0,EXT,MPC,RESET};
 
      const std::string CLASS_NAME = "Controller";
 
@@ -224,7 +224,7 @@ public:
     void setCutoffFreqAccelerometer(const double& hz);
 
     /**
-         * @brief Select the control mode to use [WALKING|MANIPULATION]
+         * @brief Select the control mode to use
          */
     bool selectControlMode(const std::string& mode);
 
@@ -234,7 +234,7 @@ public:
     unsigned int getControlMode();
 
     /**
-         * @brief Switch between WALKING and MANIPULATION
+         * @brief Switch between WPG and MPC
          */
     void switchControlMode();
 

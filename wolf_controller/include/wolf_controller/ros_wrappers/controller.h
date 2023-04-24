@@ -368,9 +368,12 @@ public:
                                                    boost::bind(&wolf_controller::Controller::selectGait,controller_,_1),
                                                    "select gait", {{"TROT","TROT"},{"CRAWL","CRAWL"}});
 
-        ddr_server_->registerEnumVariable<std::string>("select_control_mode","WALKING",
+        ddr_server_->registerEnumVariable<std::string>("select_control_mode","WPG",
                                                    boost::bind(&wolf_controller::Controller::selectControlMode,controller_,_1),
-                                                   "select mode", {{"WALKING","WALKING"},{"MANIPULATION","MANIPULATION"}});
+                                                   "select mode", {{"Walking pattern generator","WPG"},
+                                                                   {"Model predictive control", "MPC"},
+                                                                   {"External references",      "EXT"}
+                                                                  });
 
         ddr_server_->registerVariable<double>("set_mu",controller_->getIDProblem()->getFrictionConesMu(),boost::bind(&wolf_controller::Controller::setFrictionConesMu,controller_,_1),"set the friction cone value mu",0.0,1.0,controller_->getIDProblem()->CLASS_NAME);
         ddr_server_->registerVariable<double>("set_cutoff_freq_qdot",default_cutoff_freq_qdot,boost::bind(&wolf_controller::Controller::setCutoffFreqQdot,controller_,_1),"set cutoff frequency for the joint velocities",0,1000.0);

@@ -42,8 +42,8 @@ Controller::Controller()
     ,publish_odom_tf_(false)
     ,publish_odom_msg_(false)
     ,odom_pub_rate_(250)
-    ,mode_(WALKING)
-    ,previous_mode_(WALKING)
+    ,mode_(WPG)
+    ,previous_mode_(WPG)
     ,posture_(DOWN)
 {
    XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
@@ -357,10 +357,12 @@ bool Controller::setStepHeight(const double& step_height)
 
 bool Controller::selectControlMode(const std::string& mode)
 {
-  if(mode == "WALKING")
-    mode_ = Controller::mode_t::WALKING;
-  else if(mode == "MANIPULATION")
-    mode_ = Controller::mode_t::MANIPULATION;
+  if(mode == "WPG")
+    mode_ = Controller::mode_t::WPG;
+  else if(mode == "EXT")
+    mode_ = Controller::mode_t::EXT;
+  else if(mode == "MPC")
+    mode_ = Controller::mode_t::MPC;
   else if(mode == "RESET")
     mode_ = Controller::mode_t::RESET;
   else
@@ -380,10 +382,10 @@ unsigned int Controller::getControlMode()
 
 void Controller::switchControlMode()
 {
-  if(mode_ == Controller::mode_t::WALKING)
-    mode_ = Controller::mode_t::MANIPULATION;
+  if(mode_ == Controller::mode_t::WPG)
+    mode_ = Controller::mode_t::MPC;
   else
-    mode_ = Controller::mode_t::WALKING;
+    mode_ = Controller::mode_t::WPG;
 }
 
 bool Controller::selectPosture(const std::string& posture)
@@ -614,12 +616,12 @@ void Controller::updateStateMachine(const double &dt)
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
           com_planner_->resetVelocities();
-          if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
-          {
-            robot_model_->setState(QuadrupedRobot::ACTIVE);
-            state_estimator_->startContactComputation();
-            break;
-          }
+          //if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
+          //{
+          robot_model_->setState(QuadrupedRobot::ACTIVE);
+          state_estimator_->startContactComputation();
+          break;
+          //}
         }
         break;
 
@@ -627,17 +629,21 @@ void Controller::updateStateMachine(const double &dt)
 
         switch(mode_)
         {
-        case Controller::mode_t::MANIPULATION:
+        case Controller::mode_t::WPG:
           updateComponents(dt);
           updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
-          id_prob_->setControlMode(IDProblem::mode_t::MANIPULATION);
-          previous_mode_ = Controller::mode_t::MANIPULATION;
+          id_prob_->setControlMode(IDProblem::mode_t::WPG);
+          previous_mode_ = Controller::mode_t::WPG;
           break;
-        case Controller::mode_t::WALKING:
-          updateComponents(dt);
-          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
-          id_prob_->setControlMode(IDProblem::mode_t::WALKING);
-          previous_mode_ = Controller::mode_t::WALKING;
+        case Controller::mode_t::EXT:
+          // TODO
+          id_prob_->setControlMode(IDProblem::mode_t::EXT);
+          previous_mode_ = Controller::mode_t::EXT;
+          break;
+        case Controller::mode_t::MPC:
+          // TODO
+          id_prob_->setControlMode(IDProblem::mode_t::MPC);
+          previous_mode_ = Controller::mode_t::MPC;
           break;
         case Controller::mode_t::RESET:
           foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);

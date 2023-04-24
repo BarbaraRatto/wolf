@@ -61,6 +61,9 @@ public:
         // Get the urdf (used for the mesh)
         urdf_ = robot.getUrdf();
 
+        // Get the urdf links (used for the base frame selection)
+        urdf_.getLinks(links_);
+
         // Create the marker
         control_type_ = visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D;
         is_continuous_ = false;
@@ -509,14 +512,67 @@ private:
             menu_handler_.setCheckState(T_last_,interactive_markers::MenuHandler::UNCHECKED);
         }
         reset_all_way_points_entry_ = menu_handler_.insert(way_point_entry_, "Reset All",boost::bind(&Cartesian::resetAllWayPoints,this,_1));
-        reset_lastway_point_entry__ = menu_handler_.insert(way_point_entry_, "Reset Last",boost::bind(&Cartesian::resetLastWayPoints,this,_1));
+        reset_lastway_point_entry_ = menu_handler_.insert(way_point_entry_, "Reset Last",boost::bind(&Cartesian::resetLastWayPoints,this,_1));
         send_way_points_entry_ = menu_handler_.insert(way_point_entry_, "Send",boost::bind(&Cartesian::sendWayPoints,this,_1));
+
+        base_link_entry_ = menu_handler_.insert("Base Link");
+        menu_handler_.setVisible(base_link_entry_, true);
+
+        std::string distal_link = getDistalLink();
+        std::string base_link = getBaseLink();
+        for(unsigned int i = 0; i < links_.size(); ++i)
+        {
+            if(distal_link != links_.at(i)->name)
+            {
+                interactive_markers::MenuHandler::EntryHandle link_entry =
+                    menu_handler_.insert(base_link_entry_,links_.at(i)->name,boost::bind(&Cartesian::changeBaseLink,this,_1,links_.at(i)->name));
+
+
+                if(base_link.compare("world") == 0 && (links_.at(i)->name).compare("world") == 0)
+                {
+                    menu_handler_.setCheckState(link_entry, interactive_markers::MenuHandler::CHECKED );
+                }
+                else if(base_link.compare(links_.at(i)->name) == 0)
+                {
+                    menu_handler_.setCheckState(link_entry, interactive_markers::MenuHandler::CHECKED );
+                }
+                else
+                    menu_handler_.setCheckState(link_entry, interactive_markers::MenuHandler::UNCHECKED );
+
+                map_link_entries_[links_.at(i)->name] = link_entry;
+            }
+        }
 
         menu_control_.interaction_mode = visualization_msgs::InteractiveMarkerControl::BUTTON;
         menu_control_.always_visible = true;
 
         interactive_marker_.controls.push_back(menu_control_);
         menu_handler_.apply(interactive_marker_server_, interactive_marker_.name);
+    }
+
+    void changeBaseLink(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback, std::string new_base_link)
+    {
+        int entry_id = feedback->menu_entry_id;
+
+        menu_handler_.getTitle(entry_id, new_base_link);
+
+        if(new_base_link.compare(getBaseLink()) == 0)
+            return;
+
+        if(setBaseLink(new_base_link))
+        {
+          update(Eigen::VectorXd(1));
+          reset();
+          for (auto& tmp_map : map_link_entries_)
+          {
+            if(tmp_map.first == new_base_link)
+              menu_handler_.setCheckState(tmp_map.second, interactive_markers::MenuHandler::CHECKED );
+            else
+              menu_handler_.setCheckState(tmp_map.second, interactive_markers::MenuHandler::UNCHECKED );
+          }
+          menu_handler_.reApply(interactive_marker_server_);
+          interactive_marker_server_.applyChanges();
+        }
     }
 
     void sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
@@ -718,18 +774,25 @@ private:
     interactive_markers::MenuHandler menu_handler_;
     interactive_markers::MenuHandler::EntryHandle reset_marker_entry_;
     interactive_markers::MenuHandler::EntryHandle way_point_entry_;
+    interactive_markers::MenuHandler::EntryHandle base_link_entry_;
     interactive_markers::MenuHandler::EntryHandle T_entry_;
     interactive_markers::MenuHandler::EntryHandle T_last_;
-    interactive_markers::MenuHandler::EntryHandle reset_lastway_point_entry__;
+    interactive_markers::MenuHandler::EntryHandle reset_lastway_point_entry_;
     interactive_markers::MenuHandler::EntryHandle reset_all_way_points_entry_;
     interactive_markers::MenuHandler::EntryHandle send_way_points_entry_;
     interactive_markers::MenuHandler::EntryHandle continuous_control_entry_;
     visualization_msgs::InteractiveMarkerControl  menu_control_;
+    std::map<std::string,interactive_markers::MenuHandler::EntryHandle> map_link_entries_;
 
     /**
    * @brief urdf_ model description of the robot
    */
     urdf::ModelInterface urdf_;
+
+    /**
+   * @brief links_ urdf available links
+   */
+    std::vector<urdf::LinkSharedPtr> links_;
 
     /**
    * @brief use_mesh_ true if the end-effector mesh is used for the marker visualization

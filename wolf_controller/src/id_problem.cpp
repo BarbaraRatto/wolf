@@ -16,7 +16,7 @@ namespace wolf_controller {
 
 IDProblem::IDProblem(QuadrupedRobot::Ptr model):
   model_(model),
-  control_mode_(WALKING),
+  control_mode_(WPG),
   activate_com_z_(true),
   activate_angular_momentum_(true),
   activate_postural_(false),
@@ -420,26 +420,10 @@ void IDProblem::setControlMode(mode_t mode)
 
 void IDProblem::update()
 {
-  // Update arm tasks base frame if state changed
+  // Update control mode if changed
   if(change_control_mode_)
   {
-    if(ee_names_.size()>0)
-    {
-      std::string frame;
-      if(control_mode_ == WALKING)
-        frame = model_->getBaseLinkName();
-      else if (change_control_mode_ == MANIPULATION)
-        frame = WORLD_FRAME_NAME;
-      else
-        frame = model_->getBaseLinkName();
-
-      for (auto& tmp_map : arms_)
-      {
-        tmp_map.second->setBaseLink(frame);
-        tmp_map.second->update(Eigen::VectorXd(1));
-        tmp_map.second->reset();
-      }
-    }
+    // TODO
   }
 
   // Update the mu and the wrench limits

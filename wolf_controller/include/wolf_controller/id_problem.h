@@ -57,7 +57,7 @@ class IDProblem
 
 public:
 
-    enum mode_t {WALKING=0,MANIPULATION};
+    enum mode_t {WPG=0,EXT,MPC};
 
     const std::string CLASS_NAME = "IDProblem";
 
@@ -184,7 +184,7 @@ public:
     void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
 
     /**
-     * @brief set the control mode [WALKING|MANIPULATION]
+     * @brief set the control mode
      */
     void setControlMode(mode_t mode);
 
