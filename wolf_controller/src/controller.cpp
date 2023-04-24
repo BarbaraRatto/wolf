@@ -201,11 +201,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
-    state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
     impedance_     = std::make_shared<Impedance>(gait_generator_,robot_model_);
     impedance_->startInertiaCompensation(false);
 
+    state_estimator_   = std::make_shared<StateEstimator>(robot_model_);
     terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
     terrain_estimator_->setMinRoll(-M_PI);
@@ -722,13 +722,13 @@ void Controller::updateStateMachine(const double &dt)
 
     previous_height_ = current_height_;
 }
+
 void Controller::init()
 {
     // State estimator
     // Be sure to start the solver and the contact estimation when the robot is grounded.
     state_estimator_->resetGyroscopeIntegration();
-    //state_estimator_->startContactComputation();
-    state_estimator_->startHapticContactLoop();
+    state_estimator_->startContactComputation();
     // Terrain Estimator
     //terrain_estimator_->reset();
     // Footholds planner with gait generator
@@ -757,6 +757,12 @@ void Controller::init()
 
 void Controller::updateWpg(const double &dt)
 {
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+
+  // Update the gait generator contact state
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+    gait_generator_->setContactState(foot_names[i],state_estimator_->getContact(foot_names[i]),state_estimator_->getContactForce(foot_names[i]));
+
   // Update the footholds planner
   foot_holds_planner_->setTerrainTransform(terrain_estimator_->getTerrainPoseWorld());
   foot_holds_planner_->update(dt);
@@ -768,7 +774,6 @@ void Controller::updateWpg(const double &dt)
   updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
 
   // Set the references to the feet based on their current state: Stance/Swing
-  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   for(unsigned int i = 0; i<foot_names.size(); i++)
   {
       id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),

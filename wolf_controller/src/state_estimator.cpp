@@ -7,6 +7,7 @@
 
 #include <wolf_controller/state_estimator.h>
 #include <wolf_controller/common.h>
+#include <wolf_controller_utils/geometry.h>
 
 using namespace rt_logger;
 using namespace wolf_controller_utils;
@@ -69,14 +70,11 @@ StateEstimator::estimation_t stringToEnum(const std::string& estimation)
   return ret;
 }
 
-StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
+StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
 {
 
   assert(robot_model);
   robot_model_ = robot_model;
-
-  assert(gait_generator);
-  gait_generator_ = gait_generator;
 
   const std::vector<std::string>& contact_names = robot_model_->getContactNames();
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
@@ -123,8 +121,6 @@ StateEstimator::StateEstimator(GaitGenerator::Ptr gait_generator, QuadrupedRobot
   estimation_position_ = estimation_t::ESTIMATED_Z;
 
   reset_gyro_integration_done_ = false;
-
-  haptic_contact_loop_active_ = false;
 
   contact_force_th_ = 0.0; // [N]
 
@@ -309,6 +305,11 @@ const std::map<std::string,bool>& StateEstimator::getContacts() const
   return contact_states_;
 }
 
+Eigen::Vector3d& StateEstimator::getContactForce(const string& contact_name)
+{
+  return contact_forces_[contact_name];
+}
+
 bool StateEstimator::getContact(const std::string& contact_name)
 {
   return contact_states_[contact_name];
@@ -347,21 +348,6 @@ const Eigen::Vector3d &StateEstimator::getGroundTruthBaseAngularVelocity() const
 const double &StateEstimator::getEstimatedBaseHeight() const
 {
   return estimated_z_;
-}
-
-void StateEstimator::toggleHapticContactLoop()
-{
-  haptic_contact_loop_active_=!haptic_contact_loop_active_;
-}
-
-void StateEstimator::startHapticContactLoop()
-{
-  haptic_contact_loop_active_ = true;
-}
-
-void StateEstimator::stopHapticContactLoop()
-{
-  haptic_contact_loop_active_ = false;
 }
 
 void StateEstimator::startContactComputation()
@@ -452,16 +438,7 @@ void StateEstimator::updateContactState()
       contact_states_[foot_names[i]] = true;
     }
 
-    if(haptic_contact_loop_active_)
-    {
-      qp_estimation_->setContactState(foot_names[i],contact_states_[foot_names[i]]);
-      gait_generator_->setContactState(foot_names[i],contact_states_[foot_names[i]],contact_forces_[foot_names[i]]);
-    }
-    else
-    {
-      qp_estimation_->setContactState(foot_names[i],gait_generator_->isTrajectoryFinished(foot_names[i]));
-      gait_generator_->setContactState(foot_names[i],false,contact_forces_[foot_names[i]]);
-    }
+    qp_estimation_->setContactState(foot_names[i],contact_states_[foot_names[i]]);
   }
 
   // Update contact state for the arm end-effectors
@@ -487,13 +464,13 @@ void StateEstimator::updateContactState()
 double StateEstimator::estimateZ()
 {
   // Estimate z using the legs position
-  const std::vector<std::string>& foot_names = gait_generator_->getFootNames();
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   double estimated_z = 0.0;
   int feet_in_stance = 0;
   tmp_affine3d_.setIdentity();
   for(unsigned int i = 0; i<foot_names.size(); i++)
   {
-    if(!gait_generator_->isSwinging(foot_names[i]))
+    if(contact_states_[foot_names[i]])
     {
       feet_in_stance++;
       tmp_affine3d_.translation() = floating_base_pose_.linear() *  robot_model_->getFootPositionInBase(foot_names[i]);
