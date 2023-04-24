@@ -756,12 +756,12 @@ const Eigen::VectorXd& QuadrupedRobot::getStandDownJointPostion()
   return q_stand_down_;
 }
 
-const double &QuadrupedRobot::getStandUpHeight()
+const double& QuadrupedRobot::getStandUpHeight()
 {
   return stand_up_height_;
 }
 
-const double &QuadrupedRobot::getStandDownHeight()
+const double& QuadrupedRobot::getStandDownHeight()
 {
   return stand_down_height_;
 }
@@ -771,7 +771,7 @@ const std::string& QuadrupedRobot::getImuSensorName() const
   return imu_name_;
 }
 
-const std::string &QuadrupedRobot::getRobotName() const
+const std::string& QuadrupedRobot::getRobotName() const
 {
   return robot_name_;
 }
