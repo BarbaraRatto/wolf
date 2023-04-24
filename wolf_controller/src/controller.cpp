@@ -367,10 +367,10 @@ bool Controller::selectControlMode(const std::string& mode)
     mode_ = Controller::mode_t::RESET;
   else
   {
-    ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
+    ROS_ERROR_NAMED(CLASS_NAME,"Wrong control mode!");
     return false;
   }
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected control mode "<< mode);
 
   return true;
 }
@@ -511,7 +511,7 @@ void Controller::readImu()
 
 void Controller::starting(const ros::Time&  /*time*/)
 {
-    ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Starting WoLF controller");
 
     // Read from the hardware interfaces:
     // 1) Joints
@@ -519,7 +519,7 @@ void Controller::starting(const ros::Time&  /*time*/)
     // 2) IMU
     readImu();
 
-    ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Starting WoLF controller completed");
 }
 
 void Controller::updateStateEstimator(const double &dt)
@@ -1072,12 +1072,12 @@ void Controller::odomPublisher()
 
 void Controller::stopping(const ros::Time& /*time*/)
 {
-    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping the Controller");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping WoLF controller");
 
     stopping_ = true;
     odom_publisher_thread_->join();
 
-    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping WoLF controller completed");
 }
 
 void Controller::setBaseLinearVelocityCmdX(const double &v)
