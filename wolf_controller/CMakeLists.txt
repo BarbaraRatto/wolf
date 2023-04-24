@@ -52,11 +52,15 @@ include_directories(
     ${rt_gui_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
+add_library(ros_wrappers src/ros_wrappers/cartesian.cpp src/ros_wrappers/com.cpp src/ros_wrappers/momentum.cpp src/ros_wrappers/postural.cpp src/ros_wrappers/controller.cpp)
+target_link_libraries(ros_wrappers ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+    ${XBotInterface_LIBRARIES} ${rt_gui_LIBRARIES})
+
+add_library(wolf_controller src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
     src/foot_trajectory_interface.cpp src/legs_kinematics.cpp src/impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp
     src/gait_generator.cpp src/foot_state_machine.cpp src/cartesian_trajectory.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
-    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES})
+target_link_libraries(wolf_controller ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES} ros_wrappers)
 
 add_executable(plot_node src/plot_node.cpp)
 target_link_libraries(plot_node ${catkin_LIBRARIES})

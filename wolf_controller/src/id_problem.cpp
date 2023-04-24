@@ -97,7 +97,7 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   postural_->registerReconfigurableVariables();
   postural_->setReference(model_->getStandUpJointPostion());
   //   --------------------------
-  com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
+  com_ = std::make_shared<Com>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
   com_->setWeightIsDiagonalFlag(true);
   com_->loadParams();

@@ -244,7 +244,7 @@ private:
     std::map<std::string,Cartesian::Ptr> feet_;
     std::map<std::string,Cartesian::Ptr> arms_;
     Cartesian::Ptr waist_;
-    CoM::Ptr com_;
+    Com::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
     std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> min_forces_;
