@@ -201,10 +201,6 @@ private:
    */
   tf::TransformListener listener_;
 
-  /**
-   * @brief listener_ TF listener
-   */
-
 };
 
 #endif // ROS_WRAPPERS_CARTESIAN_H
