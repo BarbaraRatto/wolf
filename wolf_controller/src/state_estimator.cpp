@@ -309,6 +309,11 @@ const std::map<std::string,bool>& StateEstimator::getContacts() const
   return contact_states_;
 }
 
+bool StateEstimator::getContact(const std::string& contact_name)
+{
+  return contact_states_[contact_name];
+}
+
 const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionInWorld() const
 {
   return world_X_contact_;
@@ -369,6 +374,24 @@ void StateEstimator::startContactComputation()
 void StateEstimator::resetGyroscopeIntegration()
 {
   reset_gyro_integration_done_ = false;
+}
+
+bool StateEstimator::isAnyFootInContact()
+{
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+  bool result = false;
+  for(unsigned int i=0; i<foot_names.size(); i++)
+    result = result || contact_states_[foot_names[i]];
+  return result;
+}
+
+bool StateEstimator::areAllFeetInContact()
+{
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+  bool result = true;
+  for(unsigned int i=0; i<foot_names.size(); i++)
+    result = result && contact_states_[foot_names[i]];
+  return result;
 }
 
 void StateEstimator::stopContactComputation()
@@ -592,10 +615,6 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
     floating_base_position_.head(2) = floating_base_position_.head(2) + floating_base_velocity_.head(2) * period;  // Integrate x and y
     floating_base_position_(2) = estimated_z_; // Use estimated z
-    //if(gait_cycle_ended_.update(gait_generator_->isGaitCycleEnded()))
-    //{
-    //  floating_base_position_.head(2).setZero();
-    //}
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;

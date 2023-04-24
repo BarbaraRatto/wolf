@@ -206,7 +206,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     impedance_     = std::make_shared<Impedance>(gait_generator_,robot_model_);
     impedance_->startInertiaCompensation(false);
 
-    terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
+    terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
     terrain_estimator_->setMinRoll(-M_PI);
     terrain_estimator_->setMaxPitch(M_PI);
@@ -758,6 +758,7 @@ void Controller::init()
 void Controller::updateWpg(const double &dt)
 {
   // Update the footholds planner
+  foot_holds_planner_->setTerrainTransform(terrain_estimator_->getTerrainPoseWorld());
   foot_holds_planner_->update(dt);
 
   // Update the CoM position and velocity reference

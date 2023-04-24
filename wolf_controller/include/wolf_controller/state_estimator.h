@@ -97,6 +97,8 @@ public:
 
     const std::map<std::string,bool>& getContacts() const;
 
+    bool getContact(const std::string& contact_name);
+
     const std::map<std::string, Eigen::Vector3d>& getContactPositionInWorld() const;
 
     const std::map<std::string, Eigen::Vector3d>& getContactPositionInBase() const;
@@ -122,6 +124,10 @@ public:
     void stopHapticContactLoop();
 
     void resetGyroscopeIntegration();
+
+    bool isAnyFootInContact();
+
+    bool areAllFeetInContact();
 
 private:
 
@@ -200,12 +206,6 @@ private:
     /** @brief Reset the gyroscope integration */
     bool reset_gyro_integration_done_;
 
-    Eigen::Matrix3d tmp_matrix3d_;
-
-    Eigen::Affine3d tmp_affine3d_;
-
-    Eigen::Vector3d tmp_vector3d_;
-
     QuadrupedRobot::Ptr robot_model_;
 
     GaitGenerator::Ptr gait_generator_;
@@ -224,8 +224,10 @@ private:
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
 
-    wolf_controller_utils::Trigger gait_cycle_ended_;
-
+    /** @brief Temporary variables */
+    Eigen::Matrix3d tmp_matrix3d_;
+    Eigen::Affine3d tmp_affine3d_;
+    Eigen::Vector3d tmp_vector3d_;
 };
 
 

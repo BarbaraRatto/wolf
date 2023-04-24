@@ -15,8 +15,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <Eigen/Dense>
 #include <atomic>
 #include <wolf_controller/state_estimator.h>
-#include <wolf_controller/wpg/gait_generator.h>
-#include <wolf_controller/wpg/footholds_planner.h>
+#include <wolf_controller_utils/tools.h>
 
 namespace wolf_controller
 {
@@ -37,13 +36,8 @@ public:
      */
     typedef std::shared_ptr<const TerrainEstimator> ConstPtr;
 
-    enum estimation_t {NONE=0,FLAT_TERRAIN,ROUGH_TERRAIN};
-
     TerrainEstimator(StateEstimator::Ptr state_estimator,
-                     FootholdsPlanner::Ptr foot_holds_planner,
                      QuadrupedRobot::Ptr robot_model);
-
-    void setEstimationType();
 
     bool computeTerrainEstimation(const double& dt);
 
@@ -90,7 +84,6 @@ private:
     Eigen::Affine3d world_T_terrain_;
 
     StateEstimator::Ptr state_estimator_;
-    FootholdsPlanner::Ptr foot_holds_planner_;
     QuadrupedRobot::Ptr robot_model_;
 
     double roll_;
@@ -120,6 +113,7 @@ private:
     Eigen::Vector3d posture_adjustment_dot_base_;
 
     /** @brief Trigger the update of the terrain estimator */
+    std::map<std::string,wolf_controller_utils::Trigger> touchdown_;
     bool update_;
 
     Eigen::Matrix3d tmp_matrix3d_;

@@ -15,14 +15,10 @@ using namespace wolf_controller_utils;
 namespace wolf_controller {
 
 TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
-                                   FootholdsPlanner::Ptr foot_holds_planner,
                                    QuadrupedRobot::Ptr robot_model)
 {
   assert(state_estimator);
   state_estimator_ = state_estimator;
-
-  assert(foot_holds_planner);
-  foot_holds_planner_ = foot_holds_planner;
 
   assert(robot_model);
   robot_model_ = robot_model;
@@ -34,23 +30,18 @@ TerrainEstimator::TerrainEstimator(StateEstimator::Ptr state_estimator,
   reset();
 }
 
-void TerrainEstimator::setEstimationType() // TODO
-{
-
-
-}
-
 bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 {
 
   posture_adjustment_dot_world_.setZero();
 
-  // 0 - Update the terrain estimation everytime there is a touchdown
-  if(foot_holds_planner_->isAnyFootInTouchDown())
-    update_ = true;
+  // 0 - Update the terrain estimation everytime there is a new contact (touchdown)
+  auto foot_names = robot_model_->getFootNames();
+  for(unsigned int i=0; i<foot_names.size(); i++)
+    update_ = update_ || touchdown_[foot_names[i]].update(state_estimator_->getContact(foot_names[i]));
 
   // 1 - Check if the feet are all in stance
-  if(foot_holds_planner_->areAllFeetInStance())
+  if(state_estimator_->areAllFeetInContact())
   {
 
     if(update_ == true)
@@ -133,7 +124,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 
   // 10 - Adjust the references for the desired Hf height and orientation (roll and pitch)
   // and updates the foot trajectories with the terrain rotation
-  foot_holds_planner_->setTerrainTransform(world_T_terrain_);
+  //foot_holds_planner_->setTerrainTransform(world_T_terrain_); Now it is done in updateWpg()
 
   return true;
 }
@@ -141,6 +132,10 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 void TerrainEstimator::reset()
 {
   update_ = true; // true to have a first update
+
+  auto foot_names = robot_model_->getFootNames();
+  for(unsigned int i=0; i<foot_names.size(); i++)
+    touchdown_[foot_names[i]].update(false);
 
   roll_ = roll_filt_ = roll_out_world_ = roll_out_hf_ = estimated_roll_ = 0.0;
   pitch_ = pitch_filt_ = pitch_out_world_ = pitch_out_hf_ = estimated_pitch_ = 0.0;
@@ -156,7 +151,7 @@ void TerrainEstimator::reset()
 
 void TerrainEstimator::update()
 {
-  auto foot_names = foot_holds_planner_->getFootNames();
+  auto foot_names = robot_model_->getFootNames();
   auto foot_positions = robot_model_->getFeetPositionInWorld();
 
   A_(0,0) = foot_positions[foot_names[0]](0);
