@@ -13,7 +13,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <memory>
 #include <atomic>
 #include <Eigen/Core>
-#include <wolf_controller/wpg/gait_generator.h>
+#include <wolf_controller/state_estimator.h>
 
 namespace wolf_controller
 {
@@ -35,7 +35,7 @@ public:
    */
   typedef std::shared_ptr<const Impedance> ConstPtr;
 
-  Impedance(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model);
+  Impedance(StateEstimator::Ptr state_estimator, QuadrupedRobot::Ptr robot_model);
 
   void update();
 
@@ -72,7 +72,7 @@ private:
   void loadValues();
 
   QuadrupedRobot::Ptr robot_model_;
-  GaitGenerator::Ptr gait_generator_;
+  StateEstimator::Ptr state_estimator_;
 
   std::atomic<double> kp_swing_haa_;
   std::atomic<double> kp_swing_hfe_;

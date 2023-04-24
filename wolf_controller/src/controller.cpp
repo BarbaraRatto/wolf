@@ -202,15 +202,15 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
 
-    impedance_     = std::make_shared<Impedance>(gait_generator_,robot_model_);
-    impedance_->startInertiaCompensation(false);
-
     state_estimator_   = std::make_shared<StateEstimator>(robot_model_);
     terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
     terrain_estimator_->setMinRoll(-M_PI);
     terrain_estimator_->setMaxPitch(M_PI);
     terrain_estimator_->setMinPitch(-M_PI);
+
+    impedance_     = std::make_shared<Impedance>(state_estimator_,robot_model_);
+    impedance_->startInertiaCompensation(false);
 
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
     id_prob_ = std::make_unique<IDProblem>(robot_model_);
