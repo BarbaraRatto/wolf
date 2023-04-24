@@ -30,10 +30,10 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <memory>
 // WoLF
 #include <wolf_controller/quadruped_robot.h>
-#include <wolf_controller/gait_generator.h>
 #include <wolf_controller/impedance.h>
-#include <wolf_controller/footholds_planner.h>
-#include <wolf_controller/com_planner.h>
+#include <wolf_controller/wpg/gait_generator.h>
+#include <wolf_controller/wpg/footholds_planner.h>
+#include <wolf_controller/wpg/com_planner.h>
 #include <wolf_controller/state_estimator.h>
 #include <wolf_controller/terrain_estimator.h>
 #include <wolf_controller/id_problem.h>

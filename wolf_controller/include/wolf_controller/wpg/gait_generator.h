@@ -7,8 +7,8 @@ You should have received a copy of the license along with this
 work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 **/
 
-#ifndef GAIT_GENERATOR_H
-#define GAIT_GENERATOR_H
+#ifndef WPG_GAIT_GENERATOR_H
+#define WPG_GAIT_GENERATOR_H
 
 #include <ros/ros.h>
 #include <Eigen/Core>
@@ -16,8 +16,8 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <Eigen/StdVector>
 #include <atomic>
 #include <wolf_controller/common.h>
-#include <wolf_controller/foot_state_machine.h>
-#include <wolf_controller/foot_trajectory_interface.h>
+#include <wolf_controller/wpg/foot_state_machine.h>
+#include <wolf_controller/wpg/foot_trajectory_interface.h>
 
 #include <wolf_controller_utils/geometry.h>
 #include <wolf_controller_utils/tools.h>

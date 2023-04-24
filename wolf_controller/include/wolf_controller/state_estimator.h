@@ -16,7 +16,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <atomic>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
 #include <cartesian_interface/utils/estimation/ForceEstimation.h>
-#include <wolf_controller/gait_generator.h>
+#include <wolf_controller/wpg/gait_generator.h>
 #include <wolf_controller/quadruped_robot.h>
 
 // WoLF utils

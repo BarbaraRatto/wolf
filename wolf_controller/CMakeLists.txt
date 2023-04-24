@@ -56,11 +56,15 @@ add_library(ros_wrappers src/ros_wrappers/cartesian.cpp src/ros_wrappers/com.cpp
 target_link_libraries(ros_wrappers ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${rt_gui_LIBRARIES})
 
-add_library(wolf_controller src/controller.cpp src/id_problem.cpp src/footholds_planner.cpp src/state_estimator.cpp src/foot_trajectory_ellipse.cpp
-    src/foot_trajectory_interface.cpp src/legs_kinematics.cpp src/impedance.cpp src/quadruped_robot.cpp src/com_planner.cpp src/terrain_estimator.cpp
-    src/gait_generator.cpp src/foot_state_machine.cpp src/cartesian_trajectory.cpp)
+add_library(wpg src/wpg/com_planner.cpp src/wpg/foot_state_machine.cpp src/wpg/foot_trajectory_ellipse.cpp src/wpg/foot_trajectory_interface.cpp
+    src/wpg/footholds_planner.cpp src/wpg/gait_generator.cpp)
+target_link_libraries(wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+    ${XBotInterface_LIBRARIES} ${rt_gui_LIBRARIES})
+
+add_library(wolf_controller src/controller.cpp src/id_problem.cpp src/state_estimator.cpp
+    src/impedance.cpp src/quadruped_robot.cpp src/terrain_estimator.cpp src/cartesian_trajectory.cpp)
 target_link_libraries(wolf_controller ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
-    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES} ros_wrappers)
+    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES} ros_wrappers wpg)
 
 add_executable(plot_node src/plot_node.cpp)
 target_link_libraries(plot_node ${catkin_LIBRARIES})

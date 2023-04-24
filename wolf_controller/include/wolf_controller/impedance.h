@@ -13,7 +13,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <memory>
 #include <atomic>
 #include <Eigen/Core>
-#include <wolf_controller/gait_generator.h>
+#include <wolf_controller/wpg/gait_generator.h>
 
 namespace wolf_controller
 {

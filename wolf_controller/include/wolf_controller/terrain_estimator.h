@@ -15,8 +15,8 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <Eigen/Dense>
 #include <atomic>
 #include <wolf_controller/state_estimator.h>
-#include <wolf_controller/gait_generator.h>
-#include <wolf_controller/footholds_planner.h>
+#include <wolf_controller/wpg/gait_generator.h>
+#include <wolf_controller/wpg/footholds_planner.h>
 
 namespace wolf_controller
 {

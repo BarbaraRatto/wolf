@@ -5,8 +5,8 @@
  * @brief This file contains the Gait and GaitGenerator
  */
 
-#include <wolf_controller/gait_generator.h>
-#include <wolf_controller/foot_trajectory_ellipse.h>
+#include <wolf_controller/wpg/gait_generator.h>
+#include <wolf_controller/wpg/foot_trajectory_ellipse.h>
 
 using namespace wolf_controller;
 using namespace wolf_controller_utils;

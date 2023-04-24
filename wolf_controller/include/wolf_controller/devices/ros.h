@@ -14,8 +14,8 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/devices/interface.h>
 #include <wolf_controller/common.h>
 #include <wolf_controller/controller.h>
-#include <wolf_controller/gait_generator.h>
-#include <wolf_controller/footholds_planner.h>
+#include <wolf_controller/wpg/gait_generator.h>
+#include <wolf_controller/wpg/footholds_planner.h>
 #include <wolf_controller/id_problem.h>
 #include <std_msgs/Bool.h>
 

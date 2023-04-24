@@ -5,7 +5,7 @@
  * @brief This file contains the ComPlanner used to generate the com position and velocity references
  */
 
-#include <wolf_controller/com_planner.h>
+#include <wolf_controller/wpg/com_planner.h>
 
 using namespace rt_logger;
 
