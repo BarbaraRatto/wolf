@@ -52,7 +52,8 @@ include_directories(
     ${rt_gui_INCLUDE_DIRS}
 )
 
-add_library(ros_wrappers src/ros_wrappers/cartesian.cpp src/ros_wrappers/com.cpp src/ros_wrappers/momentum.cpp src/ros_wrappers/postural.cpp src/ros_wrappers/controller.cpp)
+add_library(ros_wrappers src/ros_wrappers/cartesian.cpp src/ros_wrappers/com.cpp src/ros_wrappers/momentum.cpp
+    src/ros_wrappers/postural.cpp src/ros_wrappers/wrench.cpp src/ros_wrappers/controller.cpp)
 target_link_libraries(ros_wrappers ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${rt_gui_LIBRARIES})
 
@@ -72,7 +73,7 @@ target_link_libraries(plot_node ${catkin_LIBRARIES})
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
-install(TARGETS ${PROJECT_NAME} plot_node
+install(TARGETS ros_wrappers wpg wolf_controller plot_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
