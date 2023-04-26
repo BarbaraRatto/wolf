@@ -40,8 +40,12 @@ std::string enumToString(const StateEstimator::estimation_t& estimation)
     ret = "imu_magnetometer";
     break;
 
-  case StateEstimator::estimation_t::INTEGRATED_LINEAR_VELOCITIES:
-    ret = "integrated_linear_velocities";
+  case StateEstimator::estimation_t::QP_ESTIMATION:
+    ret = "qp_estimation";
+    break;
+
+  case StateEstimator::estimation_t::FULL_QP_ESTIMATION:
+    ret = "full_qp_estimation";
     break;
   };
 
@@ -62,8 +66,10 @@ StateEstimator::estimation_t stringToEnum(const std::string& estimation)
     ret = StateEstimator::estimation_t::IMU_GYROSCOPE;
   else if(estimation == "imu_magnetometer")
     ret = StateEstimator::estimation_t::IMU_MAGNETOMETER;
-  else if(estimation == "integrated_linear_velocities")
-    ret = StateEstimator::estimation_t::INTEGRATED_LINEAR_VELOCITIES;
+  else if(estimation == "qp_estimation")
+    ret = StateEstimator::estimation_t::QP_ESTIMATION;
+  else if(estimation == "full_qp_estimation")
+    ret = StateEstimator::estimation_t::FULL_QP_ESTIMATION;
   else
     throw std::runtime_error("Wrong estimation type!");
 
@@ -80,11 +86,17 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   const std::vector<std::string>& foot_names = robot_model_->getFootNames();
   const std::vector<std::string>& limb_names = robot_model_->getLimbNames();
 
-  // Floating Base state estimation reset
+  // QP Floating Base state estimation reset
   Eigen::Matrix6d contact_matrix;
   contact_matrix.setZero();
   contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
   qp_estimation_ = std::make_shared<OpenSoT::floating_base_estimation::qp_estimation>(robot_model_,foot_names,contact_matrix);
+
+  full_qp_estimation_ = std::make_shared<wolf_estimation::RobotOdomEstimator>(
+        robot_model_->getUrdfString(),robot_model_->getSrdfString(),
+        robot_model_->getFootNames(),robot_model_->getImuSensorName(),
+        robot_model_->getBaseLinkName());
+  full_qp_estimation_->setTwistInLocalFrame(false);
 
   int n_dofs = robot_model_->getJointNum();
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
@@ -100,6 +112,8 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   gt_angular_velocity_= Eigen::Vector3d::Zero();
   terrain_normal_ << 0,0,1;
   imu_orientation_.normalize();
+  imu_gyroscope_.setZero();
+  imu_accelerometer_.setZero();
   floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
   contact_computation_active_ = false;
   estimated_z_ = 0.0;
@@ -112,7 +126,7 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
     base_X_contact_[contact_names[i]]  = Eigen::Vector3d::Zero();
   }
 
-  mapRPYderivativesToOmega_ = Eigen::Matrix3d::Identity();
+  map_rpy_derivatives_to_omega_ = Eigen::Matrix3d::Identity();
   world_R_base_ = Eigen::Matrix3d::Identity();
   raw_world_R_base_ = Eigen::Matrix3d::Identity();
   raw_base_rpy_ = Eigen::Vector3d::Zero();
@@ -208,6 +222,11 @@ void StateEstimator::setImuOrientation(const Eigen::Quaterniond& imu_orientation
 void StateEstimator::setImuGyroscope(const Eigen::Vector3d& imu_gyroscope)
 {
   imu_gyroscope_ = imu_gyroscope;
+}
+
+void StateEstimator::setImuAccelerometer(const Eigen::Vector3d& imu_accelerometer)
+{
+  imu_accelerometer_ = imu_accelerometer;
 }
 
 void StateEstimator::setGroundTruthBasePosition(const Eigen::Vector3d& gt_position)
@@ -325,27 +344,27 @@ const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactPositionI
   return base_X_contact_;
 }
 
-const Eigen::Vector3d &StateEstimator::getGroundTruthBasePosition() const
+const Eigen::Vector3d& StateEstimator::getGroundTruthBasePosition() const
 {
   return gt_position_;
 }
 
-const Eigen::Quaterniond &StateEstimator::getGroundTruthBaseOrientation() const
+const Eigen::Quaterniond& StateEstimator::getGroundTruthBaseOrientation() const
 {
   return gt_orientation_;
 }
 
-const Eigen::Vector3d &StateEstimator::getGroundTruthBaseLinearVelocity() const
+const Eigen::Vector3d& StateEstimator::getGroundTruthBaseLinearVelocity() const
 {
   return gt_linear_velocity_;
 }
 
-const Eigen::Vector3d &StateEstimator::getGroundTruthBaseAngularVelocity() const
+const Eigen::Vector3d& StateEstimator::getGroundTruthBaseAngularVelocity() const
 {
   return gt_angular_velocity_;
 }
 
-const double &StateEstimator::getEstimatedBaseHeight() const
+const double& StateEstimator::getEstimatedBaseHeight() const
 {
   return estimated_z_;
 }
@@ -437,7 +456,6 @@ void StateEstimator::updateContactState()
     {
       contact_states_[foot_names[i]] = true;
     }
-
     qp_estimation_->setContactState(foot_names[i],contact_states_[foot_names[i]]);
   }
 
@@ -492,6 +510,39 @@ void StateEstimator::updateFloatingBase(const double& period)
   robot_model_->setJointEffort(joint_efforts_);
   robot_model_->setJointPosition(joint_positions_);
 
+  // If not initialized, initialize the full qp estimator
+  if(estimation_orientation == estimation_t::FULL_QP_ESTIMATION ||
+     estimation_position    == estimation_t::FULL_QP_ESTIMATION  )
+  {
+    //if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
+    //{
+      if(!full_qp_estimation_->isInitialized())
+        full_qp_estimation_->init(joint_positions_,joint_velocities_,floating_base_pose_);
+      full_qp_estimation_->setJointVelocity(joint_velocities_);
+      full_qp_estimation_->setJointPosition(joint_positions_);
+      full_qp_estimation_->setImuOrientation(imu_orientation_);
+      full_qp_estimation_->setImuAngularVelocities(imu_gyroscope_);
+      full_qp_estimation_->setImuLinearAccelerations(imu_accelerometer_);
+      const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+      for(unsigned int i = 0; i<foot_names.size(); i++)
+      {
+        full_qp_estimation_->setContactForce(foot_names[i],contact_forces_[foot_names[i]]);
+        full_qp_estimation_->setContactState(foot_names[i],contact_states_[foot_names[i]]);
+      }
+      full_qp_estimation_->update(period);
+    }
+    //else if(robot_model_->getPreviousState() != robot_model_->getState()) // State changed
+    //  full_qp_estimation_->reset();
+    //else
+    //{
+    //  qp_estimation_->update();
+    //  qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+    //  floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
+    //  floating_base_position_.head(2) = floating_base_position_.head(2) + floating_base_velocity_.head(2) * period;  // Integrate x and y
+    //  floating_base_position_(2) = estimated_z_; // Use estimated z
+    //}
+  //}
+
   // Note: we assume that the IMU is orientated as the base/waist of the robot
   // if this is not the case, it is necessary to add a transfomation from the IMU frame to the
   // base/trunk frame
@@ -523,12 +574,12 @@ void StateEstimator::updateFloatingBase(const double& period)
       reset_gyro_integration_done_ = true;
     }
 #ifdef ANGULAR_VELOCITIES_WRT_BASE
-    rpyToEarBase(floating_base_rpy_,mapRPYderivativesToOmega_);
+    rpyToEarBase(floating_base_rpy_,map_rpy_derivatives_to_omega_);
 #else
     rpyToEarWorld(base_rpy_,mapRPYderivativesToOmega_);
 #endif
     // Map the omegas in the base into rpy derivatives and integrate
-    floating_base_rpy_ += (mapRPYderivativesToOmega_.inverse() * imu_gyroscope_) * period;
+    floating_base_rpy_ += (map_rpy_derivatives_to_omega_.inverse() * imu_gyroscope_) * period;
     // Overwrite measures if one of them is more noisy (e.g. only yaw is noisy)
     //quatToRotMat(imu_orientation_.normalized(),raw_base_R_world_);
     //rotTorpy(raw_base_R_world_,raw_base_rpy_);
@@ -543,6 +594,10 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_velocity_.segment(3,3) = imu_gyroscope_;
 #endif
 
+    break;
+  case estimation_t::FULL_QP_ESTIMATION:
+    floating_base_pose_.linear() = full_qp_estimation_->getBasePose().linear();
+    floating_base_velocity_.segment(3,3) = full_qp_estimation_->getBaseTwist().segment(3,3);
     break;
   case estimation_t::GROUND_TRUTH:
     quatToRot(gt_orientation_.normalized(),world_R_base_);
@@ -585,13 +640,17 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
     floating_base_position_ << 0.0,0.0, estimated_z_; // Remove x and y from the state estimation
     break;
-  case estimation_t::INTEGRATED_LINEAR_VELOCITIES:
+  case estimation_t::QP_ESTIMATION:
     // Update the qp estimation based on the new virtual model state
     qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
     floating_base_position_.head(2) = floating_base_position_.head(2) + floating_base_velocity_.head(2) * period;  // Integrate x and y
     floating_base_position_(2) = estimated_z_; // Use estimated z
+    break;
+  case estimation_t::FULL_QP_ESTIMATION:
+    floating_base_position_ = full_qp_estimation_->getBasePose().translation();
+    floating_base_velocity_.segment(0,3) = full_qp_estimation_->getBaseTwist().segment(0,3);
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;

@@ -545,6 +545,7 @@ void Controller::updateStateEstimator(const double &dt)
     {
         state_estimator_->setImuOrientation(imu_orientation_);
         state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
+        state_estimator_->setImuAccelerometer(imu_accelerometer_filt_);
     }
 
     if(use_contact_sensors_)
@@ -1005,11 +1006,11 @@ void Controller::odomPublisher()
               if(!odom_estimator.isInitialized())
                 odom_estimator.init(joint_positions_,joint_velocities_filt_,world_T_base);
 
-              odom_estimator.setJointVelocity(joint_velocities_);
+              odom_estimator.setJointVelocity(joint_velocities_filt_);
               odom_estimator.setJointPosition(joint_positions_);
               odom_estimator.setImuOrientation(imu_orientation_);
-              odom_estimator.setImuAngularVelocities(imu_gyroscope_);
-              odom_estimator.setImuLinearAccelerations(imu_accelerometer_);
+              odom_estimator.setImuAngularVelocities(imu_gyroscope_filt_);
+              odom_estimator.setImuLinearAccelerations(imu_accelerometer_filt_);
               //odom_estimator.setContactForces(state_estimator_->getContactForces());
               const std::vector<std::string>& foot_names = robot_model_->getFootNames();
               for(unsigned int i = 0; i<foot_names.size(); i++)

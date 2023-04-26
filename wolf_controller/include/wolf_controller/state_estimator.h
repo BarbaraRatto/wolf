@@ -21,6 +21,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // WoLF utils
 #include <wolf_controller_utils/tools.h>
 
+// WoLF estimation
+#include <wolf_estimation/robot_odom.h>
+
 namespace wolf_controller
 {
 
@@ -40,7 +43,7 @@ public:
      */
     typedef std::shared_ptr<const StateEstimator> ConstPtr;
 
-    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z,INTEGRATED_LINEAR_VELOCITIES};
+    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z,QP_ESTIMATION,FULL_QP_ESTIMATION};
 
     StateEstimator(QuadrupedRobot::Ptr robot_model);
 
@@ -65,6 +68,8 @@ public:
     void setImuOrientation(const Eigen::Quaterniond& imu_orientation);
 
     void setImuGyroscope(const Eigen::Vector3d& imu_gyroscope);
+
+    void setImuAccelerometer(const Eigen::Vector3d& imu_accelerometer);
 
     void setGroundTruthBasePosition(const Eigen::Vector3d& gt_position);
 
@@ -144,6 +149,8 @@ private:
     Eigen::VectorXd joint_velocities_;
     /** @brief Joint efforts */
     Eigen::VectorXd joint_efforts_;
+    /** @brief IMU Accelerometer */
+    Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Gyroscope */
     Eigen::Vector3d imu_gyroscope_;
     /** @brief IMU Orientation */
@@ -190,7 +197,7 @@ private:
 
     Eigen::Vector3d terrain_central_point_;
 
-    Eigen::Matrix3d mapRPYderivativesToOmega_;
+    Eigen::Matrix3d map_rpy_derivatives_to_omega_;
 
     Eigen::Matrix3d world_R_base_;
 
@@ -211,8 +218,11 @@ private:
 
     std::atomic<bool> use_external_contact_states_;
 
-    /** @brief Base estimation */
+    /** @brief Base estimation based on qp taking in account only the linear velocities of the base */
     OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
+
+     /** @brief Base estimation based on qp taking in account the linear and angular velocities of the base */
+    wolf_estimation::RobotOdomEstimator::Ptr full_qp_estimation_;
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
