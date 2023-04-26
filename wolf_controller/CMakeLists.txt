@@ -28,12 +28,21 @@ find_package(XBotInterface REQUIRED)
 find_package(ModelInterfaceRBDL REQUIRED)
 # RT gui
 find_package(rt_gui QUIET)
+# OCS2
+find_package(ocs2_msgs QUIET)
 
 if(${rt_gui_FOUND})
     message(STATUS "Found rt_gui, creating interface for wolf_controller.")
     add_definitions(-DRT_GUI)
 else()
     message(STATUS "rt_gui not found.")
+endif()
+
+if(${ocs2_msgs_FOUND})
+    message(STATUS "Found ocs2_msgs, creating OCS2 interface for wolf_controller.")
+    add_definitions(-DOCS2)
+else()
+    message(STATUS "ocs2_msgs not found.")
 endif()
 
 catkin_package(
@@ -50,6 +59,7 @@ include_directories(
     ${XBotInterface_INCLUDE_DIRS}
     ${ModelInterfaceRBDL_INCLUDE_DIRS}
     ${rt_gui_INCLUDE_DIRS}
+    ${ocs2_msgs_INCLUDE_DIRS}
 )
 
 add_library(ros_wrappers src/ros_wrappers/cartesian.cpp src/ros_wrappers/com.cpp src/ros_wrappers/momentum.cpp

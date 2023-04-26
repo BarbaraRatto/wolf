@@ -309,6 +309,13 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   controller_state_pub_->msg_.states = controller_->getRobotModel()->getStatesAsString();
   controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
 
+  #ifdef OCS2
+  // OCS2 mpc observation
+  mpc_observation_pub_.reset(new realtime_tools::RealtimePublisher<ocs2_msgs::mpc_observation>(controller_nh, "mpc_observation", 4));
+  mpc_observation_pub_->msg_.state.value.resize(24);
+  controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
+  #endif
+
   // DDynamic reconfigure
   ddr_server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
   ddr_server_->registerVariable<bool>("stand_up",false,boost::bind(&wolf_controller::Controller::standUp,controller_,_1),"stand up");
@@ -645,4 +652,45 @@ void ControllerRosWrapper::publish(const ros::Time& time)
     capture_point_pub_->msg_.header.stamp = time;
     capture_point_pub_->unlockAndPublish();
   }
+
+  #ifdef OCS2
+  if(mpc_observation_pub_.get() && mpc_observation_pub_->trylock())
+  {
+
+    controller_->getRobotModel()->getCentroidalMomentum(tmp_vector6d_);
+    controller_->getRobotModel()->getFloatingBasePose(tmp_affine3d_);
+    controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
+    double robot_mass = controller_->getRobotModel()->getMass();
+
+    // linear momentum
+    mpc_observation_pub_->msg_.state.value[0] = tmp_vector6d_(0) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[1] = tmp_vector6d_(1) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[2] = tmp_vector6d_(2) / robot_mass;
+
+    // angular momentum
+    mpc_observation_pub_->msg_.state.value[3] = tmp_vector6d_(3) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[4] = tmp_vector6d_(4) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[5] = tmp_vector6d_(5) / robot_mass;
+
+    // base position
+    mpc_observation_pub_->msg_.state.value[6] = tmp_affine3d_.translation().x();
+    mpc_observation_pub_->msg_.state.value[7] = tmp_affine3d_.translation().y();
+    mpc_observation_pub_->msg_.state.value[8] = tmp_affine3d_.translation().z();
+
+    // base orientation (double check that)
+    tmp_vector3d_ = wolf_controller_utils::rotToRpy(tmp_affine3d_.linear());
+    mpc_observation_pub_->msg_.state.value[9]  = tmp_vector3d_.z();
+    mpc_observation_pub_->msg_.state.value[10] = tmp_vector3d_.y();
+    mpc_observation_pub_->msg_.state.value[11] = tmp_vector3d_.x();
+
+    // joint positions (check the order, also be sure that we are not taking the arm joints)
+    for(unsigned int i=0; i<12; i++)
+      mpc_observation_pub_->msg_.state.value[12 + i] = tmp_vectorXd_(i);
+
+    // TODO missing input
+
+    mpc_observation_pub_->unlockAndPublish();
+  }
+  #endif
+
 }

@@ -35,6 +35,10 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/controller.h>
 #include <wolf_controller/ros_wrappers/interface.h>
 
+// OCS2
+#ifdef OCS2
+#include <ocs2_msgs/mpc_observation.h>
+#endif
 
 class ControllerRosWrapper : public RosWrapperInterface
 {
@@ -95,6 +99,10 @@ protected:
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::FrictionCones>> friction_cones_pub_;
     /** @brief Real time publisher - capture point */
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::CapturePoint>> capture_point_pub_;
+    /** @brief Real time publisher - OCS2 */
+    #ifdef OCS2
+    std::shared_ptr<realtime_tools::RealtimePublisher<ocs2_msgs::mpc_observation>> mpc_observation_pub_;
+    #endif
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */
@@ -114,6 +122,12 @@ protected:
     ros::ServiceServer set_duty_factor_;
     ros::ServiceServer increase_swing_frequency_;
     ros::ServiceServer decrease_swing_frequency_;
+
+    /** @brief tmp variables */
+    Eigen::Vector6d tmp_vector6d_;
+    Eigen::Affine3d tmp_affine3d_;
+    Eigen::Vector3d tmp_vector3d_;
+    Eigen::VectorXd tmp_vectorXd_;
 
 };
 
