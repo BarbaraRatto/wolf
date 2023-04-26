@@ -97,6 +97,7 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
         robot_model_->getFootNames(),robot_model_->getImuSensorName(),
         robot_model_->getBaseLinkName());
   full_qp_estimation_->setTwistInLocalFrame(false);
+  full_qp_estimation_->setTwistInLocalFrame(true);
 
   int n_dofs = robot_model_->getJointNum();
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
