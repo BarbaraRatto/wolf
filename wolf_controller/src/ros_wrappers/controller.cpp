@@ -313,7 +313,9 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   // OCS2 mpc observation
   mpc_observation_pub_.reset(new realtime_tools::RealtimePublisher<ocs2_msgs::mpc_observation>(controller_nh, "mpc_observation", 4));
   mpc_observation_pub_->msg_.state.value.resize(24);
+  mpc_observation_pub_->msg_.input.value.resize(48);
   controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
+
   #endif
 
   // DDynamic reconfigure
@@ -659,9 +661,9 @@ void ControllerRosWrapper::publish(const ros::Time& time)
 
     controller_->getRobotModel()->getCentroidalMomentum(tmp_vector6d_);
     controller_->getRobotModel()->getFloatingBasePose(tmp_affine3d_);
-    controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
     double robot_mass = controller_->getRobotModel()->getMass();
 
+    // STATE
     // linear momentum
     mpc_observation_pub_->msg_.state.value[0] = tmp_vector6d_(0) / robot_mass;
     mpc_observation_pub_->msg_.state.value[1] = tmp_vector6d_(1) / robot_mass;
@@ -684,10 +686,34 @@ void ControllerRosWrapper::publish(const ros::Time& time)
     mpc_observation_pub_->msg_.state.value[11] = tmp_vector3d_.x();
 
     // joint positions (check the order, also be sure that we are not taking the arm joints)
+    controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
     for(unsigned int i=0; i<12; i++)
       mpc_observation_pub_->msg_.state.value[12 + i] = tmp_vectorXd_(i);
 
-    // TODO missing input
+    // INPUT
+    // contact forces (FIXME hardcoded names and order)
+    mpc_observation_pub_->msg_.input.value[0] = controller_->getStateEstimator()->getContactForce("lf_foot").x();
+    mpc_observation_pub_->msg_.input.value[1] = controller_->getStateEstimator()->getContactForce("lf_foot").y();
+    mpc_observation_pub_->msg_.input.value[2] = controller_->getStateEstimator()->getContactForce("lf_foot").z();
+
+    mpc_observation_pub_->msg_.input.value[3] = controller_->getStateEstimator()->getContactForce("lh_foot").x();
+    mpc_observation_pub_->msg_.input.value[4] = controller_->getStateEstimator()->getContactForce("lh_foot").y();
+    mpc_observation_pub_->msg_.input.value[5] = controller_->getStateEstimator()->getContactForce("lh_foot").z();
+
+    mpc_observation_pub_->msg_.input.value[6] = controller_->getStateEstimator()->getContactForce("rf_foot").x();
+    mpc_observation_pub_->msg_.input.value[7] = controller_->getStateEstimator()->getContactForce("rf_foot").y();
+    mpc_observation_pub_->msg_.input.value[8] = controller_->getStateEstimator()->getContactForce("rf_foot").z();
+
+    mpc_observation_pub_->msg_.input.value[9]  = controller_->getStateEstimator()->getContactForce("rh_foot").x();
+    mpc_observation_pub_->msg_.input.value[10] = controller_->getStateEstimator()->getContactForce("rh_foot").y();
+    mpc_observation_pub_->msg_.input.value[11] = controller_->getStateEstimator()->getContactForce("rh_foot").z();
+
+    // joints velocities
+    controller_->getRobotModel()->getJointVelocity(tmp_vectorXd_);
+    for(unsigned int i=0; i<12; i++)
+      mpc_observation_pub_->msg_.input.value[36 + i] = tmp_vectorXd_(i);
+
+    // TODO missing mode and time
 
     mpc_observation_pub_->unlockAndPublish();
   }
