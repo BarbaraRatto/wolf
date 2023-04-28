@@ -308,7 +308,7 @@ void Cartesian::processFeedback(const visualization_msgs::InteractiveMarkerFeedb
     trj_->setWayPoint(pose_reference,0.1);
 }
 
-void Cartesian::referenceCallback(const wolf_msgs::CartesianTask::ConstPtr& msg)
+void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
 {
   double period = wolf_controller::_period;
 
@@ -316,7 +316,9 @@ void Cartesian::referenceCallback(const wolf_msgs::CartesianTask::ConstPtr& msg)
     period = msg->header.stamp.toSec() - last_time_;
 
   Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
-  tf::poseMsgToEigen(msg->pose_reference,pose_reference);
+  tf::poseMsgToEigen(msg->pose,pose_reference);
+
+  // TODO change reference frame if needed
 
   trj_->setWayPoint(pose_reference,period);
 

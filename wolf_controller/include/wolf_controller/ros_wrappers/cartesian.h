@@ -18,7 +18,6 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 
 // ROS
-#include <wolf_msgs/CartesianTask.h>
 #include <interactive_markers/menu_handler.h>
 #include <urdf/model.h>
 #include <tf_conversions/tf_eigen.h>
@@ -33,6 +32,10 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // WoLF utils
 #include <wolf_controller_utils/geometry.h>
 #include <wolf_controller_utils/converters.h>
+
+// WoLF msgs
+#include <wolf_msgs/CartesianTask.h>
+#include <wolf_msgs/Cartesian.h>
 
 // STD
 #include <numeric>
@@ -97,7 +100,7 @@ protected:
 
   void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
-  void referenceCallback(const wolf_msgs::CartesianTask::ConstPtr& msg);
+  void referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg);
 
   visualization_msgs::InteractiveMarkerControl& makeSTLControl(visualization_msgs::InteractiveMarker& msg);
 
