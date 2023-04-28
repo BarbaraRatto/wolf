@@ -238,6 +238,8 @@ public:
 
 private:
 
+    void activateExternalReferences(bool activate);
+
     /**
      * @brief Tasks
      */

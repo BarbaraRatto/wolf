@@ -104,7 +104,7 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   com_->registerReconfigurableVariables();
   //   --------------------------
   for(unsigned int i = 0; i < id_->getContactsWrenchAffine().size(); i++)
-      min_forces_.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_force_"+std::to_string(i), id_->getContactsWrenchAffine()[i])));
+    min_forces_.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_force_"+std::to_string(i), id_->getContactsWrenchAffine()[i])));
   min_qddot_ = std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_qddot", id_->getJointsAccelerationAffine());
   //
   // Here we create the constraints & bounds
@@ -423,7 +423,18 @@ void IDProblem::update()
   // Update control mode if changed
   if(change_control_mode_)
   {
-    // TODO
+    switch (control_mode_)
+    {
+      case WPG:
+        activateExternalReferences(false);
+      break;
+      case EXT:
+        activateExternalReferences(true);
+      break;
+      case MPC:
+        activateExternalReferences(false);
+      break;
+    }
   }
 
   // Update the mu and the wrench limits
@@ -525,6 +536,15 @@ void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z, c
 void IDProblem::setComReference(const Eigen::Vector3d& position, const Eigen::Vector3d& velocity)
 {
   com_->setReference(position,velocity);
+}
+
+void IDProblem::activateExternalReferences(bool activate)
+{
+  for(unsigned int i=0; i<foot_names_.size(); i++)
+    feet_[foot_names_[i]]->OPTIONS.set_ext_reference = activate;
+  waist_->OPTIONS.set_ext_reference = activate;
+  postural_->OPTIONS.set_ext_reference = activate;
+  com_->OPTIONS.set_ext_reference = activate;
 }
 
 } // namespace
