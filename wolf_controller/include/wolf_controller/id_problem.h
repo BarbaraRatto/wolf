@@ -37,6 +37,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/ros_wrappers/postural.h>
 #include <wolf_controller/ros_wrappers/cartesian.h>
 #include <wolf_controller/ros_wrappers/com.h>
+#include <wolf_controller/ros_wrappers/wrench.h>
 #include <wolf_controller/quadruped_robot.h>
 
 // WoLF utils
@@ -238,6 +239,8 @@ public:
 
 private:
 
+    bool _solve(const std::unique_ptr<OpenSoT::solvers::iHQP>& solver, Eigen::VectorXd& tau);
+
     void activateExternalReferences(bool activate);
 
     /**
@@ -245,6 +248,7 @@ private:
      */
     std::map<std::string,Cartesian::Ptr> feet_;
     std::map<std::string,Cartesian::Ptr> arms_;
+    std::map<std::string,Wrench::Ptr> wrenches_;
     Cartesian::Ptr waist_;
     Com::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
@@ -288,14 +292,24 @@ private:
     OpenSoT::constraints::force::FrictionCones::Ptr friction_cones_;
 
     /**
-     * @brief map of stacks
+     * @brief map of stacks for the Walkin Pattern Generator (WPG)
      */
-    OpenSoT::AutoStack::Ptr stack_;
+    OpenSoT::AutoStack::Ptr wpg_stack_;
+
+    /**
+     * @brief map of stacks for the Model Predictive Controller (MPC)
+     */
+    OpenSoT::AutoStack::Ptr mpc_stack_;
 
     /**
      * @brief solver_ iHQP solver
      */
-    std::unique_ptr<OpenSoT::solvers::iHQP> solver_;
+    std::unique_ptr<OpenSoT::solvers::iHQP> wpg_solver_;
+
+    /**
+     * @brief solver_ iHQP solver
+     */
+    std::unique_ptr<OpenSoT::solvers::iHQP> mpc_solver_;
 
     /**
      * @brief id_ inverse dynamics computation & variable helper

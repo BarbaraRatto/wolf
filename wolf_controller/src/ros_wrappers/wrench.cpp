@@ -35,7 +35,7 @@ void Wrench::registerReconfigurableVariables()
 void Wrench::loadParams()
 {
 
-  double lambda1, lambda2, weight;
+  double lambda1, weight;
   if (!nh_.getParam("gains/"+_task_id+"/lambda1" , lambda1))
   {
     ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
@@ -102,7 +102,7 @@ void Wrench::_update(const Eigen::VectorXd& x)
     trj_->getReference(tmp_affine3d_,&tmp_vector6d_,&tmp_vector6d_1_);
     //setReference(tmp_affine3d_.translation(),tmp_vector6d_.head(3),tmp_vector6d_1_.head(3));
   }
-  // OpenSoT::tasks::force::Wrench::_update(x); FIXME
+  OpenSoT::tasks::force::Wrench::_update(x);
 }
 
 bool Wrench::reset()
