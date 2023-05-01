@@ -713,7 +713,14 @@ void ControllerRosWrapper::publish(const ros::Time& time)
     for(unsigned int i=0; i<12; i++)
       mpc_observation_pub_->msg_.input.value[36 + i] = tmp_vectorXd_(i);
 
-    // TODO missing mode and time
+    // time
+    mpc_observation_pub_->msg_.time = time.toSec();
+
+    // mode (FIXME hardcoded names)
+    mpc_observation_pub_->msg_.mode = controller_->getStateEstimator()->getContact("lf_foot")*8
+                                    + controller_->getStateEstimator()->getContact("lh_foot")*4
+                                    + controller_->getStateEstimator()->getContact("rf_foot")*2
+                                    + controller_->getStateEstimator()->getContact("rh_foot");
 
     mpc_observation_pub_->unlockAndPublish();
   }
