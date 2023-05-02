@@ -113,8 +113,9 @@ public:
     /**
      * @brief publish the ros topics related to the tasks
      * @param ros current time
+     * @param ros current period
      */
-    void publish(const ros::Time& time);
+    void publish(const ros::Time& time, const ros::Duration& period);
 
     /**
      * @brief set the postural reference and gains

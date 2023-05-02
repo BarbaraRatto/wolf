@@ -62,7 +62,7 @@ void Wrench::updateCost(const Eigen::VectorXd& x)
   cost_ = computeCost(x);
 }
 
-void Wrench::publish(const ros::Time& time)
+void Wrench::publish(const ros::Time& time, const ros::Duration& /*period*/)
 {
   if(rt_pub_->trylock())
   {

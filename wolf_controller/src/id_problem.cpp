@@ -542,16 +542,16 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
   }
 }
 
-void IDProblem::publish(const ros::Time& time)
+void IDProblem::publish(const ros::Time& time, const ros::Duration& period)
 {
   for (auto& tmp_map : feet_)
-    tmp_map.second->publish(time);
+    tmp_map.second->publish(time,period);
   for (auto& tmp_map : arms_)
-    tmp_map.second->publish(time);
-  waist_->publish(time);
-  com_->publish(time);
-  postural_->publish(time);
-  angular_momentum_->publish(time);
+    tmp_map.second->publish(time,period);
+  waist_->publish(time,period);
+  com_->publish(time,period);
+  postural_->publish(time,period);
+  angular_momentum_->publish(time,period);
 }
 
 const std::vector<Eigen::Vector6d>& IDProblem::getContactWrenches() const

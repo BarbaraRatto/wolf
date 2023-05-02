@@ -101,7 +101,7 @@ void AngularMomentum::update(const Eigen::VectorXd& x)
   OpenSoT::tasks::acceleration::AngularMomentum::update(x);
 }
 
-void AngularMomentum::publish(const ros::Time& /*time*/)
+void AngularMomentum::publish(const ros::Time& /*time*/, const ros::Duration& /*period*/)
 {
 
 }

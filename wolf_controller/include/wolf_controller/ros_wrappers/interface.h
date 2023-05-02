@@ -38,7 +38,7 @@ public:
 
   RosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
   virtual ~RosWrapperInterface(){spinner_->stop();}
-  virtual void publish(const ros::Time& /*time*/) = 0;
+  virtual void publish(const ros::Time& /*time*/, const ros::Duration& /*period*/) = 0;
 
 protected:
 

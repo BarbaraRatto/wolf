@@ -314,8 +314,9 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   mpc_observation_pub_.reset(new realtime_tools::RealtimePublisher<ocs2_msgs::mpc_observation>(controller_nh, "mpc_observation", 4));
   mpc_observation_pub_->msg_.state.value.resize(24);
   mpc_observation_pub_->msg_.input.value.resize(48);
+  mpc_observation_pub_->msg_.time = 0.0;
+  mpc_observation_pub_->msg_.mode = 0;
   controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
-
   #endif
 
   // DDynamic reconfigure
@@ -540,10 +541,10 @@ bool ControllerRosWrapper::standDownCB(std_srvs::Trigger::Request& req, std_srvs
   return res.success;
 }
 
-void ControllerRosWrapper::publish(const ros::Time& time)
+void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& period)
 {
   if(controller_->getIDProblem())
-    controller_->getIDProblem()->publish(time);
+    controller_->getIDProblem()->publish(time,period);
 
   if(controller_state_pub_.get() && controller_state_pub_->trylock())
   {
@@ -714,7 +715,7 @@ void ControllerRosWrapper::publish(const ros::Time& time)
       mpc_observation_pub_->msg_.input.value[36 + i] = tmp_vectorXd_(i);
 
     // time
-    mpc_observation_pub_->msg_.time = time.toSec();
+    mpc_observation_pub_->msg_.time = mpc_observation_pub_->msg_.time + period.toSec();
 
     // mode (FIXME hardcoded names)
     mpc_observation_pub_->msg_.mode = controller_->getStateEstimator()->getContact("lf_foot")*8

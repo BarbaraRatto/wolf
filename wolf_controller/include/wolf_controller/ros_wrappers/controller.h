@@ -83,7 +83,7 @@ public:
 
     bool standDownCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
-    virtual void publish(const ros::Time& time);
+    virtual void publish(const ros::Time& time, const ros::Duration& period) override;
 
 protected:
 

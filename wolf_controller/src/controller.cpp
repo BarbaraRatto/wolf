@@ -909,7 +909,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
       joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
 
     // Publish
-    ros_wrapper_->publish(time);
+    ros_wrapper_->publish(time,period);
     RtLogger::getLogger().publish(time);
 }
 

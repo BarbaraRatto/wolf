@@ -112,7 +112,7 @@ void Com::updateCost(const Eigen::VectorXd& x)
   cost_ = computeCost(x);
 }
 
-void Com::publish(const ros::Time& time)
+void Com::publish(const ros::Time& time, const ros::Duration& /*period*/)
 {
   if(rt_pub_->trylock())
   {

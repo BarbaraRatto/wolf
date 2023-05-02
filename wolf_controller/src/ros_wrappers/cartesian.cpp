@@ -160,7 +160,7 @@ void Cartesian::updateCost(const Eigen::VectorXd& x)
   cost_ = computeCost(x);
 }
 
-void Cartesian::publish(const ros::Time& time)
+void Cartesian::publish(const ros::Time& time, const ros::Duration& /*period*/)
 {
   if(rt_pub_->trylock())
   {
@@ -374,8 +374,6 @@ Eigen::Affine3d Cartesian::getPose(const std::string& base_link, const std::stri
   tf::transformTFToEigen(transform,pose);
   return pose;
 }
-
-
 
 visualization_msgs::Marker Cartesian::makeSTL( visualization_msgs::InteractiveMarker &msg )
 {

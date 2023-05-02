@@ -72,7 +72,7 @@ void Postural::updateCost(const Eigen::VectorXd& x)
   cost_ = computeCost(x);
 }
 
-void Postural::publish(const ros::Time& time)
+void Postural::publish(const ros::Time& time, const ros::Duration& /*period*/)
 {
   if(rt_pub_->trylock())
   {
