@@ -33,6 +33,30 @@ std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
 std::string _robot_name = "";
 
+std::string enumToString(Controller::mode_t mode)
+{
+  std::string ret = "WPG";
+  switch (mode)
+  {
+  case Controller::mode_t::WPG:
+    ret = "WPG";
+    break;
+
+  case Controller::mode_t::EXT:
+    ret = "EXT";
+    break;
+
+  case Controller::mode_t::MPC:
+    ret = "MPC";
+    break;
+
+  case Controller::mode_t::RESET:
+    ret = "RESET";
+    break;
+  };
+  return ret;
+}
+
 Controller::Controller()
     :MultiInterfaceController<hardware_interface::EffortJointInterface,
                               hardware_interface::ImuSensorInterface,
@@ -1188,7 +1212,7 @@ std::vector<Eigen::Vector6d>& Controller::getDesiredContactForces()
     return des_contact_forces_;
 }
 
-std::vector<bool> &Controller::getDesiredContactStates()
+std::vector<bool>& Controller::getDesiredContactStates()
 {
   auto foot_names = robot_model_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
@@ -1197,6 +1221,20 @@ std::vector<bool> &Controller::getDesiredContactStates()
   //for(unsigned int i=foot_names.size(); i<ee_names.size()+foot_names.size(); i++)
   //  des_contact_states_[i] = false;
   return des_contact_states_;
+}
+
+std::string Controller::getModeAsString()
+{
+  return enumToString(mode_);
+}
+
+std::vector<std::string> Controller::getModesAsString()
+{
+  std::vector<std::string> modes;
+  for(unsigned int i=0; i< N_MODES; i++)
+    modes.push_back(enumToString(static_cast<mode_t>(i)));
+
+  return modes;
 }
 
 } //namespace

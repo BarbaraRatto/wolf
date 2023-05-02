@@ -58,7 +58,7 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 public:
 
      enum posture_t {UP=0,DOWN};
-     enum mode_t {WPG=0,EXT,MPC,RESET};
+     enum mode_t {WPG=0,EXT,MPC,RESET,N_MODES=5};
 
      const std::string CLASS_NAME = "Controller";
 
@@ -289,6 +289,16 @@ public:
     const Eigen::VectorXd& getDesiredJointEfforts() const;
 
     /**
+         * @brief Get the current control mode
+         */
+    std::string getModeAsString();
+
+    /**
+         * @brief Get the available control modes
+         */
+    std::vector<std::string> getModesAsString();
+
+    /**
          * @brief Get the id problem
          */
     IDProblem* getIDProblem() const;
@@ -322,7 +332,6 @@ public:
          * @brief Get Robot Model
          */
     QuadrupedRobot* getRobotModel() const;
-
 
 private:
 
@@ -450,9 +459,9 @@ private:
     wolf_controller_utils::Ramp::Ptr ramp_stand_down_;
     wolf_controller_utils::Ramp::Ptr ramp_init_;
     /** @brief State machine support variables */
-    unsigned int mode_;
-    unsigned int previous_mode_;
-    unsigned int posture_;
+    mode_t mode_;
+    mode_t previous_mode_;
+    posture_t posture_;
     double stand_down_starting_height_;
     double desired_height_;
     double current_height_;

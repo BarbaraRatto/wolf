@@ -305,9 +305,10 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
   // Controller state
   controller_state_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::ControllerState>(controller_nh, "controller_state", 4));
-  unsigned int n_states = wolf_controller::QuadrupedRobot::N_STATES;
   controller_state_pub_->msg_.states = controller_->getRobotModel()->getStatesAsString();
   controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
+  controller_state_pub_->msg_.modes = controller_->getModesAsString();
+  controller_state_pub_->msg_.current_mode = controller_->getModeAsString();
 
   #ifdef OCS2
   // OCS2 mpc observation
@@ -549,7 +550,8 @@ void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& p
   if(controller_state_pub_.get() && controller_state_pub_->trylock())
   {
     controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
-    controller_state_pub_->msg_.header.stamp = time;
+    controller_state_pub_->msg_.current_mode  = controller_->getModeAsString();
+    controller_state_pub_->msg_.header.stamp  = time;
     controller_state_pub_->unlockAndPublish();
   }
 
