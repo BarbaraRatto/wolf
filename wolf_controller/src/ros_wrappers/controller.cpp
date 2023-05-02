@@ -691,7 +691,7 @@ void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& p
     // joint positions (check the order, also be sure that we are not taking the arm joints)
     controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
     for(unsigned int i=0; i<12; i++)
-      mpc_observation_pub_->msg_.state.value[12 + i] = tmp_vectorXd_(i);
+      mpc_observation_pub_->msg_.state.value[12 + i] = tmp_vectorXd_(i+FLOATING_BASE_DOFS);
 
     // INPUT
     // contact forces (FIXME hardcoded names and order)
@@ -714,7 +714,7 @@ void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& p
     // joints velocities
     controller_->getRobotModel()->getJointVelocity(tmp_vectorXd_);
     for(unsigned int i=0; i<12; i++)
-      mpc_observation_pub_->msg_.input.value[36 + i] = tmp_vectorXd_(i);
+      mpc_observation_pub_->msg_.input.value[36 + i] = tmp_vectorXd_(i+FLOATING_BASE_DOFS);
 
     // time
     mpc_observation_pub_->msg_.time = mpc_observation_pub_->msg_.time + period.toSec();
