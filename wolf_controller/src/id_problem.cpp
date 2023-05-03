@@ -468,19 +468,21 @@ void IDProblem::update()
   }
 
   // Activate or deactivate the external references (FIXME)
-  if(change_control_mode_ && control_mode_ == EXT)
+  if(change_control_mode_)
   {
-    // When switching to EXT mode initialize the wrenches and base
-    const std::vector<std::string>& foot_names = model_->getFootNames();
-    for (unsigned int i=0; i<foot_names.size(); i++)
-      wrenches_[foot_names[i]]->setReference(contact_wrenches_[i]);
-    waist_->setReference(model_->getBasePoseInWorld());
-
-    activateExternalReferences(true);
-  }
-  else
-  {
-    activateExternalReferences(false);
+    if(control_mode_ == EXT)
+    {
+      // When switching to EXT mode initialize the wrenches and base
+      const std::vector<std::string>& foot_names = model_->getFootNames();
+      for (unsigned int i=0; i<foot_names.size(); i++)
+        wrenches_[foot_names[i]]->setReference(contact_wrenches_[i]);
+      waist_->setReference(model_->getBasePoseInWorld());
+      activateExternalReferences(true);
+    }
+    else
+    {
+      activateExternalReferences(false);
+    }
   }
 
   // Update the problem based on selected control mode

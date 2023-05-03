@@ -204,6 +204,11 @@ private:
    */
   tf::TransformListener listener_;
 
+  /**
+   * @brief Cartesian trajectory interpolator
+   */
+  wolf_controller::CartesianTrajectory::Ptr trj_;
+
 };
 
 #endif // ROS_WRAPPERS_CARTESIAN_H
