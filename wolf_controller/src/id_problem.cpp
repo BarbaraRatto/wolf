@@ -472,11 +472,12 @@ void IDProblem::update()
   {
     if(control_mode_ == EXT)
     {
-      // When switching to EXT mode initialize the wrenches and base
+      // When switching to EXT mode initialize the wrenches and base and reset the tasks
       const std::vector<std::string>& foot_names = model_->getFootNames();
       for (unsigned int i=0; i<foot_names.size(); i++)
         wrenches_[foot_names[i]]->setReference(contact_wrenches_[i]);
       waist_->setReference(model_->getBasePoseInWorld());
+      reset();
       activateExternalReferences(true);
     }
     else
