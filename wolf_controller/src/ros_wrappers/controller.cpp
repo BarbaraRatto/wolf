@@ -720,10 +720,10 @@ void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& p
     mpc_observation_pub_->msg_.time = mpc_observation_pub_->msg_.time + period.toSec();
 
     // mode (FIXME hardcoded names)
-    mpc_observation_pub_->msg_.mode = controller_->getStateEstimator()->getContact("lf_foot")*8
-                                    + controller_->getStateEstimator()->getContact("lh_foot")*4
-                                    + controller_->getStateEstimator()->getContact("rf_foot")*2
-                                    + controller_->getStateEstimator()->getContact("rh_foot");
+    mpc_observation_pub_->msg_.mode = static_cast<int8_t>(controller_->getStateEstimator()->getContact("lf_foot"))*8
+                                    + static_cast<int8_t>(controller_->getStateEstimator()->getContact("lh_foot"))*4
+                                    + static_cast<int8_t>(controller_->getStateEstimator()->getContact("rf_foot"))*2
+                                    + static_cast<int8_t>(controller_->getStateEstimator()->getContact("rh_foot"));
 
     mpc_observation_pub_->unlockAndPublish();
   }
