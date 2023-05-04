@@ -267,7 +267,7 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
     ROS_INFO_NAMED(CLASS_NAME,"joint accelerations minimization task is NOT active");
 
   wpg_stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
-  mpc_stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
+  mpc_stack_ << torque_lims_<<friction_cones_;
 
   if(activate_joint_position_limits_)
   {
@@ -477,6 +477,14 @@ void IDProblem::update()
       for (unsigned int i=0; i<foot_names.size(); i++)
         wrenches_[foot_names[i]]->setReference(contact_wrenches_[i]);
       waist_->setReference(model_->getBasePoseInWorld());
+
+      // Set all feet ready to swing
+      for (unsigned int i=0; i<foot_names.size(); i++)
+      {
+        feet_[foot_names[i]]->setBaseLink(WORLD_FRAME_NAME);
+        feet_[foot_names[i]]->setLambda(1.,1.);
+      }
+
       reset();
       activateExternalReferences(true);
     }
