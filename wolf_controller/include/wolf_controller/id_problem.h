@@ -103,12 +103,12 @@ public:
     /**
      * @brief swing with a specific foot i.e. release the contact
      */
-    void swingWithFoot(const std::string& foot_name);
+    void swingWithFoot(const std::string& foot_name, const std::string &ref_frame);
 
     /**
      * @brief stance with a specific foot i.e. activate the contact
      */
-    void stanceWithFoot(const std::string& foot_name);
+    void stanceWithFoot(const std::string& foot_name, const std::string& ref_frame);
 
     /**
      * @brief publish the ros topics related to the tasks

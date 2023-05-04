@@ -804,12 +804,12 @@ void Controller::updateWpg(const double &dt)
                                  WORLD_FRAME_NAME);
       if(gait_generator_->isSwinging(foot_names[i]))
       {
-          id_prob_->swingWithFoot(foot_names[i]);
+          id_prob_->swingWithFoot(foot_names[i],robot_model_->getBaseLinkName());
           ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
       }
       else
       {
-          id_prob_->stanceWithFoot(foot_names[i]);
+          id_prob_->stanceWithFoot(foot_names[i],WORLD_FRAME_NAME);
           ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
       }
   }

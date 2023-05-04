@@ -573,17 +573,17 @@ void IDProblem::setPosture(const Eigen::MatrixXd& Kp, const Eigen::MatrixXd& Kd,
   postural_->setReference(q);
 }
 
-void IDProblem::swingWithFoot(const string &foot_name)
+void IDProblem::swingWithFoot(const std::string& foot_name, const std::string& ref_frame)
 {
-  feet_[foot_name]->setBaseLink(model_->getBaseLinkName());
+  feet_[foot_name]->setBaseLink(ref_frame);
   feet_[foot_name]->setLambda(1.,1.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
   torque_lims_->disableContact(foot_name);
 }
 
-void IDProblem::stanceWithFoot(const string &foot_name)
+void IDProblem::stanceWithFoot(const std::string &foot_name, const std::string& ref_frame)
 {
-  feet_[foot_name]->setBaseLink(WORLD_FRAME_NAME);
+  feet_[foot_name]->setBaseLink(ref_frame);
   feet_[foot_name]->setLambda(0.,0.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
   torque_lims_->enableContact(foot_name);
