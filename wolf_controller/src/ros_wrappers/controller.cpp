@@ -22,6 +22,12 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
 {
   controller_ = controller_ptr;
 
+  // Set some ROS params
+  controller_nh.setParam("robot_base_name",controller_ptr->getRobotModel()->getBaseLinkName());
+  controller_nh.setParam("robot_foot_names",controller_ptr->getRobotModel()->getFootNames());
+  controller_nh.setParam("robot_arm_names",controller_ptr->getRobotModel()->getArmNames());
+  controller_nh.setParam("robot_imu_name",controller_ptr->getRobotModel()->getImuSensorName());
+
   // Defaults
   double default_duty_factor = 0.3;
   if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
