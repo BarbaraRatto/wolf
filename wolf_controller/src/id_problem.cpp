@@ -242,6 +242,7 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
        //arm_aggregated_weighted = 50.0 * arm_aggregated%id_XYZ + arm_aggregated%id_RPY;
     }
     wpg_stack_->getStack()[0] = arm_aggregated + wpg_stack_->getStack()[0];
+    mpc_stack_->getStack()[0] = arm_aggregated + mpc_stack_->getStack()[0];
   }
 
   // Add the minimization tasks if their weight is greated than zero (if not changed externally, by default it is 0.0)
