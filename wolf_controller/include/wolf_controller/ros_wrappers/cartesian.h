@@ -126,13 +126,9 @@ protected:
 
   void publishWP(const std::vector<geometry_msgs::Pose>& wps);
 
-  bool setTrj(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+  bool clearMarker();
 
-  bool setContinuous(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
-
-  bool clearMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
-
-  bool spawnMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+  bool spawnMarker();
 
   void setContinuousCtrl(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
 

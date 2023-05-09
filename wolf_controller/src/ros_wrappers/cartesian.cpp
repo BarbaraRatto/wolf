@@ -17,8 +17,9 @@ Cartesian::Cartesian(ros::NodeHandle& nh,
                      const bool use_mesh)
   :OpenSoT::tasks::acceleration::Cartesian(task_id,robot,distal_link,base_link,qddot)
   ,TaskRosWrapperInterface<wolf_msgs::CartesianTask>(task_id,nh)
-  ,use_mesh_(use_mesh)
+  ,is_continuous_(false)
   ,interactive_marker_server_(wolf_controller::_robot_name+"/wolf_controller/marker/"+_task_id)
+  ,use_mesh_(use_mesh)
 {
 
   // Get the urdf (used for the mesh)
@@ -27,10 +28,15 @@ Cartesian::Cartesian(ros::NodeHandle& nh,
   // Get the urdf links (used for the base frame selection)
   urdf_.getLinks(links_);
 
+  // Initialize buffers
+  tmp_affine3d_.setIdentity();
+  buffer_reference_pose_.initRT(tmp_affine3d_);
+  tmp_vector6d_.setZero();
+  buffer_reference_twist_.initRT(tmp_vector6d_);
+
   // Create the marker
   control_type_ = visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D;
-  is_continuous_ = true;
-  makeMarker(getDistalLink(),getBaseLink(),control_type_,true);
+  makeMarker(getDistalLink(),getBaseLink(),static_cast<unsigned int>(control_type_),true);
   makeMenu();
   interactive_marker_server_.applyChanges();
 
@@ -219,7 +225,9 @@ void Cartesian::_update(const Eigen::VectorXd& x)
   if(OPTIONS.set_ext_reference)
   {
     if(is_continuous_) // Direct control
+    {
       setReference(*buffer_reference_pose_.readFromRT(),*buffer_reference_twist_.readFromRT());
+    }
     else // Interpolation
     {
       trj_->update(wolf_controller::_period);
@@ -315,7 +323,6 @@ void Cartesian::processFeedback(const visualization_msgs::InteractiveMarkerFeedb
 
   if(is_continuous_ == true)
     buffer_reference_pose_.writeFromNonRT(pose_reference);
-
 }
 
 void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
@@ -331,8 +338,6 @@ void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
   tf::twistMsgToEigen(msg->twist,twist_reference);
 
   // TODO change reference frame if needed
-
-  trj_->setWayPoint(pose_reference,period);
   buffer_reference_pose_.writeFromNonRT(pose_reference);
   buffer_reference_twist_.writeFromNonRT(twist_reference);
 
@@ -374,7 +379,6 @@ Eigen::Affine3d Cartesian::getPose(const std::string& base_link, const std::stri
   {
     try
     {
-      ros::Time now = ros::Time::now();
       listener_.waitForTransform(base_link, distal_link,ros::Time(0),ros::Duration(1.0));
       listener_.lookupTransform(base_link, distal_link,ros::Time(0),transform);
     }
@@ -538,7 +542,7 @@ void Cartesian::changeBaseLink(const visualization_msgs::InteractiveMarkerFeedba
   }
 }
 
-void Cartesian::sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
   if(waypoints_.empty()) return;
 
@@ -563,25 +567,25 @@ void Cartesian::sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbac
   T_.clear();
 }
 
-void Cartesian::resetMarker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::resetMarker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
-  clearMarker(req_, res_);
-  spawnMarker(req_, res_);
+  clearMarker();
+  spawnMarker();
 }
 
-void Cartesian::resetLastWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::resetLastWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
-  ROS_INFO("RESET LAST WAYPOINT!");
+  ROS_INFO("Reset last waypoint!");
 
   if(!T_.empty())
     T_.pop_back();
   if(!waypoints_.empty())
     waypoints_.pop_back();
 
-  clearMarker(req_, res_);
+  clearMarker();
 
   if(waypoints_.empty())
-    spawnMarker(req_, res_);
+    spawnMarker();
   else
   {
     if(interactive_marker_server_.empty())
@@ -601,7 +605,7 @@ void Cartesian::resetAllWayPoints(const visualization_msgs::InteractiveMarkerFee
   waypoints_.clear();
   resetMarker(feedback);
   publishWP(waypoints_);
-  ROS_INFO("RESETTING ALL WAYPOINTS!");
+  ROS_INFO("Reset all waypoints!");
 }
 
 void Cartesian::wayPointCallBack(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback, double T)
@@ -640,21 +644,7 @@ void Cartesian::publishWP(const std::vector<geometry_msgs::Pose>& wps)
   waypoints_pub_.publish(msg);
 }
 
-bool Cartesian::setTrj(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
-{
-  clearMarker(req, res);
-  spawnMarker(req, res);
-  return true;
-}
-
-bool Cartesian::setContinuous(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
-{
-  clearMarker(req, res);
-  spawnMarker(req,res);
-  return true;
-}
-
-bool Cartesian::clearMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+bool Cartesian::clearMarker()
 {
   if(!interactive_marker_server_.empty())
   {
@@ -664,7 +654,7 @@ bool Cartesian::clearMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Resp
   return true;
 }
 
-bool Cartesian::spawnMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+bool Cartesian::spawnMarker()
 {
   if(interactive_marker_server_.empty())
   {
@@ -678,7 +668,7 @@ bool Cartesian::spawnMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Resp
   return true;
 }
 
-void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
   is_continuous_ = !is_continuous_;
 
@@ -688,7 +678,7 @@ void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFee
     menu_handler_.setVisible(way_point_entry_, true);
     waypoints_.clear();
     T_.clear();
-    setContinuous(req_,res_);
+    trj_->reset();
   }
   else if(is_continuous_ == true)
   {
@@ -696,8 +686,15 @@ void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFee
     menu_handler_.setVisible(way_point_entry_, false);
     waypoints_.clear();
     T_.clear();
-    setTrj(req_, res_);
+    Eigen::Affine3d pose;
+    Eigen::Vector6d twist = Eigen::Vector6d::Zero();
+    getActualPose(pose);
+    buffer_reference_pose_.writeFromNonRT(pose);
+    buffer_reference_twist_.writeFromNonRT(twist);
   }
+
+  clearMarker();
+  spawnMarker();
 
   menu_handler_.reApply(interactive_marker_server_);
   interactive_marker_server_.applyChanges();
