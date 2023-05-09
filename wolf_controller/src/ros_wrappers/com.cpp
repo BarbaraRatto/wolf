@@ -12,6 +12,11 @@ Com::Com(ros::NodeHandle& nh, const XBot::ModelInterface& robot, const OpenSoT::
   :OpenSoT::tasks::acceleration::CoM(robot,qddot)
   ,TaskRosWrapperInterface<wolf_msgs::ComTask>(_task_id,nh)
 {
+  // Initialize buffers
+  tmp_vector3d_.setZero();
+  buffer_reference_pos_.initRT(tmp_vector3d_);
+  buffer_reference_vel_.initRT(tmp_vector3d_);
+
   // Create the reference subscriber
   reference_sub_ = nh.subscribe("reference/"+_task_id, 1000, &Com::referenceCallback, this);
 }

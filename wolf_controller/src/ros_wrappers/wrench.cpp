@@ -16,10 +16,14 @@ Wrench::Wrench(ros::NodeHandle& nh,
   :OpenSoT::tasks::force::Wrench(task_id,distal_link,base_link,wrench)
   ,TaskRosWrapperInterface<wolf_msgs::WrenchTask>(task_id,nh)
 {
+  tmp_vectorXd_.resize(6); // Wrench
+  tmp_vectorXd_.setZero();
+
+  // Initialize buffers
+  buffer_reference_.initRT(tmp_vectorXd_);
+
   // Create the reference subscriber
   reference_sub_ = nh.subscribe("reference/"+_task_id, 1000, &Wrench::referenceCallback, this);
-
-  tmp_vectorXd_.resize(6); // Wrench
 }
 
 void Wrench::registerReconfigurableVariables()
