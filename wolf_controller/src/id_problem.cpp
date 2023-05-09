@@ -73,16 +73,16 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
     arms_[ee_names_[i]]->registerReconfigurableVariables();
   }
   auto wrench = id_->getContactsWrenchAffine();
-    for(unsigned int i=0; i<foot_names_.size(); i++)
-    {
-      wrenches_[foot_names_[i]] = std::make_shared<Wrench>(nh,foot_names_[i]+"_wrench", foot_names_[i],
-                                                          WORLD_FRAME_NAME, wrench[i]); // FIXME What is the order?
-      wrenches_[foot_names_[i]]->setLambda(1.);
-      wrenches_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
-      wrenches_[foot_names_[i]]->OPTIONS.set_ext_lambda = false;
-      wrenches_[foot_names_[i]]->loadParams();
-      wrenches_[foot_names_[i]]->registerReconfigurableVariables();
-    }
+  for(unsigned int i=0; i<foot_names_.size(); i++)
+  {
+    wrenches_[foot_names_[i]] = std::make_shared<Wrench>(nh,foot_names_[i]+"_wrench", foot_names_[i],
+                                                        WORLD_FRAME_NAME, wrench[i]);
+    wrenches_[foot_names_[i]]->setLambda(1.);
+    wrenches_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
+    wrenches_[foot_names_[i]]->OPTIONS.set_ext_lambda = true;
+    wrenches_[foot_names_[i]]->loadParams();
+    wrenches_[foot_names_[i]]->registerReconfigurableVariables();
+  }
   //   --------------------------
   angular_momentum_ = std::make_shared<AngularMomentum>(nh,*model_,id_->getJointsAccelerationAffine());
   angular_momentum_->setLambda(0.);
@@ -267,8 +267,14 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   else
     ROS_INFO_NAMED(CLASS_NAME,"joint accelerations minimization task is NOT active");
 
-  wpg_stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
-  mpc_stack_ << torque_lims_<<friction_cones_;
+  dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_,
+                                                                                      id_->getJointsAccelerationAffine(),
+                                                                                      id_->getContactsWrenchAffine(), foot_names_);
+
+  dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
+
+  wpg_stack_ << wrenches_lims_ << torque_lims_ << friction_cones_;
+  mpc_stack_ << dynamics_con_ << friction_cones_;
 
   if(activate_joint_position_limits_)
   {
@@ -296,7 +302,6 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * regularization_value_;
   regularization_->setWeight(W_reg);
 
-
   wpg_stack_->setRegularisationTask(regularization_);
   wpg_stack_->update(Eigen::VectorXd(1));
 
@@ -313,6 +318,7 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   // ,OpenSoT::solvers::wpg_solver_back_ends::OSQP);
   // ,OpenSoT::solvers::wpg_solver_back_ends::eiQuadProg);
 
+  ROS_INFO_NAMED(CLASS_NAME,"Solver created");
 }
 
 void IDProblem::setFrictionConesMu(const double& mu)
@@ -474,17 +480,14 @@ void IDProblem::update()
     if(control_mode_ == EXT)
     {
       // When switching to EXT mode initialize the wrenches and base and reset the tasks
-      const std::vector<std::string>& foot_names = model_->getFootNames();
-      for (unsigned int i=0; i<foot_names.size(); i++)
-        wrenches_[foot_names[i]]->setReference(contact_wrenches_[i]);
-      waist_->setReference(model_->getBasePoseInWorld());
-
-      // Set all feet ready to swing
-      for (unsigned int i=0; i<foot_names.size(); i++)
+      for (unsigned int i=0; i<foot_names_.size(); i++)
       {
-        feet_[foot_names[i]]->setBaseLink(WORLD_FRAME_NAME);
-        feet_[foot_names[i]]->setLambda(1.,1.);
+        wrenches_[foot_names_[i]]->setReference(contact_wrenches_[i]);
+        // Set all feet ready to swing
+        feet_[foot_names_[i]]->setBaseLink(WORLD_FRAME_NAME);
+        feet_[foot_names_[i]]->setLambda(1.,1.);
       }
+      waist_->setReference(model_->getBasePoseInWorld());
 
       reset();
       activateExternalReferences(true);

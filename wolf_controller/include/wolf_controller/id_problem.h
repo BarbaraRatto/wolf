@@ -256,6 +256,8 @@ private:
     OpenSoT::tasks::GenericTask::Ptr regularization_;
     std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> min_forces_;
     OpenSoT::tasks::MinimizeVariable::Ptr min_qddot_;
+    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr dynamics_task_;
+    OpenSoT::constraints::TaskToConstraint::Ptr dynamics_con_;
 
     /**
      * @brief postural_ a postural task
