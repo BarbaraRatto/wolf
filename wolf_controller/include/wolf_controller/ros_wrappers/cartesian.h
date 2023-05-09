@@ -209,6 +209,10 @@ private:
    */
   wolf_controller::CartesianTrajectory::Ptr trj_;
 
+
+  realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_reference_pose_;
+  realtime_tools::RealtimeBuffer<Eigen::Vector6d> buffer_reference_twist_;
+
 };
 
 #endif // ROS_WRAPPERS_CARTESIAN_H

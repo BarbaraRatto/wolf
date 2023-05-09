@@ -29,7 +29,7 @@ Cartesian::Cartesian(ros::NodeHandle& nh,
 
   // Create the marker
   control_type_ = visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D;
-  is_continuous_ = false;
+  is_continuous_ = true;
   makeMarker(getDistalLink(),getBaseLink(),control_type_,true);
   makeMenu();
   interactive_marker_server_.applyChanges();
@@ -218,10 +218,14 @@ void Cartesian::_update(const Eigen::VectorXd& x)
   }
   if(OPTIONS.set_ext_reference)
   {
-    // Interpolation
-    trj_->update(wolf_controller::_period);
-    trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
-    setReference(tmp_affine3d_,tmp_vector6d_);
+    if(is_continuous_) // Direct control
+      setReference(*buffer_reference_pose_.readFromRT(),*buffer_reference_twist_.readFromRT());
+    else // Interpolation
+    {
+      trj_->update(wolf_controller::_period);
+      trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
+      setReference(tmp_affine3d_,tmp_vector6d_);
+    }
   }
   OpenSoT::tasks::acceleration::Cartesian::_update(x);
 }
@@ -235,6 +239,11 @@ bool Cartesian::reset()
   waypoints_.clear();
   publishWP(waypoints_);
   trj_->reset();
+  getReference(tmp_affine3d_);
+  buffer_reference_pose_.initRT(tmp_affine3d_);
+  tmp_vector6d_.setZero();
+  buffer_reference_twist_.initRT(tmp_vector6d_);
+
   return res;
 }
 
@@ -305,7 +314,8 @@ void Cartesian::processFeedback(const visualization_msgs::InteractiveMarkerFeedb
   tf::poseMsgToEigen(feedback->pose,pose_reference);
 
   if(is_continuous_ == true)
-    trj_->setWayPoint(pose_reference,0.1);
+    buffer_reference_pose_.writeFromNonRT(pose_reference);
+
 }
 
 void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
@@ -316,11 +326,15 @@ void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
     period = msg->header.stamp.toSec() - last_time_;
 
   Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
+  Eigen::Vector6d twist_reference = Eigen::Vector6d::Zero();
   tf::poseMsgToEigen(msg->pose,pose_reference);
+  tf::twistMsgToEigen(msg->twist,twist_reference);
 
   // TODO change reference frame if needed
 
   trj_->setWayPoint(pose_reference,period);
+  buffer_reference_pose_.writeFromNonRT(pose_reference);
+  buffer_reference_twist_.writeFromNonRT(twist_reference);
 
   last_time_ = msg->header.stamp.toSec();
 }
