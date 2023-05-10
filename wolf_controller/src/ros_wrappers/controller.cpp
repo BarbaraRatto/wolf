@@ -383,12 +383,10 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   // RT GUI
 #ifdef RT_GUI
   // create interface
-  if(RtGuiClient::getIstance().isInitialized())
-  {
-    RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
-    RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
-    RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
-  }
+  RtGuiClient::getIstance().init("wolf_panel","controller");
+  RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
+  RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
+  RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
 #endif
 }
 
