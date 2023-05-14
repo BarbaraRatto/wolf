@@ -407,7 +407,7 @@ unsigned int Controller::getControlMode()
 void Controller::switchControlMode()
 {
   if(mode_ == Controller::mode_t::WPG)
-    mode_ = Controller::mode_t::MPC;
+    mode_ = Controller::mode_t::EXT;
   else
     mode_ = Controller::mode_t::WPG;
 }
