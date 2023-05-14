@@ -226,8 +226,8 @@ void Cartesian::_update(const Eigen::VectorXd& x)
   {
     if(is_continuous_) // Direct control
     {
-      setReference(*buffer_reference_pose_.readFromRT());
-      //setReference(*buffer_reference_pose_.readFromRT(),*buffer_reference_twist_.readFromRT());
+      //setReference(*buffer_reference_pose_.readFromRT());
+      setReference(*buffer_reference_pose_.readFromRT(),*buffer_reference_twist_.readFromRT());
     }
     else // Interpolation
     {
@@ -342,7 +342,10 @@ void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
   tf::poseMsgToEigen(msg->pose,pose_reference);
   tf::twistMsgToEigen(msg->twist,twist_reference);
 
-  // TODO change reference frame if needed
+  // Check if reference frame changed
+  if(msg->header.frame_id != "" && msg->header.frame_id != getBaseLink())
+    setBaseLink(msg->header.frame_id);
+
   buffer_reference_pose_.writeFromNonRT(pose_reference);
   buffer_reference_twist_.writeFromNonRT(twist_reference);
 
