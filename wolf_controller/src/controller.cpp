@@ -59,24 +59,24 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 {
     ROS_DEBUG_NAMED(CLASS_NAME,"Initialize");
 
-    nh_ = controller_nh;
-    root_nh_ = root_nh;
+    nh_ = controller_nh; // /robot_name/wolf_controller
+    root_nh_ = root_nh; // /robot_name/
 
     assert(robot_hw);
 
     robot_model_.reset(createRobotModel(root_nh));
     joint_names_ = robot_model_->getJointNames();
 
-    if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
+    if(!nh_.getParam("period",period_)) // Get the initial controller period
     {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No period given in namespace "+controller_nh.getNamespace());
         return false;
     }
     _period = period_;
 
-    if(!root_nh.getParam("/robot_name",robot_name_)) // Get the robot name
+    if(!root_nh_.getParam("robot_name",robot_name_)) // Get the robot name
     {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot name given in namespace /");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot name given in namespace "+controller_nh.getNamespace());
         return false;
     }
     _robot_name = robot_name_;
@@ -227,7 +227,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     previous_height_ = robot_model_->getStandUpHeight();
 
     std::string input_device = "ps3";
-    root_nh.getParam("/input_device",input_device);
+    nh_.getParam("input_device",input_device);
     if(input_device == "ps3")
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
     else if(input_device == "xbox")

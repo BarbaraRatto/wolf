@@ -1,12 +1,12 @@
 <?xml version="1.0" ?>
 <launch>
 
-    <arg name="robot_name" default="spot"/>
+    <arg name="robot_name" default="ras_1"/>
 
     <!-- Load the robot -->
     <include file="$(find wolf_description_utils)/launch/upload.launch">
-        <arg name="robot_name" value="$(arg robot_name)" />
-        <arg name="task_period" value="0.001" />
+        <arg name="robot_name"        value="$(arg robot_name)" />
+        <arg name="controller_period" value="0.001" />
     </include>
 
    <group ns="$(arg robot_name)">
