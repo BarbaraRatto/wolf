@@ -290,9 +290,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   stand_down_height_ =  -stand_down_height_/N_LEGS;
 
 #ifdef RT_GUI
-        // create interface
-        if(RtGuiClient::getIstance().init("wolf_panel","controller",ros::Duration(10.0)))
-          RtGuiClient::getIstance().addLabel(std::string("controller"),std::string("Status"),&robot_state_string_);
+  // create interface
+  RtGuiClient::getIstance().addLabel(std::string("controller"),std::string("Status"),&robot_state_string_);
 #endif
 
 }

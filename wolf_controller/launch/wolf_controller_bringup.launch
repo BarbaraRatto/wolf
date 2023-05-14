@@ -54,6 +54,7 @@
             <include file="$(find wolf_description_utils)/launch/world.launch">
                 <arg name="sensors"           value="$(arg sensors)" />
                 <arg name="robot_model"       value="$(arg robot_model)" />
+                <arg name="robot_name"       value="$(arg robot_name)" />
                 <arg name="world_name"        value="$(arg world_name)" />
                 <arg name="period"            value="$(arg period)" />
                 <arg name="gui"               value="$(arg gazebo_gui)"/>
@@ -66,6 +67,7 @@
             <include file="$(find wolf_description_utils)/launch/upload.launch">
                <arg name="sensors"      value="$(arg sensors)" />
                <arg name="robot_model"  value="$(arg robot_model)" />
+               <arg name="robot_name"   value="$(arg robot_name)" />
                <arg name="arm_name"     value="$(arg arm_name)"/>
                <arg name="period"       value="$(arg period)" />
             </include>
@@ -88,21 +90,21 @@
         </include>
 
         <!-- Convert joint states to TF transforms for rviz, etc -->
-        <node name="$(arg robot_model)_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="log">
+        <node name="state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="log">
             <remap from="/joint_states" to="/$(arg robot_model)/joint_states"/>
         </node>
 
         <!-- GUI nodes -->
         <!-- plot_node -->
-        <node name="wolf_plot_node" pkg="wolf_controller" type="plot_node" output="screen" ns="$(arg robot_model)"
+        <node name="wolf_plot_node" pkg="wolf_controller" type="plot_node" output="screen"
               if="$(eval arg('full_gui') or arg('plot_node_gui'))"/>
         <!-- plotjuggler -->
-        <node name="wolf_plotjuggler" pkg="plotjuggler" type="plotjuggler" ns="/$(arg robot_model)/wolf_controller"
-              args="$(eval '--layout '+find(arg('robot_model')+'_description')+'/plotjuggler/'+arg('robot_model')+'.xml --nosplash')"
+        <node name="wolf_plotjuggler" pkg="plotjuggler" type="plotjuggler"
+              args="$(eval '--layout '+find('wolf_controller')+'/plotjuggler/controller.xml --nosplash')"
               if="$(eval arg('full_gui') or arg('plotjuggler_gui'))"/>
         <!-- rviz -->
         <node name="wolf_rviz" pkg="rviz" type="rviz"
-              args="$(eval '-d '+find(arg('robot_model')+'_description')+'/rviz/'+arg('robot_model')+'_wbc.rviz')"
+              args="$(eval '-d '+find('wolf_controller')+'/rviz/controller.rviz')"
               if="$(eval arg('full_gui')or arg('rviz_gui'))"/>
         <!-- rqt_reconfigure -->
         <node name="wolf_gui" pkg="rqt_reconfigure" type="rqt_reconfigure"

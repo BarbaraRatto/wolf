@@ -58,6 +58,15 @@ public:
     {
         controller_ = controller_ptr;
 
+        std::string robot_name;
+        root_nh.getParam("robot_name",robot_name);
+
+        if(robot_name.empty())
+        {
+          ROS_ERROR_NAMED(CLASS_NAME,"Robot name can not be empty!");
+          return;
+        }
+
         // Defaults
         double default_duty_factor = 0.3;
         if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
@@ -397,15 +406,13 @@ public:
         set_duty_factor_             = controller_nh.advertiseService("set_duty_factor",             &ControllerRosWrapper::setDutyFactorCB,             this);
 
         // RT GUI
-#ifdef RT_GUI
+      #ifdef RT_GUI
         // create interface
-        if(RtGuiClient::getIstance().isInitialized())
-        {
-          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
-          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
-          RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
-        }
-#endif
+        RtGuiClient::getIstance().init("wolf_panel",robot_name);
+        RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
+        RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
+        RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
+      #endif
     }
 
     bool increaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
