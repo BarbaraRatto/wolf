@@ -933,7 +933,7 @@ void Controller::odomPublisher()
     static ros::Publisher odom_pub;
 
     if(publish_odom_msg_)
-      odom_pub = nh_.advertise<nav_msgs::Odometry>("/odometry/robot",100);
+      odom_pub = root_nh_.advertise<nav_msgs::Odometry>("odometry/robot",100);
 
     ros::Rate publishing_rate(odom_pub_rate_);
 

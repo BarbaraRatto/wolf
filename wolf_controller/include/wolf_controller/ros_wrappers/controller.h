@@ -408,7 +408,7 @@ public:
         // RT GUI
       #ifdef RT_GUI
         // create interface
-        RtGuiClient::getIstance().init("wolf_panel",robot_name);
+        RtGuiClient::getIstance().init("/wolf_panel",robot_name+"/wolf_controller");
         RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
         RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
         RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
