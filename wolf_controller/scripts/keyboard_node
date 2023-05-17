@@ -85,6 +85,8 @@ if __name__=="__main__":
     display_surface = pygame.display.set_mode((X, Y))
 
     robot_name = rospy.get_param('robot_name')
+    if robot_name == '' or robot_name == '/':
+        robot_name = 'wolf_keyboard'
 
     pygame.display.set_caption('%s controls: press 1 to change view' % (robot_name))
 
