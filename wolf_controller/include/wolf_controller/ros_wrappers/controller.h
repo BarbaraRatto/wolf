@@ -58,15 +58,6 @@ public:
     {
         controller_ = controller_ptr;
 
-        std::string robot_name;
-        root_nh.getParam("robot_name",robot_name);
-
-        if(robot_name.empty())
-        {
-          ROS_ERROR_NAMED(CLASS_NAME,"Robot name can not be empty!");
-          return;
-        }
-
         // Defaults
         double default_duty_factor = 0.3;
         if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
@@ -408,7 +399,7 @@ public:
         // RT GUI
       #ifdef RT_GUI
         // create interface
-        RtGuiClient::getIstance().init("/wolf_panel",robot_name+"/wolf_controller");
+        RtGuiClient::getIstance().init("/wolf_panel",controller_ptr->getRobotName()+"/wolf_controller");
         RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
         RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
         RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
