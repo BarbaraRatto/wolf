@@ -632,6 +632,7 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_UP):
+        updateWpg(dt);
         ramp = ramp_stand_up_->update(dt);
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
         des_joint_positions_ = ramp * robot_model_->getStandUpJointPostion() + (1.0-ramp) * robot_model_->getStandDownJointPostion();
@@ -710,6 +711,7 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
+        updateWpg(dt);
         ramp = ramp_stand_down_->update(dt);
         desired_height_ = ramp * stand_down_starting_height_;
         des_joint_positions_ = (1.0-ramp) * robot_model_->getStandUpJointPostion() + (ramp) * robot_model_->getStandDownJointPostion();
