@@ -34,6 +34,30 @@ double _period = 0.001;
 std::string _robot_name = "";
 std::string _tf_prefix  = "";
 
+std::string enumToString(Controller::mode_t mode)
+{
+  std::string ret = "WPG";
+  switch (mode)
+  {
+  case Controller::mode_t::WPG:
+    ret = "WPG";
+    break;
+
+  case Controller::mode_t::EXT:
+    ret = "EXT";
+    break;
+
+  case Controller::mode_t::MPC:
+    ret = "MPC";
+    break;
+
+  case Controller::mode_t::RESET:
+    ret = "RESET";
+    break;
+  };
+  return ret;
+}
+
 Controller::Controller()
     :MultiInterfaceController<hardware_interface::EffortJointInterface,
                               hardware_interface::ImuSensorInterface,
@@ -43,8 +67,8 @@ Controller::Controller()
     ,publish_odom_tf_(false)
     ,publish_odom_msg_(false)
     ,odom_pub_rate_(250)
-    ,mode_(WALKING)
-    ,previous_mode_(WALKING)
+    ,mode_(WPG)
+    ,previous_mode_(WPG)
     ,posture_(DOWN)
 {
    XBot::Logger::SetVerbosityLevel(XBot::Logger::Severity::HIGH);
@@ -208,16 +232,16 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
     foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
-    state_estimator_    = std::make_shared<StateEstimator>(gait_generator_,robot_model_);
 
-    impedance_     = std::make_shared<Impedance>(gait_generator_,robot_model_);
-    impedance_->startInertiaCompensation(false);
-
-    terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,foot_holds_planner_,robot_model_);
+    state_estimator_   = std::make_shared<StateEstimator>(robot_model_);
+    terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,robot_model_);
     terrain_estimator_->setMaxRoll(M_PI);
     terrain_estimator_->setMinRoll(-M_PI);
     terrain_estimator_->setMaxPitch(M_PI);
     terrain_estimator_->setMinPitch(-M_PI);
+
+    impedance_     = std::make_shared<Impedance>(state_estimator_,robot_model_);
+    impedance_->startInertiaCompensation(false);
 
     com_planner_ = std::make_shared<ComPlanner>(robot_model_,foot_holds_planner_,terrain_estimator_);
     id_prob_ = std::make_unique<IDProblem>(robot_model_);
@@ -364,18 +388,20 @@ bool Controller::setStepHeight(const double& step_height)
 
 bool Controller::selectControlMode(const std::string& mode)
 {
-  if(mode == "WALKING")
-    mode_ = Controller::mode_t::WALKING;
-  else if(mode == "MANIPULATION")
-    mode_ = Controller::mode_t::MANIPULATION;
+  if(mode == "WPG")
+    mode_ = Controller::mode_t::WPG;
+  else if(mode == "EXT")
+    mode_ = Controller::mode_t::EXT;
+  else if(mode == "MPC")
+    mode_ = Controller::mode_t::MPC;
   else if(mode == "RESET")
     mode_ = Controller::mode_t::RESET;
   else
   {
-    ROS_ERROR_NAMED(CLASS_NAME,"Wrong mode!");
+    ROS_ERROR_NAMED(CLASS_NAME,"Wrong control mode!");
     return false;
   }
-  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected mode "<< mode);
+  ROS_INFO_STREAM_NAMED(CLASS_NAME,"Selected control mode "<< mode);
 
   return true;
 }
@@ -387,10 +413,10 @@ unsigned int Controller::getControlMode()
 
 void Controller::switchControlMode()
 {
-  if(mode_ == Controller::mode_t::WALKING)
-    mode_ = Controller::mode_t::MANIPULATION;
+  if(mode_ == Controller::mode_t::WPG)
+    mode_ = Controller::mode_t::EXT;
   else
-    mode_ = Controller::mode_t::WALKING;
+    mode_ = Controller::mode_t::WPG;
 }
 
 bool Controller::selectPosture(const std::string& posture)
@@ -516,7 +542,7 @@ void Controller::readImu()
 
 void Controller::starting(const ros::Time&  /*time*/)
 {
-    ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Starting WoLF controller");
 
     // Read from the hardware interfaces:
     // 1) Joints
@@ -524,7 +550,7 @@ void Controller::starting(const ros::Time&  /*time*/)
     // 2) IMU
     readImu();
 
-    ROS_DEBUG_NAMED(CLASS_NAME,"Starting the Controller Completed");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Starting WoLF controller completed");
 }
 
 void Controller::updateStateEstimator(const double &dt)
@@ -565,6 +591,12 @@ void Controller::updateStateEstimator(const double &dt)
     state_estimator_->update(dt);
 }
 
+void Controller::updateTerrainEstimator(const double &dt)
+{
+  // Update the terrain estimator
+  terrain_estimator_->computeTerrainEstimation(dt);
+}
+
 void Controller::updateStateMachine(const double &dt)
 {
     desired_height_ = 0.0;
@@ -600,7 +632,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_UP):
-        updateComponents(dt);
         ramp = ramp_stand_up_->update(dt);
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
         des_joint_positions_ = ramp * robot_model_->getStandUpJointPostion() + (1.0-ramp) * robot_model_->getStandDownJointPostion();
@@ -621,12 +652,9 @@ void Controller::updateStateMachine(const double &dt)
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
           com_planner_->resetVelocities();
-          if(mode_ == Controller::mode_t::WALKING || mode_ == Controller::mode_t::MANIPULATION)
-          {
-            robot_model_->setState(QuadrupedRobot::ACTIVE);
-            state_estimator_->startContactComputation();
-            break;
-          }
+          robot_model_->setState(QuadrupedRobot::ACTIVE);
+          state_estimator_->startContactComputation();
+          break;
         }
         break;
 
@@ -634,21 +662,24 @@ void Controller::updateStateMachine(const double &dt)
 
         switch(mode_)
         {
-        case Controller::mode_t::MANIPULATION:
-          updateComponents(dt);
-          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
-          id_prob_->setControlMode(IDProblem::mode_t::MANIPULATION);
-          previous_mode_ = Controller::mode_t::MANIPULATION;
+        case Controller::mode_t::WPG:
+          updateWpg(dt);
+          id_prob_->setControlMode(IDProblem::mode_t::WPG);
+          previous_mode_ = Controller::mode_t::WPG;
           break;
-        case Controller::mode_t::WALKING:
-          updateComponents(dt);
-          updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
-          id_prob_->setControlMode(IDProblem::mode_t::WALKING);
-          previous_mode_ = Controller::mode_t::WALKING;
+        case Controller::mode_t::EXT:
+          // TODO
+          id_prob_->setControlMode(IDProblem::mode_t::EXT);
+          previous_mode_ = Controller::mode_t::EXT;
+          break;
+        case Controller::mode_t::MPC:
+          // TODO
+          id_prob_->setControlMode(IDProblem::mode_t::MPC);
+          previous_mode_ = Controller::mode_t::MPC;
           break;
         case Controller::mode_t::RESET:
           foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
-          updateComponents(dt);
+          updateWpg(dt);
           tmp_vector3d_1_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // base position
           tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference(); // base orientation
           rotToRpy(tmp_matrix3d_,tmp_vector3d_);
@@ -679,7 +710,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
-        updateComponents(dt);
         ramp = ramp_stand_down_->update(dt);
         desired_height_ = ramp * stand_down_starting_height_;
         des_joint_positions_ = (1.0-ramp) * robot_model_->getStandUpJointPostion() + (ramp) * robot_model_->getStandDownJointPostion();
@@ -707,7 +737,6 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::ANOMALY):
-        updateComponents(dt);
         des_joint_positions_ = robot_model_->getStandDownJointPostion();
         des_joint_velocities_.fill(0.0);
         updateImpedance(des_joint_positions_,des_joint_velocities_);
@@ -724,13 +753,13 @@ void Controller::updateStateMachine(const double &dt)
 
     previous_height_ = current_height_;
 }
+
 void Controller::init()
 {
     // State estimator
     // Be sure to start the solver and the contact estimation when the robot is grounded.
     state_estimator_->resetGyroscopeIntegration();
-    //state_estimator_->startContactComputation();
-    state_estimator_->startHapticContactLoop();
+    state_estimator_->startContactComputation();
     // Terrain Estimator
     //terrain_estimator_->reset();
     // Footholds planner with gait generator
@@ -757,14 +786,40 @@ void Controller::init()
     joint_positions_init_ = joint_positions_;
 }
 
-void Controller::updateComponents(const double &dt)
+void Controller::updateWpg(const double &dt)
 {
+  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+
+  // Update the gait generator contact state
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+    gait_generator_->setContactState(foot_names[i],state_estimator_->getContact(foot_names[i]),state_estimator_->getContactForce(foot_names[i]));
+
   // Update the footholds planner
+  foot_holds_planner_->setTerrainTransform(terrain_estimator_->getTerrainPoseWorld());
   foot_holds_planner_->update(dt);
-  // Update the terrain estimator
-  terrain_estimator_->computeTerrainEstimation(dt);
+
   // Update the CoM position and velocity reference
   com_planner_->update();
+
+  // Update the base references based on the com desired position
+  updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
+
+  // Set the references to the feet based on their current state: Stance/Swing
+  for(unsigned int i = 0; i<foot_names.size(); i++)
+  {
+      id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
+                                 WORLD_FRAME_NAME);
+      if(gait_generator_->isSwinging(foot_names[i]))
+      {
+          id_prob_->swingWithFoot(foot_names[i],robot_model_->getBaseLinkName());
+          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
+      }
+      else
+      {
+          id_prob_->stanceWithFoot(foot_names[i],WORLD_FRAME_NAME);
+          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
+      }
+  }
 }
 
 void Controller::updateBaseReferences(const Eigen::Vector3d &com_pos_ref, const Eigen::Vector3d &com_vel_ref, const Eigen::Matrix3d &orientation_ref)
@@ -831,24 +886,6 @@ bool Controller::updateSolver(const Eigen::VectorXd& des_joint_positions)
   // Rotate the friction cones based on the terrain orientation
   id_prob_->setFrictionConesR(terrain_estimator_->getTerrainOrientationWorld().transpose());
 
-  // Set the references to the feet based on their current state: Stance/Swing
-  const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-  for(unsigned int i = 0; i<foot_names.size(); i++)
-  {
-      id_prob_->setFootReference(foot_names[i],gait_generator_->getReference(foot_names[i]),gait_generator_->getReferenceDot(foot_names[i]),
-                                 WORLD_FRAME_NAME);
-      if(gait_generator_->isSwinging(foot_names[i]))
-      {
-          id_prob_->swingWithFoot(foot_names[i]);
-          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
-      }
-      else
-      {
-          id_prob_->stanceWithFoot(foot_names[i]);
-          ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
-      }
-  }
-
   // Update the postural
   //impedance_->startInertiaCompensation(true);
   impedance_->update();
@@ -886,6 +923,9 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
     // Update state estimator
     updateStateEstimator(period_);
 
+    // Update terrain estimator
+    updateTerrainEstimator(period_);
+
     // Update state machine
     updateStateMachine(period_);
 
@@ -900,7 +940,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
       joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
 
     // Publish
-    ros_wrapper_->publish(time);
+    ros_wrapper_->publish(time,period);
     RtLogger::getLogger().publish(time);
 }
 
@@ -1069,12 +1109,12 @@ void Controller::odomPublisher()
 
 void Controller::stopping(const ros::Time& /*time*/)
 {
-    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping the Controller");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping WoLF controller");
 
     stopping_ = true;
     odom_publisher_thread_->join();
 
-    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
+    ROS_DEBUG_NAMED(CLASS_NAME,"Stopping WoLF controller completed");
 }
 
 const string &Controller::getRobotName()
@@ -1190,7 +1230,7 @@ std::vector<Eigen::Vector6d>& Controller::getDesiredContactForces()
     return des_contact_forces_;
 }
 
-std::vector<bool> &Controller::getDesiredContactStates()
+std::vector<bool>& Controller::getDesiredContactStates()
 {
   auto foot_names = robot_model_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
@@ -1199,6 +1239,20 @@ std::vector<bool> &Controller::getDesiredContactStates()
   //for(unsigned int i=foot_names.size(); i<ee_names.size()+foot_names.size(); i++)
   //  des_contact_states_[i] = false;
   return des_contact_states_;
+}
+
+std::string Controller::getModeAsString()
+{
+  return enumToString(mode_);
+}
+
+std::vector<std::string> Controller::getModesAsString()
+{
+  std::vector<std::string> modes;
+  for(unsigned int i=0; i< N_MODES; i++)
+    modes.push_back(enumToString(static_cast<mode_t>(i)));
+
+  return modes;
 }
 
 } //namespace

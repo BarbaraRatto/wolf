@@ -7,8 +7,8 @@ You should have received a copy of the license along with this
 work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 **/
 
-#ifndef FOOT_STATE_MACHINE_H
-#define FOOT_STATE_MACHINE_H
+#ifndef WPG_FOOT_STATE_MACHINE_H
+#define WPG_FOOT_STATE_MACHINE_H
 
 #include <atomic>
 #include <string>

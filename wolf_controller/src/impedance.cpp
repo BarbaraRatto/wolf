@@ -43,10 +43,10 @@ void Impedance::loadValues()
     kd_stance_kfe_ = Kd_stance_leg_(2,2);
 }
 
-Impedance::Impedance(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model)
+Impedance::Impedance(StateEstimator::Ptr state_estimator, QuadrupedRobot::Ptr robot_model)
 {
     robot_model_ = robot_model;
-    gait_generator_ = gait_generator;
+    state_estimator_ = state_estimator;
     inertia_compensation_active_ = true;
 
     // Initialize the inertia related matrices
@@ -117,7 +117,7 @@ void Impedance::update()
     {
         int idx = robot_model_->getLimbJointsIds(leg_names[i])[0]; // NOTE: take the first idx, the are contiguos
 
-        if(gait_generator_->isSwinging(foot_names[i]))
+        if(!state_estimator_->getContact(foot_names[i]))
         {
             if(inertia_compensation_active_)
             {

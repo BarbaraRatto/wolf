@@ -6,7 +6,7 @@
  * recovery
  */
 
-#include <wolf_controller/footholds_planner.h>
+#include <wolf_controller/wpg/footholds_planner.h>
 #include <wolf_controller_utils/filters.h>
 #include <OpenSoT/utils/cartesian_utils.h>
 

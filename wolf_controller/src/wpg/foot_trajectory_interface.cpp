@@ -6,7 +6,7 @@
  * and the implementation of the step reflex
  */
 
-#include <wolf_controller/foot_trajectory_interface.h>
+#include <wolf_controller/wpg/foot_trajectory_interface.h>
 #include <wolf_controller_utils/geometry.h>
 
 using namespace wolf_controller;

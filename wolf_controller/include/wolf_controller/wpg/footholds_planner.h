@@ -7,14 +7,14 @@ You should have received a copy of the license along with this
 work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 **/
 
-#ifndef FOOTHOLDS_PLANNER_H
-#define FOOTHOLDS_PLANNER_H
+#ifndef WPG_FOOTHOLDS_PLANNER_H
+#define WPG_FOOTHOLDS_PLANNER_H
 
 #include <ros/ros.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
-#include <wolf_controller/gait_generator.h>
+#include <wolf_controller/wpg/gait_generator.h>
 #include <wolf_controller/quadruped_robot.h>
 // WoLF utils
 #include <wolf_controller_utils/tools.h>

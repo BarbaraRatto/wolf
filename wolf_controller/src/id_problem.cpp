@@ -16,7 +16,7 @@ namespace wolf_controller {
 
 IDProblem::IDProblem(QuadrupedRobot::Ptr model):
   model_(model),
-  control_mode_(WALKING),
+  control_mode_(WPG),
   activate_com_z_(true),
   activate_angular_momentum_(true),
   activate_postural_(false),
@@ -72,6 +72,17 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
     arms_[ee_names_[i]]->loadParams();
     arms_[ee_names_[i]]->registerReconfigurableVariables();
   }
+  auto wrench = id_->getContactsWrenchAffine();
+  for(unsigned int i=0; i<foot_names_.size(); i++)
+  {
+    wrenches_[foot_names_[i]] = std::make_shared<Wrench>(nh,foot_names_[i]+"_wrench", foot_names_[i],
+                                                        WORLD_FRAME_NAME, wrench[i]);
+    wrenches_[foot_names_[i]]->setLambda(1.);
+    wrenches_[foot_names_[i]]->setWeightIsDiagonalFlag(true);
+    wrenches_[foot_names_[i]]->OPTIONS.set_ext_lambda = true;
+    wrenches_[foot_names_[i]]->loadParams();
+    wrenches_[foot_names_[i]]->registerReconfigurableVariables();
+  }
   //   --------------------------
   angular_momentum_ = std::make_shared<AngularMomentum>(nh,*model_,id_->getJointsAccelerationAffine());
   angular_momentum_->setLambda(0.);
@@ -97,14 +108,14 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   postural_->registerReconfigurableVariables();
   postural_->setReference(model_->getStandUpJointPostion());
   //   --------------------------
-  com_ = std::make_shared<CoM>(nh,*model_, id_->getJointsAccelerationAffine());
+  com_ = std::make_shared<Com>(nh,*model_, id_->getJointsAccelerationAffine());
   com_->setLambda(1.,1.);
   com_->setWeightIsDiagonalFlag(true);
   com_->loadParams();
   com_->registerReconfigurableVariables();
   //   --------------------------
   for(unsigned int i = 0; i < id_->getContactsWrenchAffine().size(); i++)
-      min_forces_.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_force_"+std::to_string(i), id_->getContactsWrenchAffine()[i])));
+    min_forces_.push_back(OpenSoT::tasks::MinimizeVariable::Ptr(std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_force_"+std::to_string(i), id_->getContactsWrenchAffine()[i])));
   min_qddot_ = std::make_shared<OpenSoT::tasks::MinimizeVariable>("min_qddot", id_->getJointsAccelerationAffine());
   //
   // Here we create the constraints & bounds
@@ -174,10 +185,15 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   //
   // Here we create the stack
   //
-  OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated;//, arm_aggregated_weighted;
+  OpenSoT::tasks::Aggregated::Ptr feet_aggregated, arm_aggregated, wrenches_aggregated;//, arm_aggregated_weighted;
+
   feet_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(feet_[foot_names_[0]]%id_XYZ,feet_[foot_names_[0]]->getXSize());
   for(unsigned int i=1;i<foot_names_.size();i++)
     feet_aggregated = feet_aggregated + feet_[foot_names_[i]]%id_XYZ;
+
+  wrenches_aggregated = std::make_shared<OpenSoT::tasks::Aggregated>(wrenches_[foot_names_[0]]%id_XYZ,wrenches_[foot_names_[0]]->getXSize());
+  for(unsigned int i=1;i<foot_names_.size();i++)
+    wrenches_aggregated = wrenches_aggregated + wrenches_[foot_names_[i]]%id_XYZ;
 
   std::list<unsigned int> id_waist = id_RPY;
   std::list<unsigned int> id_com = id_XY;
@@ -192,11 +208,14 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
       ROS_INFO_NAMED(CLASS_NAME,"CoM z is NOT active");
   }
 
-  stack_ /= (feet_aggregated + waist_%id_waist + com_%id_com);
+  wpg_stack_ /= (feet_aggregated + waist_%id_waist + com_%id_com);
+
+  mpc_stack_ /= (feet_aggregated + waist_ + wrenches_aggregated);
 
   if(activate_angular_momentum_)
   {
-      stack_->getStack()[0] = angular_momentum_ + stack_->getStack()[0];
+      wpg_stack_->getStack()[0] = angular_momentum_ + wpg_stack_->getStack()[0];
+      mpc_stack_->getStack()[0] = angular_momentum_ + mpc_stack_->getStack()[0];
       ROS_INFO_NAMED(CLASS_NAME,"angular momentum task is active");
   }
   else
@@ -204,7 +223,8 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
 
   if(activate_postural_)
   {
-      stack_->getStack()[0] = postural_%id_limbs + stack_->getStack()[0];
+      wpg_stack_->getStack()[0] = postural_%id_limbs + wpg_stack_->getStack()[0];
+      mpc_stack_->getStack()[0] = postural_%id_limbs + mpc_stack_->getStack()[0];
       ROS_INFO_NAMED(CLASS_NAME,"postural task is active");
   }
   else
@@ -221,14 +241,18 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
         arm_aggregated = arm_aggregated + arms_[ee_names_[i]];
        //arm_aggregated_weighted = 50.0 * arm_aggregated%id_XYZ + arm_aggregated%id_RPY;
     }
-    stack_->getStack()[0] = arm_aggregated + stack_->getStack()[0];
+    wpg_stack_->getStack()[0] = arm_aggregated + wpg_stack_->getStack()[0];
+    mpc_stack_->getStack()[0] = arm_aggregated + mpc_stack_->getStack()[0];
   }
 
   // Add the minimization tasks if their weight is greated than zero (if not changed externally, by default it is 0.0)
   if(min_forces_weight_>0.0)
   {
     for(unsigned int i=0;i<min_forces_.size();i++)
-      stack_->getStack()[0] = min_forces_weight_ * min_forces_[i] + stack_->getStack()[0];
+    {
+      wpg_stack_->getStack()[0] = min_forces_weight_ * min_forces_[i] + wpg_stack_->getStack()[0];
+      mpc_stack_->getStack()[0] = min_forces_weight_ * min_forces_[i] + mpc_stack_->getStack()[0];
+    }
     ROS_INFO_NAMED(CLASS_NAME,"force minimization tasks are active");
   }
   else
@@ -236,18 +260,26 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
 
   if(min_qddot_weight_>0.0)
   {
-    stack_->getStack()[0] = min_qddot_weight_ * min_qddot_ + stack_->getStack()[0];
+    wpg_stack_->getStack()[0] = min_qddot_weight_ * min_qddot_ + wpg_stack_->getStack()[0];
+    mpc_stack_->getStack()[0] = min_qddot_weight_ * min_qddot_ + mpc_stack_->getStack()[0];
     ROS_INFO_NAMED(CLASS_NAME,"joint accelerations minimization task is active");
   }
   else
     ROS_INFO_NAMED(CLASS_NAME,"joint accelerations minimization task is NOT active");
 
+  dynamics_task_ = std::make_shared<OpenSoT::tasks::acceleration::DynamicFeasibility>("dynamics", *model_,
+                                                                                      id_->getJointsAccelerationAffine(),
+                                                                                      id_->getContactsWrenchAffine(), foot_names_);
 
-  stack_ << wrenches_lims_<<torque_lims_<<friction_cones_;
+  dynamics_con_ = std::make_shared<OpenSoT::constraints::TaskToConstraint>(dynamics_task_);
+
+  wpg_stack_ << wrenches_lims_ << torque_lims_ << friction_cones_;
+  mpc_stack_ << dynamics_con_ << friction_cones_;
 
   if(activate_joint_position_limits_)
   {
-    stack_ << q_lims_%id_q_lims;
+    wpg_stack_ << q_lims_%id_q_lims;
+    mpc_stack_ << q_lims_%id_q_lims;
     ROS_INFO_NAMED(CLASS_NAME,"joint position limits constraint is active");
   }
   else
@@ -269,18 +301,24 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   regularization_ = std::make_shared<OpenSoT::tasks::GenericTask>("regularization",A_reg,b_reg);
   W_reg.bottomRightCorner(n_forces,n_forces) = W_reg.bottomRightCorner(n_forces,n_forces) * regularization_value_;
   regularization_->setWeight(W_reg);
-  stack_->setRegularisationTask(regularization_);
-  stack_->update(Eigen::VectorXd(1));
+
+  wpg_stack_->setRegularisationTask(regularization_);
+  wpg_stack_->update(Eigen::VectorXd(1));
+
+  mpc_stack_->setRegularisationTask(regularization_);
+  mpc_stack_->update(Eigen::VectorXd(1));
 
   x_.setZero(id_->getSerializer()->getSize());
 
   qddot_.setZero(model_->getJointNum());
   contact_wrenches_.reserve(contact_names_.size());
 
-  solver_ = std::make_unique<OpenSoT::solvers::iHQP>(stack_->getStack(), stack_->getBounds(),1.0);
-  // ,OpenSoT::solvers::solver_back_ends::OSQP);
-  // ,OpenSoT::solvers::solver_back_ends::eiQuadProg);
+  wpg_solver_ = std::make_unique<OpenSoT::solvers::iHQP>(wpg_stack_->getStack(), wpg_stack_->getBounds(),1.0);
+  mpc_solver_ = std::make_unique<OpenSoT::solvers::iHQP>(mpc_stack_->getStack(), mpc_stack_->getBounds(),1.0);
+  // ,OpenSoT::solvers::wpg_solver_back_ends::OSQP);
+  // ,OpenSoT::solvers::wpg_solver_back_ends::eiQuadProg);
 
+  ROS_INFO_NAMED(CLASS_NAME,"Solver created");
 }
 
 void IDProblem::setFrictionConesMu(const double& mu)
@@ -302,6 +340,11 @@ void IDProblem::reset()
     tmp_map.second->reset();
   }
   for (auto& tmp_map : feet_)
+  {
+    tmp_map.second->update(Eigen::VectorXd(1));
+    tmp_map.second->reset();
+  }
+  for (auto& tmp_map : wrenches_)
   {
     tmp_map.second->update(Eigen::VectorXd(1));
     tmp_map.second->reset();
@@ -420,28 +463,6 @@ void IDProblem::setControlMode(mode_t mode)
 
 void IDProblem::update()
 {
-  // Update arm tasks base frame if state changed
-  if(change_control_mode_)
-  {
-    if(ee_names_.size()>0)
-    {
-      std::string frame;
-      if(control_mode_ == WALKING)
-        frame = model_->getBaseLinkName();
-      else if (change_control_mode_ == MANIPULATION)
-        frame = WORLD_FRAME_NAME;
-      else
-        frame = model_->getBaseLinkName();
-
-      for (auto& tmp_map : arms_)
-      {
-        tmp_map.second->setBaseLink(frame);
-        tmp_map.second->update(Eigen::VectorXd(1));
-        tmp_map.second->reset();
-      }
-    }
-  }
-
   // Update the mu and the wrench limits
   wrench_lower_lims_(0) = x_force_lower_lim_;
   wrench_lower_lims_(1) = y_force_lower_lim_;
@@ -453,30 +474,53 @@ void IDProblem::update()
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
 
-  // Update the problem
-  stack_->update(Eigen::VectorXd(1));
+  // Activate or deactivate the external references (FIXME)
+  if(change_control_mode_)
+  {
+    if(control_mode_ == EXT)
+    {
+      // When switching to EXT mode initialize the wrenches and base and reset the tasks
+      for (unsigned int i=0; i<foot_names_.size(); i++)
+      {
+        wrenches_[foot_names_[i]]->setReference(contact_wrenches_[i]);
+        // Set all feet ready to swing
+        feet_[foot_names_[i]]->setBaseLink(WORLD_FRAME_NAME);
+        feet_[foot_names_[i]]->setLambda(1.,1.);
+      }
+      waist_->setReference(model_->getBasePoseInWorld());
+
+      reset();
+      activateExternalReferences(true);
+    }
+    else
+    {
+      activateExternalReferences(false);
+    }
+  }
+
+  // Update the problem based on selected control mode
+  switch (control_mode_)
+  {
+    case WPG:
+      wpg_stack_->update(Eigen::VectorXd(1));
+      break;
+    case EXT:
+      mpc_stack_->update(Eigen::VectorXd(1));
+      break;
+    case MPC:
+      mpc_stack_->update(Eigen::VectorXd(1));
+      break;
+  }
 }
 
-void IDProblem::publish(const ros::Time& time)
-{
-  for (auto& tmp_map : feet_)
-    tmp_map.second->publish(time);
-  for (auto& tmp_map : arms_)
-    tmp_map.second->publish(time);
-  waist_->publish(time);
-  com_->publish(time);
-  postural_->publish(time);
-  angular_momentum_->publish(time);
-}
-
-bool IDProblem::solve(Eigen::VectorXd& tau)
+bool IDProblem::_solve(const std::unique_ptr<solvers::iHQP> &solver, Eigen::VectorXd &tau)
 {
   bool res_solv = false;
   bool res_id = false;
-  if (solver_)
+  if (solver)
   {
     update();
-    res_solv = solver_->solve(x_);
+    res_solv = solver->solve(x_);
     if(res_solv)
       res_id = id_->computedTorque(x_, tau, qddot_, contact_wrenches_);
   }
@@ -487,6 +531,8 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
     tmp_map.second->updateCost(x_);
   for (auto& tmp_map : arms_)
     tmp_map.second->updateCost(x_);
+  for (auto& tmp_map : wrenches_)
+    tmp_map.second->updateCost(x_);
   waistRPY_->updateCost(x_);
   com_->updateCost(x_);
   postural_->updateCost(x_);
@@ -494,6 +540,33 @@ bool IDProblem::solve(Eigen::VectorXd& tau)
 #endif
 
   return (res_solv && res_id);
+}
+
+bool IDProblem::solve(Eigen::VectorXd& tau)
+{
+  switch (control_mode_)
+  {
+    case WPG:
+      return _solve(wpg_solver_,tau);
+    case EXT:
+      return _solve(mpc_solver_,tau);
+    case MPC:
+      return _solve(mpc_solver_,tau);
+    default:
+      return false;
+  }
+}
+
+void IDProblem::publish(const ros::Time& time, const ros::Duration& period)
+{
+  for (auto& tmp_map : feet_)
+    tmp_map.second->publish(time,period);
+  for (auto& tmp_map : arms_)
+    tmp_map.second->publish(time,period);
+  waist_->publish(time,period);
+  com_->publish(time,period);
+  postural_->publish(time,period);
+  angular_momentum_->publish(time,period);
 }
 
 const std::vector<Eigen::Vector6d>& IDProblem::getContactWrenches() const
@@ -512,23 +585,23 @@ void IDProblem::setPosture(const Eigen::MatrixXd& Kp, const Eigen::MatrixXd& Kd,
   postural_->setReference(q);
 }
 
-void IDProblem::swingWithFoot(const string &foot_name)
+void IDProblem::swingWithFoot(const std::string& foot_name, const std::string& ref_frame)
 {
-  feet_[foot_name]->setBaseLink(model_->getBaseLinkName());
+  feet_[foot_name]->setBaseLink(ref_frame);
   feet_[foot_name]->setLambda(1.,1.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(true);
   torque_lims_->disableContact(foot_name);
 }
 
-void IDProblem::stanceWithFoot(const string &foot_name)
+void IDProblem::stanceWithFoot(const std::string &foot_name, const std::string& ref_frame)
 {
-  feet_[foot_name]->setBaseLink(WORLD_FRAME_NAME);
+  feet_[foot_name]->setBaseLink(ref_frame);
   feet_[foot_name]->setLambda(0.,0.);
   wrenches_lims_->getWrenchLimits(foot_name)->releaseContact(false);
   torque_lims_->enableContact(foot_name);
 }
 
-void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z, const double& z_vel)
+void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z, const double& z_vel) // FIXME Give full position?
 {
   tmp_vector6d_.setZero();
   tmp_affine3d_.setIdentity();
@@ -541,6 +614,18 @@ void IDProblem::setWaistReference(const Eigen::Matrix3d& Rot, const double& z, c
 void IDProblem::setComReference(const Eigen::Vector3d& position, const Eigen::Vector3d& velocity)
 {
   com_->setReference(position,velocity);
+}
+
+void IDProblem::activateExternalReferences(bool activate)
+{
+  // NOTE: for the moment, the arms are always controlled by external references ie. topics or markers
+  for(unsigned int i=0; i<foot_names_.size(); i++)
+    feet_[foot_names_[i]]->OPTIONS.set_ext_reference = activate;
+  for(unsigned int i=0; i<foot_names_.size(); i++)
+    wrenches_[foot_names_[i]]->OPTIONS.set_ext_reference = activate;
+  waist_->OPTIONS.set_ext_reference = activate;
+  postural_->OPTIONS.set_ext_reference = activate;
+  com_->OPTIONS.set_ext_reference = activate;
 }
 
 } // namespace

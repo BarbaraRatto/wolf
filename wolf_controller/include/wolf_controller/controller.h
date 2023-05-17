@@ -30,10 +30,10 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <memory>
 // WoLF
 #include <wolf_controller/quadruped_robot.h>
-#include <wolf_controller/gait_generator.h>
 #include <wolf_controller/impedance.h>
-#include <wolf_controller/footholds_planner.h>
-#include <wolf_controller/com_planner.h>
+#include <wolf_controller/wpg/gait_generator.h>
+#include <wolf_controller/wpg/footholds_planner.h>
+#include <wolf_controller/wpg/com_planner.h>
 #include <wolf_controller/state_estimator.h>
 #include <wolf_controller/terrain_estimator.h>
 #include <wolf_controller/id_problem.h>
@@ -58,7 +58,7 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 public:
 
      enum posture_t {UP=0,DOWN};
-     enum mode_t {WALKING=0,MANIPULATION,RESET};
+     enum mode_t {WPG=0,EXT,MPC,RESET,N_MODES=5};
 
      const std::string CLASS_NAME = "Controller";
 
@@ -229,7 +229,7 @@ public:
     void setCutoffFreqAccelerometer(const double& hz);
 
     /**
-         * @brief Select the control mode to use [WALKING|MANIPULATION]
+         * @brief Select the control mode to use
          */
     bool selectControlMode(const std::string& mode);
 
@@ -239,7 +239,7 @@ public:
     unsigned int getControlMode();
 
     /**
-         * @brief Switch between WALKING and MANIPULATION
+         * @brief Switch between WPG and MPC
          */
     void switchControlMode();
 
@@ -294,6 +294,16 @@ public:
     const Eigen::VectorXd& getDesiredJointEfforts() const;
 
     /**
+         * @brief Get the current control mode
+         */
+    std::string getModeAsString();
+
+    /**
+         * @brief Get the available control modes
+         */
+    std::vector<std::string> getModesAsString();
+
+    /**
          * @brief Get the id problem
          */
     IDProblem* getIDProblem() const;
@@ -327,7 +337,6 @@ public:
          * @brief Get Robot Model
          */
     QuadrupedRobot* getRobotModel() const;
-
 
 private:
 
@@ -457,9 +466,9 @@ private:
     wolf_controller_utils::Ramp::Ptr ramp_stand_down_;
     wolf_controller_utils::Ramp::Ptr ramp_init_;
     /** @brief State machine support variables */
-    unsigned int mode_;
-    unsigned int previous_mode_;
-    unsigned int posture_;
+    mode_t mode_;
+    mode_t previous_mode_;
+    posture_t posture_;
     double stand_down_starting_height_;
     double desired_height_;
     double current_height_;
@@ -489,6 +498,12 @@ private:
     void updateStateEstimator(const double& dt);
 
     /**
+         * @brief update the terrain estimator
+         * @param dt control period
+         */
+    void updateTerrainEstimator(const double& dt);
+
+    /**
          * @brief update the state machine
          * @param dt control period
          */
@@ -514,11 +529,10 @@ private:
     void updateImpedance(const Eigen::VectorXd& des_joint_positions, const Eigen::VectorXd& des_joint_velocities);
 
     /**
-         * @brief perform an execution step with the controller's components
-         * such as foot holds planner, com planner and terrain estimator
+         * @brief perform an execution step with the controller's walking pattern generator
          * @param dt control period
          */
-    void updateComponents(const double &dt);
+    void updateWpg(const double &dt);
 
     /**
          * @brief update base references

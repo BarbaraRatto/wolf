@@ -7,13 +7,13 @@ You should have received a copy of the license along with this
 work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 **/
 
-#ifndef COM_PLANNER_H
-#define COM_PLANNER_H
+#ifndef WPG_COM_PLANNER_H
+#define WPG_COM_PLANNER_H
 
 #include <memory>
 #include <Eigen/Core>
 #include <wolf_controller/state_estimator.h>
-#include <wolf_controller/footholds_planner.h>
+#include <wolf_controller/wpg/footholds_planner.h>
 #include <wolf_controller/terrain_estimator.h>
 
 namespace wolf_controller

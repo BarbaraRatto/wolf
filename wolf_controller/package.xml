@@ -22,6 +22,7 @@
   <depend>wolf_estimation</depend>
   <depend>wolf_controller_utils</depend>
   <depend condition="$rt_gui_FOUND == True">rt_gui</depend>
+  <depend condition="$ocs2_msgs_FOUND == True">ocs2_msgs</depend>
   <depend>rospy</depend>
 
   <test_depend>controller_manager</test_depend>

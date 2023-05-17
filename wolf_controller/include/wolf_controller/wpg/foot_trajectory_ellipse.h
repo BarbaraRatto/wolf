@@ -7,10 +7,10 @@ You should have received a copy of the license along with this
 work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 **/
 
-#ifndef FOOT_TRAJECTORY_ELLIPSE_H
-#define FOOT_TRAJECTORY_ELLIPSE_H
+#ifndef WPG_FOOT_TRAJECTORY_ELLIPSE_H
+#define WPG_FOOT_TRAJECTORY_ELLIPSE_H
 
-#include <wolf_controller/foot_trajectory_interface.h>
+#include <wolf_controller/wpg/foot_trajectory_interface.h>
 
 namespace wolf_controller
 {

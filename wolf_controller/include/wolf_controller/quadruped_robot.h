@@ -86,27 +86,27 @@ public:
   using ModelInterface::getCOMVelocity;
   using ModelInterface::getJacobian;
 
-  const std::map<std::string, Eigen::Vector3d> &getFeetPositionInWorld() const;
-  const std::map<std::string, Eigen::Vector3d> &getFeetPositionInBase() const;
-  const std::map<std::string, Eigen::Affine3d> &getFeetPoseInWorld() const;
-  const std::map<std::string, Eigen::Affine3d> &getFeetPoseInBase() const;
+  const std::map<std::string, Eigen::Vector3d>& getFeetPositionInWorld() const;
+  const std::map<std::string, Eigen::Vector3d>& getFeetPositionInBase() const;
+  const std::map<std::string, Eigen::Affine3d>& getFeetPoseInWorld() const;
+  const std::map<std::string, Eigen::Affine3d>& getFeetPoseInBase() const;
 
-  Eigen::Vector3d &getFootPositionInWorld(const std::string &name);
-  Eigen::Vector3d &getFootPositionInBase(const std::string &name);
-  Eigen::Affine3d &getFootPoseInWorld(const std::string &name);
-  Eigen::Affine3d &getFootPoseInBase(const std::string &name);
+  Eigen::Vector3d& getFootPositionInWorld(const std::string &name);
+  Eigen::Vector3d& getFootPositionInBase(const std::string &name);
+  Eigen::Affine3d& getFootPoseInWorld(const std::string &name);
+  Eigen::Affine3d& getFootPoseInBase(const std::string &name);
 
-  const std::map<std::string, Eigen::Vector3d> &getEndEffectorsPositionInWorld() const;
-  const std::map<std::string, Eigen::Vector3d> &getEndEffectorsPositionInBase() const;
-  const std::map<std::string, Eigen::Affine3d> &getEndEffectorsPoseInWorld() const;
-  const std::map<std::string, Eigen::Affine3d> &getEndEffectorsPoseInBase() const;
+  const std::map<std::string, Eigen::Vector3d>& getEndEffectorsPositionInWorld() const;
+  const std::map<std::string, Eigen::Vector3d>& getEndEffectorsPositionInBase() const;
+  const std::map<std::string, Eigen::Affine3d>& getEndEffectorsPoseInWorld() const;
+  const std::map<std::string, Eigen::Affine3d>& getEndEffectorsPoseInBase() const;
 
-  Eigen::Vector3d &getEndEffectorPositionInWorld(const std::string &name);
-  Eigen::Vector3d &getEndEffectorPositionInBase(const std::string &name);
-  Eigen::Affine3d &getEndEffectorPoseInWorld(const std::string &name);
-  Eigen::Affine3d &getEndEffectorPoseInBase(const std::string &name);
+  Eigen::Vector3d& getEndEffectorPositionInWorld(const std::string &name);
+  Eigen::Vector3d& getEndEffectorPositionInBase(const std::string &name);
+  Eigen::Affine3d& getEndEffectorPoseInWorld(const std::string &name);
+  Eigen::Affine3d& getEndEffectorPoseInBase(const std::string &name);
 
-  const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
+  const Eigen::Affine3d& getBasePoseInWorld() const; // This is the floating base pose w.r.t world
 
   /**
        * @brief check if the joint velocities are above a max value

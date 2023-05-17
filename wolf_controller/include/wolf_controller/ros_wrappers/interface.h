@@ -16,6 +16,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <interactive_markers/interactive_marker_server.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <realtime_tools/realtime_buffer.h>
+#include <eigen_conversions/eigen_msg.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -37,7 +38,7 @@ public:
 
   RosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
   virtual ~RosWrapperInterface(){spinner_->stop();}
-  virtual void publish(const ros::Time& /*time*/) = 0;
+  virtual void publish(const ros::Time& /*time*/, const ros::Duration& /*period*/) = 0;
 
 protected:
 
@@ -62,6 +63,7 @@ public:
 
   TaskRosWrapperInterface(const std::string& task_name, ros::NodeHandle& nh)
   {
+    last_time_ = 0.0;
     task_name_ = task_name;
     nh_ = nh;
     rt_pub_.reset(new realtime_tools::RealtimePublisher<Msg_type>(nh_,task_name_, 4));
@@ -104,12 +106,11 @@ protected:
   Eigen::VectorXd       tmp_vectorXd_;
   Eigen::Affine3d       tmp_affine3d_;
   Eigen::Vector6d       tmp_vector6d_;
+  Eigen::Vector6d       tmp_vector6d_1_;
   Eigen::Vector3d       tmp_vector3d_;
   Eigen::Matrix6d       tmp_matrix6d_;
   Eigen::Matrix3d       tmp_matrix3d_;
   Eigen::Quaterniond    tmp_quaterniond_;
-
-  //realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_pose_reference_;
 
   std::atomic<double> buffer_lambda1_;
   std::atomic<double> buffer_lambda2_;
@@ -130,7 +131,10 @@ protected:
   std::atomic<double> buffer_kd_yaw_;
 
   std::shared_ptr<realtime_tools::RealtimePublisher<Msg_type>> rt_pub_;
-  wolf_controller::CartesianTrajectory::Ptr trj_;
+
+  double last_time_;
+
+  ros::Subscriber reference_sub_;
 
   double cost_;
 

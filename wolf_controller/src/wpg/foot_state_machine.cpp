@@ -5,7 +5,7 @@
  * @brief This file contains the state machine for the foot state
  */
 
-#include <wolf_controller/foot_state_machine.h>
+#include <wolf_controller/wpg/foot_state_machine.h>
 #include <ros/ros.h>
 
 using namespace wolf_controller;

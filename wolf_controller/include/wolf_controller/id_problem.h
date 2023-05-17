@@ -37,6 +37,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/ros_wrappers/postural.h>
 #include <wolf_controller/ros_wrappers/cartesian.h>
 #include <wolf_controller/ros_wrappers/com.h>
+#include <wolf_controller/ros_wrappers/wrench.h>
 #include <wolf_controller/quadruped_robot.h>
 
 // WoLF utils
@@ -57,7 +58,7 @@ class IDProblem
 
 public:
 
-    enum mode_t {WALKING=0,MANIPULATION};
+    enum mode_t {WPG=0,EXT,MPC};
 
     const std::string CLASS_NAME = "IDProblem";
 
@@ -102,18 +103,19 @@ public:
     /**
      * @brief swing with a specific foot i.e. release the contact
      */
-    void swingWithFoot(const std::string& foot_name);
+    void swingWithFoot(const std::string& foot_name, const std::string &ref_frame);
 
     /**
      * @brief stance with a specific foot i.e. activate the contact
      */
-    void stanceWithFoot(const std::string& foot_name);
+    void stanceWithFoot(const std::string& foot_name, const std::string& ref_frame);
 
     /**
      * @brief publish the ros topics related to the tasks
      * @param ros current time
+     * @param ros current period
      */
-    void publish(const ros::Time& time);
+    void publish(const ros::Time& time, const ros::Duration& period);
 
     /**
      * @brief set the postural reference and gains
@@ -184,7 +186,7 @@ public:
     void setComReference(const Eigen::Vector3d &position, const Eigen::Vector3d &velocity);
 
     /**
-     * @brief set the control mode [WALKING|MANIPULATION]
+     * @brief set the control mode
      */
     void setControlMode(mode_t mode);
 
@@ -238,17 +240,24 @@ public:
 
 private:
 
+    bool _solve(const std::unique_ptr<OpenSoT::solvers::iHQP>& solver, Eigen::VectorXd& tau);
+
+    void activateExternalReferences(bool activate);
+
     /**
      * @brief Tasks
      */
     std::map<std::string,Cartesian::Ptr> feet_;
     std::map<std::string,Cartesian::Ptr> arms_;
+    std::map<std::string,Wrench::Ptr> wrenches_;
     Cartesian::Ptr waist_;
-    CoM::Ptr com_;
+    Com::Ptr com_;
     AngularMomentum::Ptr angular_momentum_;
     OpenSoT::tasks::GenericTask::Ptr regularization_;
     std::vector<OpenSoT::tasks::MinimizeVariable::Ptr> min_forces_;
     OpenSoT::tasks::MinimizeVariable::Ptr min_qddot_;
+    OpenSoT::tasks::acceleration::DynamicFeasibility::Ptr dynamics_task_;
+    OpenSoT::constraints::TaskToConstraint::Ptr dynamics_con_;
 
     /**
      * @brief postural_ a postural task
@@ -286,14 +295,24 @@ private:
     OpenSoT::constraints::force::FrictionCones::Ptr friction_cones_;
 
     /**
-     * @brief map of stacks
+     * @brief map of stacks for the Walkin Pattern Generator (WPG)
      */
-    OpenSoT::AutoStack::Ptr stack_;
+    OpenSoT::AutoStack::Ptr wpg_stack_;
+
+    /**
+     * @brief map of stacks for the Model Predictive Controller (MPC)
+     */
+    OpenSoT::AutoStack::Ptr mpc_stack_;
 
     /**
      * @brief solver_ iHQP solver
      */
-    std::unique_ptr<OpenSoT::solvers::iHQP> solver_;
+    std::unique_ptr<OpenSoT::solvers::iHQP> wpg_solver_;
+
+    /**
+     * @brief solver_ iHQP solver
+     */
+    std::unique_ptr<OpenSoT::solvers::iHQP> mpc_solver_;
 
     /**
      * @brief id_ inverse dynamics computation & variable helper
