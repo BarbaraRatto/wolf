@@ -1064,6 +1064,11 @@ void Controller::stopping(const ros::Time& /*time*/)
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping Controller Completed");
 }
 
+const string &Controller::getRobotName()
+{
+    return robot_name_;
+}
+
 void Controller::setBaseLinearVelocityCmdX(const double &v)
 {
     vel_x_ = v;

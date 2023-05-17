@@ -113,6 +113,11 @@ public:
     void stopping(const ros::Time& time);
 
     /**
+         * @brief get the robot name
+         */
+    const std::string& getRobotName();
+
+    /**
          * @brief Set the base linear velocity command along X
          * @param v
          */
