@@ -1256,3 +1256,5 @@ std::vector<std::string> Controller::getModesAsString()
 }
 
 } //namespace
+
+PLUGINLIB_EXPORT_CLASS(wolf_controller::Controller, controller_interface::ControllerBase);

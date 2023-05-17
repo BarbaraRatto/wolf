@@ -74,8 +74,8 @@ target_link_libraries(wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_i
 
 add_library(wolf_controller src/controller.cpp src/id_problem.cpp src/state_estimator.cpp
     src/impedance.cpp src/quadruped_robot.cpp src/terrain_estimator.cpp src/cartesian_trajectory.cpp)
-target_link_libraries(wolf_controller ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
-    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES} ros_wrappers wpg)
+target_link_libraries(wolf_controller ros_wrappers wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+    ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
 target_link_libraries(plot_node ${catkin_LIBRARIES})

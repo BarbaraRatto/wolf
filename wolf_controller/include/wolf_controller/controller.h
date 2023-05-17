@@ -549,9 +549,6 @@ private:
 
 };
 
-
-PLUGINLIB_EXPORT_CLASS(wolf_controller::Controller, controller_interface::ControllerBase);
-
 } //@namespace wolf_controller
 
 #endif //wolf_controller_H
