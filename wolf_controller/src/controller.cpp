@@ -6,16 +6,25 @@
  * WoLF controller.
  */
 
+// WoLF
 #include <wolf_controller/controller.h>
 #include <wolf_controller/ros_wrappers/controller.h>
 #include <wolf_controller/devices/joy.h>
 #include <wolf_controller/devices/twist.h>
 #include <wolf_controller/devices/keyboard.h>
 
+// WoLF controller utils
 #include <wolf_controller_utils/tools.h>
 
+// ROS
 #include <tf2/transform_datatypes.h>
 #include <tf2_eigen/tf2_eigen.h>
+
+// RT GUI
+#ifdef RT_GUI
+#include <rt_gui/rt_gui_client.h>
+using namespace rt_gui;
+#endif
 
 using namespace XBot;
 using namespace Cartesian;
@@ -291,6 +300,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts)           ,des_joint_efforts_);
     RtLogger::getLogger().addPublisher(TOPIC(joint_efforts)               ,joint_efforts_);
     RtLogger::getLogger().addPublisher(TOPIC(period)                      ,period_);
+
+#ifdef RT_GUI
+    // create interface
+    RtGuiClient::getIstance().addLabel(std::string("controller"),std::string("Control mode"),&mode_string_);
+#endif
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
@@ -603,6 +617,7 @@ void Controller::updateStateMachine(const double &dt)
     current_height_ = state_estimator_->getEstimatedBaseHeight();
     current_rpy_ = robot_model_->getBaseRotationInWorldRPY();
     unsigned int current_state = robot_model_->getState();
+    mode_string_ = getModeAsString();
     double ramp;
     switch(current_state)
     {
