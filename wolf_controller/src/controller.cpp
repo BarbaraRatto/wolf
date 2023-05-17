@@ -32,6 +32,7 @@ std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
 std::string _robot_name = "";
+std::string _tf_prefix  = "";
 
 Controller::Controller()
     :MultiInterfaceController<hardware_interface::EffortJointInterface,
@@ -74,12 +75,18 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     _period = period_;
 
-    if(!root_nh_.getParam("robot_name",robot_name_)) // Get the robot name
+    if(!root_nh_.getParam("robot_name",robot_name_)) // Get the robot namespace
     {
         ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot name given in namespace "+controller_nh.getNamespace());
         return false;
     }
     _robot_name = robot_name_;
+
+    if(!root_nh_.getParam("tf_prefix",tf_prefix_)) // Get the tf prefix
+    {
+        ROS_WARN_STREAM_NAMED(CLASS_NAME,"No tf prefix given in namespace, using an empty one "+controller_nh.getNamespace());
+    }
+    _tf_prefix = tf_prefix_;
 
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
@@ -937,6 +944,12 @@ void Controller::odomPublisher()
 
     ros::Rate publishing_rate(odom_pub_rate_);
 
+    std::string prefix;
+    if(!tf_prefix_.empty())
+      prefix = tf_prefix_+"/";
+    else
+      prefix = "";
+
     while(!stopping_)
     {
         ros::Time t = ros::Time::now();
@@ -960,8 +973,8 @@ void Controller::odomPublisher()
           // Set coordinates
           basefoot_T_world_msg = tf2::eigenToTransform(basefoot_T_world);
           // Set transform header
-          basefoot_T_world_msg.header.frame_id = BASE_FOOTPRINT_FRAME;
-          basefoot_T_world_msg.child_frame_id  = WORLD_FRAME_NAME;
+          basefoot_T_world_msg.header.frame_id = prefix+BASE_FOOTPRINT_FRAME;
+          basefoot_T_world_msg.child_frame_id  = prefix+WORLD_FRAME_NAME;
           basefoot_T_world_msg.header.seq++;
           basefoot_T_world_msg.header.stamp = t;
           br.sendTransform(basefoot_T_world_msg);
@@ -974,8 +987,8 @@ void Controller::odomPublisher()
           // Set coordinates
           basefoot_T_base_msg = tf2::eigenToTransform(basefoot_T_base);
           // Set transform header
-          basefoot_T_base_msg.header.frame_id = BASE_FOOTPRINT_FRAME;
-          basefoot_T_base_msg.child_frame_id  = robot_model_->getBaseLinkName();
+          basefoot_T_base_msg.header.frame_id = prefix+BASE_FOOTPRINT_FRAME;
+          basefoot_T_base_msg.child_frame_id  = prefix+robot_model_->getBaseLinkName();
           basefoot_T_base_msg.header.seq++;
           basefoot_T_base_msg.header.stamp = t;
           br.sendTransform(basefoot_T_base_msg);
@@ -1020,8 +1033,8 @@ void Controller::odomPublisher()
             // Set coordinates
             odom_T_basefoot_msg = tf2::eigenToTransform(odom_T_basefoot);
             // Set transform header
-            odom_T_basefoot_msg.header.frame_id = ODOM_FRAME;
-            odom_T_basefoot_msg.child_frame_id  = BASE_FOOTPRINT_FRAME;
+            odom_T_basefoot_msg.header.frame_id = prefix+ODOM_FRAME;
+            odom_T_basefoot_msg.child_frame_id  = prefix+BASE_FOOTPRINT_FRAME;
             odom_T_basefoot_msg.header.seq++;
             odom_T_basefoot_msg.header.stamp = t;
             if(publish_odom_tf_)

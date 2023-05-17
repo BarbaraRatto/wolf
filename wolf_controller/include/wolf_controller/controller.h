@@ -337,6 +337,8 @@ private:
     std::vector<hardware_interface::JointHandle> joint_states_;
     /** @brief Robot name */
     std::string robot_name_;
+    /** @brief TF prefix */
+    std::string tf_prefix_;
     /** @brief Control period */
     double period_;
     /** @brief IMU sensor name */
