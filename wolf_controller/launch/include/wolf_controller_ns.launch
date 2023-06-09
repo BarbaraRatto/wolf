@@ -38,7 +38,7 @@
     </group>
 
     <!-- Joy node -->
-    <node pkg="joy" type="joy_node"     name="joy_node" ns="/$(arg robot_model)/wolf_controller" if="$(eval arg('input_device') == 'ps3' or arg('input_device') == 'xbox')">
+    <node pkg="joy" type="joy_node"     name="joy_node" ns="wolf_controller" if="$(eval arg('input_device') == 'ps3' or arg('input_device') == 'xbox')">
          <param name="autorepeat_rate " value="500" />
          <param name="deadzone"         value="0.1"/>
     </node>
