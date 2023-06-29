@@ -8,26 +8,29 @@
     <arg name="period"             default="0.001" doc="controller period"/>
     <arg name="arm_name"           default=""      doc="[kinova]"/>
 
-    <!-- Input device argument: ps3/xbox/keyboard/spacemouse -->
+    <!-- Input device argument -->
     <arg name="input_device" default="keyboard" doc="[ps3/xbox/keyboard/spacemouse]"/>
 
     <!-- Gazebo related arguments -->
-    <arg name="gazebo_debug" default="false" />
-    <arg name="gazebo"       default="true" />
-    <arg name="engine"       default="ode" />
-    <arg name="world_name"   default="empty" />
+    <arg name="gazebo"        default="true"    doc="start gazebo"/>
+    <arg name="gazebo_debug"  default="false"   doc="activate gazebo debug"/>
+    <arg name="engine"        default="ode"     doc="[ode/bullet/dart/simbody]"/>
+    <arg name="world_name"    default="empty"   doc="load a specific world"/>
+    <arg name="spawn_robot"   default="true"    doc="spawn the robot in gazebo"/>
+    <arg name="initial_xyz"   default="[0,0,0]" doc="initial robot xyz position in the world"/>
+    <arg name="initial_rpy"   default="[0,0,0]" doc="initial robot rpy position in the world"/>
 
     <!-- GUI related arguments -->
-    <arg name="gazebo_gui"      default="true" />
-    <arg name="plotjuggler_gui" default="false" />
-    <arg name="rviz_gui"        default="false" />
-    <arg name="rqt_gui"         default="true" />
-    <arg name="plot_node_gui"   default="false" />
-    <arg name="full_gui"        default="false" />
+    <arg name="gazebo_gui"      default="true"  doc="start gzclient"/>
+    <arg name="plotjuggler_gui" default="false" doc="start plotjuggler"/>
+    <arg name="rviz_gui"        default="false" doc="start rviz"/>
+    <arg name="rqt_gui"         default="true"  doc="start rqt_reconfigure"/>
+    <arg name="plot_node_gui"   default="false" doc="start controller's visualization node for rviz"/>
+    <arg name="full_gui"        default="false" doc="start all the previous gui"/>
 
     <!-- Odometry arguments -->
-    <arg name="publish_odom_msg" default="true"/>
-    <arg name="publish_odom_tf"  default="true"/>
+    <arg name="publish_odom_msg" default="true" doc="publish nav_msgs/Odometry message from the controller"/>
+    <arg name="publish_odom_tf"  default="true" doc="publish the odom tf frame from the controller"/>
 
     <!-- Load the robot description and Gazebo -->
     <group if="$(arg gazebo)">
@@ -52,6 +55,14 @@
            <arg name="period"       value="$(arg period)" />
         </include>
     </group>
+
+    <!-- Spawn the robot in Gazebo -->
+    <node name="goto0" pkg="wolf_description_utils" type="go0" output="screen" if="$(arg spawn_robot)">
+        <param name="robot_name"      value="$(arg robot_name)"/>
+        <param name="robot_model"     value="$(arg robot_model)"/>
+        <param name="initial_xyz"     value="$(arg initial_xyz)"/>
+        <param name="initial_rpy"     value="$(arg initial_rpy)"/>
+    </node>
 
     <group if="$(eval robot_name != '')">
          <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.launch" ns="$(arg robot_name)">
