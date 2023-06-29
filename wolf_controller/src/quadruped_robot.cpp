@@ -291,9 +291,8 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
 #ifdef RT_GUI
   // create interface
-  RtGuiClient::getIstance().addLabel(std::string("controller"),std::string("Status"),&robot_state_string_);
+  RtGuiClient::getIstance().addLabel(std::string(wolf_controller::_rt_gui_group),std::string("Status"),&robot_state_string_);
 #endif
-
 }
 
 bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)

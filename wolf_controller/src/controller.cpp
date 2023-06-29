@@ -40,8 +40,9 @@ std::vector<std::string> _rpy = {"roll","pitch","yaw"};
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
-std::string _robot_name = "";
-std::string _tf_prefix  = "";
+std::string _robot_name   = "";
+std::string _tf_prefix    = "";
+std::string _rt_gui_group = "";
 
 std::string enumToString(Controller::mode_t mode)
 {
@@ -98,9 +99,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     assert(robot_hw);
 
-    robot_model_.reset(createRobotModel(root_nh));
-    joint_names_ = robot_model_->getJointNames();
-
     if(!nh_.getParam("period",period_)) // Get the initial controller period
     {
         ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No period given in namespace "+controller_nh.getNamespace());
@@ -114,6 +112,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         return false;
     }
     _robot_name = robot_name_;
+    if(_robot_name.empty())
+      _rt_gui_group = "controller";
+    else
+      _rt_gui_group = "controller/"+_robot_name;
 
     if(!root_nh_.getParam("tf_prefix",tf_prefix_)) // Get the tf prefix
     {
@@ -121,6 +123,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     }
     _tf_prefix = tf_prefix_;
 
+    // Create the robot model
+    robot_model_.reset(createRobotModel(root_nh));
+    joint_names_ = robot_model_->getJointNames();
+
+    // Load hardware interfaces
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
     hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
@@ -303,7 +310,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
 #ifdef RT_GUI
     // create interface
-    RtGuiClient::getIstance().addLabel(std::string("controller"),std::string("Control mode"),&mode_string_);
+    RtGuiClient::getIstance().addLabel(std::string(wolf_controller::_rt_gui_group),std::string("Control mode"),&mode_string_);
 #endif
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);

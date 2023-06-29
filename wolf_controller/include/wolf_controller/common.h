@@ -33,6 +33,8 @@ namespace wolf_controller
 #define EPS 0.00001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 extern std::string _robot_name;
+extern std::string _tf_prefix;
+extern std::string _rt_gui_group;
 #define TOPIC( data ) (_robot_name+"/wolf_controller/"#data)
 //#define OPEN_LOOP_TRAJECTORY
 
