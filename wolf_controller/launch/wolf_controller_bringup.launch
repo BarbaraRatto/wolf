@@ -57,7 +57,7 @@
     </group>
 
     <!-- Spawn the robot in Gazebo -->
-    <node name="goto0" pkg="wolf_description_utils" type="go0" output="screen" if="$(arg spawn_robot)">
+    <node name="$(anon go0)" pkg="wolf_description_utils" type="go0" output="screen" if="$(arg spawn_robot)">
         <param name="robot_name"      value="$(arg robot_name)"/>
         <param name="robot_model"     value="$(arg robot_model)"/>
         <param name="initial_xyz"     value="$(arg initial_xyz)"/>
