@@ -995,13 +995,13 @@ void Controller::odomPublisher()
     Eigen::Matrix3d tmp_R;
 
     ros::Time t_prev;
-    static tf2_ros::TransformBroadcaster br;
+    tf2_ros::TransformBroadcaster br;
     nav_msgs::Odometry odom_msg;
     geometry_msgs::TransformStamped basefoot_T_world_msg;
     geometry_msgs::TransformStamped basefoot_T_base_msg;
     geometry_msgs::TransformStamped odom_T_basefoot_msg;
     geometry_msgs::TransformStamped odom_T_base_msg;
-    static ros::Publisher odom_pub;
+    ros::Publisher odom_pub;
 
     if(publish_odom_msg_)
       odom_pub = root_nh_.advertise<nav_msgs::Odometry>("odometry/robot",100);
