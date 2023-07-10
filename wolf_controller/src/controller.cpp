@@ -121,6 +121,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     {
         ROS_WARN_STREAM_NAMED(CLASS_NAME,"No tf prefix given in namespace, using an empty one "+controller_nh.getNamespace());
     }
+
+    fixTFprefix(tf_prefix_);
+
     _tf_prefix = tf_prefix_;
 
     // Create the robot model
@@ -1008,12 +1011,6 @@ void Controller::odomPublisher()
 
     ros::Rate publishing_rate(odom_pub_rate_);
 
-    std::string prefix;
-    if(!tf_prefix_.empty())
-      prefix = tf_prefix_+"/";
-    else
-      prefix = "";
-
     while(!stopping_)
     {
         ros::Time t = ros::Time::now();
@@ -1037,8 +1034,8 @@ void Controller::odomPublisher()
           // Set coordinates
           basefoot_T_world_msg = tf2::eigenToTransform(basefoot_T_world);
           // Set transform header
-          basefoot_T_world_msg.header.frame_id = prefix+BASE_FOOTPRINT_FRAME;
-          basefoot_T_world_msg.child_frame_id  = prefix+WORLD_FRAME_NAME;
+          basefoot_T_world_msg.header.frame_id = tf_prefix_+BASE_FOOTPRINT_FRAME;
+          basefoot_T_world_msg.child_frame_id  = tf_prefix_+WORLD_FRAME_NAME;
           basefoot_T_world_msg.header.seq++;
           basefoot_T_world_msg.header.stamp = t;
           br.sendTransform(basefoot_T_world_msg);
@@ -1051,8 +1048,8 @@ void Controller::odomPublisher()
           // Set coordinates
           basefoot_T_base_msg = tf2::eigenToTransform(basefoot_T_base);
           // Set transform header
-          basefoot_T_base_msg.header.frame_id = prefix+BASE_FOOTPRINT_FRAME;
-          basefoot_T_base_msg.child_frame_id  = prefix+robot_model_->getBaseLinkName();
+          basefoot_T_base_msg.header.frame_id = tf_prefix_+BASE_FOOTPRINT_FRAME;
+          basefoot_T_base_msg.child_frame_id  = tf_prefix_+robot_model_->getBaseLinkName();
           basefoot_T_base_msg.header.seq++;
           basefoot_T_base_msg.header.stamp = t;
           br.sendTransform(basefoot_T_base_msg);
@@ -1097,8 +1094,8 @@ void Controller::odomPublisher()
             // Set coordinates
             odom_T_basefoot_msg = tf2::eigenToTransform(odom_T_basefoot);
             // Set transform header
-            odom_T_basefoot_msg.header.frame_id = prefix+ODOM_FRAME;
-            odom_T_basefoot_msg.child_frame_id  = prefix+BASE_FOOTPRINT_FRAME;
+            odom_T_basefoot_msg.header.frame_id = tf_prefix_+ODOM_FRAME;
+            odom_T_basefoot_msg.child_frame_id  = tf_prefix_+BASE_FOOTPRINT_FRAME;
             odom_T_basefoot_msg.header.seq++;
             odom_T_basefoot_msg.header.stamp = t;
             if(publish_odom_tf_)
