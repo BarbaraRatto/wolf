@@ -62,7 +62,7 @@ inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& 
 
 inline QuadrupedRobot* createRobotModel(ros::NodeHandle& nh)
 {
-  // Create the quadruped robot object, it wraps the xbot model with some meta information
+  // Create the quadruped robot object, it wraps the robot model with some meta information
   std::string urdf, srdf;
   if(!nh.getParam("robot_description",urdf)) // Get the robot description from the global namespace "/"
   {

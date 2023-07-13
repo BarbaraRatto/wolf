@@ -380,7 +380,7 @@ private:
     Eigen::VectorXd des_joint_efforts_impedance_;
     /** @brief Desired joint efforts sent to the hardware interface */
     Eigen::VectorXd des_joint_efforts_;
-    /** @brief Xbot robot model */
+    /** @brief Quadruped robot model */
     QuadrupedRobot::Ptr robot_model_;
     /** @brief Impedance pointer */
     Impedance::Ptr impedance_;
