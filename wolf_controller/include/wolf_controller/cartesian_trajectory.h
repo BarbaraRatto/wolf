@@ -13,7 +13,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <memory>
 #include <Eigen/Core>
 #include <vector>
-#include <cartesian_interface/trajectory/Trajectory.h>
+#include <wolf_controller_utils/trajectory/trajectory.h>
 #include <OpenSoT/tasks/acceleration/Cartesian.h>
 
 namespace wolf_controller
@@ -73,7 +73,7 @@ private:
   Eigen::Vector6d vel_;
   Eigen::Vector6d acc_;
 
-  XBot::Cartesian::Trajectory::Ptr trajectory_;
+  wolf_controller_utils::trajectory::Trajectory::Ptr trajectory_;
   OpenSoT::tasks::acceleration::Cartesian* task_ptr_;
 
   bool checkProximity() const;

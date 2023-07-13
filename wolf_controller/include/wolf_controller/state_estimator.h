@@ -15,7 +15,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <Eigen/Dense>
 #include <atomic>
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
-#include <cartesian_interface/utils/estimation/ForceEstimation.h>
+#include <wolf_controller/force_estimator.h>
 #include <wolf_controller/quadruped_robot.h>
 
 // WoLF utils
@@ -167,9 +167,9 @@ private:
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
     Eigen::Vector3d floating_base_rpy_;
     /** @brief Contact estimation */
-    XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
+    ForceEstimator::Ptr force_estimation_;
     /** @brief Contact estimation */
-    std::map<std::string,XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
+    std::map<std::string,ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Contact positions w.r.t world */
     std::map<std::string,Eigen::Vector3d> world_X_contact_;
     /** @brief Contact positions w.r.t base */

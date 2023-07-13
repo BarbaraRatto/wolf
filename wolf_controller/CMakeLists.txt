@@ -19,11 +19,10 @@ else()
 endif()
 
 # ROS
-find_package(catkin REQUIRED tf2 controller_interface control_toolbox wolf_hardware_interface
+find_package(catkin REQUIRED tf tf_conversions controller_interface control_toolbox wolf_hardware_interface
     realtime_tools ddynamic_reconfigure rviz_visual_tools rt_logger wolf_msgs wolf_estimation wolf_controller_utils)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
-find_package(cartesian_interface REQUIRED)
 find_package(XBotInterface REQUIRED)
 find_package(ModelInterfaceRBDL REQUIRED)
 # RT gui
@@ -55,7 +54,6 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${OpenSoT_INCLUDE_DIRS}
-    ${cartesian_interface_INCLUDE_DIRS}
     ${XBotInterface_INCLUDE_DIRS}
     ${ModelInterfaceRBDL_INCLUDE_DIRS}
     ${rt_gui_INCLUDE_DIRS}
@@ -64,17 +62,17 @@ include_directories(
 
 add_library(ros_wrappers src/ros_wrappers/cartesian.cpp src/ros_wrappers/com.cpp src/ros_wrappers/momentum.cpp
     src/ros_wrappers/postural.cpp src/ros_wrappers/wrench.cpp src/ros_wrappers/controller.cpp)
-target_link_libraries(ros_wrappers ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+target_link_libraries(ros_wrappers ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${rt_gui_LIBRARIES})
 
 add_library(wpg src/wpg/com_planner.cpp src/wpg/foot_state_machine.cpp src/wpg/foot_trajectory_ellipse.cpp src/wpg/foot_trajectory_interface.cpp
     src/wpg/footholds_planner.cpp src/wpg/gait_generator.cpp)
-target_link_libraries(wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+target_link_libraries(wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${rt_gui_LIBRARIES})
 
 add_library(wolf_controller src/controller.cpp src/id_problem.cpp src/state_estimator.cpp
-    src/impedance.cpp src/quadruped_robot.cpp src/terrain_estimator.cpp src/cartesian_trajectory.cpp)
-target_link_libraries(wolf_controller ros_wrappers wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES}
+    src/impedance.cpp src/quadruped_robot.cpp src/terrain_estimator.cpp src/force_estimator.cpp src/cartesian_trajectory.cpp)
+target_link_libraries(wolf_controller ros_wrappers wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES})
 
 add_executable(plot_node src/plot_node.cpp)
@@ -118,14 +116,13 @@ catkin_install_python(PROGRAMS scripts/keyboard_node
 if (CATKIN_ENABLE_TESTING)
   find_package(catkin REQUIRED COMPONENTS roscpp rostest urdf controller_manager hardware_interface wolf_hardware_interface std_msgs)
   find_package(OpenSoT REQUIRED)
-  find_package(cartesian_interface REQUIRED)
   include_directories(include ${catkin_INCLUDE_DIRS})
 
   add_library(robot_dummy test/robot_dummy.cpp)
   target_link_libraries(robot_dummy ${catkin_LIBRARIES} ${PROJECT_NAME})
 
   add_executable(test_state_estimation test/test_state_estimation.cpp)
-  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES})
+  target_link_libraries(test_state_estimation ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES})
 
   #add_executable(test_id_problem test/test_id_problem.cpp)
   #target_link_libraries(test_id_problem ${catkin_LIBRARIES} ${PROJECT_NAME} gtest)
@@ -134,7 +131,7 @@ if (CATKIN_ENABLE_TESTING)
   #target_link_libraries(test_controller ${catkin_LIBRARIES} ${PROJECT_NAME} gtest robot_dummy)
 
   add_executable(test_trajectory test/test_trajectory.cpp)
-  target_link_libraries(test_trajectory ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} ${cartesian_interface_LIBRARIES} gtest)
+  target_link_libraries(test_trajectory ${catkin_LIBRARIES} ${PROJECT_NAME} ${OpenSoT_LIBRARIES} gtest)
 
   add_rostest_gtest(test_controller
     test/test_controller.test

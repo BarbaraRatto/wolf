@@ -128,7 +128,7 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   use_external_contact_states_ = false;
 
   // Contact force estimation reset
-  force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimationMomentumBased>(robot_model_,1.0/_period);
+  force_estimation_ = std::make_shared<ForceEstimatorMomentumBased>(robot_model_,1.0/_period);
   //force_estimation_ = std::make_shared<XBot::Cartesian::Utils::ForceEstimation>(robot_model_->getXBotModel());
 
   // Contact estimation reset
