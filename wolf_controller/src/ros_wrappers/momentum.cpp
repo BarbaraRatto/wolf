@@ -33,12 +33,12 @@ void AngularMomentum::loadParams()
   double lambda1, weight;
   if (!nh_.getParam("gains/"+_task_id+"/lambda1" , lambda1))
   {
-    ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda1 = getLambda();
   }
   if (!nh_.getParam("gains/"+_task_id+"/weight" , weight))
   {
-    ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     weight = getWeight()(0,0);
   }
   // Check if the values are positive
@@ -58,13 +58,13 @@ void AngularMomentum::loadParams()
   {
     if (!nh_.getParam("gains/"+_task_id+"/K/" + wolf_controller::_rpy[i] , K(i,i)))
     {
-      ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_rpy[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
+      ROS_DEBUG("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_rpy[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
       use_identity = true;
     }
     // Check if the values are positive
     if(K(i,i)<0.0)
     {
-      ROS_WARN("K gain must be positive!");
+      ROS_DEBUG("K gain must be positive!");
       use_identity = true;
     }
   }

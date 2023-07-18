@@ -81,17 +81,17 @@ void Cartesian::loadParams()
   double lambda1, lambda2, weight;
   if (!nh_.getParam("gains/"+_task_id+"/lambda1" , lambda1))
   {
-    ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda1 = getLambda();
   }
   if (!nh_.getParam("gains/"+_task_id+"/lambda2" , lambda2))
   {
-    ROS_WARN("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda2 = getLambda2();
   }
   if (!nh_.getParam("gains/"+_task_id+"/weight" , weight))
   {
-    ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     weight = getWeight()(0,0);
   }
   // Check if the values are positive
@@ -112,12 +112,12 @@ void Cartesian::loadParams()
   {
     if (!nh_.getParam("gains/"+_task_id+"/Kp/" + wolf_controller::_cartesian_names[i] , Kp(i,i)))
     {
-      ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
+      ROS_DEBUG("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
       use_identity = true;
     }
     if (!nh_.getParam("gains/"+_task_id+"/Kd/"  + wolf_controller::_cartesian_names[i] , Kd(i,i)))
     {
-      ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
+      ROS_DEBUG("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
       use_identity = true;
     }
     // Check if the values are positive
@@ -151,7 +151,7 @@ void Cartesian::loadParams()
 
   std::string type;
   if (!nh_.getParam("gains/"+_task_id+"/type" , type))
-    ROS_WARN("No gains type given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No gains type given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
   else
     if(type == "acceleration")
       setGainType(OpenSoT::tasks::acceleration::GainType::Acceleration);

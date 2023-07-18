@@ -41,12 +41,12 @@ void Wrench::loadParams()
   double lambda1, weight;
   if (!nh_.getParam("gains/"+_task_id+"/lambda1" , lambda1))
   {
-    ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda1 = getLambda();
   }
   if (!nh_.getParam("gains/"+_task_id+"/weight" , weight))
   {
-    ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     weight = getWeight()(0,0);
   }
   // Check if the values are positive

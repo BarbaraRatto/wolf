@@ -32,77 +32,77 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   double default_duty_factor = 0.3;
   if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_duty_factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_duty_factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
   }
   double default_swing_frequency = 3.0; // [Hz]
   if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_swing_frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_swing_frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
   }
   double default_contact_threshold = 50.0; // [N]
   if (!controller_nh.getParam("default_contact_threshold", default_contact_threshold))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
   }
   double default_step_height = 0.05; // [m]
   if (!controller_nh.getParam("default_step_height", default_step_height))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_step_height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_step_height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
   }
   double max_step_height = 0.15; // [m]
   if (!controller_nh.getParam("max_step_height", max_step_height))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_step_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_step_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
   }
   double max_step_length = 0.5; // [m]
   if (!controller_nh.getParam("max_step_length", max_step_length))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_step_length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_step_length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
   }
   double default_step_reflex_contact_threshold = default_contact_threshold/3.0; // [N]
   if (!controller_nh.getParam("default_step_reflex_contact_threshold", default_step_reflex_contact_threshold))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_step_reflex_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_contact_threshold);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_step_reflex_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_contact_threshold);
   }
   double default_step_reflex_max_retraction = max_step_height/2.0; // [m]
   if (!controller_nh.getParam("default_step_reflex_max_retraction", default_step_reflex_max_retraction))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_step_reflex_max_retraction given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_max_retraction);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_step_reflex_max_retraction given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_max_retraction);
   }
   double max_base_height = 0.5; // [m]
   if (!controller_nh.getParam("max_base_height", max_base_height))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
   }
   double max_base_roll = 2*M_PI; // [rad]
   if (!controller_nh.getParam("max_base_roll", max_base_roll))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_roll);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_roll);
   }
   double max_base_pitch = 2*M_PI; // [rad]
   if (!controller_nh.getParam("max_base_pitch", max_base_pitch))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_pitch);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_pitch);
   }
   double min_base_roll = -2*M_PI; // [rad]
   if (!controller_nh.getParam("min_base_roll", min_base_roll))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No min_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_roll);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No min_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_roll);
   }
   double min_base_pitch = -2*M_PI; // [rad]
   if (!controller_nh.getParam("min_base_pitch", min_base_pitch))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
   }
   double default_base_linear_velocity, default_base_linear_velocity_x, default_base_linear_velocity_y, default_base_linear_velocity_z;
   default_base_linear_velocity = default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = 0.5; // [m/s]
   if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, looking for default_base_linear_velocity_[x,y,z].", controller_nh.getNamespace().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, looking for default_base_linear_velocity_[x,y,z].", controller_nh.getNamespace().c_str());
     if(!controller_nh.getParam("default_base_linear_velocity_x", default_base_linear_velocity_x) ||
        !controller_nh.getParam("default_base_linear_velocity_y", default_base_linear_velocity_y) ||
        !controller_nh.getParam("default_base_linear_velocity_z", default_base_linear_velocity_z)  )
-      ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity_[x,y,z] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_linear_velocity_[x,y,z] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
   }
   else
     default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = default_base_linear_velocity;
@@ -110,11 +110,11 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   default_base_angular_velocity = default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = 0.5; // [rad/s]
   if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, looking for default_base_angular_velocity_[roll,pitch,yaw].", controller_nh.getNamespace().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, looking for default_base_angular_velocity_[roll,pitch,yaw].", controller_nh.getNamespace().c_str());
     if(!controller_nh.getParam("default_base_angular_velocity_roll", default_base_angular_velocity_roll)   ||
        !controller_nh.getParam("default_base_angular_velocity_pitch", default_base_angular_velocity_pitch) ||
        !controller_nh.getParam("default_base_angular_velocity_yaw", default_base_angular_velocity_yaw)     )
-      ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity_[roll,pitch,yaw] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_angular_velocity_[roll,pitch,yaw] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
   }
   else
     default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = default_base_angular_velocity;
@@ -122,22 +122,22 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   double default_friction_cones_mu = 0.7;
   if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
   }
   double default_cutoff_freq_gyroscope = 300.; // [Hz]
   if (!controller_nh.getParam("default_cutoff_freq_gyroscope", default_cutoff_freq_gyroscope))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
   }
   double default_cutoff_freq_accelerometer = 300.; // [Hz]
   if (!controller_nh.getParam("default_cutoff_freq_accelerometer", default_cutoff_freq_accelerometer))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_accelerometer given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_accelerometer);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_cutoff_freq_accelerometer given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_accelerometer);
   }
   double default_cutoff_freq_qdot = 300.; // [Hz]
   if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
   }
 
   bool activate_com_z = true;
@@ -170,13 +170,13 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
 
   std::string estimation_position_type;
   if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
-    ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
   else
     controller_->getStateEstimator()->setPositionEstimationType(estimation_position_type);
 
   std::string estimation_orientation_type;
   if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
-    ROS_WARN_NAMED(CLASS_NAME,"No estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
   else
     controller_->getStateEstimator()->setOrientationEstimationType(estimation_orientation_type);
 
@@ -232,16 +232,16 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   {
     if (!controller_nh.getParam("gains/Kp_leg/" + wolf_controller::_joints_prefix[i] , Kp_leg(i)))
     {
-      ROS_WARN_NAMED(CLASS_NAME,"No default Kp_leg_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default Kp_leg_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
     }
     if (!controller_nh.getParam("gains/Kd_leg/" + wolf_controller::_joints_prefix[i] , Kd_leg(i)))
     {
-      ROS_WARN_NAMED(CLASS_NAME,"No default Kd_leg_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default Kd_leg_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
     }
     // Check if the values are positive
     if(Kp_leg(i)<0.0 || Kd_leg(i)<0.0)
     {
-      ROS_WARN_NAMED(CLASS_NAME,"Kp_leg and Kd_leg gains must be positive!");
+      ROS_DEBUG_NAMED(CLASS_NAME,"Kp_leg and Kd_leg gains must be positive!");
       Kp_leg(i) = Kd_leg(i) = 1.0;
     }
   }
@@ -261,16 +261,16 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
       {
         if (!controller_nh.getParam("gains/Kp_arm/j" + std::to_string(i) , Kp_arm(i)))
         {
-          ROS_WARN_NAMED(CLASS_NAME,"No default Kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+          ROS_DEBUG_NAMED(CLASS_NAME,"No default Kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
         }
         if (!controller_nh.getParam("gains/Kd_arm/j"  + std::to_string(i) , Kd_arm(i)))
         {
-          ROS_WARN_NAMED(CLASS_NAME,"No default Kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+          ROS_DEBUG_NAMED(CLASS_NAME,"No default Kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
         }
         // Check if the values are positive
         if(Kp_arm(i)<0.0 || Kd_arm(i)<0.0)
         {
-          ROS_WARN_NAMED(CLASS_NAME,"Kp_arm and Kd_arm gains must be positive!");
+          ROS_DEBUG_NAMED(CLASS_NAME,"Kp_arm and Kd_arm gains must be positive!");
           Kp_arm(i) = Kd_arm(i) = 1.0;
         }
       }
