@@ -1,25 +1,21 @@
 <?xml version="1.0" ?>
 <launch>
 
-   <arg name="robot_name"        default="ras_1"/>
-   <arg name="controller_period" default="0.001"/>
+    <arg name="period"     default="0.001"/>
 
-   <param name="robot_name" type="str"  value="$(arg robot_name)" />
-   <param name="controller_period"      value="$(arg controller_period)"/>
+    <param name="period"     value="$(arg period)"/>
+    <param name="robot_name" value=""/>
 
-   <!-- Load the robot -->
-   <include file="$(find wolf_description_utils)/launch/upload.launch">
-       <arg name="robot_name"        value="$(arg robot_name)" />
-       <arg name="controller_period" value="$(arg controller_period)" />
-   </include>
+    <!-- Load the robot -->
+    <include file="$(find wolf_description_utils)/launch/upload.launch">
+        <arg name="period" value="$(arg period)" />
+    </include>
 
-   <group ns="$(arg robot_name)">
-       <!-- Controller test -->
-       <test test-name="wolf_controller_test"
-            pkg="wolf_controller"
-            type="test_controller"
-            time-limit="80.0">
-       </test>
-   </group>
+    <!-- Controller test -->
+    <test test-name="wolf_controller_test"
+         pkg="wolf_controller"
+         type="test_controller"
+         time-limit="80.0">
+    </test>
 
 </launch>
