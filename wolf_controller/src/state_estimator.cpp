@@ -11,6 +11,7 @@
 
 using namespace rt_logger;
 using namespace wolf_controller_utils;
+using namespace wolf_estimation;
 
 namespace wolf_controller {
 
@@ -84,7 +85,7 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   Eigen::Matrix6d contact_matrix;
   contact_matrix.setZero();
   contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
-  qp_estimation_ = std::make_shared<OpenSoT::floating_base_estimation::qp_estimation>(robot_model_,foot_names,contact_matrix);
+  qp_estimation_ = std::make_shared<qp_estimation>(robot_model_,foot_names,contact_matrix);
 
   int n_dofs = robot_model_->getJointNum();
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));

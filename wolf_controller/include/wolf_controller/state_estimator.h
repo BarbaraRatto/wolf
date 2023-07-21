@@ -14,9 +14,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
-#include <OpenSoT/floating_base_estimation/qp_estimation.h>
 #include <wolf_controller/force_estimator.h>
 #include <wolf_controller/quadruped_robot.h>
+#include <wolf_estimation/qp_estimation.h>
 
 // WoLF utils
 #include <wolf_controller_utils/tools.h>
@@ -212,7 +212,7 @@ private:
     std::atomic<bool> use_external_contact_states_;
 
     /** @brief Base estimation */
-    OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
+    wolf_estimation::qp_estimation::Ptr qp_estimation_;
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
