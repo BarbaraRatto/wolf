@@ -313,10 +313,16 @@ void IDProblem::init(ros::NodeHandle& nh, const double& dt)
   qddot_.setZero(model_->getJointNum());
   contact_wrenches_.reserve(contact_names_.size());
 
-  wpg_solver_ = std::make_unique<OpenSoT::solvers::iHQP>(wpg_stack_->getStack(), wpg_stack_->getBounds(),1.0);
-  mpc_solver_ = std::make_unique<OpenSoT::solvers::iHQP>(mpc_stack_->getStack(), mpc_stack_->getBounds(),1.0);
-  // ,OpenSoT::solvers::wpg_solver_back_ends::OSQP);
-  // ,OpenSoT::solvers::wpg_solver_back_ends::eiQuadProg);
+  wpg_solver_ = std::make_unique<OpenSoT::solvers::iHQP>(wpg_stack_->getStack(), wpg_stack_->getBounds(),1.0,OpenSoT::solvers::solver_back_ends::eiQuadProg);
+  mpc_solver_ = std::make_unique<OpenSoT::solvers::iHQP>(mpc_stack_->getStack(), mpc_stack_->getBounds(),1.0,OpenSoT::solvers::solver_back_ends::eiQuadProg);
+  // Possible solvers
+  //,OpenSoT::solvers::wpg_solver_back_ends::qpOASES   );
+  //,OpenSoT::solvers::wpg_solver_back_ends::OSQP      );
+  //,OpenSoT::solvers::wpg_solver_back_ends::GLPK      );
+  //,OpenSoT::solvers::wpg_solver_back_ends::eiQuadProg);
+  //,OpenSoT::solvers::wpg_solver_back_ends::ODYS      );
+  //,OpenSoT::solvers::wpg_solver_back_ends::qpSWIFT   );
+  //,OpenSoT::solvers::wpg_solver_back_ends::proxQP    );
 
   ROS_INFO_NAMED(CLASS_NAME,"Solver created");
 }
