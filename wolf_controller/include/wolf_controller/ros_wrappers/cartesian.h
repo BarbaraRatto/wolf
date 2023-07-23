@@ -44,31 +44,6 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 class Cartesian : public OpenSoT::tasks::acceleration::Cartesian, public TaskRosWrapperInterface<wolf_msgs::CartesianTask>
 {
 
-  template <class Marker_Type>
-    inline void EigenAffine3dToVisualizationPose(const Eigen::Affine3d& Frame, Marker_Type& Marker)
-    {
-        Marker.pose.position.x = Frame.translation().x();
-        Marker.pose.position.y = Frame.translation().y();
-        Marker.pose.position.z = Frame.translation().z();
-        Eigen::Quaterniond q(Frame.linear());
-        Marker.pose.orientation.x = q.x();
-        Marker.pose.orientation.y = q.y();
-        Marker.pose.orientation.z = q.z();
-        Marker.pose.orientation.w = q.w();
-    }
-
-    template <class Marker_Type>
-    inline void PoseToVisualizationPose(const geometry_msgs::Pose& Frame, Marker_Type& Marker)
-    {
-        Marker.pose.position.x = Frame.position.x;
-        Marker.pose.position.y = Frame.position.y;
-        Marker.pose.position.z = Frame.position.z;
-        Marker.pose.orientation.x = Frame.orientation.x;
-        Marker.pose.orientation.y = Frame.orientation.y;
-        Marker.pose.orientation.z = Frame.orientation.z;
-        Marker.pose.orientation.w = Frame.orientation.w;
-    }
-
 public:
 
   typedef std::shared_ptr<Cartesian> Ptr;

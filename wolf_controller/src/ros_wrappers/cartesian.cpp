@@ -7,6 +7,9 @@
 
 // WoLF
 #include <wolf_controller/ros_wrappers/cartesian.h>
+#include <wolf_controller_utils/converters.h>
+
+using namespace wolf_controller_utils;
 
 Cartesian::Cartesian(ros::NodeHandle& nh,
                      const std::string task_id,
@@ -277,7 +280,7 @@ void Cartesian::makeMarker(const std::string &distal_link, const std::string &ba
   }
   Eigen::Affine3d start_pose;
   getActualPose(start_pose);
-  EigenAffine3dToVisualizationPose(start_pose, interactive_marker_);
+  eigenAffine3dToVisualizationPose(start_pose, interactive_marker_);
   interactive_marker_server_.insert(interactive_marker_,boost::bind(&Cartesian::processFeedback, this, _1));
 }
 
@@ -418,7 +421,7 @@ visualization_msgs::Marker Cartesian::makeSTL( visualization_msgs::InteractiveMa
   }
 
   Eigen::Affine3d&& actual_pose = getPose(controlled_link->name, link->name);
-  EigenAffine3dToVisualizationPose(actual_pose,marker_);
+  eigenAffine3dToVisualizationPose(actual_pose,marker_);
 
   marker_.color.r = 0.5;
   marker_.color.g = 0.5;
@@ -598,7 +601,7 @@ void Cartesian::resetLastWayPoints(const visualization_msgs::InteractiveMarkerFe
   {
     if(interactive_marker_server_.empty())
     {
-      PoseToVisualizationPose(waypoints_.back(),interactive_marker_);
+      poseToVisualizationPose(waypoints_.back(),interactive_marker_);
       interactive_marker_server_.insert(interactive_marker_,boost::bind(&Cartesian::processFeedback,this,_1));
       menu_handler_.reApply(interactive_marker_server_);
       interactive_marker_server_.applyChanges();
@@ -668,7 +671,7 @@ bool Cartesian::spawnMarker()
   {
     Eigen::Affine3d start_pose;
     getActualPose(start_pose);
-    EigenAffine3dToVisualizationPose(start_pose,interactive_marker_);
+    eigenAffine3dToVisualizationPose(start_pose,interactive_marker_);
     interactive_marker_server_.insert(interactive_marker_,boost::bind(&Cartesian::processFeedback, this, _1));
     menu_handler_.reApply(interactive_marker_server_);
     interactive_marker_server_.applyChanges();
