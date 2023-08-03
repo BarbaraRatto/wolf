@@ -285,7 +285,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<SpaceJoyHandler>(controller_nh,this)); // Space joy
     else if(input_device == "keyboard")
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
-    devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
+    devices_.addDevice(DevicesHandler::priority_t::MEDIUM,std::make_shared<TwistHandler>(controller_nh,this,"priority_twist")); // Twist
+    devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this,"twist")); // Twist
 
     bool publish_odom_tf = false; // On/Off
     controller_nh.getParam("publish_odom_tf", publish_odom_tf);
