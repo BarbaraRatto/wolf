@@ -7,6 +7,10 @@
     <arg name="sensors"            default="false" />
     <arg name="period"             default="0.001" />
     <arg name="arm_name"           default="" />
+    <arg name="max_vel_x"          default="0.7"/>
+    <arg name="max_vel_y"          default="0.5"/>
+    <arg name="max_vel_z"          default="0.5"/>
+    <arg name="max_vel_yaw"        default="0.5"/>
 
     <!-- Input device argument -->
     <arg name="input_device" default="keyboard"/>
