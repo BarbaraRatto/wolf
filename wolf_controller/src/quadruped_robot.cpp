@@ -100,15 +100,22 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   if(!RigidBodyDynamics::Addons::URDFReadFromString(getUrdfString().c_str(), &virtual_model_, isFloatingBase(), false))
       throw std::runtime_error("Can not initialize virtual model");
 
-  const srdf_advr::Model& srdf_model = getSrdf();
+  const auto& srdf_model = getSrdf();
+  const auto& urdf_model = getUrdf();
 
   robot_name_ = srdf_model.getName();
+
+  std::vector<urdf::LinkSharedPtr> links;
+  urdf_model.getLinks(links);
+  for(unsigned int i=0;i < links.size(); i++)
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"URDF Link["<<i<<"]: "<< links[i]->name);
 
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
     const auto& joints = srdf_model.getGroups()[i].joints_;
     const auto& links  = srdf_model.getGroups()[i].links_;
+
     // Parse the foot tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("leg") != std::string::npos)
     {
@@ -297,7 +304,6 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
 bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)
 {
-
     int body_id = linkId(source_frame);
     if( body_id == -1 ){
         Logger::error() << "in " << __func__ << ": link " << source_frame << " not defined in RBDL model!" << Logger::endl();
