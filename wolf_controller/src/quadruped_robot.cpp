@@ -793,4 +793,15 @@ Eigen::VectorXd QuadrupedRobot::getLegJointValues(const Eigen::VectorXd& joints)
   return joints_out;
 }
 
+Eigen::VectorXd QuadrupedRobot::getArmJointValues(const Eigen::VectorXd& joints)
+{
+  Eigen::VectorXd joints_out;
+  joints_out.resize(joint_arm_idx_.size()+FLOATING_BASE_DOFS);
+  for(unsigned int i=0; i<FLOATING_BASE_DOFS; i++)
+    joints_out(i) = joints(i);
+  for(unsigned int i=FLOATING_BASE_DOFS; i<joint_arm_idx_.size(); i++)
+    joints_out(i) = joints(joint_arm_idx_[i]);
+  return joints_out;
+}
+
 };

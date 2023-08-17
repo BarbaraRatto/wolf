@@ -56,6 +56,7 @@ public:
   const std::string& getImuSensorName() const;
   const std::string& getRobotName() const;
   Eigen::VectorXd getLegJointValues(const Eigen::VectorXd& joints);
+  Eigen::VectorXd getArmJointValues(const Eigen::VectorXd& joints);
 
   const std::vector<unsigned int> &getLimbJointsIds(const std::string& limb_name);
 
