@@ -55,6 +55,7 @@ public:
   const std::string& getBaseLinkName() const;
   const std::string& getImuSensorName() const;
   const std::string& getRobotName() const;
+  Eigen::VectorXd getLegJointValues(const Eigen::VectorXd& joints);
 
   const std::vector<unsigned int> &getLimbJointsIds(const std::string& limb_name);
 
@@ -241,11 +242,16 @@ private:
   std::string robot_name_;
 
   limb_joint_idxs_map_t joint_limb_idx_;
+  std::vector<unsigned int> joint_leg_idx_;
+  std::vector<unsigned int> joint_arm_idx_;
 
   joint_idxs_map_t joint_idx_;
 
-  limb_joint_names_map_t joint_legs_;
-  limb_joint_names_map_t joint_arms_;
+  limb_joint_names_map_t joint_leg_names_;
+  limb_joint_names_map_t joint_arm_names_;
+
+  Eigen::VectorXd joint_legs_;
+  Eigen::VectorXd joint_arms_;
 
   unsigned int n_legs_;
   unsigned int n_arms_;

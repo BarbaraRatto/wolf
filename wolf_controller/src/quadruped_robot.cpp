@@ -123,7 +123,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         foot_names_.push_back(chains[j].second);
       for(unsigned int j=0;j<joints.size();j++)
-        joint_legs_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
+        joint_leg_names_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
     }
     // Parse the arm tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("arm") != std::string::npos)
@@ -132,7 +132,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         ee_names_.push_back(chains[j].second);
       for(unsigned int j=0;j<joints.size();j++)
-        joint_arms_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
+        joint_arm_names_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
     }
     // Parse the hip tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("hip") != std::string::npos)
@@ -183,23 +183,25 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   for(unsigned int i=0;i<leg_names_.size();i++)
   {
-    for(unsigned int j=0;j<joint_legs_[leg_names_[i]].size();j++)
+    for(unsigned int j=0;j<joint_leg_names_[leg_names_[i]].size();j++)
     {
-      std::string current_joint_name = joint_legs_[leg_names_[i]].at(j);
+      std::string current_joint_name = joint_leg_names_[leg_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
       joint_limb_idx_[leg_names_[i]].push_back(idx);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
+      joint_leg_idx_.push_back(idx);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_leg_names_[leg_names_[i]][j] << " " << idx);
     }
   }
 
   for(unsigned int i=0;i<arm_names_.size();i++)
   {
-    for(unsigned int j=0;j<joint_arms_[arm_names_[i]].size();j++)
+    for(unsigned int j=0;j<joint_arm_names_[arm_names_[i]].size();j++)
     {
-      std::string current_joint_name = joint_arms_[arm_names_[i]].at(j);
+      std::string current_joint_name = joint_arm_names_[arm_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
       joint_limb_idx_[arm_names_[i]].push_back(idx);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
+      joint_arm_idx_.push_back(idx);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arm_names_[arm_names_[i]][j] << " " << idx);
     }
   }
 
@@ -780,5 +782,15 @@ const std::string& QuadrupedRobot::getRobotName() const
   return robot_name_;
 }
 
+Eigen::VectorXd QuadrupedRobot::getLegJointValues(const Eigen::VectorXd& joints)
+{
+  Eigen::VectorXd joints_out;
+  joints_out.resize(joint_leg_idx_.size()+FLOATING_BASE_DOFS);
+  for(unsigned int i=0; i<FLOATING_BASE_DOFS; i++)
+    joints_out(i) = joints(i);
+  for(unsigned int i=FLOATING_BASE_DOFS; i<joint_leg_idx_.size(); i++)
+    joints_out(i) = joints(joint_leg_idx_[i]);
+  return joints_out;
+}
 
 };
