@@ -474,11 +474,11 @@ visualization_msgs::Marker Cartesian::makeSTL( visualization_msgs::InteractiveMa
 void Cartesian::makeMenu()
 {
 
-  continuous_control_entry_ = menu_handler_.insert("Continuous Ctrl",boost::bind(&Cartesian::setContinuousCtrl,this,_1));
-  menu_handler_.setCheckState(continuous_control_entry_, interactive_markers::MenuHandler::UNCHECKED);
+  continuous_control_entry_ = menu_handler_.insert("Marker Ctrl",boost::bind(&Cartesian::setContinuousCtrl,this,_1));
+  menu_handler_.setCheckState(continuous_control_entry_, interactive_markers::MenuHandler::CHECKED);
 
   way_point_entry_ = menu_handler_.insert("Add WayPoint");
-  menu_handler_.setVisible(way_point_entry_, true);
+  menu_handler_.setVisible(way_point_entry_, false);
 
   T_entry_ = menu_handler_.insert(way_point_entry_, "T [sec]");
   for (unsigned int i = 0; i < 10; i++ )
@@ -706,6 +706,7 @@ void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFee
 
   clearMarker();
   spawnMarker();
+  publishWP(waypoints_);
 
   menu_handler_.reApply(interactive_marker_server_);
   interactive_marker_server_.applyChanges();
