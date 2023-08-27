@@ -139,6 +139,11 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   {
     ROS_DEBUG_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
   }
+  double default_push_recovery_sensibility = 0.0; // [0.0,1.0]
+  if (!controller_nh.getParam("default_push_recovery_sensibility", default_push_recovery_sensibility))
+  {
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_push_recovery_sensibility given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_push_recovery_sensibility);
+  }
 
   bool activate_com_z = true;
   controller_nh.getParam("activate_com_z", activate_com_z);
@@ -199,6 +204,7 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   controller_->getFootholdsPlanner()->setMaxBasePitch(max_base_pitch);
   controller_->getFootholdsPlanner()->setMinBaseRoll(min_base_roll);
   controller_->getFootholdsPlanner()->setMinBasePitch(min_base_pitch);
+  controller_->getFootholdsPlanner()->setPushRecoverySensibility(default_push_recovery_sensibility);
 
   // ID problem
   controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
