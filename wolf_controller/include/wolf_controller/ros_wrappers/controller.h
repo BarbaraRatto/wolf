@@ -29,7 +29,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_msgs/FrictionCones.h>
 #include <wolf_msgs/CapturePoint.h>
 #include <wolf_msgs/ControllerState.h>
-#include <wolf_msgs/float32.h>
+#include <wolf_msgs/Float32.h>
 
 // WoLF
 #include <wolf_controller/controller.h>
@@ -55,15 +55,15 @@ public:
 
     bool decreaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
-    bool setSwingFrequencyCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res);
+    bool setSwingFrequencyCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res);
 
-    bool setDutyFactorCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res);
+    bool setDutyFactorCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res);
 
     bool activatePushRecoveryCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
     bool activateStepReflexCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
-    bool setStepHeightCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res);
+    bool setStepHeightCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res);
 
     bool increaseStepHeightCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 

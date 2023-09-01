@@ -410,7 +410,7 @@ bool ControllerRosWrapper::decreaseSwingFrequencyCB(std_srvs::Trigger::Request& 
   return res.success;
 }
 
-bool ControllerRosWrapper::setSwingFrequencyCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
+bool ControllerRosWrapper::setSwingFrequencyCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res)
 {
   res.success = true;
   if(req.data >= 0)
@@ -420,7 +420,7 @@ bool ControllerRosWrapper::setSwingFrequencyCB(wolf_msgs::float32Request& req, w
   return res.success;
 }
 
-bool ControllerRosWrapper::setDutyFactorCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
+bool ControllerRosWrapper::setDutyFactorCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res)
 {
   res.success = true;
   if(req.data >= 0)
@@ -444,7 +444,7 @@ bool ControllerRosWrapper::activateStepReflexCB(std_srvs::Trigger::Request& req,
   return res.success;
 }
 
-bool ControllerRosWrapper::setStepHeightCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
+bool ControllerRosWrapper::setStepHeightCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res)
 {
   res.success = true;
   if(req.data >= 0)
