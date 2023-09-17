@@ -826,7 +826,7 @@ void Controller::updateWpg(const double &dt)
   foot_holds_planner_->update(dt);
 
   // Update the CoM position and velocity reference
-  com_planner_->update();
+  com_planner_->update(dt);
 
   // Update the base references based on the com desired position
   updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
