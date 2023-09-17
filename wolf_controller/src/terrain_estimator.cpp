@@ -47,8 +47,8 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 
     // NOTE: I commented out this line because it was causing huge steps in the terrain height estimation.
     // This can be a real problem when going up stairs.
-    //if(update_ == true)
-    //{
+    if(update_ == true)
+    {
 
       // 2 - Update A and b with the feet position
       update();
@@ -76,7 +76,7 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 
       // Perform only one update per touch down
       update_ = false;
-    //}
+    }
   }
 
   // 5 - Filter
