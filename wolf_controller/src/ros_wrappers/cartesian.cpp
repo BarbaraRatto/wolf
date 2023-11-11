@@ -346,7 +346,7 @@ void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
   tf::twistMsgToEigen(msg->twist,twist_reference);
 
   // Check if reference frame changed
-  if(msg->header.frame_id != "" && msg->header.frame_id != getBaseLink())
+  if(msg->header.frame_id != "" && msg->header.frame_id != getBaseLink() && OPTIONS.set_ext_reference)
     setBaseLink(msg->header.frame_id);
 
   buffer_reference_pose_.writeFromNonRT(pose_reference);
