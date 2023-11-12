@@ -698,7 +698,7 @@ void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& p
 
     // base orientation (ZYX)
     base_rpy_ = wolf_controller_utils::rotToRpy(tmp_affine3d_.linear());
-    base_rpy_ = wolf_controller_utils::unwrap(base_rpy_prev_,base_rpy_);
+    wolf_controller_utils::unwrap(base_rpy_prev_,base_rpy_);
     mpc_observation_pub_->msg_.state.value[9]  = base_rpy_.z();
     mpc_observation_pub_->msg_.state.value[10] = base_rpy_.y();
     mpc_observation_pub_->msg_.state.value[11] = base_rpy_.x();
