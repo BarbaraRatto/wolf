@@ -22,6 +22,10 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
 {
   controller_ = controller_ptr;
 
+  // Init
+  base_rpy_.fill(0.0);
+  base_rpy_prev_.fill(0.0);
+
   // Set some ROS params
   controller_nh.setParam("robot_base_name",controller_ptr->getRobotModel()->getBaseLinkName());
   controller_nh.setParam("robot_foot_names",controller_ptr->getRobotModel()->getFootNames());
@@ -692,11 +696,13 @@ void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& p
     mpc_observation_pub_->msg_.state.value[7] = tmp_affine3d_.translation().y();
     mpc_observation_pub_->msg_.state.value[8] = tmp_affine3d_.translation().z();
 
-    // base orientation (double check that)
-    tmp_vector3d_ = wolf_controller_utils::rotToRpy(tmp_affine3d_.linear());
-    mpc_observation_pub_->msg_.state.value[9]  = tmp_vector3d_.z();
-    mpc_observation_pub_->msg_.state.value[10] = tmp_vector3d_.y();
-    mpc_observation_pub_->msg_.state.value[11] = tmp_vector3d_.x();
+    // base orientation (ZYX)
+    base_rpy_ = wolf_controller_utils::rotToRpy(tmp_affine3d_.linear());
+    base_rpy_ = wolf_controller_utils::unwrap(base_rpy_prev_,base_rpy_);
+    mpc_observation_pub_->msg_.state.value[9]  = base_rpy_.z();
+    mpc_observation_pub_->msg_.state.value[10] = base_rpy_.y();
+    mpc_observation_pub_->msg_.state.value[11] = base_rpy_.x();
+    base_rpy_prev_ = base_rpy_;
 
     // joint positions (check the order, also be sure that we are not taking the arm joints)
     controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);

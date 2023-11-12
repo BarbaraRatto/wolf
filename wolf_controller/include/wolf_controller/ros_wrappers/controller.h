@@ -129,6 +129,10 @@ protected:
     Eigen::Vector3d tmp_vector3d_;
     Eigen::VectorXd tmp_vectorXd_;
 
+    /** @brief angles variables */
+    Eigen::Vector3d base_rpy_;
+    Eigen::Vector3d base_rpy_prev_;
+
 };
 
 #endif // ROS_WRAPPERS_CONTROLLER_H

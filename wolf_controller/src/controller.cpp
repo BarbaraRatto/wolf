@@ -694,12 +694,12 @@ void Controller::updateStateMachine(const double &dt)
           previous_mode_ = Controller::mode_t::WPG;
           break;
         case Controller::mode_t::EXT:
-          // TODO
+          foot_holds_planner_->update(dt,robot_model_->getBasePoseInWorld().translation(), robot_model_->getBaseRotationInWorldRPY()); 
           id_prob_->setControlMode(IDProblem::mode_t::EXT);
           previous_mode_ = Controller::mode_t::EXT;
           break;
         case Controller::mode_t::MPC:
-          // TODO
+          foot_holds_planner_->update(dt,robot_model_->getBasePoseInWorld().translation(), robot_model_->getBaseRotationInWorldRPY()); 
           id_prob_->setControlMode(IDProblem::mode_t::MPC);
           previous_mode_ = Controller::mode_t::MPC;
           break;

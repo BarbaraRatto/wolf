@@ -480,26 +480,33 @@ void IDProblem::update()
       wrenches_lims_->getWrenchLimits(tmp_map.first)->setWrenchLimits(wrench_lower_lims_,wrench_upper_lims_);
   }
 
-  // Activate or deactivate the external references (FIXME)
+  // When switching mode initialize the wrenches and base and reset the tasks
+  // and activate or deactivate the external references
   if(change_control_mode_)
   {
     if(control_mode_ == EXT)
     {
-      // When switching to EXT mode initialize the wrenches and base and reset the tasks
+      ROS_INFO("Change control mode to EXT");
       for (unsigned int i=0; i<foot_names_.size(); i++)
       {
         wrenches_[foot_names_[i]]->setReference(contact_wrenches_[i]);
-        // Set all feet ready to swing
-        feet_[foot_names_[i]]->setBaseLink(WORLD_FRAME_NAME);
         feet_[foot_names_[i]]->setLambda(1.,1.);
       }
       waist_->setReference(model_->getBasePoseInWorld());
-
       reset();
       activateExternalReferences(true);
     }
-    else
-    {
+    else if (control_mode_ == WPG)
+    { 
+      ROS_INFO("Change control mode to WPG");
+      for (unsigned int i=0; i<foot_names_.size(); i++)
+      {
+        wrenches_[foot_names_[i]]->setReference(contact_wrenches_[i]);
+        feet_[foot_names_[i]]->setBaseLink(WORLD_FRAME_NAME);
+        feet_[foot_names_[i]]->setLambda(0.,0.);
+      }
+      waist_->setReference(model_->getBasePoseInWorld());
+      reset();
       activateExternalReferences(false);
     }
   }
