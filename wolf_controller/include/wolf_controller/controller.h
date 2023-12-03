@@ -467,7 +467,8 @@ private:
     wolf_controller_utils::Ramp::Ptr ramp_init_;
     /** @brief State machine support variables */
     std::string mode_string_;
-    mode_t mode_;
+    mode_t current_mode_;
+    mode_t requested_mode_;
     mode_t previous_mode_;
     posture_t posture_;
     double stand_down_starting_height_;

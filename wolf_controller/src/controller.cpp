@@ -76,7 +76,8 @@ Controller::Controller()
     ,publish_odom_tf_(false)
     ,publish_odom_msg_(false)
     ,odom_pub_rate_(250)
-    ,mode_(WPG)
+    ,current_mode_(WPG)
+    ,requested_mode_(WPG)
     ,previous_mode_(WPG)
     ,posture_(DOWN)
 {
@@ -413,13 +414,13 @@ bool Controller::setStepHeight(const double& step_height)
 bool Controller::selectControlMode(const std::string& mode)
 {
   if(mode == "WPG")
-    mode_ = Controller::mode_t::WPG;
+    requested_mode_ = Controller::mode_t::WPG;
   else if(mode == "EXT")
-    mode_ = Controller::mode_t::EXT;
+    requested_mode_ = Controller::mode_t::EXT;
   else if(mode == "MPC")
-    mode_ = Controller::mode_t::MPC;
+    requested_mode_ = Controller::mode_t::MPC;
   else if(mode == "RESET")
-    mode_ = Controller::mode_t::RESET;
+    requested_mode_ = Controller::mode_t::RESET;
   else
   {
     ROS_ERROR_NAMED(CLASS_NAME,"Wrong control mode!");
@@ -432,15 +433,15 @@ bool Controller::selectControlMode(const std::string& mode)
 
 unsigned int Controller::getControlMode()
 {
-  return mode_;
+  return current_mode_;
 }
 
 void Controller::switchControlMode()
 {
-  if(mode_ == Controller::mode_t::WPG)
-    mode_ = Controller::mode_t::EXT;
+  if(requested_mode_ == Controller::mode_t::WPG)
+    requested_mode_ = Controller::mode_t::EXT;
   else
-    mode_ = Controller::mode_t::WPG;
+    requested_mode_ = Controller::mode_t::WPG;
 }
 
 bool Controller::selectPosture(const std::string& posture)
@@ -479,7 +480,7 @@ void Controller::standUp(bool stand_up)
 
 void Controller::resetBase()
 {
-  mode_ = Controller::mode_t::RESET;
+  requested_mode_ = Controller::mode_t::RESET;
 }
 
 void Controller::emergencyStop()
@@ -686,7 +687,10 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::ACTIVE):
 
-        switch(mode_)
+        if(requested_mode_!=current_mode_ && state_estimator_->areAllFeetInContact())
+          current_mode_ = requested_mode_;
+
+        switch(current_mode_)
         {
         case Controller::mode_t::WPG:
           updateWpg(dt);
@@ -716,7 +720,7 @@ void Controller::updateStateMachine(const double &dt)
               std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01
               )
           {
-            mode_ = previous_mode_;
+            current_mode_ = previous_mode_;
             break;
           }
           break;
@@ -1264,7 +1268,7 @@ std::vector<bool>& Controller::getDesiredContactStates()
 
 std::string Controller::getModeAsString()
 {
-  return enumToString(mode_);
+  return enumToString(current_mode_);
 }
 
 std::vector<std::string> Controller::getModesAsString()
