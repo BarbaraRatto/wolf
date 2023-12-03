@@ -36,6 +36,19 @@
     <arg name="publish_odom_msg" default="true" doc="publish nav_msgs/Odometry message from the controller"/>
     <arg name="publish_odom_tf"  default="true" doc="publish the odom tf frame from the controller"/>
 
+    <!-- Planner arguments -->
+    <arg name="launch_planner"  default="false" doc="launch the MPC planner"/>
+
+    <!-- Planner launch file -->
+    <group if="$(arg launch_planner)">
+        <include file="$(find wolf_planner)/launch/launch_planner.launch">
+            <arg name="robot_model"       value="$(arg robot_model)" />
+            <arg name="robot_name"        value="$(arg robot_name)" />
+            <arg name="rviz_gui"          value="false" />
+            <arg name="launch_controller" value="false" />
+        </include>
+    </group>
+
     <!-- Load the robot description and Gazebo -->
     <group if="$(arg gazebo)">
         <include file="$(find wolf_description_utils)/launch/world.launch">
