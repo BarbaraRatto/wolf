@@ -13,99 +13,14 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // WoLF
 #include <wolf_controller/common.h>
 
+// WoLF
+#include <wolf_controller_utils/mux.h>
+
 // STD
 #include <memory>
 #include <algorithm>
 
-class Input
-{
-public:
-
-    Input(const double& T = 2.0) {active_=false;t_=0.0;T_=T;}
-
-    ~Input() {}
-
-    virtual void updateInput()=0;
-
-    virtual void resetInput()=0;
-
-    bool isInputActive()
-    {
-        return active_;
-    };
-
-    void increaseTimer(const double& period)
-    {
-        t_+=period;
-    }
-
-    bool isTimerExpired()
-    {
-        if(t_>=T_)
-            return true;
-        else
-            return false;
-    }
-
-    void activate()
-    {
-        // Reset the timer everytime the input is activated
-        t_  = 0.0;
-        active_ = true;
-    }
-
-    void deactivate()
-    {
-        active_ = false;
-    }
-
-
-private:
-    std::atomic<bool> active_;
-    double t_;
-    double T_;
-};
-
-class Mux
-{
-public:
-
-    typedef std::list<std::pair<unsigned int,Input*> > list_t;
-
-    Mux() {}
-
-    void addInput(unsigned int priority, Input* input)
-    {
-        inputs_.push_back(std::make_pair(priority,input));
-        inputs_.sort();
-    }
-
-    void selectInput(const double& period)
-    {
-        list_t::iterator it;
-        for (it=inputs_.begin(); it!=inputs_.end(); it++)
-        {
-            it->second->increaseTimer(period);
-            if(it->second->isInputActive() || !it->second->isTimerExpired())
-            {
-                it->second->updateInput();
-                it->second->deactivate();
-                break;
-            }
-            else
-            {
-                it->second->resetInput();
-                it->second->updateInput();
-                it->second->deactivate();
-            }
-        }
-    }
-
-private:
-    list_t inputs_;
-};
-
-class DeviceHandlerInterface : public Input
+class DeviceHandlerInterface : public wolf_controller_utils::Input
 {
 
 public:
@@ -194,7 +109,7 @@ public:
 
 private:
     std::vector<DeviceHandlerInterface::Ptr> devices_;
-    Mux mux_;
+    wolf_controller_utils::Mux mux_;
 };
 
 
