@@ -7,7 +7,7 @@
     <arg name="sensors"            default="false" doc="activate robot's sensors"/>
     <arg name="period"             default="0.001" doc="controller period"/>
     <arg name="arm_name"           default=""      doc="[kinova]"/>
-    <arg name="max_vel_x"          default="0.7"   doc="maximum linear velocity x" />
+    <arg name="max_vel_x"          default="0.8"   doc="maximum linear velocity x" />
     <arg name="max_vel_y"          default="0.5"   doc="maximum linear velocity y" />
     <arg name="max_vel_z"          default="0.5"   doc="maximum linear velocity z"/>
     <arg name="max_vel_yaw"        default="0.5"   doc="maximum angular velocity yaw"/>
