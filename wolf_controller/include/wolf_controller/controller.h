@@ -58,7 +58,7 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 public:
 
      enum posture_t {UP=0,DOWN};
-     enum mode_t {WPG=0,EXT,MPC,RESET,N_MODES=5};
+     enum mode_t {WPG=0,EXT,MPC,RESET,N_MODES=4};
 
      const std::string CLASS_NAME = "Controller";
 
