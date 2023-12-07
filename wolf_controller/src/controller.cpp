@@ -268,7 +268,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     solver_failures_cnt_   = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     contact_failures_cnt_  = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     for(unsigned int i=0;i<joint_velocities_.size();i++)
-      velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.1 / period_))));
+      velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_))));
 
     ramp_stand_up_    = std::make_shared<Ramp>(5.0,Ramp::UP);
     ramp_stand_down_  = std::make_shared<Ramp>(5.0,Ramp::DOWN);
