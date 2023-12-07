@@ -866,7 +866,7 @@ bool Controller::performSafetyChecks()
 
   bool ok = true;
 
-  // Check if we have at least one contact with the feet
+  // Check if we have at least one contact with the ground
   auto contacts = state_estimator_->getContacts();
   bool contact = false;
   auto foot_names = robot_model_->getFootNames();
@@ -880,6 +880,18 @@ bool Controller::performSafetyChecks()
   {
     ok = false;
     ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Lost contacts!");
+  }
+
+  // Check the base orientation
+  double roll = robot_model_->getBaseRotationInWorldRPY().x();
+  double pitch = robot_model_->getBaseRotationInWorldRPY().y();
+  if (roll > M_PI_2 || roll < -M_PI_2) {
+    ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Base roll is beyond limits (-M_PI_2,M_PI_2)");
+    ok = false;
+  }
+  if (pitch > M_PI_2 || pitch < -M_PI_2) {
+    ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Base pitch is beyond limits (-M_PI_2,M_PI_2)");
+    ok = false;
   }
 
   // Check if the current joint velocities (only legs for the moment) are valid otherwise set robot state to anomaly
