@@ -493,6 +493,9 @@ void IDProblem::update()
         feet_[foot_names_[i]]->setLambda(1.,1.);
       }
       waist_->setReference(model_->getBasePoseInWorld());
+      model_->getCOM(tmp_vector3d_);
+      tmp_vector3d_1_.setZero();
+      com_->setReference(tmp_vector3d_,tmp_vector3d_1_);
       reset();
       activateExternalReferences(true);
     }
@@ -506,6 +509,9 @@ void IDProblem::update()
         feet_[foot_names_[i]]->setLambda(0.,0.);
       }
       waist_->setReference(model_->getBasePoseInWorld());
+      model_->getCOM(tmp_vector3d_);
+      tmp_vector3d_1_.setZero();
+      com_->setReference(tmp_vector3d_,tmp_vector3d_1_);
       reset();
       activateExternalReferences(false);
     }

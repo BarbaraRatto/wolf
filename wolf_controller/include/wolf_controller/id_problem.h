@@ -384,6 +384,7 @@ private:
     Eigen::Affine3d tmp_affine3d_;
     Eigen::Vector6d tmp_vector6d_;
     Eigen::Vector3d tmp_vector3d_;
+    Eigen::Vector3d tmp_vector3d_1_;
 
 };
 
