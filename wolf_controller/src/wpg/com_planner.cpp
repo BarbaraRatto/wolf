@@ -93,7 +93,7 @@ void ComPlanner::computeComVelocityReference(const double& dt)
 
 void ComPlanner::update(const double& dt)
 {
-  // Update filters
+  // Update filters 
   com_position_ref_filter_.setTimeStep(dt);
   com_velocity_ref_filter_.setTimeStep(dt);
   com_position_ref_filter_.setOmega(2.0*M_PI*filters_cutoff_freq_);
@@ -118,9 +118,22 @@ const Eigen::Vector3d &ComPlanner::getComPosition() const
   return com_position_ref_;
 }
 
-void ComPlanner::resetVelocities()
+void ComPlanner::reset()
+{
+  resetPosition();
+  resetVelocity();
+}
+
+void ComPlanner::resetPosition()
+{
+  robot_model_->getCOM(com_position_ref_);
+  com_position_ref_filter_.reset(com_position_ref_);
+}
+
+void ComPlanner::resetVelocity()
 {
   com_velocity_ref_.setZero();
+  com_velocity_ref_filter_.reset(com_velocity_ref_);
 }
 
 void ComPlanner::setFiltersCutoffFreq(const double &hz)

@@ -44,7 +44,11 @@ public:
 
   const Eigen::Vector3d& getComPosition() const;
 
-  void resetVelocities();
+  void reset();
+
+  void resetVelocity();
+
+  void resetPosition();
 
   void setFiltersCutoffFreq(const double& hz);
 

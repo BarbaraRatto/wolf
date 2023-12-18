@@ -678,7 +678,7 @@ void Controller::updateStateMachine(const double &dt)
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
-          com_planner_->resetVelocities();
+          com_planner_->reset();
           robot_model_->setState(QuadrupedRobot::ACTIVE);
           state_estimator_->startContactComputation();
           break;
@@ -800,6 +800,8 @@ void Controller::init()
     foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
     foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
     foot_holds_planner_->initializeFeetPosition();
+    // CoM planner
+    com_planner_->reset();
     // Filters
     imu_gyroscope_filter_.setTimeStep(period_);
     imu_accelerometer_filter_.setTimeStep(period_);
