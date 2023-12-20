@@ -16,14 +16,16 @@
     <arg name="input_device" default="keyboard"    doc="[ps3/xbox/keyboard/spacemouse]"/>
 
     <!-- Gazebo related arguments -->
-    <arg name="gazebo"        default="true"                                                      doc="start gazebo"/>
-    <arg name="gazebo_debug"  default="false"                                                     doc="activate gazebo debug"/>
-    <arg name="engine"        default="ode"                                                       doc="[ode/bullet/dart/simbody]"/>
-    <arg name="spawn_robot"   default="true"                                                      doc="spawn the robot in gazebo"/>
-    <arg name="initial_xyz"   default="[0,0,0]"                                                   doc="initial robot xyz position in the world"/>
-    <arg name="initial_rpy"   default="[0,0,0]"                                                   doc="initial robot rpy position in the world"/>
-    <arg name="world_name"    default="empty"                                                     doc="load a specific world from wolf_gazebo_resources"/>
-    <arg name="world_file"    default="$(find wolf_navigation_utils)/maps/$(arg world_name).yaml" doc="load a specific world file"/>
+    <arg name="gazebo"        default="true"     doc="start gazebo"/>
+    <arg name="gazebo_debug"  default="false"    doc="activate gazebo debug"/>
+    <arg name="engine"        default="ode"      doc="[ode/bullet/dart/simbody]"/>
+    <arg name="spawn_robot"   default="true"     doc="spawn the robot in gazebo"/>
+    <arg name="initial_xyz"   default="[0,0,0]"  doc="initial robot xyz position in the world"/>
+    <arg name="initial_rpy"   default="[0,0,0]"  doc="initial robot rpy position in the world"/>
+    <arg name="world_name"    default="empty"    doc="load a specific world from wolf_gazebo_resources"/>
+    <arg name="world_file"    default="$(eval find('wolf_gazebo_resources') + '/worlds/' + arg('world_name') + '.world')" doc="load a specific world file"/>
+
+
 
     <!-- GUI related arguments -->
     <arg name="gazebo_gui"      default="true"  doc="start gzclient"/>
