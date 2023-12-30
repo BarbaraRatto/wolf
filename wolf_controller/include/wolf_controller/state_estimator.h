@@ -66,6 +66,8 @@ public:
 
     void setImuGyroscope(const Eigen::Vector3d& imu_gyroscope);
 
+    void setImuAccelerometer(const Eigen::Vector3d& imu_accelerometer);
+
     void setGroundTruthBasePosition(const Eigen::Vector3d& gt_position);
 
     void setGroundTruthBaseOrientation(const Eigen::Quaterniond& gt_orientation);
@@ -73,6 +75,8 @@ public:
     void setGroundTruthBaseLinearVelocity(const Eigen::Vector3d& gt_linear_velocity);
 
     void setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt_angular_velocity);
+
+    void setGroundTruthBaseLinearAcceleration(const Eigen::Vector3d& gt_linear_acceleration);
 
     void setContactState(const std::string& name, const bool& state);
 
@@ -146,6 +150,8 @@ private:
     Eigen::VectorXd joint_efforts_;
     /** @brief IMU Gyroscope */
     Eigen::Vector3d imu_gyroscope_;
+    /** @brief IMU Accelerometer */
+    Eigen::Vector3d imu_accelerometer_;
     /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
     /** @brief Ground Truth position */
@@ -156,6 +162,8 @@ private:
     Eigen::Vector3d gt_linear_velocity_;
     /** @brief IMU Ground Truth angular velocity */
     Eigen::Vector3d gt_angular_velocity_;
+    /** @brief IMU Ground Truth linear acceleration */
+    Eigen::Vector3d gt_linear_acceleration_;
     /** @brief Floating base pose w.r.t world */
     Eigen::Affine3d floating_base_pose_;
     /** @brief Floating base position (x,y,z) w.r.t world */
@@ -211,7 +219,7 @@ private:
 
     std::atomic<bool> use_external_contact_states_;
 
-    /** @brief Base estimation */
+    /** @brief QP base estimation */
     wolf_estimation::qp_estimation::Ptr qp_estimation_;
 
     /** @brief Base estimated height wrt the feet */

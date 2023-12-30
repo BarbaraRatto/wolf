@@ -587,6 +587,7 @@ void Controller::updateStateEstimator(const double &dt)
     {
         state_estimator_->setGroundTruthBasePosition(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearPosition()));
         state_estimator_->setGroundTruthBaseLinearVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearVelocity()));
+        state_estimator_->setGroundTruthBaseLinearAcceleration(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearAcceleration()));
     }
     if(!ground_truth_.getName().empty() && state_estimator_->getOrientationEstimationType() == "ground_truth")
     {
@@ -601,6 +602,7 @@ void Controller::updateStateEstimator(const double &dt)
     {
         state_estimator_->setImuOrientation(imu_orientation_);
         state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
+        state_estimator_->setImuAccelerometer(imu_accelerometer_filt_);
     }
 
     if(use_contact_sensors_)

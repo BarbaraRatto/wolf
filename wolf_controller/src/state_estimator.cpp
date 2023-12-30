@@ -99,8 +99,11 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   gt_orientation_ = Eigen::Quaterniond::Identity();
   gt_linear_velocity_ = Eigen::Vector3d::Zero();
   gt_angular_velocity_= Eigen::Vector3d::Zero();
+  gt_linear_acceleration_ = Eigen::Vector3d::Zero();
   terrain_normal_ << 0,0,1;
   imu_orientation_.normalize();
+  imu_accelerometer_.setZero();
+  imu_gyroscope_.setZero();
   floating_base_velocity_qp_.resize(FLOATING_BASE_DOFS);
   contact_computation_active_ = false;
   estimated_z_ = 0.0;
@@ -211,6 +214,11 @@ void StateEstimator::setImuGyroscope(const Eigen::Vector3d& imu_gyroscope)
   imu_gyroscope_ = imu_gyroscope;
 }
 
+void StateEstimator::setImuAccelerometer(const Eigen::Vector3d& imu_accelerometer)
+{
+  imu_accelerometer_ = imu_accelerometer;
+}
+
 void StateEstimator::setGroundTruthBasePosition(const Eigen::Vector3d& gt_position)
 {
   gt_position_ = gt_position;
@@ -229,6 +237,11 @@ void StateEstimator::setGroundTruthBaseLinearVelocity(const Eigen::Vector3d& gt_
 void StateEstimator::setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt_angular_velocity)
 {
   gt_angular_velocity_ = gt_angular_velocity;
+}
+
+void StateEstimator::setGroundTruthBaseLinearAcceleration(const Eigen::Vector3d& gt_linear_acceleration)
+{
+  gt_linear_acceleration_ = gt_linear_acceleration;
 }
 
 void StateEstimator::setContactState(const std::string &name, const bool &state)
