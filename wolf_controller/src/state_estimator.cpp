@@ -44,6 +44,10 @@ std::string enumToString(const StateEstimator::estimation_t& estimation)
   case StateEstimator::estimation_t::INTEGRATED_LINEAR_VELOCITIES:
     ret = "integrated_linear_velocities";
     break;
+
+  case StateEstimator::estimation_t::KALMAN_FILTER:
+    ret = "kalman_filter";
+    break;
   };
 
   return ret;
@@ -65,6 +69,8 @@ StateEstimator::estimation_t stringToEnum(const std::string& estimation)
     ret = StateEstimator::estimation_t::IMU_MAGNETOMETER;
   else if(estimation == "integrated_linear_velocities")
     ret = StateEstimator::estimation_t::INTEGRATED_LINEAR_VELOCITIES;
+  else if(estimation == "kalman_filter")
+    ret = StateEstimator::estimation_t::KALMAN_FILTER;
   else
     throw std::runtime_error("Wrong estimation type!");
 
@@ -86,6 +92,10 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   contact_matrix.setZero();
   contact_matrix.block(0,0,3,3) << Eigen::Matrix3d::Identity();
   qp_estimation_ = std::make_shared<qp_estimation>(robot_model_,foot_names,contact_matrix);
+
+  // FIXME
+  ros::NodeHandle nh;
+  kf_estimation_ = std::make_shared<KalmanFilterEstimatorPinoccchio>(nh,0.001);
 
   int n_dofs = robot_model_->getJointNum();
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
@@ -206,7 +216,7 @@ void StateEstimator::setTerrainNormal(const Eigen::Vector3d &terrain_normal)
 
 void StateEstimator::setImuOrientation(const Eigen::Quaterniond& imu_orientation)
 {
-  imu_orientation_ = imu_orientation;
+  imu_orientation_ = imu_orientation.normalized();
 }
 
 void StateEstimator::setImuGyroscope(const Eigen::Vector3d& imu_gyroscope)
@@ -453,6 +463,15 @@ void StateEstimator::updateContactState()
     }
 
     qp_estimation_->setContactState(foot_names[i],contact_states_[foot_names[i]]);
+
+    kf_estimation_->updateContact(i,contact_states_[foot_names[i]]);
+
+    Eigen::Vector6d twist;
+    robot_model_->getTwist(joint_positions_,joint_velocities_,foot_names[i],twist);
+
+    kf_estimation_->updateFoot(i,
+                               robot_model_->getFootPositionInWorld(foot_names[i]),
+                               twist.head(3));
   }
 
   // Update contact state for the arm end-effectors
@@ -607,12 +626,28 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_position_.head(2) = floating_base_position_.head(2) + floating_base_velocity_.head(2) * period;  // Integrate x and y
     floating_base_position_(2) = estimated_z_; // Use estimated z
     break;
+  case estimation_t::KALMAN_FILTER:
+    kf_estimation_->updateImu(gt_orientation_,gt_angular_velocity_,gt_linear_acceleration_); // FIXME
+    kf_estimation_->update();
+    floating_base_position_ = kf_estimation_->robot_state_.pos_;
+    floating_base_velocity_.segment(0,3) = kf_estimation_->robot_state_.linear_vel_;
+    break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
     //floating_base_position_.head(2) << gt_position_.head(2);
     // Note: this is the z calculated wrt the base not the one wrt world!
     //floating_base_position_(2) = estimated_z_;
     floating_base_position_ = gt_position_;
+
+    if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
+    {
+      kf_estimation_->updateJoints(joint_positions_,joint_velocities_);
+      //gt_angular_velocity_.setZero();
+      //gt_linear_acceleration_.setZero();
+      //gt_orientation_.setIdentity();
+      kf_estimation_->updateImu(imu_orientation_,imu_gyroscope_,imu_accelerometer_); // FIXME
+      kf_estimation_->update();
+    }
     break;
   default:
     // The base does not move

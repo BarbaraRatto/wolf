@@ -10,13 +10,15 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #ifndef STATE_ESTIMATOR_H
 #define STATE_ESTIMATOR_H
 
+#include <wolf_estimation/kf_estimation.h>
+#include <wolf_estimation/qp_estimation.h>
+#include <wolf_controller/force_estimator.h>
+#include <wolf_controller/quadruped_robot.h>
+
 #include <ros/ros.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
-#include <wolf_controller/force_estimator.h>
-#include <wolf_controller/quadruped_robot.h>
-#include <wolf_estimation/qp_estimation.h>
 
 // WoLF utils
 #include <wolf_controller_utils/tools.h>
@@ -40,7 +42,7 @@ public:
      */
     typedef std::shared_ptr<const StateEstimator> ConstPtr;
 
-    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z,INTEGRATED_LINEAR_VELOCITIES};
+    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z,INTEGRATED_LINEAR_VELOCITIES,KALMAN_FILTER};
 
     StateEstimator(QuadrupedRobot::Ptr robot_model);
 
@@ -221,6 +223,9 @@ private:
 
     /** @brief QP base estimation */
     wolf_estimation::qp_estimation::Ptr qp_estimation_;
+
+    /** @brief KF base estimation */
+    wolf_estimation::KalmanFilterEstimatorPinoccchio::Ptr kf_estimation_;
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
