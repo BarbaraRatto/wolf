@@ -304,6 +304,21 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 #endif
 }
 
+bool QuadrupedRobot::getTwist(const Eigen::VectorXd& q, const Eigen::VectorXd& qd, const std::string& source_frame, Eigen::Vector6d& twist)
+{
+    int body_id = linkId(source_frame);
+    if( body_id == -1 ){
+        Logger::error() << "in " << __func__ << ": link " << source_frame << " not defined in RBDL model!" << Logger::endl();
+        return false;
+    }
+
+    tmp_vector3d_.setZero();
+
+    twist = RigidBodyDynamics::CalcPointVelocity6D(virtual_model_,q,qd,body_id,tmp_vector3d_,true);
+
+    return true;
+}
+
 bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)
 {
     int body_id = linkId(source_frame);

@@ -185,6 +185,16 @@ public:
   */
   bool getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose);
 
+  /**
+  * @brief Computes the twist of the source_frame w.r.t. the world frame
+  *
+  * @param q The joint positions.
+  * @param qd The joint velocities.
+  * @param source_frame The source link name.
+  * @param twist the calculated twist
+  * @return True if source_frame is valid. False otherwise.
+  */
+  bool getTwist(const Eigen::VectorXd& q, const Eigen::VectorXd& qd, const std::string& source_frame, Eigen::Vector6d& twist);
 
   /**
    * @brief Gets the Jacobian of link_name expressed in the world frame, i.e a matrix such that its product with
