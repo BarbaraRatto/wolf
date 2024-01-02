@@ -25,7 +25,14 @@ ComPlanner::ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr fo
 
   update_ = true;
 
-  computeComPositionReference();
+  // Initialize filters
+  filters_cutoff_freq_ = 10.0; // hz
+  com_position_ref_filter_.setTimeStep(_period);
+  com_velocity_ref_filter_.setTimeStep(_period);
+  com_position_ref_filter_.setOmega(2.0*M_PI*filters_cutoff_freq_);
+  com_velocity_ref_filter_.setOmega(2.0*M_PI*filters_cutoff_freq_);
+
+  computeComPositionReference(_period);
 }
 
 void ComPlanner::computeSupportPolygonCenter()
@@ -44,7 +51,7 @@ void ComPlanner::computeSupportPolygonCenter()
   support_polygon_center_ = support_polygon_center_/N_LEGS;
 }
 
-void ComPlanner::computeComPositionReference()
+void ComPlanner::computeComPositionReference(const double& dt)
 {
   // Update the support polygon everytime there is a touchdown
   // or if the robot is standing up or down (because if we
@@ -69,7 +76,7 @@ void ComPlanner::computeComPositionReference()
   com_position_ref_ << support_polygon_center_(0), support_polygon_center_(1), foothold_planner_->getBaseHeight();
 }
 
-void ComPlanner::computeComVelocityReference()
+void ComPlanner::computeComVelocityReference(const double& dt)
 {
 
   //https://kodlab.seas.upenn.edu/uploads/Kod/Schwind95.pdf
@@ -82,13 +89,23 @@ void ComPlanner::computeComVelocityReference()
   //com_velocity_ref_.z() = 0.0; // No height reference, only damping
 
   com_velocity_ref_ = 1.0/foothold_planner_->getVelocityFactor() * com_velocity_ref_;
-
 }
 
-void ComPlanner::update()
+void ComPlanner::update(const double& dt)
 {
-  computeComVelocityReference();
-  computeComPositionReference();
+  // Update filters 
+  com_position_ref_filter_.setTimeStep(dt);
+  com_velocity_ref_filter_.setTimeStep(dt);
+  com_position_ref_filter_.setOmega(2.0*M_PI*filters_cutoff_freq_);
+  com_velocity_ref_filter_.setOmega(2.0*M_PI*filters_cutoff_freq_);
+
+  // Update com pos and vel
+  computeComVelocityReference(dt);
+  computeComPositionReference(dt);
+
+  // Process filters
+  com_position_ref_ = com_position_ref_filter_.process(com_position_ref_);
+  com_velocity_ref_ = com_velocity_ref_filter_.process(com_velocity_ref_);
 }
 
 const Eigen::Vector3d &ComPlanner::getComVelocity() const
@@ -101,9 +118,28 @@ const Eigen::Vector3d &ComPlanner::getComPosition() const
   return com_position_ref_;
 }
 
-void ComPlanner::resetVelocities()
+void ComPlanner::reset()
+{
+  resetPosition();
+  resetVelocity();
+}
+
+void ComPlanner::resetPosition()
+{
+  robot_model_->getCOM(com_position_ref_);
+  com_position_ref_filter_.reset(com_position_ref_);
+}
+
+void ComPlanner::resetVelocity()
 {
   com_velocity_ref_.setZero();
+  com_velocity_ref_filter_.reset(com_velocity_ref_);
+}
+
+void ComPlanner::setFiltersCutoffFreq(const double &hz)
+{
+  if(filters_cutoff_freq_> 0.0)
+    filters_cutoff_freq_ = hz;
 }
 
 }; // namespace

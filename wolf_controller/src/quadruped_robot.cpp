@@ -100,15 +100,22 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   if(!RigidBodyDynamics::Addons::URDFReadFromString(getUrdfString().c_str(), &virtual_model_, isFloatingBase(), false))
       throw std::runtime_error("Can not initialize virtual model");
 
-  const srdf_advr::Model& srdf_model = getSrdf();
+  const auto& srdf_model = getSrdf();
+  const auto& urdf_model = getUrdf();
 
   robot_name_ = srdf_model.getName();
+
+  std::vector<urdf::LinkSharedPtr> links;
+  urdf_model.getLinks(links);
+  for(unsigned int i=0;i < links.size(); i++)
+    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"URDF Link["<<i<<"]: "<< links[i]->name);
 
   for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
   {
     const auto& chains = srdf_model.getGroups()[i].chains_;
     const auto& joints = srdf_model.getGroups()[i].joints_;
     const auto& links  = srdf_model.getGroups()[i].links_;
+
     // Parse the foot tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("leg") != std::string::npos)
     {
@@ -116,7 +123,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         foot_names_.push_back(chains[j].second);
       for(unsigned int j=0;j<joints.size();j++)
-        joint_legs_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
+        joint_leg_names_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
     }
     // Parse the arm tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("arm") != std::string::npos)
@@ -125,7 +132,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
       for(unsigned int j=0;j<chains.size();j++)
         ee_names_.push_back(chains[j].second);
       for(unsigned int j=0;j<joints.size();j++)
-        joint_arms_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
+        joint_arm_names_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
     }
     // Parse the hip tip_link from the SRDF file
     if(srdf_model.getGroups()[i].name_.find("hip") != std::string::npos)
@@ -176,23 +183,25 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
 
   for(unsigned int i=0;i<leg_names_.size();i++)
   {
-    for(unsigned int j=0;j<joint_legs_[leg_names_[i]].size();j++)
+    for(unsigned int j=0;j<joint_leg_names_[leg_names_[i]].size();j++)
     {
-      std::string current_joint_name = joint_legs_[leg_names_[i]].at(j);
+      std::string current_joint_name = joint_leg_names_[leg_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
       joint_limb_idx_[leg_names_[i]].push_back(idx);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_legs_[leg_names_[i]][j] << " " << idx);
+      joint_leg_idx_.push_back(idx);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,leg_names_[i] << " " << joint_leg_names_[leg_names_[i]][j] << " " << idx);
     }
   }
 
   for(unsigned int i=0;i<arm_names_.size();i++)
   {
-    for(unsigned int j=0;j<joint_arms_[arm_names_[i]].size();j++)
+    for(unsigned int j=0;j<joint_arm_names_[arm_names_[i]].size();j++)
     {
-      std::string current_joint_name = joint_arms_[arm_names_[i]].at(j);
+      std::string current_joint_name = joint_arm_names_[arm_names_[i]].at(j);
       int idx = joint_idx_[current_joint_name];
       joint_limb_idx_[arm_names_[i]].push_back(idx);
-      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arms_[arm_names_[i]][j] << " " << idx);
+      joint_arm_idx_.push_back(idx);
+      ROS_DEBUG_STREAM_NAMED(CLASS_NAME,arm_names_[i] << " " << joint_arm_names_[arm_names_[i]][j] << " " << idx);
     }
   }
 
@@ -290,16 +299,28 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   stand_down_height_ =  -stand_down_height_/N_LEGS;
 
 #ifdef RT_GUI
-        // create interface
-        if(RtGuiClient::getIstance().init("wolf_panel","controller",ros::Duration(10.0)))
-          RtGuiClient::getIstance().addLabel(std::string("controller"),std::string("Status"),&robot_state_string_);
+  // create interface
+  RtGuiClient::getIstance().addLabel(std::string(wolf_controller::_rt_gui_group),std::string("Status"),&robot_state_string_);
 #endif
+}
 
+bool QuadrupedRobot::getTwist(const Eigen::VectorXd& q, const Eigen::VectorXd& qd, const std::string& source_frame, Eigen::Vector6d& twist)
+{
+    int body_id = linkId(source_frame);
+    if( body_id == -1 ){
+        Logger::error() << "in " << __func__ << ": link " << source_frame << " not defined in RBDL model!" << Logger::endl();
+        return false;
+    }
+
+    tmp_vector3d_.setZero();
+
+    twist = RigidBodyDynamics::CalcPointVelocity6D(virtual_model_,q,qd,body_id,tmp_vector3d_,true);
+
+    return true;
 }
 
 bool QuadrupedRobot::getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose)
 {
-
     int body_id = linkId(source_frame);
     if( body_id == -1 ){
         Logger::error() << "in " << __func__ << ": link " << source_frame << " not defined in RBDL model!" << Logger::endl();
@@ -776,5 +797,26 @@ const std::string& QuadrupedRobot::getRobotName() const
   return robot_name_;
 }
 
+Eigen::VectorXd QuadrupedRobot::getLegJointValues(const Eigen::VectorXd& joints)
+{
+  Eigen::VectorXd joints_out;
+  joints_out.resize(joint_leg_idx_.size()+FLOATING_BASE_DOFS);
+  for(unsigned int i=0; i<FLOATING_BASE_DOFS; i++)
+    joints_out(i) = joints(i);
+  for(unsigned int i=FLOATING_BASE_DOFS; i<joint_leg_idx_.size(); i++)
+    joints_out(i) = joints(joint_leg_idx_[i]);
+  return joints_out;
+}
+
+Eigen::VectorXd QuadrupedRobot::getArmJointValues(const Eigen::VectorXd& joints)
+{
+  Eigen::VectorXd joints_out;
+  joints_out.resize(joint_arm_idx_.size()+FLOATING_BASE_DOFS);
+  for(unsigned int i=0; i<FLOATING_BASE_DOFS; i++)
+    joints_out(i) = joints(i);
+  for(unsigned int i=FLOATING_BASE_DOFS; i<joint_arm_idx_.size(); i++)
+    joints_out(i) = joints(joint_arm_idx_[i]);
+  return joints_out;
+}
 
 };

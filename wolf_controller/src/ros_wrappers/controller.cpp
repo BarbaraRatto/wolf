@@ -22,81 +22,91 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
 {
   controller_ = controller_ptr;
 
+  // Init
+  base_rpy_.fill(0.0);
+  base_rpy_prev_.fill(0.0);
+
+  // Set some ROS params
+  controller_nh.setParam("robot_base_name",controller_ptr->getRobotModel()->getBaseLinkName());
+  controller_nh.setParam("robot_foot_names",controller_ptr->getRobotModel()->getFootNames());
+  controller_nh.setParam("robot_arm_names",controller_ptr->getRobotModel()->getArmNames());
+  controller_nh.setParam("robot_imu_name",controller_ptr->getRobotModel()->getImuSensorName());
+
   // Defaults
   double default_duty_factor = 0.3;
   if (!controller_nh.getParam("default_duty_factor", default_duty_factor))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_duty_factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_duty_factor given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_duty_factor);
   }
   double default_swing_frequency = 3.0; // [Hz]
   if (!controller_nh.getParam("default_swing_frequency", default_swing_frequency))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_swing_frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_swing_frequency given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_swing_frequency);
   }
   double default_contact_threshold = 50.0; // [N]
   if (!controller_nh.getParam("default_contact_threshold", default_contact_threshold))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_contact_threshold);
   }
   double default_step_height = 0.05; // [m]
   if (!controller_nh.getParam("default_step_height", default_step_height))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_step_height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_step_height given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_height);
   }
   double max_step_height = 0.15; // [m]
   if (!controller_nh.getParam("max_step_height", max_step_height))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_step_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_step_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_height);
   }
   double max_step_length = 0.5; // [m]
   if (!controller_nh.getParam("max_step_length", max_step_length))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_step_length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_step_length given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_step_length);
   }
   double default_step_reflex_contact_threshold = default_contact_threshold/3.0; // [N]
   if (!controller_nh.getParam("default_step_reflex_contact_threshold", default_step_reflex_contact_threshold))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_step_reflex_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_contact_threshold);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_step_reflex_contact_threshold given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_contact_threshold);
   }
   double default_step_reflex_max_retraction = max_step_height/2.0; // [m]
   if (!controller_nh.getParam("default_step_reflex_max_retraction", default_step_reflex_max_retraction))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_step_reflex_max_retraction given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_max_retraction);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_step_reflex_max_retraction given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_step_reflex_max_retraction);
   }
   double max_base_height = 0.5; // [m]
   if (!controller_nh.getParam("max_base_height", max_base_height))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_base_height given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_height);
   }
   double max_base_roll = 2*M_PI; // [rad]
   if (!controller_nh.getParam("max_base_roll", max_base_roll))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_roll);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_roll);
   }
   double max_base_pitch = 2*M_PI; // [rad]
   if (!controller_nh.getParam("max_base_pitch", max_base_pitch))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No max_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_pitch);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No max_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),max_base_pitch);
   }
   double min_base_roll = -2*M_PI; // [rad]
   if (!controller_nh.getParam("min_base_roll", min_base_roll))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No min_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_roll);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No min_base_roll given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_roll);
   }
   double min_base_pitch = -2*M_PI; // [rad]
   if (!controller_nh.getParam("min_base_pitch", min_base_pitch))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No min_base_pitch given in namespace %s, using a max value of %f.", controller_nh.getNamespace().c_str(),min_base_pitch);
   }
   double default_base_linear_velocity, default_base_linear_velocity_x, default_base_linear_velocity_y, default_base_linear_velocity_z;
   default_base_linear_velocity = default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = 0.5; // [m/s]
   if (!controller_nh.getParam("default_base_linear_velocity", default_base_linear_velocity))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, looking for default_base_linear_velocity_[x,y,z].", controller_nh.getNamespace().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_linear_velocity given in namespace %s, looking for default_base_linear_velocity_[x,y,z].", controller_nh.getNamespace().c_str());
     if(!controller_nh.getParam("default_base_linear_velocity_x", default_base_linear_velocity_x) ||
        !controller_nh.getParam("default_base_linear_velocity_y", default_base_linear_velocity_y) ||
        !controller_nh.getParam("default_base_linear_velocity_z", default_base_linear_velocity_z)  )
-      ROS_WARN_NAMED(CLASS_NAME,"No default_base_linear_velocity_[x,y,z] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_linear_velocity_[x,y,z] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_linear_velocity);
   }
   else
     default_base_linear_velocity_x = default_base_linear_velocity_y = default_base_linear_velocity_z = default_base_linear_velocity;
@@ -104,11 +114,11 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   default_base_angular_velocity = default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = 0.5; // [rad/s]
   if (!controller_nh.getParam("default_base_angular_velocity", default_base_angular_velocity))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, looking for default_base_angular_velocity_[roll,pitch,yaw].", controller_nh.getNamespace().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_angular_velocity given in namespace %s, looking for default_base_angular_velocity_[roll,pitch,yaw].", controller_nh.getNamespace().c_str());
     if(!controller_nh.getParam("default_base_angular_velocity_roll", default_base_angular_velocity_roll)   ||
        !controller_nh.getParam("default_base_angular_velocity_pitch", default_base_angular_velocity_pitch) ||
        !controller_nh.getParam("default_base_angular_velocity_yaw", default_base_angular_velocity_yaw)     )
-      ROS_WARN_NAMED(CLASS_NAME,"No default_base_angular_velocity_[roll,pitch,yaw] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default_base_angular_velocity_[roll,pitch,yaw] given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_base_angular_velocity);
   }
   else
     default_base_angular_velocity_roll = default_base_angular_velocity_pitch = default_base_angular_velocity_yaw = default_base_angular_velocity;
@@ -116,22 +126,27 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   double default_friction_cones_mu = 0.7;
   if (!controller_nh.getParam("default_friction_cones_mu", default_friction_cones_mu))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_friction_cones_mu given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_friction_cones_mu);
   }
   double default_cutoff_freq_gyroscope = 300.; // [Hz]
   if (!controller_nh.getParam("default_cutoff_freq_gyroscope", default_cutoff_freq_gyroscope))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_cutoff_freq_gyroscope given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_gyroscope);
   }
   double default_cutoff_freq_accelerometer = 300.; // [Hz]
   if (!controller_nh.getParam("default_cutoff_freq_accelerometer", default_cutoff_freq_accelerometer))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_accelerometer given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_accelerometer);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_cutoff_freq_accelerometer given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_accelerometer);
   }
   double default_cutoff_freq_qdot = 300.; // [Hz]
   if (!controller_nh.getParam("default_cutoff_freq_qdot", default_cutoff_freq_qdot))
   {
-    ROS_WARN_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_cutoff_freq_qdot given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_cutoff_freq_qdot);
+  }
+  double default_push_recovery_sensibility = 0.0; // [0.0,1.0]
+  if (!controller_nh.getParam("default_push_recovery_sensibility", default_push_recovery_sensibility))
+  {
+    ROS_DEBUG_NAMED(CLASS_NAME,"No default_push_recovery_sensibility given in namespace %s, using a default value of %f.", controller_nh.getNamespace().c_str(),default_push_recovery_sensibility);
   }
 
   bool activate_com_z = true;
@@ -164,13 +179,13 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
 
   std::string estimation_position_type;
   if (!controller_nh.getParam("estimation_position_type", estimation_position_type))
-    ROS_WARN_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No estimation_position_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getPositionEstimationType().c_str());
   else
     controller_->getStateEstimator()->setPositionEstimationType(estimation_position_type);
 
   std::string estimation_orientation_type;
   if (!controller_nh.getParam("estimation_orientation_type", estimation_orientation_type))
-    ROS_WARN_NAMED(CLASS_NAME,"No estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
+    ROS_DEBUG_NAMED(CLASS_NAME,"No estimation_orientation_type given in namespace %s, using %s", controller_nh.getNamespace().c_str(),controller_->getStateEstimator()->getOrientationEstimationType().c_str());
   else
     controller_->getStateEstimator()->setOrientationEstimationType(estimation_orientation_type);
 
@@ -193,6 +208,7 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   controller_->getFootholdsPlanner()->setMaxBasePitch(max_base_pitch);
   controller_->getFootholdsPlanner()->setMinBaseRoll(min_base_roll);
   controller_->getFootholdsPlanner()->setMinBasePitch(min_base_pitch);
+  controller_->getFootholdsPlanner()->setPushRecoverySensibility(default_push_recovery_sensibility);
 
   // ID problem
   controller_->getIDProblem()->setFrictionConesMu(default_friction_cones_mu);
@@ -226,16 +242,16 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   {
     if (!controller_nh.getParam("gains/Kp_leg/" + wolf_controller::_joints_prefix[i] , Kp_leg(i)))
     {
-      ROS_WARN_NAMED(CLASS_NAME,"No default Kp_leg_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default Kp_leg_%s gain given in the namespace: %s using 1.0 gain.",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
     }
     if (!controller_nh.getParam("gains/Kd_leg/" + wolf_controller::_joints_prefix[i] , Kd_leg(i)))
     {
-      ROS_WARN_NAMED(CLASS_NAME,"No default Kd_leg_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
+      ROS_DEBUG_NAMED(CLASS_NAME,"No default Kd_leg_%s gain given in the namespace: %s using 1.0 gain. ",wolf_controller::_joints_prefix[i].c_str(),controller_nh.getNamespace().c_str());
     }
     // Check if the values are positive
     if(Kp_leg(i)<0.0 || Kd_leg(i)<0.0)
     {
-      ROS_WARN_NAMED(CLASS_NAME,"Kp_leg and Kd_leg gains must be positive!");
+      ROS_DEBUG_NAMED(CLASS_NAME,"Kp_leg and Kd_leg gains must be positive!");
       Kp_leg(i) = Kd_leg(i) = 1.0;
     }
   }
@@ -255,16 +271,16 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
       {
         if (!controller_nh.getParam("gains/Kp_arm/j" + std::to_string(i) , Kp_arm(i)))
         {
-          ROS_WARN_NAMED(CLASS_NAME,"No default Kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+          ROS_DEBUG_NAMED(CLASS_NAME,"No default Kp_arm_j%s gain given in the namespace: %s using 1.0 gain.",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
         }
         if (!controller_nh.getParam("gains/Kd_arm/j"  + std::to_string(i) , Kd_arm(i)))
         {
-          ROS_WARN_NAMED(CLASS_NAME,"No default Kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
+          ROS_DEBUG_NAMED(CLASS_NAME,"No default Kd_arm_j%s gain given in the namespace: %s using 1.0 gain. ",std::to_string(i).c_str(),controller_nh.getNamespace().c_str());
         }
         // Check if the values are positive
         if(Kp_arm(i)<0.0 || Kd_arm(i)<0.0)
         {
-          ROS_WARN_NAMED(CLASS_NAME,"Kp_arm and Kd_arm gains must be positive!");
+          ROS_DEBUG_NAMED(CLASS_NAME,"Kp_arm and Kd_arm gains must be positive!");
           Kp_arm(i) = Kd_arm(i) = 1.0;
         }
       }
@@ -305,9 +321,20 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
   // Controller state
   controller_state_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::ControllerState>(controller_nh, "controller_state", 4));
-  unsigned int n_states = wolf_controller::QuadrupedRobot::N_STATES;
   controller_state_pub_->msg_.states = controller_->getRobotModel()->getStatesAsString();
   controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
+  controller_state_pub_->msg_.modes = controller_->getModesAsString();
+  controller_state_pub_->msg_.current_mode = controller_->getModeAsString();
+
+  #ifdef OCS2
+  // OCS2 mpc observation
+  mpc_observation_pub_.reset(new realtime_tools::RealtimePublisher<ocs2_msgs::mpc_observation>(controller_nh, "mpc_observation", 4));
+  mpc_observation_pub_->msg_.state.value.resize(24);
+  mpc_observation_pub_->msg_.input.value.resize(48);
+  mpc_observation_pub_->msg_.time = 0.0;
+  mpc_observation_pub_->msg_.mode = 0;
+  controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
+  #endif
 
   // DDynamic reconfigure
   ddr_server_.reset(new ddynamic_reconfigure::DDynamicReconfigure(controller_nh));
@@ -326,7 +353,7 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   //ddr_server_->registerVariable<double>("set_linear_vel",default_base_linear_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseLinearVelocityCmd,controller_->getFootholdsPlanner(),_1),"set linear velocity",0.0,1.0);
   //ddr_server_->registerVariable<double>("set_angular_vel",default_base_angular_velocity,boost::bind(&wolf_controller::FootholdsPlanner::setBaseAngularVelocityCmd,controller_->getFootholdsPlanner(),_1),"set angular velocity",0.0,1.0);
   ddr_server_->registerVariable<double>("set_step_height",default_step_height,boost::bind(&wolf_controller::FootholdsPlanner::setStepHeight,controller_->getFootholdsPlanner(),_1),"set step height",0.0,max_step_height);
-  ddr_server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wolf_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,100.0);
+  ddr_server_->registerVariable<double>("set_contact_threshold",default_contact_threshold,boost::bind(&wolf_controller::StateEstimator::setContactThreshold,controller_->getStateEstimator(),_1),"set contact threshold",0.0,500.0);
 
   ddr_server_->registerEnumVariable<std::string>("select_gait","TROT",
                                                  boost::bind(&wolf_controller::Controller::selectGait,controller_,_1),
@@ -366,12 +393,10 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   // RT GUI
 #ifdef RT_GUI
   // create interface
-  if(RtGuiClient::getIstance().isInitialized())
-  {
-    RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
-    RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
-    RtGuiClient::getIstance().addTrigger(std::string("controller"),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
-  }
+  RtGuiClient::getIstance().init("/wolf_panel","/wolf_controller");
+  RtGuiClient::getIstance().addTrigger(std::string(wolf_controller::_rt_gui_group),std::string("Stand up"),boost::bind(&wolf_controller::Controller::standUp,controller_,true));
+  RtGuiClient::getIstance().addTrigger(std::string(wolf_controller::_rt_gui_group),std::string("Stand down"),boost::bind(&wolf_controller::Controller::standUp,controller_,false));
+  RtGuiClient::getIstance().addTrigger(std::string(wolf_controller::_rt_gui_group),std::string("Emergency stop"),boost::bind(&wolf_controller::Controller::emergencyStop,controller_));
 #endif
 }
 
@@ -389,7 +414,7 @@ bool ControllerRosWrapper::decreaseSwingFrequencyCB(std_srvs::Trigger::Request& 
   return res.success;
 }
 
-bool ControllerRosWrapper::setSwingFrequencyCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
+bool ControllerRosWrapper::setSwingFrequencyCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res)
 {
   res.success = true;
   if(req.data >= 0)
@@ -399,7 +424,7 @@ bool ControllerRosWrapper::setSwingFrequencyCB(wolf_msgs::float32Request& req, w
   return res.success;
 }
 
-bool ControllerRosWrapper::setDutyFactorCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
+bool ControllerRosWrapper::setDutyFactorCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res)
 {
   res.success = true;
   if(req.data >= 0)
@@ -423,7 +448,7 @@ bool ControllerRosWrapper::activateStepReflexCB(std_srvs::Trigger::Request& req,
   return res.success;
 }
 
-bool ControllerRosWrapper::setStepHeightCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res)
+bool ControllerRosWrapper::setStepHeightCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res)
 {
   res.success = true;
   if(req.data >= 0)
@@ -531,15 +556,16 @@ bool ControllerRosWrapper::standDownCB(std_srvs::Trigger::Request& req, std_srvs
   return res.success;
 }
 
-void ControllerRosWrapper::publish(const ros::Time& time)
+void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& period)
 {
   if(controller_->getIDProblem())
-    controller_->getIDProblem()->publish(time);
+    controller_->getIDProblem()->publish(time,period);
 
   if(controller_state_pub_.get() && controller_state_pub_->trylock())
   {
     controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
-    controller_state_pub_->msg_.header.stamp = time;
+    controller_state_pub_->msg_.current_mode  = controller_->getModeAsString();
+    controller_state_pub_->msg_.header.stamp  = time;
     controller_state_pub_->unlockAndPublish();
   }
 
@@ -645,4 +671,78 @@ void ControllerRosWrapper::publish(const ros::Time& time)
     capture_point_pub_->msg_.header.stamp = time;
     capture_point_pub_->unlockAndPublish();
   }
+
+  #ifdef OCS2
+  if(mpc_observation_pub_.get() && mpc_observation_pub_->trylock())
+  {
+
+    controller_->getRobotModel()->getCentroidalMomentum(tmp_vector6d_);
+    controller_->getRobotModel()->getFloatingBasePose(tmp_affine3d_);
+    double robot_mass = controller_->getRobotModel()->getMass();
+
+    // STATE
+    // linear momentum
+    mpc_observation_pub_->msg_.state.value[0] = tmp_vector6d_(0) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[1] = tmp_vector6d_(1) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[2] = tmp_vector6d_(2) / robot_mass;
+
+    // angular momentum
+    mpc_observation_pub_->msg_.state.value[3] = tmp_vector6d_(3) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[4] = tmp_vector6d_(4) / robot_mass;
+    mpc_observation_pub_->msg_.state.value[5] = tmp_vector6d_(5) / robot_mass;
+
+    // base position
+    mpc_observation_pub_->msg_.state.value[6] = tmp_affine3d_.translation().x();
+    mpc_observation_pub_->msg_.state.value[7] = tmp_affine3d_.translation().y();
+    mpc_observation_pub_->msg_.state.value[8] = tmp_affine3d_.translation().z();
+
+    // base orientation (ZYX)
+    base_rpy_ = wolf_controller_utils::rotToRpy(tmp_affine3d_.linear());
+    wolf_controller_utils::unwrap(base_rpy_prev_,base_rpy_);
+    mpc_observation_pub_->msg_.state.value[9]  = base_rpy_.z();
+    mpc_observation_pub_->msg_.state.value[10] = base_rpy_.y();
+    mpc_observation_pub_->msg_.state.value[11] = base_rpy_.x();
+    base_rpy_prev_ = base_rpy_;
+
+    // joint positions (check the order, also be sure that we are not taking the arm joints)
+    controller_->getRobotModel()->getJointPosition(tmp_vectorXd_);
+    for(unsigned int i=0; i<12; i++)
+      mpc_observation_pub_->msg_.state.value[12 + i] = tmp_vectorXd_(i+FLOATING_BASE_DOFS);
+
+    // INPUT
+    // contact forces (FIXME hardcoded names and order)
+    mpc_observation_pub_->msg_.input.value[0] = controller_->getStateEstimator()->getContactForce("lf_foot").x();
+    mpc_observation_pub_->msg_.input.value[1] = controller_->getStateEstimator()->getContactForce("lf_foot").y();
+    mpc_observation_pub_->msg_.input.value[2] = controller_->getStateEstimator()->getContactForce("lf_foot").z();
+
+    mpc_observation_pub_->msg_.input.value[3] = controller_->getStateEstimator()->getContactForce("lh_foot").x();
+    mpc_observation_pub_->msg_.input.value[4] = controller_->getStateEstimator()->getContactForce("lh_foot").y();
+    mpc_observation_pub_->msg_.input.value[5] = controller_->getStateEstimator()->getContactForce("lh_foot").z();
+
+    mpc_observation_pub_->msg_.input.value[6] = controller_->getStateEstimator()->getContactForce("rf_foot").x();
+    mpc_observation_pub_->msg_.input.value[7] = controller_->getStateEstimator()->getContactForce("rf_foot").y();
+    mpc_observation_pub_->msg_.input.value[8] = controller_->getStateEstimator()->getContactForce("rf_foot").z();
+
+    mpc_observation_pub_->msg_.input.value[9]  = controller_->getStateEstimator()->getContactForce("rh_foot").x();
+    mpc_observation_pub_->msg_.input.value[10] = controller_->getStateEstimator()->getContactForce("rh_foot").y();
+    mpc_observation_pub_->msg_.input.value[11] = controller_->getStateEstimator()->getContactForce("rh_foot").z();
+
+    // joints velocities
+    controller_->getRobotModel()->getJointVelocity(tmp_vectorXd_);
+    for(unsigned int i=0; i<12; i++)
+      mpc_observation_pub_->msg_.input.value[36 + i] = tmp_vectorXd_(i+FLOATING_BASE_DOFS);
+
+    // time
+    mpc_observation_pub_->msg_.time = mpc_observation_pub_->msg_.time + period.toSec();
+
+    // mode (FIXME hardcoded names)
+    mpc_observation_pub_->msg_.mode = static_cast<int8_t>(controller_->getStateEstimator()->getContact("lf_foot"))*8
+                                    + static_cast<int8_t>(controller_->getStateEstimator()->getContact("lh_foot"))*4
+                                    + static_cast<int8_t>(controller_->getStateEstimator()->getContact("rf_foot"))*2
+                                    + static_cast<int8_t>(controller_->getStateEstimator()->getContact("rh_foot"));
+
+    mpc_observation_pub_->unlockAndPublish();
+  }
+  #endif
+
 }

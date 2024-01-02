@@ -16,8 +16,11 @@ Wrench::Wrench(ros::NodeHandle& nh,
   :OpenSoT::tasks::force::Wrench(task_id,distal_link,base_link,wrench)
   ,TaskRosWrapperInterface<wolf_msgs::WrenchTask>(task_id,nh)
 {
-  // Setup the interpolator
-  trj_ = std::make_shared<wolf_controller::CartesianTrajectory>();
+  tmp_vectorXd_.resize(6); // Wrench
+  tmp_vectorXd_.setZero();
+
+  // Initialize buffers
+  buffer_reference_.initRT(tmp_vectorXd_);
 
   // Create the reference subscriber
   reference_sub_ = nh.subscribe("reference/"+_task_id, 1000, &Wrench::referenceCallback, this);
@@ -35,15 +38,15 @@ void Wrench::registerReconfigurableVariables()
 void Wrench::loadParams()
 {
 
-  double lambda1, lambda2, weight;
+  double lambda1, weight;
   if (!nh_.getParam("gains/"+_task_id+"/lambda1" , lambda1))
   {
-    ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda1 = getLambda();
   }
   if (!nh_.getParam("gains/"+_task_id+"/weight" , weight))
   {
-    ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     weight = getWeight()(0,0);
   }
   // Check if the values are positive
@@ -62,13 +65,14 @@ void Wrench::updateCost(const Eigen::VectorXd& x)
   cost_ = computeCost(x);
 }
 
-void Wrench::publish(const ros::Time& time)
+void Wrench::publish(const ros::Time& time, const ros::Duration& /*period*/)
 {
   if(rt_pub_->trylock())
   {
     rt_pub_->msg_.header.frame_id = getBaseLink();
     rt_pub_->msg_.header.stamp = time;
 
+    // FIXME
     // ACTUAL VALUES
     //getActualPose(tmp_vector3d_);
     //// Pose - Translation
@@ -76,9 +80,9 @@ void Wrench::publish(const ros::Time& time)
     //// Velocity reference
     //tmp_vector3d_ = getCachedVelocityReference();
     //wolf_controller_utils::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.velocity_reference);
-    //
-    //// REFERENCE VALUES
-    //getReference(tmp_vector3d_);
+
+    // REFERENCE VALUES
+    //getReference(tmp_vectorXd_);
     //// Pose - Translation
     //wolf_controller_utils::vector3dToVector3(tmp_vector3d_,rt_pub_->msg_.position_reference);
 
@@ -97,17 +101,18 @@ void Wrench::_update(const Eigen::VectorXd& x)
     setWeight(buffer_weight_diag_);
   if(OPTIONS.set_ext_reference)
   {
-    // Interpolation
-    trj_->update(wolf_controller::_period);
-    trj_->getReference(tmp_affine3d_,&tmp_vector6d_,&tmp_vector6d_1_);
-    //setReference(tmp_affine3d_.translation(),tmp_vector6d_.head(3),tmp_vector6d_1_.head(3));
+    // Set external reference
+    setReference(*buffer_reference_.readFromRT());
   }
-  // OpenSoT::tasks::force::Wrench::_update(x); FIXME
+  OpenSoT::tasks::force::Wrench::_update(x);
 }
 
 bool Wrench::reset()
 {
-  bool res = OpenSoT::tasks::force::Wrench::reset(); // Task's reset
+  //bool res = OpenSoT::tasks::force::Wrench::reset(); // Task's reset (FIXME it is not implemented in OpenSoT)
+  bool res = true;
+  getReference(tmp_vectorXd_);
+  buffer_reference_.initRT(tmp_vectorXd_);
   //getActualPose(tmp_vector3d_);
   //tmp_affine3d_ = Eigen::Affine3d::Identity();
   //tmp_affine3d_.translation() = tmp_vector3d_;
@@ -115,20 +120,18 @@ bool Wrench::reset()
   return res;
 }
 
-void Wrench::referenceCallback(const wolf_msgs::WrenchTask::ConstPtr& msg)
+void Wrench::referenceCallback(const wolf_msgs::Wrench::ConstPtr& msg)
 {
   double period = wolf_controller::_period;
 
   if(last_time_ != 0.0)
     period = msg->header.stamp.toSec() - last_time_;
 
-  Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
-  //pose_reference.translation().x() = msg->position_reference.x;
-  //pose_reference.translation().y() = msg->position_reference.y;
-  //pose_reference.translation().z() = msg->position_reference.z;
-  trj_->setWayPoint(pose_reference,period);
+  Eigen::Vector6d reference = Eigen::Vector6d::Zero();
+  reference(0) = msg->wrench.force.x;
+  reference(1) = msg->wrench.force.y;
+  reference(2) = msg->wrench.force.z;
+  buffer_reference_.writeFromNonRT(reference);
 
   last_time_ = msg->header.stamp.toSec();
 }
-
-

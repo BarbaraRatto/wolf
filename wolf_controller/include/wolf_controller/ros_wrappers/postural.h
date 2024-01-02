@@ -37,7 +37,7 @@ public:
 
   virtual void updateCost(const Eigen::VectorXd& x) override;
 
-  virtual void publish(const ros::Time& time);
+  virtual void publish(const ros::Time& time, const ros::Duration& period);
 
 private:
 

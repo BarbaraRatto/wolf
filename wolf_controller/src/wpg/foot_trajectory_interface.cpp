@@ -274,7 +274,7 @@ void TrajectoryReflex::update(const double& period)
   {
     init();
     init_done_ = true;
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Activate step reflex for foot: "<<_legs_prefix[trajectory_interface_ptr_->trajectory_id]);
+    //ROS_INFO_STREAM_NAMED(CLASS_NAME,"Activate step reflex for foot: "<<_legs_prefix[trajectory_interface_ptr_->trajectory_id]);
   }
 
   double t = trajectory_interface_ptr_->time_;

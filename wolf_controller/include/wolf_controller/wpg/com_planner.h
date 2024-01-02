@@ -38,19 +38,25 @@ public:
 
   ComPlanner(QuadrupedRobot::Ptr robot_model, FootholdsPlanner::Ptr foothold_planner, TerrainEstimator::Ptr terrain_estimator);
 
-  void update();
+  void update(const double& dt);
 
   const Eigen::Vector3d& getComVelocity() const;
 
   const Eigen::Vector3d& getComPosition() const;
 
-  void resetVelocities();
+  void reset();
+
+  void resetVelocity();
+
+  void resetPosition();
+
+  void setFiltersCutoffFreq(const double& hz);
 
 private:
 
   void computeSupportPolygonCenter();
-  void computeComPositionReference();
-  void computeComVelocityReference();
+  void computeComPositionReference(const double& dt);
+  void computeComVelocityReference(const double& dt);
 
   QuadrupedRobot::Ptr robot_model_;
   FootholdsPlanner::Ptr foothold_planner_;
@@ -60,6 +66,11 @@ private:
   Eigen::Vector3d base_velocity_;
   Eigen::Vector3d support_polygon_center_;
   std::vector<Eigen::Vector3d> support_polygon_edges_;
+
+  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> com_position_ref_filter_;
+  XBot::Utils::SecondOrderFilter<Eigen::Vector3d> com_velocity_ref_filter_;
+
+  double filters_cutoff_freq_;
 
   bool update_;
 

@@ -33,6 +33,8 @@ namespace wolf_controller
 #define EPS 0.00001 //std::numeric_limits<double>::epsilon()
 extern double _period;
 extern std::string _robot_name;
+extern std::string _tf_prefix;
+extern std::string _rt_gui_group;
 #define TOPIC( data ) (_robot_name+"/wolf_controller/"#data)
 //#define OPEN_LOOP_TRAJECTORY
 
@@ -58,15 +60,15 @@ inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& 
     return ordered_names;
 }
 
-inline QuadrupedRobot* createRobotModel(ros::NodeHandle& root_nh)
+inline QuadrupedRobot* createRobotModel(ros::NodeHandle& nh)
 {
-  // Create the quadruped robot object, it wraps the xbot model with some meta information
+  // Create the quadruped robot object, it wraps the robot model with some meta information
   std::string urdf, srdf;
-  if(!root_nh.getParam("/robot_description",urdf)) // Get the robot description from the global namespace "/"
+  if(!nh.getParam("robot_description",urdf)) // Get the robot description from the global namespace "/"
   {
       throw std::runtime_error("No robot_description given in namespace /");
   }
-  if(!root_nh.getParam("/robot_description_semantic",srdf)) // Get the robot semantic description from the global namespace "/"
+  if(!nh.getParam("robot_description_semantic",srdf)) // Get the robot semantic description from the global namespace "/"
   {
       throw std::runtime_error("No robot_description_semantic given in namespace /");
   }

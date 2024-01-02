@@ -12,8 +12,10 @@ Com::Com(ros::NodeHandle& nh, const XBot::ModelInterface& robot, const OpenSoT::
   :OpenSoT::tasks::acceleration::CoM(robot,qddot)
   ,TaskRosWrapperInterface<wolf_msgs::ComTask>(_task_id,nh)
 {
-  // Setup the interpolator
-  //trj_ = std::make_shared<wolf_controller::CartesianTrajectory>(this);
+  // Initialize buffers
+  tmp_vector3d_.setZero();
+  buffer_reference_pos_.initRT(tmp_vector3d_);
+  buffer_reference_vel_.initRT(tmp_vector3d_);
 
   // Create the reference subscriber
   reference_sub_ = nh.subscribe("reference/"+_task_id, 1000, &Com::referenceCallback, this);
@@ -44,17 +46,17 @@ void Com::loadParams()
   double lambda1, lambda2, weight;
   if (!nh_.getParam("gains/"+_task_id+"/lambda1" , lambda1))
   {
-    ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda1 = getLambda();
   }
   if (!nh_.getParam("gains/"+_task_id+"/lambda2" , lambda2))
   {
-    ROS_WARN("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda2 = getLambda2();
   }
   if (!nh_.getParam("gains/"+_task_id+"/weight" , weight))
   {
-    ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     weight = getWeight()(0,0);
   }
   // Check if the values are positive
@@ -75,12 +77,12 @@ void Com::loadParams()
   {
     if (!nh_.getParam("gains/"+_task_id+"/Kp/" + wolf_controller::_xyz[i] , Kp(i,i)))
     {
-      ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_xyz[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
+      ROS_DEBUG("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_xyz[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
       use_identity = true;
     }
     if (!nh_.getParam("gains/"+_task_id+"/Kd/"  + wolf_controller::_xyz[i] , Kd(i,i)))
     {
-      ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_xyz[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
+      ROS_DEBUG("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_xyz[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
       use_identity = true;
     }
     // Check if the values are positive
@@ -112,7 +114,7 @@ void Com::updateCost(const Eigen::VectorXd& x)
   cost_ = computeCost(x);
 }
 
-void Com::publish(const ros::Time& time)
+void Com::publish(const ros::Time& time, const ros::Duration& /*period*/)
 {
   if(rt_pub_->trylock())
   {
@@ -139,6 +141,14 @@ void Com::publish(const ros::Time& time)
   }
 }
 
+bool Com::reset()
+{
+  bool res = OpenSoT::tasks::acceleration::CoM::reset();
+  getActualPose(tmp_vector3d_);
+  buffer_reference_pos_.initRT(tmp_vector3d_);
+  return res;
+}
+
 void Com::_update(const Eigen::VectorXd& x)
 {
   if(OPTIONS.set_ext_lambda)
@@ -160,26 +170,32 @@ void Com::_update(const Eigen::VectorXd& x)
   }
   if(OPTIONS.set_ext_reference)
   {
-    // Interpolation
-    //trj_->update(wolf_controller::_period);
-    //trj_->getReference(tmp_affine3d_,&tmp_vector6d_,&tmp_vector6d_1_);
-    //setReference(tmp_affine3d_.translation(),tmp_vector6d_.head(3),tmp_vector6d_1_.head(3));
+    // Set external reference
+    setReference(*buffer_reference_pos_.readFromRT(),*buffer_reference_vel_.readFromRT());
   }
   OpenSoT::tasks::acceleration::CoM::_update(x);
 }
 
-void Com::referenceCallback(const wolf_msgs::ComTask::ConstPtr& msg)
+void Com::referenceCallback(const wolf_msgs::Com::ConstPtr& msg)
 {
   double period = wolf_controller::_period;
 
   if(last_time_ != 0.0)
     period = msg->header.stamp.toSec() - last_time_;
 
-  Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
-  pose_reference.translation().x() = msg->position_reference.x;
-  pose_reference.translation().y() = msg->position_reference.y;
-  pose_reference.translation().z() = msg->position_reference.z;
-  //trj_->setWayPoint(pose_reference,period);
+  Eigen::Vector3d position_reference = Eigen::Vector3d::Zero();
+  Eigen::Vector3d velocity_reference = Eigen::Vector3d::Zero();
+
+  position_reference.x() = msg->position.x;
+  position_reference.y() = msg->position.y;
+  position_reference.z() = msg->position.z;
+
+  velocity_reference.x() = msg->velocity.x;
+  velocity_reference.y() = msg->velocity.y;
+  velocity_reference.z() = msg->velocity.z;
+
+  buffer_reference_pos_.writeFromNonRT(position_reference);
+  buffer_reference_vel_.writeFromNonRT(velocity_reference);
 
   last_time_ = msg->header.stamp.toSec();
 }

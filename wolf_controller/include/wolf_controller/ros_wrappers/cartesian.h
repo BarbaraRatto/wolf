@@ -18,7 +18,6 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/tasks/acceleration/AngularMomentum.h>
 
 // ROS
-#include <wolf_msgs/CartesianTask.h>
 #include <interactive_markers/menu_handler.h>
 #include <urdf/model.h>
 #include <tf_conversions/tf_eigen.h>
@@ -34,37 +33,16 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller_utils/geometry.h>
 #include <wolf_controller_utils/converters.h>
 
+// WoLF msgs
+#include <wolf_msgs/CartesianTask.h>
+#include <wolf_msgs/Cartesian.h>
+
 // STD
 #include <numeric>
 
 // CARTESIAN
 class Cartesian : public OpenSoT::tasks::acceleration::Cartesian, public TaskRosWrapperInterface<wolf_msgs::CartesianTask>
 {
-
-  template <class Marker_Type>
-    inline void EigenAffine3dToVisualizationPose(const Eigen::Affine3d& Frame, Marker_Type& Marker)
-    {
-        Marker.pose.position.x = Frame.translation().x();
-        Marker.pose.position.y = Frame.translation().y();
-        Marker.pose.position.z = Frame.translation().z();
-        Eigen::Quaterniond q(Frame.linear());
-        Marker.pose.orientation.x = q.x();
-        Marker.pose.orientation.y = q.y();
-        Marker.pose.orientation.z = q.z();
-        Marker.pose.orientation.w = q.w();
-    }
-
-    template <class Marker_Type>
-    inline void PoseToVisualizationPose(const geometry_msgs::Pose& Frame, Marker_Type& Marker)
-    {
-        Marker.pose.position.x = Frame.position.x;
-        Marker.pose.position.y = Frame.position.y;
-        Marker.pose.position.z = Frame.position.z;
-        Marker.pose.orientation.x = Frame.orientation.x;
-        Marker.pose.orientation.y = Frame.orientation.y;
-        Marker.pose.orientation.z = Frame.orientation.z;
-        Marker.pose.orientation.w = Frame.orientation.w;
-    }
 
 public:
 
@@ -84,7 +62,7 @@ public:
 
   virtual void updateCost(const Eigen::VectorXd& x) override;
 
-  virtual void publish(const ros::Time& time) override;
+  virtual void publish(const ros::Time& time, const ros::Duration& period) override;
 
   virtual bool reset() override;
 
@@ -97,7 +75,7 @@ protected:
 
   void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
 
-  void referenceCallback(const wolf_msgs::CartesianTask::ConstPtr& msg);
+  void referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg);
 
   visualization_msgs::InteractiveMarkerControl& makeSTLControl(visualization_msgs::InteractiveMarker& msg);
 
@@ -123,13 +101,9 @@ protected:
 
   void publishWP(const std::vector<geometry_msgs::Pose>& wps);
 
-  bool setTrj(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+  bool clearMarker();
 
-  bool setContinuous(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
-
-  bool clearMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
-
-  bool spawnMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+  bool spawnMarker();
 
   void setContinuousCtrl(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
 
@@ -200,6 +174,15 @@ private:
    * @brief listener_ TF listener
    */
   tf::TransformListener listener_;
+
+  /**
+   * @brief Cartesian trajectory interpolator
+   */
+  wolf_controller::CartesianTrajectory::Ptr trj_;
+
+
+  realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_reference_pose_;
+  realtime_tools::RealtimeBuffer<Eigen::Vector6d> buffer_reference_twist_;
 
 };
 

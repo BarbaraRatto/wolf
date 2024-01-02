@@ -6,19 +6,27 @@
  * WoLF controller.
  */
 
+// WoLF
 #include <wolf_controller/controller.h>
 #include <wolf_controller/ros_wrappers/controller.h>
 #include <wolf_controller/devices/joy.h>
 #include <wolf_controller/devices/twist.h>
 #include <wolf_controller/devices/keyboard.h>
 
+// WoLF controller utils
 #include <wolf_controller_utils/tools.h>
 
+// ROS
 #include <tf2/transform_datatypes.h>
 #include <tf2_eigen/tf2_eigen.h>
 
+// RT GUI
+#ifdef RT_GUI
+#include <rt_gui/rt_gui_client.h>
+using namespace rt_gui;
+#endif
+
 using namespace XBot;
-using namespace Cartesian;
 using namespace rt_logger;
 using namespace wolf_controller_utils;
 
@@ -31,7 +39,33 @@ std::vector<std::string> _rpy = {"roll","pitch","yaw"};
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
-std::string _robot_name = "";
+std::string _robot_name   = "";
+std::string _tf_prefix    = "";
+std::string _rt_gui_group = "";
+
+std::string enumToString(Controller::mode_t mode)
+{
+  std::string ret = "WPG";
+  switch (mode)
+  {
+  case Controller::mode_t::WPG:
+    ret = "WPG";
+    break;
+
+  case Controller::mode_t::EXT:
+    ret = "EXT";
+    break;
+
+  case Controller::mode_t::MPC:
+    ret = "MPC";
+    break;
+
+  case Controller::mode_t::RESET:
+    ret = "RESET";
+    break;
+  };
+  return ret;
+}
 
 Controller::Controller()
     :MultiInterfaceController<hardware_interface::EffortJointInterface,
@@ -42,7 +76,8 @@ Controller::Controller()
     ,publish_odom_tf_(false)
     ,publish_odom_msg_(false)
     ,odom_pub_rate_(250)
-    ,mode_(WPG)
+    ,current_mode_(WPG)
+    ,requested_mode_(WPG)
     ,previous_mode_(WPG)
     ,posture_(DOWN)
 {
@@ -59,28 +94,43 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 {
     ROS_DEBUG_NAMED(CLASS_NAME,"Initialize");
 
-    nh_ = controller_nh;
-    root_nh_ = root_nh;
+    nh_ = controller_nh; // /robot_name/wolf_controller
+    root_nh_ = root_nh; // /robot_name/
 
     assert(robot_hw);
 
-    robot_model_.reset(createRobotModel(root_nh));
-    joint_names_ = robot_model_->getJointNames();
-
-    if(!root_nh.getParam("/task_period",period_)) // Get the initial task period
+    if(!nh_.getParam("period",period_)) // Get the initial controller period
     {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No task period given in namespace /");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No period given in namespace "+controller_nh.getNamespace());
         return false;
     }
     _period = period_;
 
-    if(!root_nh.getParam("/robot_name",robot_name_)) // Get the robot name
+    if(!root_nh_.getParam("robot_name",robot_name_)) // Get the robot namespace
     {
-        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot name given in namespace /");
+        ROS_ERROR_STREAM_NAMED(CLASS_NAME,"No robot name given in namespace "+controller_nh.getNamespace());
         return false;
     }
     _robot_name = robot_name_;
+    if(_robot_name.empty())
+      _rt_gui_group = "controller";
+    else
+      _rt_gui_group = "controller/"+_robot_name;
 
+    if(!root_nh_.getParam("tf_prefix",tf_prefix_)) // Get the tf prefix
+    {
+        ROS_WARN_STREAM_NAMED(CLASS_NAME,"No tf prefix given in namespace, using an empty one "+controller_nh.getNamespace());
+    }
+
+    fixTFprefix(tf_prefix_);
+
+    _tf_prefix = tf_prefix_;
+
+    // Create the robot model
+    robot_model_.reset(createRobotModel(root_nh));
+    joint_names_ = robot_model_->getJointNames();
+
+    // Load hardware interfaces
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
     hardware_interface::ImuSensorInterface* imu_hw = robot_hw->get<hardware_interface::ImuSensorInterface>();
     hardware_interface::GroundTruthInterface* gt_hw = robot_hw->get<hardware_interface::GroundTruthInterface>();
@@ -218,7 +268,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     solver_failures_cnt_   = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     contact_failures_cnt_  = std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_)));
     for(unsigned int i=0;i<joint_velocities_.size();i++)
-      velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.1 / period_))));
+      velocity_lims_failures_cnt_.push_back(std::make_shared<Counter>(static_cast<int>(std::ceil(0.5 / period_))));
 
     ramp_stand_up_    = std::make_shared<Ramp>(5.0,Ramp::UP);
     ramp_stand_down_  = std::make_shared<Ramp>(5.0,Ramp::DOWN);
@@ -227,7 +277,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     previous_height_ = robot_model_->getStandUpHeight();
 
     std::string input_device = "ps3";
-    root_nh.getParam("/input_device",input_device);
+    nh_.getParam("input_device",input_device);
     if(input_device == "ps3")
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
     else if(input_device == "xbox")
@@ -236,7 +286,8 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<SpaceJoyHandler>(controller_nh,this)); // Space joy
     else if(input_device == "keyboard")
         devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
-    devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this)); // Twist
+    devices_.addDevice(DevicesHandler::priority_t::MEDIUM,std::make_shared<TwistHandler>(controller_nh,this,"priority_twist")); // Twist
+    devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this,"twist")); // Twist
 
     bool publish_odom_tf = false; // On/Off
     controller_nh.getParam("publish_odom_tf", publish_odom_tf);
@@ -260,6 +311,11 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     RtLogger::getLogger().addPublisher(TOPIC(des_joint_efforts)           ,des_joint_efforts_);
     RtLogger::getLogger().addPublisher(TOPIC(joint_efforts)               ,joint_efforts_);
     RtLogger::getLogger().addPublisher(TOPIC(period)                      ,period_);
+
+#ifdef RT_GUI
+    // create interface
+    RtGuiClient::getIstance().addLabel(std::string(wolf_controller::_rt_gui_group),std::string("Control mode"),&mode_string_);
+#endif
 
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
@@ -358,13 +414,13 @@ bool Controller::setStepHeight(const double& step_height)
 bool Controller::selectControlMode(const std::string& mode)
 {
   if(mode == "WPG")
-    mode_ = Controller::mode_t::WPG;
+    requested_mode_ = Controller::mode_t::WPG;
   else if(mode == "EXT")
-    mode_ = Controller::mode_t::EXT;
+    requested_mode_ = Controller::mode_t::EXT;
   else if(mode == "MPC")
-    mode_ = Controller::mode_t::MPC;
+    requested_mode_ = Controller::mode_t::MPC;
   else if(mode == "RESET")
-    mode_ = Controller::mode_t::RESET;
+    requested_mode_ = Controller::mode_t::RESET;
   else
   {
     ROS_ERROR_NAMED(CLASS_NAME,"Wrong control mode!");
@@ -377,15 +433,15 @@ bool Controller::selectControlMode(const std::string& mode)
 
 unsigned int Controller::getControlMode()
 {
-  return mode_;
+  return current_mode_;
 }
 
 void Controller::switchControlMode()
 {
-  if(mode_ == Controller::mode_t::WPG)
-    mode_ = Controller::mode_t::MPC;
+  if(requested_mode_ == Controller::mode_t::WPG)
+    requested_mode_ = Controller::mode_t::EXT;
   else
-    mode_ = Controller::mode_t::WPG;
+    requested_mode_ = Controller::mode_t::WPG;
 }
 
 bool Controller::selectPosture(const std::string& posture)
@@ -424,7 +480,7 @@ void Controller::standUp(bool stand_up)
 
 void Controller::resetBase()
 {
-  mode_ = Controller::mode_t::RESET;
+  requested_mode_ = Controller::mode_t::RESET;
 }
 
 void Controller::emergencyStop()
@@ -531,6 +587,7 @@ void Controller::updateStateEstimator(const double &dt)
     {
         state_estimator_->setGroundTruthBasePosition(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearPosition()));
         state_estimator_->setGroundTruthBaseLinearVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearVelocity()));
+        state_estimator_->setGroundTruthBaseLinearAcceleration(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearAcceleration()));
     }
     if(!ground_truth_.getName().empty() && state_estimator_->getOrientationEstimationType() == "ground_truth")
     {
@@ -573,6 +630,7 @@ void Controller::updateStateMachine(const double &dt)
     current_height_ = state_estimator_->getEstimatedBaseHeight();
     current_rpy_ = robot_model_->getBaseRotationInWorldRPY();
     unsigned int current_state = robot_model_->getState();
+    mode_string_ = getModeAsString();
     double ramp;
     switch(current_state)
     {
@@ -602,6 +660,7 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_UP):
+        updateWpg(dt);
         ramp = ramp_stand_up_->update(dt);
         desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
         des_joint_positions_ = ramp * robot_model_->getStandUpJointPostion() + (1.0-ramp) * robot_model_->getStandDownJointPostion();
@@ -621,7 +680,7 @@ void Controller::updateStateMachine(const double &dt)
         {
           foot_holds_planner_->reset();
           ramp_stand_up_->reset();
-          com_planner_->resetVelocities();
+          com_planner_->reset();
           robot_model_->setState(QuadrupedRobot::ACTIVE);
           state_estimator_->startContactComputation();
           break;
@@ -630,7 +689,10 @@ void Controller::updateStateMachine(const double &dt)
 
       case(QuadrupedRobot::ACTIVE):
 
-        switch(mode_)
+        if(requested_mode_!=current_mode_ && state_estimator_->areAllFeetInContact())
+          current_mode_ = requested_mode_;
+
+        switch(current_mode_)
         {
         case Controller::mode_t::WPG:
           updateWpg(dt);
@@ -638,12 +700,12 @@ void Controller::updateStateMachine(const double &dt)
           previous_mode_ = Controller::mode_t::WPG;
           break;
         case Controller::mode_t::EXT:
-          // TODO
+          foot_holds_planner_->update(dt,robot_model_->getBasePoseInWorld().translation(), robot_model_->getBaseRotationInWorldRPY()); 
           id_prob_->setControlMode(IDProblem::mode_t::EXT);
           previous_mode_ = Controller::mode_t::EXT;
           break;
         case Controller::mode_t::MPC:
-          // TODO
+          foot_holds_planner_->update(dt,robot_model_->getBasePoseInWorld().translation(), robot_model_->getBaseRotationInWorldRPY()); 
           id_prob_->setControlMode(IDProblem::mode_t::MPC);
           previous_mode_ = Controller::mode_t::MPC;
           break;
@@ -660,7 +722,7 @@ void Controller::updateStateMachine(const double &dt)
               std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01
               )
           {
-            mode_ = previous_mode_;
+            current_mode_ = previous_mode_;
             break;
           }
           break;
@@ -680,6 +742,7 @@ void Controller::updateStateMachine(const double &dt)
         break;
 
       case(QuadrupedRobot::STANDING_DOWN):
+        updateWpg(dt);
         ramp = ramp_stand_down_->update(dt);
         desired_height_ = ramp * stand_down_starting_height_;
         des_joint_positions_ = (1.0-ramp) * robot_model_->getStandUpJointPostion() + (ramp) * robot_model_->getStandDownJointPostion();
@@ -739,6 +802,8 @@ void Controller::init()
     foot_holds_planner_->setBaseOrientation(state_estimator_->getFloatingBaseOrientationRPY());
     foot_holds_planner_->setDefaultBaseOrientation(Eigen::Vector3d(0.0,0.0,0.0));
     foot_holds_planner_->initializeFeetPosition();
+    // CoM planner
+    com_planner_->reset();
     // Filters
     imu_gyroscope_filter_.setTimeStep(period_);
     imu_accelerometer_filter_.setTimeStep(period_);
@@ -769,7 +834,7 @@ void Controller::updateWpg(const double &dt)
   foot_holds_planner_->update(dt);
 
   // Update the CoM position and velocity reference
-  com_planner_->update();
+  com_planner_->update(dt);
 
   // Update the base references based on the com desired position
   updateBaseReferences(com_planner_->getComPosition(),com_planner_->getComVelocity(),foot_holds_planner_->getBaseRotationReference());
@@ -781,12 +846,12 @@ void Controller::updateWpg(const double &dt)
                                  WORLD_FRAME_NAME);
       if(gait_generator_->isSwinging(foot_names[i]))
       {
-          id_prob_->swingWithFoot(foot_names[i]);
+          id_prob_->swingWithFoot(foot_names[i],robot_model_->getBaseLinkName());
           ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Swinging: "<< foot_names[i]);
       }
       else
       {
-          id_prob_->stanceWithFoot(foot_names[i]);
+          id_prob_->stanceWithFoot(foot_names[i],WORLD_FRAME_NAME);
           ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Stance: "<< foot_names[i]);
       }
   }
@@ -805,7 +870,7 @@ bool Controller::performSafetyChecks()
 
   bool ok = true;
 
-  // Check if we have at least one contact with the feet
+  // Check if we have at least one contact with the ground
   auto contacts = state_estimator_->getContacts();
   bool contact = false;
   auto foot_names = robot_model_->getFootNames();
@@ -819,6 +884,18 @@ bool Controller::performSafetyChecks()
   {
     ok = false;
     ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Lost contacts!");
+  }
+
+  // Check the base orientation
+  double roll = robot_model_->getBaseRotationInWorldRPY().x();
+  double pitch = robot_model_->getBaseRotationInWorldRPY().y();
+  if (roll > M_PI_2 || roll < -M_PI_2) {
+    ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Base roll is beyond limits (-M_PI_2,M_PI_2)");
+    ok = false;
+  }
+  if (pitch > M_PI_2 || pitch < -M_PI_2) {
+    ROS_WARN_THROTTLE_NAMED(THROTTLE_SEC,CLASS_NAME,"Base pitch is beyond limits (-M_PI_2,M_PI_2)");
+    ok = false;
   }
 
   // Check if the current joint velocities (only legs for the moment) are valid otherwise set robot state to anomaly
@@ -910,7 +987,7 @@ void Controller::update(const ros::Time& time, const ros::Duration& period)
       joint_states_[i].setCommand(des_joint_efforts_(i+FLOATING_BASE_DOFS));
 
     // Publish
-    ros_wrapper_->publish(time);
+    ros_wrapper_->publish(time,period);
     RtLogger::getLogger().publish(time);
 }
 
@@ -941,16 +1018,16 @@ void Controller::odomPublisher()
     Eigen::Matrix3d tmp_R;
 
     ros::Time t_prev;
-    static tf2_ros::TransformBroadcaster br;
+    tf2_ros::TransformBroadcaster br;
     nav_msgs::Odometry odom_msg;
     geometry_msgs::TransformStamped basefoot_T_world_msg;
     geometry_msgs::TransformStamped basefoot_T_base_msg;
     geometry_msgs::TransformStamped odom_T_basefoot_msg;
     geometry_msgs::TransformStamped odom_T_base_msg;
-    static ros::Publisher odom_pub;
+    ros::Publisher odom_pub;
 
     if(publish_odom_msg_)
-      odom_pub = nh_.advertise<nav_msgs::Odometry>("/odometry/robot",100);
+      odom_pub = root_nh_.advertise<nav_msgs::Odometry>("odometry/robot",100);
 
     ros::Rate publishing_rate(odom_pub_rate_);
 
@@ -977,8 +1054,8 @@ void Controller::odomPublisher()
           // Set coordinates
           basefoot_T_world_msg = tf2::eigenToTransform(basefoot_T_world);
           // Set transform header
-          basefoot_T_world_msg.header.frame_id = BASE_FOOTPRINT_FRAME;
-          basefoot_T_world_msg.child_frame_id  = WORLD_FRAME_NAME;
+          basefoot_T_world_msg.header.frame_id = tf_prefix_+BASE_FOOTPRINT_FRAME;
+          basefoot_T_world_msg.child_frame_id  = tf_prefix_+WORLD_FRAME_NAME;
           basefoot_T_world_msg.header.seq++;
           basefoot_T_world_msg.header.stamp = t;
           br.sendTransform(basefoot_T_world_msg);
@@ -991,8 +1068,8 @@ void Controller::odomPublisher()
           // Set coordinates
           basefoot_T_base_msg = tf2::eigenToTransform(basefoot_T_base);
           // Set transform header
-          basefoot_T_base_msg.header.frame_id = BASE_FOOTPRINT_FRAME;
-          basefoot_T_base_msg.child_frame_id  = robot_model_->getBaseLinkName();
+          basefoot_T_base_msg.header.frame_id = tf_prefix_+BASE_FOOTPRINT_FRAME;
+          basefoot_T_base_msg.child_frame_id  = tf_prefix_+robot_model_->getBaseLinkName();
           basefoot_T_base_msg.header.seq++;
           basefoot_T_base_msg.header.stamp = t;
           br.sendTransform(basefoot_T_base_msg);
@@ -1037,8 +1114,8 @@ void Controller::odomPublisher()
             // Set coordinates
             odom_T_basefoot_msg = tf2::eigenToTransform(odom_T_basefoot);
             // Set transform header
-            odom_T_basefoot_msg.header.frame_id = ODOM_FRAME;
-            odom_T_basefoot_msg.child_frame_id  = BASE_FOOTPRINT_FRAME;
+            odom_T_basefoot_msg.header.frame_id = tf_prefix_+ODOM_FRAME;
+            odom_T_basefoot_msg.child_frame_id  = tf_prefix_+BASE_FOOTPRINT_FRAME;
             odom_T_basefoot_msg.header.seq++;
             odom_T_basefoot_msg.header.stamp = t;
             if(publish_odom_tf_)
@@ -1079,6 +1156,11 @@ void Controller::stopping(const ros::Time& /*time*/)
     odom_publisher_thread_->join();
 
     ROS_DEBUG_NAMED(CLASS_NAME,"Stopping WoLF controller completed");
+}
+
+const string &Controller::getRobotName()
+{
+    return robot_name_;
 }
 
 void Controller::setBaseLinearVelocityCmdX(const double &v)
@@ -1189,7 +1271,7 @@ std::vector<Eigen::Vector6d>& Controller::getDesiredContactForces()
     return des_contact_forces_;
 }
 
-std::vector<bool> &Controller::getDesiredContactStates()
+std::vector<bool>& Controller::getDesiredContactStates()
 {
   auto foot_names = robot_model_->getFootNames();
   for(unsigned int i=0; i<foot_names.size(); i++)
@@ -1200,4 +1282,20 @@ std::vector<bool> &Controller::getDesiredContactStates()
   return des_contact_states_;
 }
 
+std::string Controller::getModeAsString()
+{
+  return enumToString(current_mode_);
+}
+
+std::vector<std::string> Controller::getModesAsString()
+{
+  std::vector<std::string> modes;
+  for(unsigned int i=0; i< N_MODES; i++)
+    modes.push_back(enumToString(static_cast<mode_t>(i)));
+
+  return modes;
+}
+
 } //namespace
+
+PLUGINLIB_EXPORT_CLASS(wolf_controller::Controller, controller_interface::ControllerBase);

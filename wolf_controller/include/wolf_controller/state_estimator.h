@@ -14,9 +14,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <atomic>
-#include <OpenSoT/floating_base_estimation/qp_estimation.h>
-#include <cartesian_interface/utils/estimation/ForceEstimation.h>
+#include <wolf_controller/force_estimator.h>
 #include <wolf_controller/quadruped_robot.h>
+#include <wolf_estimation/qp_estimation.h>
 
 // WoLF utils
 #include <wolf_controller_utils/tools.h>
@@ -78,6 +78,8 @@ public:
     void setGroundTruthBaseLinearVelocity(const Eigen::Vector3d& gt_linear_velocity);
 
     void setGroundTruthBaseAngularVelocity(const Eigen::Vector3d& gt_angular_velocity);
+
+    void setGroundTruthBaseLinearAcceleration(const Eigen::Vector3d& gt_linear_acceleration);
 
     void setContactState(const std::string& name, const bool& state);
 
@@ -163,6 +165,8 @@ private:
     Eigen::Vector3d gt_linear_velocity_;
     /** @brief IMU Ground Truth angular velocity */
     Eigen::Vector3d gt_angular_velocity_;
+    /** @brief IMU Ground Truth linear acceleration */
+    Eigen::Vector3d gt_linear_acceleration_;
     /** @brief Floating base pose w.r.t world */
     Eigen::Affine3d floating_base_pose_;
     /** @brief Floating base position (x,y,z) w.r.t world */
@@ -174,9 +178,9 @@ private:
     /** @brief Floating base orientation w.r.t the world frame, computed by the state estimator (RPY) */
     Eigen::Vector3d floating_base_rpy_;
     /** @brief Contact estimation */
-    XBot::Cartesian::Utils::ForceEstimation::Ptr force_estimation_;
+    ForceEstimator::Ptr force_estimation_;
     /** @brief Contact estimation */
-    std::map<std::string,XBot::ForceTorqueSensor::ConstPtr> force_torque_sensors_;
+    std::map<std::string,ForceTorqueSensor::ConstPtr> force_torque_sensors_;
     /** @brief Contact positions w.r.t world */
     std::map<std::string,Eigen::Vector3d> world_X_contact_;
     /** @brief Contact positions w.r.t base */
@@ -219,7 +223,7 @@ private:
     std::atomic<bool> use_external_contact_states_;
 
     /** @brief Base estimation based on qp taking in account only the linear velocities of the base */
-    OpenSoT::floating_base_estimation::qp_estimation::Ptr qp_estimation_;
+    wolf_estimation::qp_estimation::Ptr qp_estimation_;
 
      /** @brief Base estimation based on qp taking in account the linear and angular velocities of the base */
     wolf_estimation::RobotOdomEstimator::Ptr full_qp_estimation_;

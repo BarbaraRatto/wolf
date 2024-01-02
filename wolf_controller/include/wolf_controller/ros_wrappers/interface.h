@@ -38,7 +38,7 @@ public:
 
   RosWrapperInterface(){spinner_.reset(new ros::AsyncSpinner(1)); spinner_->start();}
   virtual ~RosWrapperInterface(){spinner_->stop();}
-  virtual void publish(const ros::Time& /*time*/) = 0;
+  virtual void publish(const ros::Time& /*time*/, const ros::Duration& /*period*/) = 0;
 
 protected:
 
@@ -112,8 +112,6 @@ protected:
   Eigen::Matrix3d       tmp_matrix3d_;
   Eigen::Quaterniond    tmp_quaterniond_;
 
-  //realtime_tools::RealtimeBuffer<Eigen::Affine3d> buffer_pose_reference_;
-
   std::atomic<double> buffer_lambda1_;
   std::atomic<double> buffer_lambda2_;
   std::atomic<double> buffer_weight_diag_;
@@ -133,7 +131,6 @@ protected:
   std::atomic<double> buffer_kd_yaw_;
 
   std::shared_ptr<realtime_tools::RealtimePublisher<Msg_type>> rt_pub_;
-  wolf_controller::CartesianTrajectory::Ptr trj_;
 
   double last_time_;
 

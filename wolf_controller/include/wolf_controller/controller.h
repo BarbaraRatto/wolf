@@ -58,7 +58,7 @@ class Controller : public controller_interface::MultiInterfaceController<hardwar
 public:
 
      enum posture_t {UP=0,DOWN};
-     enum mode_t {WPG=0,EXT,MPC,RESET};
+     enum mode_t {WPG=0,EXT,MPC,RESET,N_MODES=4};
 
      const std::string CLASS_NAME = "Controller";
 
@@ -111,6 +111,11 @@ public:
          * @param const ros::time& Time
          */
     void stopping(const ros::Time& time);
+
+    /**
+         * @brief get the robot name
+         */
+    const std::string& getRobotName();
 
     /**
          * @brief Set the base linear velocity command along X
@@ -289,6 +294,16 @@ public:
     const Eigen::VectorXd& getDesiredJointEfforts() const;
 
     /**
+         * @brief Get the current control mode
+         */
+    std::string getModeAsString();
+
+    /**
+         * @brief Get the available control modes
+         */
+    std::vector<std::string> getModesAsString();
+
+    /**
          * @brief Get the id problem
          */
     IDProblem* getIDProblem() const;
@@ -323,7 +338,6 @@ public:
          */
     QuadrupedRobot* getRobotModel() const;
 
-
 private:
 
     /** @brief Joint names */
@@ -332,6 +346,8 @@ private:
     std::vector<hardware_interface::JointHandle> joint_states_;
     /** @brief Robot name */
     std::string robot_name_;
+    /** @brief TF prefix */
+    std::string tf_prefix_;
     /** @brief Control period */
     double period_;
     /** @brief IMU sensor name */
@@ -364,7 +380,7 @@ private:
     Eigen::VectorXd des_joint_efforts_impedance_;
     /** @brief Desired joint efforts sent to the hardware interface */
     Eigen::VectorXd des_joint_efforts_;
-    /** @brief Xbot robot model */
+    /** @brief Quadruped robot model */
     QuadrupedRobot::Ptr robot_model_;
     /** @brief Impedance pointer */
     Impedance::Ptr impedance_;
@@ -450,9 +466,11 @@ private:
     wolf_controller_utils::Ramp::Ptr ramp_stand_down_;
     wolf_controller_utils::Ramp::Ptr ramp_init_;
     /** @brief State machine support variables */
-    unsigned int mode_;
-    unsigned int previous_mode_;
-    unsigned int posture_;
+    std::string mode_string_;
+    mode_t current_mode_;
+    mode_t requested_mode_;
+    mode_t previous_mode_;
+    posture_t posture_;
     double stand_down_starting_height_;
     double desired_height_;
     double current_height_;
@@ -532,9 +550,6 @@ private:
     bool performSafetyChecks();
 
 };
-
-
-PLUGINLIB_EXPORT_CLASS(wolf_controller::Controller, controller_interface::ControllerBase);
 
 } //@namespace wolf_controller
 

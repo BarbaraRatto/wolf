@@ -7,6 +7,9 @@
 
 // WoLF
 #include <wolf_controller/ros_wrappers/cartesian.h>
+#include <wolf_controller_utils/converters.h>
+
+using namespace wolf_controller_utils;
 
 Cartesian::Cartesian(ros::NodeHandle& nh,
                      const std::string task_id,
@@ -17,8 +20,9 @@ Cartesian::Cartesian(ros::NodeHandle& nh,
                      const bool use_mesh)
   :OpenSoT::tasks::acceleration::Cartesian(task_id,robot,distal_link,base_link,qddot)
   ,TaskRosWrapperInterface<wolf_msgs::CartesianTask>(task_id,nh)
-  ,use_mesh_(use_mesh)
+  ,is_continuous_(true)
   ,interactive_marker_server_(wolf_controller::_robot_name+"/wolf_controller/marker/"+_task_id)
+  ,use_mesh_(use_mesh)
 {
 
   // Get the urdf (used for the mesh)
@@ -27,10 +31,15 @@ Cartesian::Cartesian(ros::NodeHandle& nh,
   // Get the urdf links (used for the base frame selection)
   urdf_.getLinks(links_);
 
+  // Initialize buffers
+  tmp_affine3d_.setIdentity();
+  buffer_reference_pose_.initRT(tmp_affine3d_);
+  tmp_vector6d_.setZero();
+  buffer_reference_twist_.initRT(tmp_vector6d_);
+
   // Create the marker
   control_type_ = visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D;
-  is_continuous_ = false;
-  makeMarker(getDistalLink(),getBaseLink(),control_type_,true);
+  makeMarker(getDistalLink(),getBaseLink(),static_cast<unsigned int>(control_type_),true);
   makeMenu();
   interactive_marker_server_.applyChanges();
 
@@ -75,17 +84,17 @@ void Cartesian::loadParams()
   double lambda1, lambda2, weight;
   if (!nh_.getParam("gains/"+_task_id+"/lambda1" , lambda1))
   {
-    ROS_WARN("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda1 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda1 = getLambda();
   }
   if (!nh_.getParam("gains/"+_task_id+"/lambda2" , lambda2))
   {
-    ROS_WARN("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No lambda2 gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     lambda2 = getLambda2();
   }
   if (!nh_.getParam("gains/"+_task_id+"/weight" , weight))
   {
-    ROS_WARN("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No weight gain given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
     weight = getWeight()(0,0);
   }
   // Check if the values are positive
@@ -106,12 +115,12 @@ void Cartesian::loadParams()
   {
     if (!nh_.getParam("gains/"+_task_id+"/Kp/" + wolf_controller::_cartesian_names[i] , Kp(i,i)))
     {
-      ROS_WARN("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
+      ROS_DEBUG("No Kp.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
       use_identity = true;
     }
     if (!nh_.getParam("gains/"+_task_id+"/Kd/"  + wolf_controller::_cartesian_names[i] , Kd(i,i)))
     {
-      ROS_WARN("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
+      ROS_DEBUG("No Kd.%s gain given for task %s in the namespace: %s, using an identity matrix. ",wolf_controller::_cartesian_names[i].c_str(),_task_id.c_str(),nh_.getNamespace().c_str());
       use_identity = true;
     }
     // Check if the values are positive
@@ -145,7 +154,7 @@ void Cartesian::loadParams()
 
   std::string type;
   if (!nh_.getParam("gains/"+_task_id+"/type" , type))
-    ROS_WARN("No gains type given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
+    ROS_DEBUG("No gains type given for task %s in the namespace: %s, using the default value loaded from the task",_task_id.c_str(),nh_.getNamespace().c_str());
   else
     if(type == "acceleration")
       setGainType(OpenSoT::tasks::acceleration::GainType::Acceleration);
@@ -160,7 +169,7 @@ void Cartesian::updateCost(const Eigen::VectorXd& x)
   cost_ = computeCost(x);
 }
 
-void Cartesian::publish(const ros::Time& time)
+void Cartesian::publish(const ros::Time& time, const ros::Duration& /*period*/)
 {
   if(rt_pub_->trylock())
   {
@@ -218,10 +227,17 @@ void Cartesian::_update(const Eigen::VectorXd& x)
   }
   if(OPTIONS.set_ext_reference)
   {
-    // Interpolation
-    trj_->update(wolf_controller::_period);
-    trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
-    setReference(tmp_affine3d_,tmp_vector6d_);
+    if(is_continuous_) // Direct control
+    {
+      //setReference(*buffer_reference_pose_.readFromRT());
+      setReference(*buffer_reference_pose_.readFromRT(),*buffer_reference_twist_.readFromRT());
+    }
+    else // Interpolation
+    {
+      trj_->update(wolf_controller::_period);
+      trj_->getReference(tmp_affine3d_,&tmp_vector6d_);
+      setReference(tmp_affine3d_,tmp_vector6d_);
+    }
   }
   OpenSoT::tasks::acceleration::Cartesian::_update(x);
 }
@@ -229,12 +245,17 @@ void Cartesian::_update(const Eigen::VectorXd& x)
 bool Cartesian::reset()
 {
   bool res = OpenSoT::tasks::acceleration::Cartesian::reset(); // Task's reset
-  makeMarker(getDistalLink(),getBaseLink(),control_type_,true);
+  makeMarker(getDistalLink(),getBaseLink(),static_cast<unsigned int>(control_type_),true);
   menu_handler_.reApply(interactive_marker_server_);
   interactive_marker_server_.applyChanges();
   waypoints_.clear();
   publishWP(waypoints_);
   trj_->reset();
+  getActualPose(tmp_affine3d_);
+  buffer_reference_pose_.initRT(tmp_affine3d_);
+  tmp_vector6d_.setZero();
+  buffer_reference_twist_.initRT(tmp_vector6d_);
+
   return res;
 }
 
@@ -259,7 +280,7 @@ void Cartesian::makeMarker(const std::string &distal_link, const std::string &ba
   }
   Eigen::Affine3d start_pose;
   getActualPose(start_pose);
-  EigenAffine3dToVisualizationPose(start_pose, interactive_marker_);
+  eigenAffine3dToVisualizationPose(start_pose, interactive_marker_);
   interactive_marker_server_.insert(interactive_marker_,boost::bind(&Cartesian::processFeedback, this, _1));
 }
 
@@ -302,13 +323,17 @@ void Cartesian::processFeedback(const visualization_msgs::InteractiveMarkerFeedb
                     << ", " << feedback->pose.position.z << " frame " << feedback->header.frame_id );
 
   Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
+  Eigen::Vector6d twist_reference = Eigen::Vector6d::Zero();
   tf::poseMsgToEigen(feedback->pose,pose_reference);
 
   if(is_continuous_ == true)
-    trj_->setWayPoint(pose_reference,0.1);
+  {
+    buffer_reference_pose_.writeFromNonRT(pose_reference);
+    buffer_reference_twist_.writeFromNonRT(twist_reference);
+  }
 }
 
-void Cartesian::referenceCallback(const wolf_msgs::CartesianTask::ConstPtr& msg)
+void Cartesian::referenceCallback(const wolf_msgs::Cartesian::ConstPtr& msg)
 {
   double period = wolf_controller::_period;
 
@@ -316,9 +341,16 @@ void Cartesian::referenceCallback(const wolf_msgs::CartesianTask::ConstPtr& msg)
     period = msg->header.stamp.toSec() - last_time_;
 
   Eigen::Affine3d pose_reference = Eigen::Affine3d::Identity();
-  tf::poseMsgToEigen(msg->pose_reference,pose_reference);
+  Eigen::Vector6d twist_reference = Eigen::Vector6d::Zero();
+  tf::poseMsgToEigen(msg->pose,pose_reference);
+  tf::twistMsgToEigen(msg->twist,twist_reference);
 
-  trj_->setWayPoint(pose_reference,period);
+  // Check if reference frame changed
+  if(msg->header.frame_id != "" && msg->header.frame_id != getBaseLink() && OPTIONS.set_ext_reference)
+    setBaseLink(msg->header.frame_id);
+
+  buffer_reference_pose_.writeFromNonRT(pose_reference);
+  buffer_reference_twist_.writeFromNonRT(twist_reference);
 
   last_time_ = msg->header.stamp.toSec();
 }
@@ -358,7 +390,6 @@ Eigen::Affine3d Cartesian::getPose(const std::string& base_link, const std::stri
   {
     try
     {
-      ros::Time now = ros::Time::now();
       listener_.waitForTransform(base_link, distal_link,ros::Time(0),ros::Duration(1.0));
       listener_.lookupTransform(base_link, distal_link,ros::Time(0),transform);
     }
@@ -372,8 +403,6 @@ Eigen::Affine3d Cartesian::getPose(const std::string& base_link, const std::stri
   tf::transformTFToEigen(transform,pose);
   return pose;
 }
-
-
 
 visualization_msgs::Marker Cartesian::makeSTL( visualization_msgs::InteractiveMarker &msg )
 {
@@ -392,7 +421,7 @@ visualization_msgs::Marker Cartesian::makeSTL( visualization_msgs::InteractiveMa
   }
 
   Eigen::Affine3d&& actual_pose = getPose(controlled_link->name, link->name);
-  EigenAffine3dToVisualizationPose(actual_pose,marker_);
+  eigenAffine3dToVisualizationPose(actual_pose,marker_);
 
   marker_.color.r = 0.5;
   marker_.color.g = 0.5;
@@ -445,11 +474,11 @@ visualization_msgs::Marker Cartesian::makeSTL( visualization_msgs::InteractiveMa
 void Cartesian::makeMenu()
 {
 
-  continuous_control_entry_ = menu_handler_.insert("Continuous Ctrl",boost::bind(&Cartesian::setContinuousCtrl,this,_1));
-  menu_handler_.setCheckState(continuous_control_entry_, interactive_markers::MenuHandler::UNCHECKED);
+  continuous_control_entry_ = menu_handler_.insert("Marker Ctrl",boost::bind(&Cartesian::setContinuousCtrl,this,_1));
+  menu_handler_.setCheckState(continuous_control_entry_, interactive_markers::MenuHandler::CHECKED);
 
   way_point_entry_ = menu_handler_.insert("Add WayPoint");
-  menu_handler_.setVisible(way_point_entry_, true);
+  menu_handler_.setVisible(way_point_entry_, false);
 
   T_entry_ = menu_handler_.insert(way_point_entry_, "T [sec]");
   for (unsigned int i = 0; i < 10; i++ )
@@ -524,7 +553,7 @@ void Cartesian::changeBaseLink(const visualization_msgs::InteractiveMarkerFeedba
   }
 }
 
-void Cartesian::sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
   if(waypoints_.empty()) return;
 
@@ -549,30 +578,30 @@ void Cartesian::sendWayPoints(const visualization_msgs::InteractiveMarkerFeedbac
   T_.clear();
 }
 
-void Cartesian::resetMarker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::resetMarker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
-  clearMarker(req_, res_);
-  spawnMarker(req_, res_);
+  clearMarker();
+  spawnMarker();
 }
 
-void Cartesian::resetLastWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::resetLastWayPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
-  ROS_INFO("RESET LAST WAYPOINT!");
+  ROS_INFO("Reset last waypoint!");
 
   if(!T_.empty())
     T_.pop_back();
   if(!waypoints_.empty())
     waypoints_.pop_back();
 
-  clearMarker(req_, res_);
+  clearMarker();
 
   if(waypoints_.empty())
-    spawnMarker(req_, res_);
+    spawnMarker();
   else
   {
     if(interactive_marker_server_.empty())
     {
-      PoseToVisualizationPose(waypoints_.back(),interactive_marker_);
+      poseToVisualizationPose(waypoints_.back(),interactive_marker_);
       interactive_marker_server_.insert(interactive_marker_,boost::bind(&Cartesian::processFeedback,this,_1));
       menu_handler_.reApply(interactive_marker_server_);
       interactive_marker_server_.applyChanges();
@@ -587,7 +616,7 @@ void Cartesian::resetAllWayPoints(const visualization_msgs::InteractiveMarkerFee
   waypoints_.clear();
   resetMarker(feedback);
   publishWP(waypoints_);
-  ROS_INFO("RESETTING ALL WAYPOINTS!");
+  ROS_INFO("Reset all waypoints!");
 }
 
 void Cartesian::wayPointCallBack(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback, double T)
@@ -626,21 +655,7 @@ void Cartesian::publishWP(const std::vector<geometry_msgs::Pose>& wps)
   waypoints_pub_.publish(msg);
 }
 
-bool Cartesian::setTrj(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
-{
-  clearMarker(req, res);
-  spawnMarker(req, res);
-  return true;
-}
-
-bool Cartesian::setContinuous(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
-{
-  clearMarker(req, res);
-  spawnMarker(req,res);
-  return true;
-}
-
-bool Cartesian::clearMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+bool Cartesian::clearMarker()
 {
   if(!interactive_marker_server_.empty())
   {
@@ -650,13 +665,13 @@ bool Cartesian::clearMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Resp
   return true;
 }
 
-bool Cartesian::spawnMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+bool Cartesian::spawnMarker()
 {
   if(interactive_marker_server_.empty())
   {
     Eigen::Affine3d start_pose;
     getActualPose(start_pose);
-    EigenAffine3dToVisualizationPose(start_pose,interactive_marker_);
+    eigenAffine3dToVisualizationPose(start_pose,interactive_marker_);
     interactive_marker_server_.insert(interactive_marker_,boost::bind(&Cartesian::processFeedback, this, _1));
     menu_handler_.reApply(interactive_marker_server_);
     interactive_marker_server_.applyChanges();
@@ -664,7 +679,7 @@ bool Cartesian::spawnMarker(std_srvs::Empty::Request& req, std_srvs::Empty::Resp
   return true;
 }
 
-void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
+void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& /*feedback*/)
 {
   is_continuous_ = !is_continuous_;
 
@@ -674,7 +689,7 @@ void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFee
     menu_handler_.setVisible(way_point_entry_, true);
     waypoints_.clear();
     T_.clear();
-    setContinuous(req_,res_);
+    trj_->reset();
   }
   else if(is_continuous_ == true)
   {
@@ -682,8 +697,16 @@ void Cartesian::setContinuousCtrl(const visualization_msgs::InteractiveMarkerFee
     menu_handler_.setVisible(way_point_entry_, false);
     waypoints_.clear();
     T_.clear();
-    setTrj(req_, res_);
+    Eigen::Affine3d pose;
+    Eigen::Vector6d twist = Eigen::Vector6d::Zero();
+    getActualPose(pose);
+    buffer_reference_pose_.writeFromNonRT(pose);
+    buffer_reference_twist_.writeFromNonRT(twist);
   }
+
+  clearMarker();
+  spawnMarker();
+  publishWP(waypoints_);
 
   menu_handler_.reApply(interactive_marker_server_);
   interactive_marker_server_.applyChanges();

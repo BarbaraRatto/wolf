@@ -39,7 +39,7 @@ public:
 
   virtual void update(const Eigen::VectorXd& x);
 
-  virtual void publish(const ros::Time& time);
+  virtual void publish(const ros::Time& time, const ros::Duration& period);
 
 
 };

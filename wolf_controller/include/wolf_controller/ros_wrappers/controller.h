@@ -29,12 +29,16 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_msgs/FrictionCones.h>
 #include <wolf_msgs/CapturePoint.h>
 #include <wolf_msgs/ControllerState.h>
-#include <wolf_msgs/float32.h>
+#include <wolf_msgs/Float32.h>
 
 // WoLF
 #include <wolf_controller/controller.h>
 #include <wolf_controller/ros_wrappers/interface.h>
 
+// OCS2
+#ifdef OCS2
+#include <ocs2_msgs/mpc_observation.h>
+#endif
 
 class ControllerRosWrapper : public RosWrapperInterface
 {
@@ -51,15 +55,15 @@ public:
 
     bool decreaseSwingFrequencyCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
-    bool setSwingFrequencyCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res);
+    bool setSwingFrequencyCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res);
 
-    bool setDutyFactorCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res);
+    bool setDutyFactorCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res);
 
     bool activatePushRecoveryCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
     bool activateStepReflexCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
-    bool setStepHeightCB(wolf_msgs::float32Request& req, wolf_msgs::float32Response& res);
+    bool setStepHeightCB(wolf_msgs::Float32Request& req, wolf_msgs::Float32Response& res);
 
     bool increaseStepHeightCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
@@ -79,7 +83,7 @@ public:
 
     bool standDownCB(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
 
-    virtual void publish(const ros::Time& time);
+    virtual void publish(const ros::Time& time, const ros::Duration& period) override;
 
 protected:
 
@@ -95,6 +99,10 @@ protected:
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::FrictionCones>> friction_cones_pub_;
     /** @brief Real time publisher - capture point */
     std::shared_ptr<realtime_tools::RealtimePublisher<wolf_msgs::CapturePoint>> capture_point_pub_;
+    /** @brief Real time publisher - OCS2 */
+    #ifdef OCS2
+    std::shared_ptr<realtime_tools::RealtimePublisher<ocs2_msgs::mpc_observation>> mpc_observation_pub_;
+    #endif
     /** @brief Controller pnt */
     wolf_controller::Controller* controller_;
     /** @brief ROS services */
@@ -114,6 +122,16 @@ protected:
     ros::ServiceServer set_duty_factor_;
     ros::ServiceServer increase_swing_frequency_;
     ros::ServiceServer decrease_swing_frequency_;
+
+    /** @brief tmp variables */
+    Eigen::Vector6d tmp_vector6d_;
+    Eigen::Affine3d tmp_affine3d_;
+    Eigen::Vector3d tmp_vector3d_;
+    Eigen::VectorXd tmp_vectorXd_;
+
+    /** @brief angles variables */
+    Eigen::Vector3d base_rpy_;
+    Eigen::Vector3d base_rpy_prev_;
 
 };
 

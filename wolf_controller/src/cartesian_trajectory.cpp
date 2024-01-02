@@ -7,8 +7,8 @@
 
 #include <wolf_controller/cartesian_trajectory.h>
 
-using namespace XBot;
-using namespace Cartesian;
+using namespace wolf_controller_utils;
+using namespace trajectory;
 
 namespace
 {
@@ -107,7 +107,7 @@ CartesianTrajectory::state_t CartesianTrajectory::getState() const
 
 bool CartesianTrajectory::checkProximity() const
 {
-  auto T_ref = trajectory_->getWayPoints().back().frame;
+  auto T_ref = trajectory_->getWayPoints().back().frame_;
   return T_ref.isApprox(T_, DEFAULT_REACH_THRESHOLD);
 }
 

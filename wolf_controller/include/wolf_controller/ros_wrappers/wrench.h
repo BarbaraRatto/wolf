@@ -14,8 +14,9 @@ work. If not, see <http://creativewrenchmons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/Task.h>
 #include <OpenSoT/tasks/force/Force.h>
 
-// ROS
+// WoLF msgs
 #include <wolf_msgs/WrenchTask.h>
+#include <wolf_msgs/Wrench.h>
 
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
@@ -43,7 +44,7 @@ public:
 
   virtual void updateCost(const Eigen::VectorXd& x) override;
 
-  virtual void publish(const ros::Time& time) override;
+  virtual void publish(const ros::Time& time, const ros::Duration& period) override;
 
   virtual bool reset() override;
 
@@ -51,7 +52,9 @@ private:
 
   virtual void _update(const Eigen::VectorXd& x) override;
 
-  void referenceCallback(const wolf_msgs::WrenchTask::ConstPtr& msg);
+  void referenceCallback(const wolf_msgs::Wrench::ConstPtr& msg);
+
+  realtime_tools::RealtimeBuffer<Eigen::Vector6d> buffer_reference_;
 
 };
 

@@ -34,6 +34,8 @@ TEST(ControllerTest, Update)
   EXPECT_NO_THROW(_controller_ptr->update(ros::Time::now(),ros::Duration(_period))); // Update
   while(_controller_ptr->getRobotModel()->getState() == wolf_controller::QuadrupedRobot::INIT)  // Running the impedance
     EXPECT_NO_THROW(_controller_ptr->update(ros::Time::now(),ros::Duration(_period))); // Update
+  while(_controller_ptr->getRobotModel()->getState() == wolf_controller::QuadrupedRobot::STANDING_UP)  // Standing up
+    EXPECT_NO_THROW(_controller_ptr->update(ros::Time::now(),ros::Duration(_period))); // Update
   EXPECT_NO_THROW(_controller_ptr->update(ros::Time::now(),ros::Duration(_period))); // Running the solver
   END_REAL_TIME_CRITICAL_CODE();
 }
@@ -51,7 +53,7 @@ int main(int argc, char** argv)
   testing::InitGoogleTest(&argc, argv);
 
   _root_nh_ptr = std::make_unique<ros::NodeHandle>();
-  _controller_nh_ptr = std::make_unique<ros::NodeHandle>();
+  _controller_nh_ptr = std::make_unique<ros::NodeHandle>("wolf_controller");
   _hw_ptr = std::make_shared<wolf_controller::RobotDummy>();
   _controller_ptr = std::make_shared<wolf_controller::Controller>();
 

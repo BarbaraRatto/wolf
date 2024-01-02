@@ -45,6 +45,8 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   if(state_estimator_->areAllFeetInContact())
   {
 
+    // NOTE: I commented out this line because it was causing huge steps in the terrain height estimation.
+    // This can be a real problem when going up stairs.
     if(update_ == true)
     {
 

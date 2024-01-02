@@ -55,6 +55,8 @@ public:
   const std::string& getBaseLinkName() const;
   const std::string& getImuSensorName() const;
   const std::string& getRobotName() const;
+  Eigen::VectorXd getLegJointValues(const Eigen::VectorXd& joints);
+  Eigen::VectorXd getArmJointValues(const Eigen::VectorXd& joints);
 
   const std::vector<unsigned int> &getLimbJointsIds(const std::string& limb_name);
 
@@ -86,27 +88,27 @@ public:
   using ModelInterface::getCOMVelocity;
   using ModelInterface::getJacobian;
 
-  const std::map<std::string, Eigen::Vector3d> &getFeetPositionInWorld() const;
-  const std::map<std::string, Eigen::Vector3d> &getFeetPositionInBase() const;
-  const std::map<std::string, Eigen::Affine3d> &getFeetPoseInWorld() const;
-  const std::map<std::string, Eigen::Affine3d> &getFeetPoseInBase() const;
+  const std::map<std::string, Eigen::Vector3d>& getFeetPositionInWorld() const;
+  const std::map<std::string, Eigen::Vector3d>& getFeetPositionInBase() const;
+  const std::map<std::string, Eigen::Affine3d>& getFeetPoseInWorld() const;
+  const std::map<std::string, Eigen::Affine3d>& getFeetPoseInBase() const;
 
-  Eigen::Vector3d &getFootPositionInWorld(const std::string &name);
-  Eigen::Vector3d &getFootPositionInBase(const std::string &name);
-  Eigen::Affine3d &getFootPoseInWorld(const std::string &name);
-  Eigen::Affine3d &getFootPoseInBase(const std::string &name);
+  Eigen::Vector3d& getFootPositionInWorld(const std::string &name);
+  Eigen::Vector3d& getFootPositionInBase(const std::string &name);
+  Eigen::Affine3d& getFootPoseInWorld(const std::string &name);
+  Eigen::Affine3d& getFootPoseInBase(const std::string &name);
 
-  const std::map<std::string, Eigen::Vector3d> &getEndEffectorsPositionInWorld() const;
-  const std::map<std::string, Eigen::Vector3d> &getEndEffectorsPositionInBase() const;
-  const std::map<std::string, Eigen::Affine3d> &getEndEffectorsPoseInWorld() const;
-  const std::map<std::string, Eigen::Affine3d> &getEndEffectorsPoseInBase() const;
+  const std::map<std::string, Eigen::Vector3d>& getEndEffectorsPositionInWorld() const;
+  const std::map<std::string, Eigen::Vector3d>& getEndEffectorsPositionInBase() const;
+  const std::map<std::string, Eigen::Affine3d>& getEndEffectorsPoseInWorld() const;
+  const std::map<std::string, Eigen::Affine3d>& getEndEffectorsPoseInBase() const;
 
-  Eigen::Vector3d &getEndEffectorPositionInWorld(const std::string &name);
-  Eigen::Vector3d &getEndEffectorPositionInBase(const std::string &name);
-  Eigen::Affine3d &getEndEffectorPoseInWorld(const std::string &name);
-  Eigen::Affine3d &getEndEffectorPoseInBase(const std::string &name);
+  Eigen::Vector3d& getEndEffectorPositionInWorld(const std::string &name);
+  Eigen::Vector3d& getEndEffectorPositionInBase(const std::string &name);
+  Eigen::Affine3d& getEndEffectorPoseInWorld(const std::string &name);
+  Eigen::Affine3d& getEndEffectorPoseInBase(const std::string &name);
 
-  const Eigen::Affine3d &getBasePoseInWorld() const; // This is the floating base pose w.r.t world
+  const Eigen::Affine3d& getBasePoseInWorld() const; // This is the floating base pose w.r.t world
 
   /**
        * @brief check if the joint velocities are above a max value
@@ -183,6 +185,16 @@ public:
   */
   bool getPose(const Eigen::VectorXd& q, const std::string& source_frame, Eigen::Affine3d& pose);
 
+  /**
+  * @brief Computes the twist of the source_frame w.r.t. the world frame
+  *
+  * @param q The joint positions.
+  * @param qd The joint velocities.
+  * @param source_frame The source link name.
+  * @param twist the calculated twist
+  * @return True if source_frame is valid. False otherwise.
+  */
+  bool getTwist(const Eigen::VectorXd& q, const Eigen::VectorXd& qd, const std::string& source_frame, Eigen::Vector6d& twist);
 
   /**
    * @brief Gets the Jacobian of link_name expressed in the world frame, i.e a matrix such that its product with
@@ -241,11 +253,16 @@ private:
   std::string robot_name_;
 
   limb_joint_idxs_map_t joint_limb_idx_;
+  std::vector<unsigned int> joint_leg_idx_;
+  std::vector<unsigned int> joint_arm_idx_;
 
   joint_idxs_map_t joint_idx_;
 
-  limb_joint_names_map_t joint_legs_;
-  limb_joint_names_map_t joint_arms_;
+  limb_joint_names_map_t joint_leg_names_;
+  limb_joint_names_map_t joint_arm_names_;
+
+  Eigen::VectorXd joint_legs_;
+  Eigen::VectorXd joint_arms_;
 
   unsigned int n_legs_;
   unsigned int n_arms_;

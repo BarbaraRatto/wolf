@@ -14,8 +14,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <OpenSoT/Task.h>
 #include <OpenSoT/tasks/acceleration/CoM.h>
 
-// ROS
+// WoLF msgs
 #include <wolf_msgs/ComTask.h>
+#include <wolf_msgs/Com.h>
 
 // WoLF
 #include <wolf_controller/ros_wrappers/interface.h>
@@ -39,15 +40,18 @@ public:
 
   virtual void updateCost(const Eigen::VectorXd& x) override;
 
-  virtual void publish(const ros::Time& time) override;
+  virtual void publish(const ros::Time& time, const ros::Duration& period) override;
 
-protected:
-
-  void referenceCallback(const wolf_msgs::ComTask::ConstPtr& msg);
+  virtual bool reset() override;
 
 private:
 
   virtual void _update(const Eigen::VectorXd& x) override;
+
+  void referenceCallback(const wolf_msgs::Com::ConstPtr& msg);
+
+  realtime_tools::RealtimeBuffer<Eigen::Vector3d> buffer_reference_pos_;
+  realtime_tools::RealtimeBuffer<Eigen::Vector3d> buffer_reference_vel_;
 
 };
 
