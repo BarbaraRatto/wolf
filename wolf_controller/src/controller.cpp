@@ -712,17 +712,20 @@ void Controller::updateStateMachine(const double &dt)
         case Controller::mode_t::RESET:
           foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
           updateWpg(dt);
-          tmp_vector3d_1_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // base position
-          tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference(); // base orientation
-          rotToRpy(tmp_matrix3d_,tmp_vector3d_);
-          tmp_vector3d_2_.setZero(); // com velocity
-          updateBaseReferences(tmp_vector3d_1_,tmp_vector3d_2_,tmp_matrix3d_);
-          if( (current_height_ - previous_height_)/dt        <= EPS  &&
-              std::abs(current_rpy_.x() - tmp_vector3d_.x()) <= 0.01 &&
-              std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01
+          id_prob_->setControlMode(IDProblem::mode_t::WPG);
+          previous_mode_ = Controller::mode_t::RESET;
+          tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // com position
+          tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference();
+          tmp_vector3d_1_.setZero(); // com velocity
+          //rpyToRot(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_matrix3d_);
+          updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
+          if(current_height_ >= robot_model_->getStandUpHeight()
+             // && std::abs(current_rpy_.x()) <= 0.2
+             // && std::abs(current_rpy_.y()) <= 0.2
               )
           {
-            current_mode_ = previous_mode_;
+            robot_model_->setState(QuadrupedRobot::ACTIVE);
+            requested_mode_ = Controller::mode_t::WPG;
             break;
           }
           break;
@@ -997,9 +1000,10 @@ void Controller::odomPublisher()
 
     auto odom_estimator = wolf_estimation::RobotOdomEstimator(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
                                                               robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                              robot_model_->getBaseLinkName());
+                                                              robot_model_->getBaseLinkName(),true);
     // Set some params
     odom_estimator.setTwistInLocalFrame(false);
+    odom_estimator.setBaseHeightTaskWeight(100.0);
 
     // Create the following transformations:
     // odom --> base_footprint --> base
