@@ -96,7 +96,7 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   full_qp_estimation_ = std::make_shared<RobotOdomEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
                                                              robot_model_->getFootNames(),robot_model_->getImuSensorName(),
                                                              robot_model_->getBaseLinkName(),true);
-  full_qp_estimation_->setTwistInLocalFrame(false);
+  full_qp_estimation_->setTwistInLocalFrame(true);
   full_qp_estimation_->setBaseHeightTaskWeight(100.0);
 
   int n_dofs = robot_model_->getJointNum();
@@ -306,6 +306,16 @@ void StateEstimator::setContactForce(const std::string& name, const Eigen::Vecto
   }
 }
 
+void StateEstimator::setDesiredContactState(const string &name, const bool &state)
+{
+  des_contact_states_[name] = state;
+}
+
+void StateEstimator::setDesiredContactForce(const string &name, const Eigen::Vector3d &force)
+{
+  des_contact_forces_[name] = force;
+}
+
 const Eigen::Affine3d& StateEstimator::getFloatingBasePose() const
 {
   return floating_base_pose_;
@@ -404,6 +414,11 @@ bool StateEstimator::areAllFeetInContact()
   for(unsigned int i=0; i<foot_names.size(); i++)
     result = result && contact_states_[foot_names[i]];
   return result;
+}
+
+void StateEstimator::setCycleTime(const double& cycle_t)
+{
+  cycle_t_ = cycle_t;
 }
 
 void StateEstimator::stopContactComputation()
@@ -631,13 +646,18 @@ void StateEstimator::updateFloatingBase(const double& period)
       full_qp_estimation_->setImuLinearAccelerations(imu_accelerometer_);
       for(unsigned int i = 0; i<robot_model_->getFootNames().size(); i++)
       {
-        full_qp_estimation_->setContactForce(robot_model_->getFootNames()[i],contact_forces_[robot_model_->getFootNames()[i]]);
-        full_qp_estimation_->setContactState(robot_model_->getFootNames()[i],contact_states_[robot_model_->getFootNames()[i]]);
+        full_qp_estimation_->setContactForce(robot_model_->getFootNames()[i],des_contact_forces_[robot_model_->getFootNames()[i]]);
+        full_qp_estimation_->setContactState(robot_model_->getFootNames()[i],des_contact_states_[robot_model_->getFootNames()[i]]);
       }
       if(full_qp_estimation_->update(period))
       {
         floating_base_velocity_.segment(0,3) = full_qp_estimation_->getBaseTwist().segment(0,3);
         floating_base_position_ = full_qp_estimation_->getBasePose().translation().segment(0,3);
+
+        // Update the qp estimation based on the new virtual model state
+        //qp_estimation_->update();
+        //qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
+        //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
       }
       else
       {
@@ -650,8 +670,6 @@ void StateEstimator::updateFloatingBase(const double& period)
       // Update the qp estimation based on the new virtual model state
       qp_estimation_->update();
       qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-      //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
-      //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
       floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
       floating_base_position_ << 0.0,0.0, estimated_z_; // Remove x and y from the state estimation
     }

@@ -85,6 +85,10 @@ public:
 
     void setContactForce(const std::string &name, const Eigen::Vector3d &force);
 
+    void setDesiredContactState(const std::string& name, const bool& state);
+
+    void setDesiredContactForce(const std::string &name, const Eigen::Vector3d &force);
+
     void setContactThreshold(const double& th);
 
     const Eigen::Affine3d& getFloatingBasePose() const;
@@ -130,6 +134,8 @@ public:
     bool isAnyFootInContact();
 
     bool areAllFeetInContact();
+
+    void setCycleTime(const double& cycle_t);
 
 private:
 
@@ -189,6 +195,10 @@ private:
     std::map<std::string,bool> contact_states_;
     /** @brief Contact forces */
     std::map<std::string,Eigen::Vector3d> contact_forces_;
+    /** @brief Contact states */
+    std::map<std::string,bool> des_contact_states_;
+    /** @brief Contact forces */
+    std::map<std::string,Eigen::Vector3d> des_contact_forces_;
     /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
     is consired true */
     std::atomic<double> contact_force_th_;
@@ -230,6 +240,8 @@ private:
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
+
+    double cycle_t_;
 
     /** @brief Temporary variables */
     Eigen::Matrix3d tmp_matrix3d_;
