@@ -621,7 +621,6 @@ void Controller::updateStateEstimator(const double &dt)
       state_estimator_->setDesiredContactForce(foot_names[i],des_contact_forces_[i].head(3));
       state_estimator_->setDesiredContactState(foot_names[i],des_contact_states_[i]);
     }
-    state_estimator_->setCycleTime(gait_generator_->getAvgCycleTime());
     state_estimator_->update(dt);
 }
 

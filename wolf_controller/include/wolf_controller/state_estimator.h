@@ -135,8 +135,6 @@ public:
 
     bool areAllFeetInContact();
 
-    void setCycleTime(const double& cycle_t);
-
 private:
 
     void setEstimationType(estimation_t position_t, estimation_t orientation_t);
@@ -240,8 +238,6 @@ private:
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
-
-    double cycle_t_;
 
     /** @brief Temporary variables */
     Eigen::Matrix3d tmp_matrix3d_;

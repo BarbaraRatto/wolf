@@ -416,11 +416,6 @@ bool StateEstimator::areAllFeetInContact()
   return result;
 }
 
-void StateEstimator::setCycleTime(const double& cycle_t)
-{
-  cycle_t_ = cycle_t;
-}
-
 void StateEstimator::stopContactComputation()
 {
   contact_computation_active_ = false;
@@ -619,8 +614,6 @@ void StateEstimator::updateFloatingBase(const double& period)
     // Update the qp estimation based on the new virtual model state
     qp_estimation_->update();
     qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-    //floating_base_velocity_.segment(0,3) << 0.0,0.0,0.0;
-    //floating_base_velocity_.segment(0,3) << 0.0,0.0,floating_base_velocity_qp_(2);
     floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
     floating_base_position_ << 0.0,0.0, estimated_z_; // Remove x and y from the state estimation
     break;
@@ -659,7 +652,6 @@ void StateEstimator::updateFloatingBase(const double& period)
         robot_model_->setState(QuadrupedRobot::ANOMALY);
         break;
       }
-
     }
     else
     {
@@ -672,9 +664,6 @@ void StateEstimator::updateFloatingBase(const double& period)
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
-    //floating_base_position_.head(2) << gt_position_.head(2);
-    // Note: this is the z calculated wrt the base not the one wrt world!
-    //floating_base_position_(2) = estimated_z_;
     floating_base_position_ = gt_position_;
     break;
   default:
