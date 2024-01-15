@@ -1007,7 +1007,7 @@ void Controller::odomPublisher()
 
     auto odom_estimator = wolf_estimation::RobotOdomEstimator(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
                                                               robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                              robot_model_->getBaseLinkName(),true);
+                                                              robot_model_->getBaseLinkName(),true,false,false,"odom_estimator");
     // Set some params
     odom_estimator.setTwistInLocalFrame(false);
     odom_estimator.setBaseHeightTaskWeight(100.0);

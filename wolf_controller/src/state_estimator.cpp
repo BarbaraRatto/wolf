@@ -95,7 +95,7 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
 
   full_qp_estimation_ = std::make_shared<RobotOdomEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
                                                              robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                             robot_model_->getBaseLinkName(),true);
+                                                             robot_model_->getBaseLinkName(),true,false,false,"full_qp_estimation");
   full_qp_estimation_->setTwistInLocalFrame(true);
   full_qp_estimation_->setBaseHeightTaskWeight(100.0);
 
@@ -653,15 +653,11 @@ void StateEstimator::updateFloatingBase(const double& period)
       {
         floating_base_velocity_.segment(0,3) = full_qp_estimation_->getBaseTwist().segment(0,3);
         floating_base_position_ = full_qp_estimation_->getBasePose().translation().segment(0,3);
-
-        // Update the qp estimation based on the new virtual model state
-        //qp_estimation_->update();
-        //qp_estimation_->getFloatingBaseTwist(floating_base_velocity_qp_);
-        //floating_base_velocity_.segment(0,3) = floating_base_velocity_qp_.segment(0,3);
       }
       else
       {
         robot_model_->setState(QuadrupedRobot::ANOMALY);
+        break;
       }
 
     }
