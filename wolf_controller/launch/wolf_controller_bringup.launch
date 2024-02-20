@@ -25,8 +25,6 @@
     <arg name="world_name"    default="empty"    doc="load a specific world from wolf_gazebo_resources"/>
     <arg name="world_file"    default="$(eval find('wolf_gazebo_resources') + '/worlds/' + arg('world_name') + '.world')" doc="load a specific world file"/>
 
-
-
     <!-- GUI related arguments -->
     <arg name="gazebo_gui"      default="true"  doc="start gzclient"/>
     <arg name="plotjuggler_gui" default="false" doc="start plotjuggler"/>

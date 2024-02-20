@@ -43,7 +43,7 @@ public:
      */
     typedef std::shared_ptr<const StateEstimator> ConstPtr;
 
-    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z,QP_ESTIMATION,FULL_QP_ESTIMATION};
+    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ODOMETRY};
 
     StateEstimator(QuadrupedRobot::Ptr robot_model);
 
@@ -230,11 +230,8 @@ private:
 
     std::atomic<bool> use_external_contact_states_;
 
-    /** @brief Base estimation based on qp taking in account only the linear velocities of the base */
-    wolf_estimation::qp_estimation::Ptr qp_estimation_;
-
-     /** @brief Base estimation based on qp taking in account the linear and angular velocities of the base */
-    wolf_estimation::RobotOdomEstimator::Ptr full_qp_estimation_;
+     /** @brief Odom estimation based on qp taking in account the linear and angular velocities of the base */
+    wolf_estimation::RobotOdomEstimator::Ptr odom_estimator_;
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;
