@@ -86,7 +86,7 @@
     </node>
 
     <group if="$(eval robot_name != '')">
-         <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.launch" ns="$(arg robot_name)">
+         <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.xml" ns="$(arg robot_name)">
              <arg name="robot_model"      value="$(arg robot_model)"/>
              <arg name="robot_name"       value="$(arg robot_name)"/>
              <arg name="sensors"          value="$(arg sensors)" />
@@ -108,7 +108,7 @@
     </group>
 
     <group if="$(eval robot_name == '')">
-        <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.launch">
+        <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.xml">
             <arg name="robot_model"      value="$(arg robot_model)"/>
             <arg name="robot_name"       value="$(arg robot_name)"/>
             <arg name="sensors"          value="$(arg sensors)" />
