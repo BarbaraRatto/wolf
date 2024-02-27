@@ -97,6 +97,8 @@ public:
 
     const Eigen::Vector3d& getFloatingBaseOrientationRPY() const;
 
+    const Eigen::Vector6d& getFloatingBaseTwist() const;
+
     double getContactThreshold();
 
     std::string getPositionEstimationType();

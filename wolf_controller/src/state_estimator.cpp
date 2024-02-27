@@ -312,6 +312,11 @@ const Eigen::Vector3d& StateEstimator::getFloatingBaseOrientationRPY() const
   return floating_base_rpy_;
 }
 
+const Eigen::Vector6d &StateEstimator::getFloatingBaseTwist() const
+{
+  return floating_base_velocity_;
+}
+
 const std::map<std::string,Eigen::Vector3d>& StateEstimator::getContactForces() const
 {
   return contact_forces_;
