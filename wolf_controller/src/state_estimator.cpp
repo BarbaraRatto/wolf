@@ -76,7 +76,7 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
 
   odom_estimator_ = std::make_shared<RobotOdomEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
                                                          robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                         robot_model_->getBaseLinkName(),true,false,false,"full_qp_estimation");
+                                                         robot_model_->getBaseLinkName(),true,false,false,"odometry");
   odom_estimator_->setTwistInLocalFrame(true);
   odom_estimator_->setBaseHeightTaskWeight(100.0);
 
