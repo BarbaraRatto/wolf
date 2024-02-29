@@ -76,9 +76,8 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
 
   odom_estimator_ = std::make_shared<RobotOdomEstimator>(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
                                                          robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                         robot_model_->getBaseLinkName(),true,false,false,"odometry");
+                                                         robot_model_->getBaseLinkName(),true,false,true,"odometry");
   odom_estimator_->setTwistInLocalFrame(true);
-  odom_estimator_->setBaseHeightTaskWeight(100.0);
 
   int n_dofs = robot_model_->getJointNum();
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
