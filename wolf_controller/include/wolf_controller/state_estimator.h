@@ -23,6 +23,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 // WoLF utils
 #include <wolf_controller_utils/tools.h>
 
+// WoLF estimation
+#include <wolf_estimation/robot_odom.h>
+
 namespace wolf_controller
 {
 
@@ -42,7 +45,7 @@ public:
      */
     typedef std::shared_ptr<const StateEstimator> ConstPtr;
 
-    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,ESTIMATED_Z,INTEGRATED_LINEAR_VELOCITIES,KALMAN_FILTER};
+    enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,KALMAN_FILTER,ODOMETRY};
 
     StateEstimator(QuadrupedRobot::Ptr robot_model);
 
@@ -84,6 +87,10 @@ public:
 
     void setContactForce(const std::string &name, const Eigen::Vector3d &force);
 
+    void setDesiredContactState(const std::string& name, const bool& state);
+
+    void setDesiredContactForce(const std::string &name, const Eigen::Vector3d &force);
+
     void setContactThreshold(const double& th);
 
     const Eigen::Affine3d& getFloatingBasePose() const;
@@ -91,6 +98,8 @@ public:
     const Eigen::Vector3d& getFloatingBasePosition() const;
 
     const Eigen::Vector3d& getFloatingBaseOrientationRPY() const;
+
+    const Eigen::Vector6d& getFloatingBaseTwist() const;
 
     double getContactThreshold();
 
@@ -150,10 +159,10 @@ private:
     Eigen::VectorXd joint_velocities_;
     /** @brief Joint efforts */
     Eigen::VectorXd joint_efforts_;
-    /** @brief IMU Gyroscope */
-    Eigen::Vector3d imu_gyroscope_;
     /** @brief IMU Accelerometer */
     Eigen::Vector3d imu_accelerometer_;
+    /** @brief IMU Gyroscope */
+    Eigen::Vector3d imu_gyroscope_;
     /** @brief IMU Orientation */
     Eigen::Quaterniond imu_orientation_;
     /** @brief Ground Truth position */
@@ -188,6 +197,10 @@ private:
     std::map<std::string,bool> contact_states_;
     /** @brief Contact forces */
     std::map<std::string,Eigen::Vector3d> contact_forces_;
+    /** @brief Contact states */
+    std::map<std::string,bool> des_contact_states_;
+    /** @brief Contact forces */
+    std::map<std::string,Eigen::Vector3d> des_contact_forces_;
     /** @brief Contact force threshold, this is a normalized value. The actual contact force get compared to this value and if greater equal the contact
     is consired true */
     std::atomic<double> contact_force_th_;
@@ -200,7 +213,7 @@ private:
 
     Eigen::Vector3d terrain_central_point_;
 
-    Eigen::Matrix3d mapRPYderivativesToOmega_;
+    Eigen::Matrix3d map_rpy_derivatives_to_omega_;
 
     Eigen::Matrix3d world_R_base_;
 
@@ -221,8 +234,8 @@ private:
 
     std::atomic<bool> use_external_contact_states_;
 
-    /** @brief QP base estimation */
-    wolf_estimation::qp_estimation::Ptr qp_estimation_;
+     /** @brief Odom estimation based on qp taking in account the linear and angular velocities of the base */
+    wolf_estimation::RobotOdomEstimator::Ptr odom_estimator_;
 
     /** @brief KF base estimation */
     wolf_estimation::KalmanFilterEstimatorPinoccchio::Ptr kf_estimation_;

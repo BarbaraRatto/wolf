@@ -25,8 +25,6 @@
     <arg name="world_name"    default="empty"    doc="load a specific world from wolf_gazebo_resources"/>
     <arg name="world_file"    default="$(eval find('wolf_gazebo_resources') + '/worlds/' + arg('world_name') + '.world')" doc="load a specific world file"/>
 
-
-
     <!-- GUI related arguments -->
     <arg name="gazebo_gui"      default="true"  doc="start gzclient"/>
     <arg name="plotjuggler_gui" default="false" doc="start plotjuggler"/>
@@ -86,7 +84,7 @@
     </node>
 
     <group if="$(eval robot_name != '')">
-         <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.launch" ns="$(arg robot_name)">
+         <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.xml" ns="$(arg robot_name)">
              <arg name="robot_model"      value="$(arg robot_model)"/>
              <arg name="robot_name"       value="$(arg robot_name)"/>
              <arg name="sensors"          value="$(arg sensors)" />
@@ -108,7 +106,7 @@
     </group>
 
     <group if="$(eval robot_name == '')">
-        <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.launch">
+        <include file="$(find wolf_controller)/launch/include/wolf_controller_ns.xml">
             <arg name="robot_model"      value="$(arg robot_model)"/>
             <arg name="robot_name"       value="$(arg robot_name)"/>
             <arg name="sensors"          value="$(arg sensors)" />

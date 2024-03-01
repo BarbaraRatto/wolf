@@ -583,26 +583,25 @@ void Controller::updateStateEstimator(const double &dt)
     state_estimator_->setJointPosition(joint_positions_);
     state_estimator_->setJointVelocity(joint_velocities_filt_);
     state_estimator_->setJointEffort(joint_efforts_);
-    if(!ground_truth_.getName().empty() && state_estimator_->getPositionEstimationType() == "ground_truth")
+    state_estimator_->setImuOrientation(imu_orientation_);
+    state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
+    state_estimator_->setImuAccelerometer(imu_accelerometer_filt_);
+
+    // Pass ground truth to the state estimator if available
+    if(!ground_truth_.getName().empty())
     {
+        // Linear
         state_estimator_->setGroundTruthBasePosition(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearPosition()));
         state_estimator_->setGroundTruthBaseLinearVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearVelocity()));
         state_estimator_->setGroundTruthBaseLinearAcceleration(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getLinearAcceleration()));
-    }
-    if(!ground_truth_.getName().empty() && state_estimator_->getOrientationEstimationType() == "ground_truth")
-    {
+
+        // Orientation
         ground_truth_orientation_.w() = ground_truth_.getOrientation()[0];
         ground_truth_orientation_.x() = ground_truth_.getOrientation()[1];
         ground_truth_orientation_.y() = ground_truth_.getOrientation()[2];
         ground_truth_orientation_.z() = ground_truth_.getOrientation()[3];
         state_estimator_->setGroundTruthBaseOrientation(ground_truth_orientation_);
         state_estimator_->setGroundTruthBaseAngularVelocity(Eigen::Map<const Eigen::Vector3d>(ground_truth_.getAngularVelocity()));
-    }
-    else
-    {
-        state_estimator_->setImuOrientation(imu_orientation_);
-        state_estimator_->setImuGyroscope(imu_gyroscope_filt_);
-        state_estimator_->setImuAccelerometer(imu_accelerometer_filt_);
     }
 
     if(use_contact_sensors_)
@@ -615,6 +614,12 @@ void Controller::updateStateEstimator(const double &dt)
             //state_estimator_->setContactState(tmp.first,tmp.second.getContactState());
         }
 
+    const std::vector<std::string>& foot_names = robot_model_->getFootNames();
+    for(unsigned int i = 0; i<foot_names.size(); i++)
+    {
+      state_estimator_->setDesiredContactForce(foot_names[i],des_contact_forces_[i].head(3));
+      state_estimator_->setDesiredContactState(foot_names[i],des_contact_states_[i]);
+    }
     state_estimator_->update(dt);
 }
 
@@ -712,17 +717,20 @@ void Controller::updateStateMachine(const double &dt)
         case Controller::mode_t::RESET:
           foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
           updateWpg(dt);
-          tmp_vector3d_1_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // base position
-          tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference(); // base orientation
-          rotToRpy(tmp_matrix3d_,tmp_vector3d_);
-          tmp_vector3d_2_.setZero(); // com velocity
-          updateBaseReferences(tmp_vector3d_1_,tmp_vector3d_2_,tmp_matrix3d_);
-          if( (current_height_ - previous_height_)/dt        <= EPS  &&
-              std::abs(current_rpy_.x() - tmp_vector3d_.x()) <= 0.01 &&
-              std::abs(current_rpy_.y() - tmp_vector3d_.y()) <= 0.01
+          id_prob_->setControlMode(IDProblem::mode_t::WPG);
+          previous_mode_ = Controller::mode_t::RESET;
+          tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // com position
+          tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference();
+          tmp_vector3d_1_.setZero(); // com velocity
+          //rpyToRot(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_matrix3d_);
+          updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
+          if(current_height_ >= robot_model_->getStandUpHeight()
+             // && std::abs(current_rpy_.x()) <= 0.2
+             // && std::abs(current_rpy_.y()) <= 0.2
               )
           {
-            current_mode_ = previous_mode_;
+            robot_model_->setState(QuadrupedRobot::ACTIVE);
+            requested_mode_ = Controller::mode_t::WPG;
             break;
           }
           break;
@@ -995,18 +1003,12 @@ void Controller::odomPublisher()
 {
     ROS_DEBUG_NAMED(CLASS_NAME,"Start the odomPublisher");
 
-    auto odom_estimator = wolf_estimation::RobotOdomEstimator(robot_model_->getUrdfString(),robot_model_->getSrdfString(),
-                                                              robot_model_->getFootNames(),robot_model_->getImuSensorName(),
-                                                              robot_model_->getBaseLinkName());
-    // Set some params
-    odom_estimator.setTwistInLocalFrame(false);
-
     // Create the following transformations:
     // odom --> base_footprint --> base
-    //                   `--> world (position available only if using ground_truth)
-    // odom: represents the odometry of the robot, i.e. how far the robot moved
+    //                   `--> world (available only if using ground truth)
+    // odom: represents the floating base pose
     // base_footprint: check here https://www.ros.org/reps/rep-0120.html#base-footprint
-    // world: the fixed frame in which the floating base pose is represented
+    // world: ground truth
 
     Eigen::Affine3d world_T_base;
     Eigen::Affine3d odom_T_base;
@@ -1039,8 +1041,10 @@ void Controller::odomPublisher()
 
         if(dt > 0.0) // Avoid publishing duplicated transforms
         {
-          // Get base wrt the internal world estimation
-          world_T_base = state_estimator_->getFloatingBasePose();
+          // Get base wrt the ground truth
+          world_T_base.translation() = state_estimator_->getGroundTruthBasePosition();
+          world_T_base.linear() = state_estimator_->getGroundTruthBaseOrientation().toRotationMatrix();
+
           // Get the estimated z of the base
           estimated_z = state_estimator_->getEstimatedBaseHeight();
 
@@ -1076,38 +1080,8 @@ void Controller::odomPublisher()
 
           if(publish_odom_msg_ || publish_odom_tf_)
           {
-            // Create the transform between odom -> base_footprint
-            if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
-            {
 
-              if(!odom_estimator.isInitialized())
-                odom_estimator.init(joint_positions_,joint_velocities_filt_,world_T_base);
-
-              odom_estimator.setJointVelocity(joint_velocities_);
-              odom_estimator.setJointPosition(joint_positions_);
-              odom_estimator.setImuOrientation(imu_orientation_);
-              odom_estimator.setImuAngularVelocities(imu_gyroscope_);
-              odom_estimator.setImuLinearAccelerations(imu_accelerometer_);
-              //odom_estimator.setContactForces(state_estimator_->getContactForces());
-              const std::vector<std::string>& foot_names = robot_model_->getFootNames();
-              for(unsigned int i = 0; i<foot_names.size(); i++)
-              {
-                odom_estimator.setContactForce(foot_names[i],des_contact_forces_[i].head(3));
-                odom_estimator.setContactState(foot_names[i],des_contact_states_[i]);
-              }
-
-              odom_estimator.update(dt);
-
-              odom_T_base = odom_estimator.getBasePose();
-            }
-            else
-            {
-              if(robot_model_->getPreviousState() != robot_model_->getState()) // State changed
-                odom_estimator.reset();
-
-              odom_T_base = world_T_base;
-            }
-
+            odom_T_base = state_estimator_->getFloatingBasePose();
 
             odom_T_basefoot = odom_T_base * basefoot_T_base.inverse();
 
@@ -1130,7 +1104,7 @@ void Controller::odomPublisher()
             odom_msg.pose.pose.position.y       = odom_T_basefoot_msg.transform.translation.y;
             odom_msg.pose.pose.position.z       = odom_T_basefoot_msg.transform.translation.z;
             odom_msg.pose.pose.orientation      = odom_T_basefoot_msg.transform.rotation;
-            odom_msg.twist.twist                = tf2::toMsg(odom_estimator.getBaseTwist());
+            odom_msg.twist.twist                = tf2::toMsg(state_estimator_->getFloatingBaseTwist());
             // FIXME This is causing issues:
             //wolf_estimation::eigenToCovariance(odom_estimator.getPoseCovariance(),odom_msg.pose.covariance);
             //wolf_estimation::eigenToCovariance(odom_estimator.getTwistCovariance(),odom_msg.twist.covariance);

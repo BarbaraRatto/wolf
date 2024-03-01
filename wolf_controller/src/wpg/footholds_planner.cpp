@@ -334,7 +334,7 @@ void FootholdsPlanner::resetBaseVelocities()
 void FootholdsPlanner::resetBasePosition()
 {
   for(unsigned int i=0;i<3;i++)
-    base_position_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
+    base_position_reference_(i) = secondOrderFilter(base_position_(i),base_position_filt_(i),default_base_position_(i),1.0);
 }
 
 void FootholdsPlanner::resetBaseOrientation()
