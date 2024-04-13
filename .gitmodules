@@ -37,3 +37,6 @@
 [submodule "wolf_planner"]
 	path = wolf_planner
 	url = git@github.com:graiola/wolf_planner.git
+[submodule "wolf_3d_navigation"]
+	path = wolf_3d_navigation
+	url = git@github.com:graiola/wolf_3d_navigation.git
