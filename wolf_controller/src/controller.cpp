@@ -279,14 +279,14 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     std::string input_device = "ps3";
     nh_.getParam("input_device",input_device);
     if(input_device == "ps3")
-        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
+        devices_.addDevice(DevicesHandler::priority_t::MEDIUM,std::make_shared<Ps3JoyHandler>(controller_nh,this)); // Ps3 joy
     else if(input_device == "xbox")
-        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<XboxJoyHandler>(controller_nh,this)); // Xbox joy
+        devices_.addDevice(DevicesHandler::priority_t::MEDIUM,std::make_shared<XboxJoyHandler>(controller_nh,this)); // Xbox joy
     else if(input_device == "spacemouse")
-        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<SpaceJoyHandler>(controller_nh,this)); // Space joy
+        devices_.addDevice(DevicesHandler::priority_t::MEDIUM,std::make_shared<SpaceJoyHandler>(controller_nh,this)); // Space joy
     else if(input_device == "keyboard")
-        devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
-    devices_.addDevice(DevicesHandler::priority_t::MEDIUM,std::make_shared<TwistHandler>(controller_nh,this,"priority_twist")); // Twist
+        devices_.addDevice(DevicesHandler::priority_t::MEDIUM,std::make_shared<KeyboardHandler>(controller_nh,this)); // Keyboard
+    devices_.addDevice(DevicesHandler::priority_t::HIGH,std::make_shared<TwistHandler>(controller_nh,this,"priority_twist")); // Twist
     devices_.addDevice(DevicesHandler::priority_t::LOW,std::make_shared<TwistHandler>(controller_nh,this,"twist")); // Twist
 
     bool publish_odom_tf = false; // On/Off
@@ -1004,7 +1004,7 @@ void Controller::odomPublisher()
     ROS_DEBUG_NAMED(CLASS_NAME,"Start the odomPublisher");
 
     // Create the following transformations:
-    // odom --> base_footprint --> base
+    // odom --> base_footprint --> base --> base_stabilized
     //                   `--> world (available only if using ground truth)
     // odom: represents the floating base pose
     // base_footprint: check here https://www.ros.org/reps/rep-0120.html#base-footprint
@@ -1015,6 +1015,7 @@ void Controller::odomPublisher()
     Eigen::Affine3d odom_T_basefoot;
     Eigen::Affine3d basefoot_T_world;
     Eigen::Affine3d basefoot_T_base;
+    Eigen::Affine3d base_T_stabilized;
     Eigen::Vector3d tmp_v;
     double estimated_z;
     Eigen::Matrix3d tmp_R;
@@ -1026,6 +1027,7 @@ void Controller::odomPublisher()
     geometry_msgs::TransformStamped basefoot_T_base_msg;
     geometry_msgs::TransformStamped odom_T_basefoot_msg;
     geometry_msgs::TransformStamped odom_T_base_msg;
+    geometry_msgs::TransformStamped base_T_stabilized_msg;
     ros::Publisher odom_pub;
 
     if(publish_odom_msg_)
@@ -1077,6 +1079,20 @@ void Controller::odomPublisher()
           basefoot_T_base_msg.header.seq++;
           basefoot_T_base_msg.header.stamp = t;
           br.sendTransform(basefoot_T_base_msg);
+
+          // Create the tf transform between base -> base_stabilized
+          base_T_stabilized.linear() = robot_model_->getBaseRotationInHf().transpose();
+          base_T_stabilized.translation().x() = 0.0;
+          base_T_stabilized.translation().y() = 0.0;
+          base_T_stabilized.translation().z() = 0.0;
+          // Set coordinates
+          base_T_stabilized_msg = tf2::eigenToTransform(base_T_stabilized);
+          // Set transform header
+          base_T_stabilized_msg.header.frame_id = tf_prefix_+robot_model_->getBaseLinkName();
+          base_T_stabilized_msg.child_frame_id  = tf_prefix_+BASE_STABILIZED_FRAME;
+          base_T_stabilized_msg.header.seq++;
+          base_T_stabilized_msg.header.stamp = t;
+          br.sendTransform(base_T_stabilized_msg);
 
           if(publish_odom_msg_ || publish_odom_tf_)
           {
