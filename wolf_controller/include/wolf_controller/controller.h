@@ -41,7 +41,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller/devices/interface.h>
 #include <wolf_hardware_interface/ground_truth_interface.h>
 #include <wolf_hardware_interface/contact_switch_sensor_interface.h>
-#include <wolf_estimation/robot_odom.h>
+#include <wolf_estimation/robot_odom/robot_odom.h>
 #include <wolf_controller_utils/tools.h>
 
 // Eigen

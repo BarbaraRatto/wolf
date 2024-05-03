@@ -10,8 +10,6 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #ifndef STATE_ESTIMATOR_H
 #define STATE_ESTIMATOR_H
 
-#include <wolf_estimation/kf_estimation.h>
-#include <wolf_estimation/qp_estimation.h>
 #include <wolf_controller/force_estimator.h>
 #include <wolf_controller/quadruped_robot.h>
 
@@ -24,7 +22,9 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <wolf_controller_utils/tools.h>
 
 // WoLF estimation
-#include <wolf_estimation/robot_odom.h>
+#include <wolf_estimation/robot_odom/robot_odom.h>
+#include <wolf_estimation/estimation/kf_estimation_pinocchio.h>
+#include <wolf_estimation/estimation/qp_estimation.h>
 
 namespace wolf_controller
 {
