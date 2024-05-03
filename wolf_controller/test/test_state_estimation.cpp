@@ -252,11 +252,11 @@ int main(int argc, char **argv)
   message_filters::Subscriber<sensor_msgs::Imu> imu_sub;
   message_filters::Subscriber<wolf_msgs::ContactForces> cf_sub;
 
-  _odom_pub = root_nh.advertise<nav_msgs::Odometry>("/spot/wolf_estimation/odom",100); // FIXME
+  _odom_pub = root_nh.advertise<nav_msgs::Odometry>("/wolf_estimation/odom",100); // FIXME
 
-  joint_state_sub.subscribe(root_nh,_robot->getRobotName()+"/joint_states",100);
-  imu_sub.subscribe(root_nh,_robot->getRobotName()+"/trunk_imu/data",100);
-  cf_sub.subscribe(root_nh,_robot->getRobotName()+"/wolf_controller/contact_forces",100);
+  joint_state_sub.subscribe(root_nh,"/joint_states",100);
+  imu_sub.subscribe(root_nh,"/trunk_imu/data",100);
+  cf_sub.subscribe(root_nh,"/wolf_controller/contact_forces",100);
   _state_sub = std::make_shared<message_filters::TimeSynchronizer<sensor_msgs::JointState,sensor_msgs::Imu,wolf_msgs::ContactForces> >(joint_state_sub,imu_sub,cf_sub,100);
   _state_sub->registerCallback(update);
 

@@ -103,7 +103,7 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   const auto& srdf_model = getSrdf();
   const auto& urdf_model = getUrdf();
 
-  robot_name_ = srdf_model.getName();
+  robot_model_name_ = srdf_model.getName();
 
   std::vector<urdf::LinkSharedPtr> links;
   urdf_model.getLinks(links);
@@ -792,9 +792,9 @@ const std::string& QuadrupedRobot::getImuSensorName() const
   return imu_name_;
 }
 
-const std::string& QuadrupedRobot::getRobotName() const
+const std::string& QuadrupedRobot::getRobotModelName() const
 {
-  return robot_name_;
+  return robot_model_name_;
 }
 
 Eigen::VectorXd QuadrupedRobot::getLegJointValues(const Eigen::VectorXd& joints)

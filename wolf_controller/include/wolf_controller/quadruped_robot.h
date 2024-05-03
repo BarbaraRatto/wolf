@@ -54,7 +54,7 @@ public:
   const std::vector<std::string>& getLimbNames() const;
   const std::string& getBaseLinkName() const;
   const std::string& getImuSensorName() const;
-  const std::string& getRobotName() const;
+  const std::string& getRobotModelName() const;
   Eigen::VectorXd getLegJointValues(const Eigen::VectorXd& joints);
   Eigen::VectorXd getArmJointValues(const Eigen::VectorXd& joints);
 
@@ -250,7 +250,7 @@ private:
   std::vector<std::string> limb_names_; // chain names
   std::string base_name_;
   std::string imu_name_;
-  std::string robot_name_;
+  std::string robot_model_name_;
 
   limb_joint_idxs_map_t joint_limb_idx_;
   std::vector<unsigned int> joint_leg_idx_;

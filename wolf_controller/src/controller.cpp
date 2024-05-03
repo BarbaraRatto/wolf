@@ -39,9 +39,10 @@ std::vector<std::string> _rpy = {"roll","pitch","yaw"};
 std::vector<std::string> _joints_prefix = {"haa","hfe","kfe"};
 std::vector<std::string> _legs_prefix = {"lf","lh","rf","rh"};
 double _period = 0.001;
-std::string _robot_name   = "";
-std::string _tf_prefix    = "";
-std::string _rt_gui_group = "";
+std::string _robot_name         = "";
+std::string _robot_model_name   = "";
+std::string _tf_prefix          = "";
+std::string _rt_gui_group       = "";
 
 std::string enumToString(Controller::mode_t mode)
 {
@@ -129,6 +130,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     // Create the robot model
     robot_model_.reset(createRobotModel(root_nh));
     joint_names_ = robot_model_->getJointNames();
+    _robot_model_name = robot_model_->getRobotModelName();
 
     // Load hardware interfaces
     hardware_interface::EffortJointInterface* jt_hw = robot_hw->get<hardware_interface::EffortJointInterface>();
