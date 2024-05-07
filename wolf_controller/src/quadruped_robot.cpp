@@ -55,9 +55,19 @@ std::string enumToString(QuadrupedRobot::robot_states_t state)
   return ret;
 }
 
-QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
-  :ModelInterfaceRBDL(), robot_state_(robot_states_t::IDLE), robot_state_prev_(robot_states_t::IDLE),robot_state_string_("IDLE")
+QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& nh)
+  :ModelInterfaceRBDL(), nh_(nh), robot_state_(robot_states_t::IDLE), robot_state_prev_(robot_states_t::IDLE),robot_state_string_("IDLE")
 {
+  // Create the quadruped robot object, it wraps the robot model with some meta information
+  std::string urdf, srdf;
+  if(!nh.getParam("robot_description",urdf)) // Get the robot description from the global namespace "/"
+  {
+      throw std::runtime_error(std::string("No robot_description given in namespace " + nh.getNamespace()));
+  }
+  if(!nh.getParam("robot_description_semantic",srdf)) // Get the robot semantic description from the global namespace "/"
+  {
+      throw std::runtime_error(std::string("No robot_description_semantic given in namespace " + nh.getNamespace()));
+  }
 
   // Create the ModelInterface from XBot
   XBot::ConfigOptions opt;
@@ -100,63 +110,18 @@ QuadrupedRobot::QuadrupedRobot(const std::string& urdf, const std::string& srdf)
   if(!RigidBodyDynamics::Addons::URDFReadFromString(getUrdfString().c_str(), &virtual_model_, isFloatingBase(), false))
       throw std::runtime_error("Can not initialize virtual model");
 
-  const auto& srdf_model = getSrdf();
-  const auto& urdf_model = getUrdf();
+  parser_.parseSRDF(nh_.getNamespace());
+  robot_model_name_ = parser_.getRobotModelName();
+  leg_names_        = parser_.getLegNames();
+  foot_names_       = parser_.getFootNames();
+  joint_leg_names_  = parser_.getJointLegNames();
+  arm_names_        = parser_.getArmNames();
+  ee_names_         = parser_.getEndEffectorNames();
+  joint_arm_names_  = parser_.getJointArmNames();
+  hip_names_        = parser_.getHipNames();
+  base_name_        = parser_.getBaseLinkName();
+  imu_name_         = parser_.getImuLinkName();
 
-  robot_model_name_ = srdf_model.getName();
-
-  std::vector<urdf::LinkSharedPtr> links;
-  urdf_model.getLinks(links);
-  for(unsigned int i=0;i < links.size(); i++)
-    ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"URDF Link["<<i<<"]: "<< links[i]->name);
-
-  for(unsigned int i=0;i < srdf_model.getGroups().size(); i++)
-  {
-    const auto& chains = srdf_model.getGroups()[i].chains_;
-    const auto& joints = srdf_model.getGroups()[i].joints_;
-    const auto& links  = srdf_model.getGroups()[i].links_;
-
-    // Parse the foot tip_link from the SRDF file
-    if(srdf_model.getGroups()[i].name_.find("leg") != std::string::npos)
-    {
-      leg_names_.push_back(srdf_model.getGroups()[i].name_);
-      for(unsigned int j=0;j<chains.size();j++)
-        foot_names_.push_back(chains[j].second);
-      for(unsigned int j=0;j<joints.size();j++)
-        joint_leg_names_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
-    }
-    // Parse the arm tip_link from the SRDF file
-    if(srdf_model.getGroups()[i].name_.find("arm") != std::string::npos)
-    {
-      arm_names_.push_back(srdf_model.getGroups()[i].name_);
-      for(unsigned int j=0;j<chains.size();j++)
-        ee_names_.push_back(chains[j].second);
-      for(unsigned int j=0;j<joints.size();j++)
-        joint_arm_names_[srdf_model.getGroups()[i].name_].push_back(joints[j]);
-    }
-    // Parse the hip tip_link from the SRDF file
-    if(srdf_model.getGroups()[i].name_.find("hip") != std::string::npos)
-    {
-      for(unsigned int j=0;j<chains.size();j++)
-        hip_names_.push_back(chains[j].second);
-    }
-    // Parse the base link name from the SRDF file
-    if(srdf_model.getGroups()[i].name_.find("base") != std::string::npos)
-    {
-      if(links.size()==1)
-        base_name_ = links[0];
-      else
-        throw std::runtime_error("There can be only one base defined in the SRDF file!");
-    }
-    // Parse the imu link name from the SRDF file
-    if(srdf_model.getGroups()[i].name_.find("imu") != std::string::npos)
-    {
-      if(links.size()==1)
-        imu_name_ = links[0];
-      else
-        throw std::runtime_error("There can be only one imu defined in the SRDF file!");
-    }
-  }
 
   n_legs_ = leg_names_.size();
   n_arms_ = arm_names_.size();

@@ -10,12 +10,16 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #ifndef QUADRUPED_ROBOT_H
 #define QUADRUPED_ROBOT_H
 
+// ROS
+#include <ros/ros.h>
 // ADVR
 #include <XBotCoreModel/XBotCoreModel.h>
 #include <ModelInterfaceRBDL/ModelInterfaceRBDL.h>
 // STD
 #include <memory>
 #include <atomic>
+// WoLF
+#include <wolf_controller_utils/srdf_parser.h>
 
 
 namespace wolf_controller
@@ -38,7 +42,7 @@ public:
 
   enum robot_states_t {IDLE,INIT,ANOMALY,STANDING_UP,STANDING_DOWN,ACTIVE,N_STATES=7};
 
-  QuadrupedRobot(const std::string& urdf, const std::string& srdf);
+  QuadrupedRobot(ros::NodeHandle& nh);
 
   bool update( bool update_position = true,
                bool update_velocity = true,
@@ -239,6 +243,9 @@ public:
 
 
 private:
+
+  ros::NodeHandle nh_;
+  wolf_controller_utils::SRDFParser parser_;
 
   std::vector<std::string> foot_names_; // foot tip names
   std::vector<std::string> hip_names_;

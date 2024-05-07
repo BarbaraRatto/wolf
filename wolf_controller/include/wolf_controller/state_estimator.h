@@ -238,7 +238,7 @@ private:
     wolf_estimation::RobotOdomEstimator::Ptr odom_estimator_;
 
     /** @brief KF base estimation */
-    wolf_estimation::KalmanFilterEstimatorPinoccchio::Ptr kf_estimation_;
+    wolf_estimation::KalmanFilterEstimatorInterface::Ptr kf_estimation_;
 
     /** @brief Base estimated height wrt the feet */
     double estimated_z_;

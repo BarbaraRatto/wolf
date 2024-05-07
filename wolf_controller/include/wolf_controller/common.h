@@ -62,22 +62,6 @@ inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& 
     return ordered_names;
 }
 
-inline QuadrupedRobot* createRobotModel(ros::NodeHandle& nh)
-{
-  // Create the quadruped robot object, it wraps the robot model with some meta information
-  std::string urdf, srdf;
-  if(!nh.getParam("robot_description",urdf)) // Get the robot description from the global namespace "/"
-  {
-      throw std::runtime_error("No robot_description given in namespace /");
-  }
-  if(!nh.getParam("robot_description_semantic",srdf)) // Get the robot semantic description from the global namespace "/"
-  {
-      throw std::runtime_error("No robot_description_semantic given in namespace /");
-  }
-
-  return new wolf_controller::QuadrupedRobot(urdf,srdf);
-}
-
 } // namespace
 
 #endif

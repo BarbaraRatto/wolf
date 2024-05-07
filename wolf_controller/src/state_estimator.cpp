@@ -9,6 +9,9 @@
 #include <wolf_controller/common.h>
 #include <wolf_controller_utils/geometry.h>
 
+#include <wolf_estimation/estimation/kf_estimation_pinocchio.h>
+#include <wolf_estimation/estimation/kf_estimation_rbdl.h>
+
 using namespace rt_logger;
 using namespace wolf_controller_utils;
 using namespace wolf_estimation;
@@ -86,14 +89,15 @@ StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
   odom_estimator_->setTwistInLocalFrame(true);
 
   ros::NodeHandle nh(wolf_controller::_robot_name);
-  kf_estimation_ = std::make_shared<KalmanFilterEstimatorPinoccchio>(nh,wolf_controller::_period);
+  //kf_estimation_ = std::make_shared<KalmanFilterEstimatorPinocchio>(nh,wolf_controller::_period);
+  kf_estimation_ = std::make_shared<KalmanFilterEstimatorRbdl>(nh,wolf_controller::_period);
 
   int n_dofs = robot_model_->getJointNum();
   joint_positions_.resize(static_cast<Eigen::Index>(n_dofs));
   joint_velocities_.resize(static_cast<Eigen::Index>(n_dofs));
   joint_efforts_.resize(static_cast<Eigen::Index>(n_dofs));
   floating_base_rpy_ = Eigen::Vector3d::Zero();
-  floating_base_position_      = Eigen::Vector3d::Zero();
+  floating_base_position_ = Eigen::Vector3d::Zero();
   floating_base_velocity_ = Eigen::Vector6d::Zero();
   floating_base_pose_ = Eigen::Affine3d::Identity();
   gt_position_ = Eigen::Vector3d::Zero();
@@ -536,6 +540,7 @@ void StateEstimator::updateFloatingBase(const double& period)
     odom_estimator_->setContactState(robot_model_->getFootNames()[i],contact_states_[robot_model_->getFootNames()[i]]);
 
     kf_estimation_->updateContact(i,contact_states_[robot_model_->getFootNames()[i]]);
+    kf_estimation_->updateContactForce(i,contact_forces_[robot_model_->getFootNames()[i]]);
   }
   if(!odom_estimator_->update(period))
   {

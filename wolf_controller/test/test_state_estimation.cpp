@@ -236,7 +236,7 @@ int main(int argc, char **argv)
   _postural_reference.fill(0.0);
   _postural_reference_dot.fill(0.0);
 
-  _robot.reset(wolf_controller::createRobotModel(root_nh));
+  _robot.reset(new wolf_controller::QuadrupedRobot(root_nh));
 
   rt_logger::RtLogger::getLogger().addPublisher("q_meas",_q_meas);
   rt_logger::RtLogger::getLogger().addPublisher("qdot_meas",_qdot_meas);

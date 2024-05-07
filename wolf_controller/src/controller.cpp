@@ -128,7 +128,7 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     _tf_prefix = tf_prefix_;
 
     // Create the robot model
-    robot_model_.reset(createRobotModel(root_nh));
+    robot_model_ = std::make_shared<QuadrupedRobot>(root_nh);
     joint_names_ = robot_model_->getJointNames();
     _robot_model_name = robot_model_->getRobotModelName();
 
