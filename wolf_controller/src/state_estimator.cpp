@@ -525,27 +525,48 @@ void StateEstimator::updateFloatingBase(const double& period)
   robot_model_->setJointPosition(joint_positions_);
 
   // Update the robot odom
-  if(!odom_estimator_->isInitialized())
+  if(estimation_position == ODOMETRY || estimation_orientation == ODOMETRY)
   {
-    odom_estimator_->init(joint_positions_,joint_velocities_,floating_base_pose_);
-  }
-  odom_estimator_->setJointVelocity(joint_velocities_);
-  odom_estimator_->setJointPosition(joint_positions_);
-  odom_estimator_->setImuOrientation(imu_orientation_);
-  odom_estimator_->setImuAngularVelocities(imu_gyroscope_);
-  odom_estimator_->setImuLinearAccelerations(imu_accelerometer_);
-  for(unsigned int i = 0; i<robot_model_->getFootNames().size(); i++)
-  {
-    odom_estimator_->setContactForce(robot_model_->getFootNames()[i],contact_forces_[robot_model_->getFootNames()[i]]);
-    odom_estimator_->setContactState(robot_model_->getFootNames()[i],contact_states_[robot_model_->getFootNames()[i]]);
+    if(!odom_estimator_->isInitialized())
+    {
+      odom_estimator_->init(joint_positions_,joint_velocities_,floating_base_pose_);
+    }
+    odom_estimator_->setJointVelocity(joint_velocities_);
+    odom_estimator_->setJointPosition(joint_positions_);
+    odom_estimator_->setImuOrientation(imu_orientation_);
+    odom_estimator_->setImuAngularVelocities(imu_gyroscope_);
+    odom_estimator_->setImuLinearAccelerations(imu_accelerometer_);
 
-    kf_estimation_->updateContact(i,contact_states_[robot_model_->getFootNames()[i]]);
-    kf_estimation_->updateContactForce(i,contact_forces_[robot_model_->getFootNames()[i]]);
+    for(unsigned int i = 0; i<robot_model_->getFootNames().size(); i++)
+    {
+      odom_estimator_->setContactForce(robot_model_->getFootNames()[i],contact_forces_[robot_model_->getFootNames()[i]]);
+      odom_estimator_->setContactState(robot_model_->getFootNames()[i],contact_states_[robot_model_->getFootNames()[i]]);
+    }
+
+    if(!odom_estimator_->update(period))
+    {
+      robot_model_->setState(QuadrupedRobot::ANOMALY);
+      return;
+    }
   }
-  if(!odom_estimator_->update(period))
+
+  // Update the KF
+  if(estimation_position == KALMAN_FILTER || estimation_orientation == KALMAN_FILTER)
   {
-    robot_model_->setState(QuadrupedRobot::ANOMALY);
-    return;
+    if(!kf_estimation_->isInitialized())
+    {
+      kf_estimation_->init(joint_positions_,joint_velocities_,floating_base_pose_);
+    }
+    kf_estimation_->updateJoints(joint_positions_,joint_velocities_);
+    kf_estimation_->updateImu(imu_orientation_,imu_gyroscope_,imu_accelerometer_);
+
+    for(unsigned int i = 0; i<robot_model_->getFootNames().size(); i++)
+    {
+      kf_estimation_->updateContact(i,contact_states_[robot_model_->getFootNames()[i]]);
+      kf_estimation_->updateContactForce(i,contact_forces_[robot_model_->getFootNames()[i]]);
+    }
+
+    kf_estimation_->update();
   }
 
   // Note: we assume that the IMU is orientated as the base/waist of the robot
@@ -562,6 +583,10 @@ void StateEstimator::updateFloatingBase(const double& period)
   case estimation_t::ODOMETRY:
     floating_base_pose_.linear() = odom_estimator_->getBasePose().linear();
     floating_base_velocity_.segment(3,3) << odom_estimator_->getBaseTwist().segment(3,3);
+    break;
+  case estimation_t::KALMAN_FILTER:
+    floating_base_pose_.linear() = kf_estimation_->getOrientation().toRotationMatrix();
+    floating_base_velocity_.segment(3,3) << kf_estimation_->getAngularVelocity();
     break;
   case estimation_t::IMU_MAGNETOMETER: // Use directly the orientation information from the IMU
     //use this with the real robot only if the magnetometer is not drifting
@@ -640,11 +665,8 @@ void StateEstimator::updateFloatingBase(const double& period)
     floating_base_position_ = odom_estimator_->getBasePose().translation().segment(0,3);
     break;
   case estimation_t::KALMAN_FILTER:
-    kf_estimation_->updateJoints(joint_positions_,joint_velocities_);
-    kf_estimation_->updateImu(imu_orientation_,imu_gyroscope_,imu_accelerometer_);
-    kf_estimation_->update();
-    floating_base_position_ = kf_estimation_->robot_state_.pos_;
-    floating_base_velocity_.segment(0,3) = kf_estimation_->robot_state_.linear_vel_;
+    floating_base_position_ = kf_estimation_->getPosition();
+    floating_base_velocity_.segment(0,3) = kf_estimation_->getLinearVelocity();
     break;
   case estimation_t::GROUND_TRUTH:
     floating_base_velocity_.segment(0,3) << gt_linear_velocity_;
