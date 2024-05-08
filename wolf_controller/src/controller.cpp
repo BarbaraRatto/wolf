@@ -298,8 +298,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
 
     publish_odom_tf_ = publish_odom_tf;
     publish_odom_msg_ = publish_odom_msg;
-    // Spawn the odom publisher thread
-    odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
 
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope)               ,imu_gyroscope_);
     RtLogger::getLogger().addPublisher(TOPIC(imu_gyroscope_filt)          ,imu_gyroscope_filt_);
@@ -322,6 +320,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
     ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
     id_prob_->init(nh_,period_);
+
+
+    // Spawn the odom publisher thread
+    odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
 
     return true;
 }
