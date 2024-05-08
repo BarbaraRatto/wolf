@@ -48,19 +48,6 @@ extern std::vector<std::string> _rpy;
 extern std::vector<std::string> _joints_prefix;
 extern std::vector<std::string> _legs_prefix;
 enum _leg_id {LF=0,LH,RF,RH};
-inline std::vector<std::string> sortByLegPrefix(const std::vector<std::string>& names, const std::vector<std::string>& order = {"lf","lh","rf","rh"} )
-{
-    // Sort the names following order
-    assert(names.size() == N_LEGS);
-    assert(order.size() == N_LEGS);
-    std::vector<std::string> ordered_names(N_LEGS);
-    for(unsigned int i=0;i<names.size();i++)
-        for(unsigned int j=0;j<order.size();j++)
-            if(names[i].find(order[j]) != std::string::npos)
-                ordered_names[j] = names[i];
-
-    return ordered_names;
-}
 
 } // namespace
 

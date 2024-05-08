@@ -175,10 +175,6 @@ QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& nh)
 
   ROS_DEBUG_STREAM_NAMED(CLASS_NAME,"Base name: "<<base_name_);
 
-  hip_names_ = sortByLegPrefix(hip_names_);
-  foot_names_ = sortByLegPrefix(foot_names_);
-  leg_names_ = sortByLegPrefix(leg_names_);
-
   std::vector<std::string> limbs;
   limbs = getChainNames();
 
