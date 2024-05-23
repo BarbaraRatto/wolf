@@ -1,19 +1,72 @@
+/**
+ * @file state_machine.cpp
+ * @author Gennaro Raiola
+ * @date 1 November, 2021
+ * @brief This file contains the StateMachine code
+ */
+
 #include <wolf_controller/state_machine.h>
+#include <wolf_controller/controller.h>
 #include <wolf_controller_utils/geometry.h>
+
+// RT GUI
+#ifdef RT_GUI
+#include <rt_gui/rt_gui_client.h>
+using namespace rt_gui;
+#endif
 
 using namespace wolf_controller;
 using namespace wolf_controller_utils;
 
+std::string enumToString(StateMachine::robot_states_t state)
+{
+  std::string ret = "NONE";
+  switch (state)
+  {
+
+  case StateMachine::robot_states_t::IDLE:
+    ret = "IDLE";
+    break;
+
+  case StateMachine::robot_states_t::INIT:
+    ret = "INIT";
+    break;
+
+  case StateMachine::robot_states_t::ACTIVE:
+    ret = "ACTIVE";
+    break;
+
+  case StateMachine::robot_states_t::ANOMALY:
+    ret = "ANOMALY";
+    break;
+
+  case StateMachine::robot_states_t::STANDING_UP:
+    ret = "STANDING_UP";
+    break;
+
+  case StateMachine::robot_states_t::STANDING_DOWN:
+    ret = "STANDING_DOWN";
+    break;
+  };
+
+  return ret;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // State Machine Implementation
 StateMachine::StateMachine(Controller* controller)
-  : controller_(controller), current_state_(IDLE), previous_state_(N_STATES) {
+  : controller_(controller), current_state_(IDLE), previous_state_(N_STATES), current_state_str_("IDLE") {
   states_[IDLE] = std::make_shared<QuadrupedRobotIdleState>();
   states_[INIT] = std::make_shared<QuadrupedRobotInitState>();
   states_[STANDING_UP] = std::make_shared<QuadrupedRobotStandingUpState>();
   states_[ACTIVE] = std::make_shared<QuadrupedRobotActiveState>();
   states_[STANDING_DOWN] = std::make_shared<QuadrupedRobotStandingDownState>();
   states_[ANOMALY] = std::make_shared<QuadrupedRobotAnomalyState>();
+
+#ifdef RT_GUI
+  // create interface
+  RtGuiClient::getIstance().addLabel(std::string(wolf_controller::_rt_gui_group),std::string("Status"),&current_state_str_);
+#endif
 }
 
 void StateMachine::updateStateMachine(const double& dt)
@@ -21,12 +74,31 @@ void StateMachine::updateStateMachine(const double& dt)
   if (states_.find(current_state_) != states_.end()) {
     states_[current_state_]->updateStateMachine(this, dt);
   }
+
+  // save the state as string
+  current_state_str_ = enumToString(current_state_);
 }
 
 void StateMachine::setCurrentState(StateMachine::robot_states_t state)
 {
-  previous_state_ = current_state_;
+  if(state != current_state_)
+    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Change state to "<<enumToString(state));
+  previous_state_.store(current_state_.load());
   current_state_ = state;
+}
+
+std::string StateMachine::getStateAsString()
+{
+  return enumToString(current_state_);
+}
+
+std::vector<std::string> StateMachine::getStatesAsString()
+{
+  std::vector<std::string> states;
+  for(unsigned int i=0; i< N_STATES; i++)
+    states.push_back(enumToString(static_cast<robot_states_t>(i)));
+
+  return states;
 }
 
 StateMachine::robot_states_t StateMachine::getCurrentState()
@@ -49,7 +121,7 @@ Controller *StateMachine::getController()
 void QuadrupedRobotIdleState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   controller->desired_height_ = 0.0;
-  controller->current_height_ = controller->state_estimator_->getEstimatedBaseHeight();
+  //controller->current_height_ = controller->state_estimator_->getEstimatedBaseHeight();
   controller->current_rpy_ = controller->robot_model_->getBaseRotationInWorldRPY();
   if (controller->posture_ == Controller::posture_t::UP) {
     controller->init();
@@ -92,7 +164,7 @@ void QuadrupedRobotStandingUpState::updateStateMachine(StateMachine* state_machi
   controller->updateBaseReferences(controller->tmp_vector3d_, controller->tmp_vector3d_1_, controller->tmp_matrix3d_);
   if (!controller->updateSolver(controller->des_joint_positions_)) {
     state_machine->setCurrentState(StateMachine::ANOMALY);
-  } else if (controller->current_height_ >= controller->robot_model_->getStandUpHeight()) {
+  } else if (controller->getRobotModel()->getCurrentHeight() >= controller->robot_model_->getStandUpHeight()) {
     controller->foot_holds_planner_->reset();
     controller->ramp_stand_up_->reset();
     controller->com_planner_->reset();
@@ -137,7 +209,7 @@ void QuadrupedRobotActiveState::updateStateMachine(StateMachine* state_machine, 
     controller->tmp_matrix3d_ = controller->foot_holds_planner_->getBaseRotationReference();
     controller->tmp_vector3d_1_.setZero();
     controller->updateBaseReferences(controller->tmp_vector3d_, controller->tmp_vector3d_1_, controller->tmp_matrix3d_);
-    if (controller->current_height_ >= controller->robot_model_->getStandUpHeight()) {
+    if (controller->getRobotModel()->getCurrentHeight() >= controller->robot_model_->getStandUpHeight()) {
       state_machine->setCurrentState(StateMachine::ACTIVE);
       controller->requested_mode_ = Controller::mode_t::WPG;
     }
@@ -148,7 +220,7 @@ void QuadrupedRobotActiveState::updateStateMachine(StateMachine* state_machine, 
       !controller->performSafetyChecks()) {
     state_machine->setCurrentState(StateMachine::ANOMALY);
   } else if (controller->posture_ == Controller::posture_t::DOWN) {
-    controller->stand_down_starting_height_ = controller->current_height_;
+    controller->stand_down_starting_height_ = controller->getRobotModel()->getCurrentHeight(); // FIXME
     state_machine->setCurrentState(StateMachine::STANDING_DOWN);
   }
 }
@@ -184,7 +256,7 @@ void QuadrupedRobotAnomalyState::updateStateMachine(StateMachine* state_machine,
   controller->des_joint_positions_ = controller->robot_model_->getStandDownJointPostion();
   controller->des_joint_velocities_.fill(0.0);
   controller->updateImpedance(controller->des_joint_positions_, controller->des_joint_velocities_);
-  if ((controller->current_height_ - controller->previous_height_) / dt <= EPS) {
+  if (!controller->getRobotModel()->isRobotFalling()) {
     controller->posture_ = Controller::posture_t::DOWN;
     controller->terrain_estimator_->reset();
     state_machine->setCurrentState(StateMachine::IDLE);

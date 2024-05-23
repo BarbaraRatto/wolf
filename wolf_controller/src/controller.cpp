@@ -252,10 +252,12 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   imu_gyroscope_filt_.fill(0.0);
   imu_accelerometer_filt_.fill(0.0);
 
-  gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
-  foot_holds_planner_ = std::make_shared<FootholdsPlanner>(gait_generator_,robot_model_);
+  state_machine_ = std::make_shared<StateMachine>(this);
 
-  state_estimator_   = std::make_shared<StateEstimator>(robot_model_);
+  gait_generator_ = std::make_shared<GaitGenerator>(robot_model_->getFootNames(),Gait::TROT);
+  foot_holds_planner_ = std::make_shared<FootholdsPlanner>(state_machine_,gait_generator_,robot_model_);
+
+  state_estimator_   = std::make_shared<StateEstimator>(state_machine_,robot_model_);
   terrain_estimator_ = std::make_shared<TerrainEstimator>(state_estimator_,robot_model_);
   terrain_estimator_->setMaxRoll(M_PI);
   terrain_estimator_->setMinRoll(-M_PI);
@@ -276,8 +278,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   ramp_stand_up_    = std::make_shared<Ramp>(5.0,Ramp::UP);
   ramp_stand_down_  = std::make_shared<Ramp>(5.0,Ramp::DOWN);
   ramp_init_        = std::make_shared<Ramp>(3.0,Ramp::UP);
-
-  previous_height_ = robot_model_->getStandUpHeight();
 
   std::string input_device = "ps3";
   nh_.getParam("input_device",input_device);
@@ -321,7 +321,6 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw,
   ros_wrapper_ = std::make_shared<ControllerRosWrapper>(root_nh,controller_nh,this);
 
   id_prob_->init(nh_,period_);
-
 
   // Spawn the odom publisher thread
   odom_publisher_thread_= std::make_shared<std::thread>(&Controller::odomPublisher,this);
@@ -495,7 +494,7 @@ void Controller::resetBase()
 
 void Controller::emergencyStop()
 {
-  robot_model_->setState(QuadrupedRobot::ANOMALY);
+  state_machine_->setCurrentState(StateMachine::ANOMALY);
 }
 
 bool Controller::selectGait(const string& gait)
@@ -641,168 +640,7 @@ void Controller::updateTerrainEstimator(const double &dt)
 
 void Controller::updateStateMachine(const double &dt)
 {
-  desired_height_ = 0.0;
-  current_height_ = state_estimator_->getEstimatedBaseHeight();
-  current_rpy_ = robot_model_->getBaseRotationInWorldRPY();
-  unsigned int current_state = robot_model_->getState();
-  mode_string_ = getModeAsString();
-  double ramp;
-  switch(current_state)
-  {
-  case(QuadrupedRobot::IDLE):
-    if(posture_ == Controller::posture_t::UP)
-    {
-      init();
-      robot_model_->setState(QuadrupedRobot::INIT);
-      break;
-    }
-    break;
-
-  case(QuadrupedRobot::INIT):
-    des_joint_positions_ = robot_model_->getStandDownJointPostion();
-    des_joint_velocities_.fill(0.0);
-    ramp = ramp_init_->update(dt);
-    // Linear interpolation between initial joint positions and desired (stand down)
-    des_joint_positions_ = ramp * robot_model_->getStandDownJointPostion() + (1.0-ramp) * joint_positions_init_;
-    updateImpedance(des_joint_positions_,des_joint_velocities_);
-    if(ramp >= 1.0)
-    {
-      desired_yaw_ = robot_model_->getBaseRotationInWorldRPY().z();
-      id_prob_->reset();
-      ramp_init_->reset();
-      robot_model_->setState(QuadrupedRobot::STANDING_UP);
-    }
-    break;
-
-  case(QuadrupedRobot::STANDING_UP):
-    updateWpg(dt);
-    ramp = ramp_stand_up_->update(dt);
-    desired_height_ = terrain_estimator_->getTerrainPositionWorld().z() + ramp * robot_model_->getStandUpHeight();
-    des_joint_positions_ = ramp * robot_model_->getStandUpJointPostion() + (1.0-ramp) * robot_model_->getStandDownJointPostion();
-    tmp_vector3d_ << 0.0, 0.0, desired_yaw_;
-    rpyToRot(tmp_vector3d_,tmp_matrix3d_);
-    tmp_vector3d_.setZero(); // com position
-    tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
-    tmp_vector3d_1_.setZero(); // com velocity
-    tmp_vector3d_1_.z() = foot_holds_planner_->getBaseLinearVelocityCmdZ();
-    updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-    if(!updateSolver(des_joint_positions_))
-    {
-      robot_model_->setState(QuadrupedRobot::ANOMALY);
-      break;
-    }
-    if(current_height_ >= robot_model_->getStandUpHeight())
-    {
-      foot_holds_planner_->reset();
-      ramp_stand_up_->reset();
-      com_planner_->reset();
-      robot_model_->setState(QuadrupedRobot::ACTIVE);
-      state_estimator_->startContactComputation();
-      break;
-    }
-    break;
-
-  case(QuadrupedRobot::ACTIVE):
-
-    if(requested_mode_!=current_mode_ && state_estimator_->areAllFeetInContact())
-      current_mode_ = requested_mode_;
-
-    switch(current_mode_)
-    {
-    case Controller::mode_t::WPG:
-      updateWpg(dt);
-      id_prob_->setControlMode(IDProblem::mode_t::WPG);
-      previous_mode_ = Controller::mode_t::WPG;
-      break;
-    case Controller::mode_t::EXT:
-      foot_holds_planner_->update(dt,robot_model_->getBasePoseInWorld().translation(), robot_model_->getBaseRotationInWorldRPY());
-      id_prob_->setControlMode(IDProblem::mode_t::EXT);
-      previous_mode_ = Controller::mode_t::EXT;
-      break;
-    case Controller::mode_t::MPC:
-      foot_holds_planner_->update(dt,robot_model_->getBasePoseInWorld().translation(), robot_model_->getBaseRotationInWorldRPY());
-      id_prob_->setControlMode(IDProblem::mode_t::MPC);
-      previous_mode_ = Controller::mode_t::MPC;
-      break;
-    case Controller::mode_t::RESET:
-      foot_holds_planner_->setCmd(FootholdsPlanner::RESET_BASE);
-      updateWpg(dt);
-      id_prob_->setControlMode(IDProblem::mode_t::WPG);
-      previous_mode_ = Controller::mode_t::RESET;
-      tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), foot_holds_planner_->getBaseHeight(); // com position
-      tmp_matrix3d_ = foot_holds_planner_->getBaseRotationReference();
-      tmp_vector3d_1_.setZero(); // com velocity
-      //rpyToRot(0.0,0.0,robot_model_->getBaseYawInWorld(),tmp_matrix3d_);
-      updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-      if(current_height_ >= robot_model_->getStandUpHeight()
-         // && std::abs(current_rpy_.x()) <= 0.2
-         // && std::abs(current_rpy_.y()) <= 0.2
-         )
-      {
-        robot_model_->setState(QuadrupedRobot::ACTIVE);
-        requested_mode_ = Controller::mode_t::WPG;
-        break;
-      }
-      break;
-    };
-
-    if(!updateSolver(robot_model_->getStandUpJointPostion()) || !performSafetyChecks())
-    {
-      robot_model_->setState(QuadrupedRobot::ANOMALY);
-      break;
-    }
-    if(posture_ == Controller::posture_t::DOWN)
-    {
-      stand_down_starting_height_ = current_height_;
-      robot_model_->setState(QuadrupedRobot::STANDING_DOWN);
-      break;
-    }
-    break;
-
-  case(QuadrupedRobot::STANDING_DOWN):
-    updateWpg(dt);
-    ramp = ramp_stand_down_->update(dt);
-    desired_height_ = ramp * stand_down_starting_height_;
-    des_joint_positions_ = (1.0-ramp) * robot_model_->getStandUpJointPostion() + (ramp) * robot_model_->getStandDownJointPostion();
-    tmp_vector3d_ << 0.0, 0.0, robot_model_->getBaseRotationInWorldRPY().z();
-    rpyToRot(tmp_vector3d_,tmp_matrix3d_);
-    tmp_vector3d_.setZero(); // com position
-    tmp_vector3d_ << com_planner_->getComPosition().x(), com_planner_->getComPosition().y(), desired_height_;
-    tmp_vector3d_1_.setZero(); // com velocity
-    tmp_vector3d_1_.z() = -foot_holds_planner_->getBaseLinearVelocityCmdZ();
-    updateBaseReferences(tmp_vector3d_,tmp_vector3d_1_,tmp_matrix3d_);
-    if(!updateSolver(des_joint_positions_))
-    {
-      ramp_stand_down_->reset();
-      robot_model_->setState(QuadrupedRobot::ANOMALY);
-      break;
-    }
-    if(desired_height_ <= EPS)
-    {
-      ramp_stand_down_->reset();
-      //posture_ = Controller::posture_t::DOWN;
-      robot_model_->setState(QuadrupedRobot::IDLE);
-      state_estimator_->stopContactComputation();
-      break;
-    }
-    break;
-
-  case(QuadrupedRobot::ANOMALY):
-    des_joint_positions_ = robot_model_->getStandDownJointPostion();
-    des_joint_velocities_.fill(0.0);
-    updateImpedance(des_joint_positions_,des_joint_velocities_);
-    if((current_height_ - previous_height_)/dt <= EPS)
-    {
-      posture_ = Controller::posture_t::DOWN;
-      terrain_estimator_->reset();
-      robot_model_->setState(QuadrupedRobot::IDLE);
-      state_estimator_->stopContactComputation();
-      break;
-    }
-    break;
-  };
-
-  previous_height_ = current_height_;
+  state_machine_->updateStateMachine(dt);
 }
 
 void Controller::init()
@@ -1262,6 +1100,11 @@ Impedance* Controller::getImpedance() const
 QuadrupedRobot* Controller::getRobotModel() const
 {
   return robot_model_.get();
+}
+
+StateMachine* Controller::getStateMachine() const
+{
+  return state_machine_.get();
 }
 
 std::vector<Eigen::Vector6d>& Controller::getDesiredContactForces()

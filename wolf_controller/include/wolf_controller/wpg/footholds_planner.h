@@ -16,6 +16,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <atomic>
 #include <wolf_controller/wpg/gait_generator.h>
 #include <wolf_controller/quadruped_robot.h>
+#include <wolf_controller/state_machine.h>
 // WoLF utils
 #include <wolf_controller_utils/tools.h>
 
@@ -155,7 +156,7 @@ public:
      * @param maximum step length
      * @param maximum step height
      */
-    FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, double step_length_max = 0.3, double step_height_max = 0.3);
+    FootholdsPlanner(StateMachine::Ptr state_machine, GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, double step_length_max = 0.3, double step_height_max = 0.3);
 
     /**
      * @brief update triggers an update step of the footholds planner to compute the next foot holds given a base twist command.
@@ -428,6 +429,7 @@ private:
     Eigen::Vector3d base_linear_velocity_reference_;
     Eigen::Vector3d base_angular_velocity_reference_;
 
+    StateMachine::Ptr state_machine_;
     GaitGenerator::Ptr gait_generator_;
     QuadrupedRobot::Ptr robot_model_;
 

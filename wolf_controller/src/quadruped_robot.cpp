@@ -21,42 +21,8 @@ using namespace wolf_controller_utils;
 
 namespace wolf_controller {
 
-std::string enumToString(QuadrupedRobot::robot_states_t state)
-{
-  std::string ret = "NONE";
-  switch (state)
-  {
-
-  case QuadrupedRobot::robot_states_t::IDLE:
-    ret = "IDLE";
-    break;
-
-  case QuadrupedRobot::robot_states_t::INIT:
-    ret = "INIT";
-    break;
-
-  case QuadrupedRobot::robot_states_t::ACTIVE:
-    ret = "ACTIVE";
-    break;
-
-  case QuadrupedRobot::robot_states_t::ANOMALY:
-    ret = "ANOMALY";
-    break;
-
-  case QuadrupedRobot::robot_states_t::STANDING_UP:
-    ret = "STANDING_UP";
-    break;
-
-  case QuadrupedRobot::robot_states_t::STANDING_DOWN:
-    ret = "STANDING_DOWN";
-    break;
-  };
-
-  return ret;
-}
-
 QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& nh)
-  :ModelInterfaceRBDL(), nh_(nh), robot_state_(robot_states_t::IDLE), robot_state_prev_(robot_states_t::IDLE),robot_state_string_("IDLE")
+  :ModelInterfaceRBDL(), nh_(nh)
 {
   // Create the quadruped robot object, it wraps the robot model with some meta information
   std::string urdf, srdf;
@@ -213,6 +179,8 @@ QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& nh)
     base_T_ee_[ee_names_[i]] = Eigen::Affine3d::Identity();
   }
 
+  current_height_ = previous_height_ = 0.0;
+
   // Get inertias
   getInertiaMatrix(tmp_M_);
   getInertiaInverse(tmp_Mi_);
@@ -258,11 +226,6 @@ QuadrupedRobot::QuadrupedRobot(ros::NodeHandle& nh)
     stand_down_height_ = pose.translation().z() + stand_down_height_;
   }
   stand_down_height_ =  -stand_down_height_/N_LEGS;
-
-#ifdef RT_GUI
-  // create interface
-  RtGuiClient::getIstance().addLabel(std::string(wolf_controller::_rt_gui_group),std::string("Status"),&robot_state_string_);
-#endif
 }
 
 bool QuadrupedRobot::getTwist(const Eigen::VectorXd& q, const Eigen::VectorXd& qd, const std::string& source_frame, Eigen::Vector6d& twist)
@@ -472,8 +435,10 @@ bool QuadrupedRobot::update(bool update_position, bool update_velocity, bool upd
     base_X_ee_[ee_names_[i]] = base_T_ee_[ee_names_[i]].translation();
   }
 
-  // save the state as string
-  robot_state_string_ = enumToString(robot_state_);
+  // Update height info
+  previous_height_ = current_height_;
+  getFloatingBasePose(tmp_affine3d_);
+  current_height_ = tmp_affine3d_.translation().z();
 
   return res;
 }
@@ -658,6 +623,11 @@ const double &QuadrupedRobot::getBaseWidth() const
   return base_width_;
 }
 
+bool QuadrupedRobot::isRobotFalling() const
+{
+  return (((current_height_ - previous_height_)/_period <= EPS) ? false : true);
+}
+
 void QuadrupedRobot::getFloatingBasePositionInertia(Eigen::Matrix3d& M)
 {
   XBot::ModelInterfaceRBDL::getInertiaMatrix(tmp_M_);
@@ -689,43 +659,9 @@ void QuadrupedRobot::getLimbInertiaInverse(const std::string& limb_name, Eigen::
   Mi = tmp_Mi_.block(idx,idx,n,n);
 }
 
-QuadrupedRobot::robot_states_t QuadrupedRobot::getState()
-{
-  return robot_state_;
-}
-
-std::string QuadrupedRobot::getStateAsString()
-{
-  return enumToString(robot_state_);
-}
-
-std::vector<std::string> QuadrupedRobot::getStatesAsString()
-{
-  std::vector<std::string> states;
-  for(unsigned int i=0; i< N_STATES; i++)
-    states.push_back(enumToString(static_cast<robot_states_t>(i)));
-
-  return states;
-}
-
-QuadrupedRobot::robot_states_t QuadrupedRobot::getPreviousState()
-{
-  return robot_state_prev_;
-}
-
-bool QuadrupedRobot::setState(QuadrupedRobot::robot_states_t state)
-{
-  if(state != robot_state_)
-    ROS_INFO_STREAM_NAMED(CLASS_NAME,"Change state to "<<enumToString(state));
-  robot_state_prev_.store(robot_state_.load());
-  robot_state_ = state;
-  return true;
-}
-
 double QuadrupedRobot::getCurrentHeight()
 {
-  getFloatingBasePose(tmp_affine3d_);
-  return tmp_affine3d_.translation().z();
+  return current_height_;
 }
 
 const Eigen::VectorXd& QuadrupedRobot::getStandUpJointPostion()

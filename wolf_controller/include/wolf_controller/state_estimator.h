@@ -12,6 +12,7 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 
 #include <wolf_controller/force_estimator.h>
 #include <wolf_controller/quadruped_robot.h>
+#include <wolf_controller/state_machine.h>
 
 #include <ros/ros.h>
 #include <Eigen/Core>
@@ -47,7 +48,7 @@ public:
 
     enum estimation_t {NONE=0,IMU_MAGNETOMETER,IMU_GYROSCOPE,GROUND_TRUTH,KALMAN_FILTER,ODOMETRY};
 
-    StateEstimator(QuadrupedRobot::Ptr robot_model);
+    StateEstimator(StateMachine::Ptr state_machine, QuadrupedRobot::Ptr robot_model);
 
     //~StateEstimator()
 
@@ -223,6 +224,8 @@ private:
 
     /** @brief Reset the gyroscope integration */
     bool reset_gyro_integration_done_;
+
+    StateMachine::Ptr state_machine_;
 
     QuadrupedRobot::Ptr robot_model_;
 

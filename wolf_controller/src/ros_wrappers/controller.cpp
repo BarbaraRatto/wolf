@@ -7,6 +7,7 @@
 
 // WoLF
 #include <wolf_controller/ros_wrappers/controller.h>
+#include <wolf_controller/state_machine.h>
 
 // RT GUI
 #ifdef RT_GUI
@@ -321,8 +322,8 @@ ControllerRosWrapper::ControllerRosWrapper(ros::NodeHandle& root_nh, ros::NodeHa
   capture_point_pub_->msg_.support_polygon.points.resize(N_LEGS);
   // Controller state
   controller_state_pub_.reset(new realtime_tools::RealtimePublisher<wolf_msgs::ControllerState>(controller_nh, "controller_state", 4));
-  controller_state_pub_->msg_.states = controller_->getRobotModel()->getStatesAsString();
-  controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
+  controller_state_pub_->msg_.states = controller_->getStateMachine()->getStatesAsString();
+  controller_state_pub_->msg_.current_state = controller_->getStateMachine()->getStateAsString();
   controller_state_pub_->msg_.modes = controller_->getModesAsString();
   controller_state_pub_->msg_.current_mode = controller_->getModeAsString();
 
@@ -505,16 +506,16 @@ bool ControllerRosWrapper::resetBaseCB(std_srvs::Trigger::Request& req, std_srvs
   res.success = true;
   controller_->resetBase();
   unsigned int current_mode = controller_->getControlMode();
-  unsigned int current_state = controller_->getRobotModel()->getState();
+  unsigned int current_state = controller_->getStateMachine()->getCurrentState();
   while(current_mode == wolf_controller::Controller::RESET)
   {
-    if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
+    if(current_state == wolf_controller::StateMachine::robot_states_t::ANOMALY)
     {
       res.success = false;
       break;
     }
     current_mode = controller_->getControlMode();
-    current_state = controller_->getRobotModel()->getState();
+    current_state = controller_->getStateMachine()->getCurrentState();
     std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
   }
   return res.success;
@@ -524,15 +525,15 @@ bool ControllerRosWrapper::standUpCB(std_srvs::Trigger::Request& req, std_srvs::
 {
   res.success = true;
   controller_->selectPosture("UP");
-  unsigned int current_state = controller_->getRobotModel()->getState();
-  while(current_state != wolf_controller::QuadrupedRobot::ACTIVE)
+  unsigned int current_state = controller_->getStateMachine()->getCurrentState();
+  while(current_state != wolf_controller::StateMachine::robot_states_t::ACTIVE)
   {
-    if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
+    if(current_state == wolf_controller::StateMachine::robot_states_t::ANOMALY)
     {
       res.success = false;
       break;
     }
-    current_state = controller_->getRobotModel()->getState();
+    current_state = controller_->getStateMachine()->getCurrentState();
     std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
   }
   return res.success;
@@ -542,15 +543,15 @@ bool ControllerRosWrapper::standDownCB(std_srvs::Trigger::Request& req, std_srvs
 {
   res.success = true;
   controller_->selectPosture("DOWN");
-  unsigned int current_state = controller_->getRobotModel()->getState();
-  while(current_state != wolf_controller::QuadrupedRobot::IDLE)
+  unsigned int current_state = controller_->getStateMachine()->getCurrentState();
+  while(current_state != wolf_controller::StateMachine::robot_states_t::IDLE)
   {
-    if(current_state == wolf_controller::QuadrupedRobot::ANOMALY)
+    if(current_state == wolf_controller::StateMachine::robot_states_t::ANOMALY)
     {
       res.success = false;
       break;
     }
-    current_state = controller_->getRobotModel()->getState();
+    current_state = controller_->getStateMachine()->getCurrentState();
     std::this_thread::sleep_for( std::chrono::milliseconds(THREADS_SLEEP_TIME_ms) );
   }
   return res.success;
@@ -563,7 +564,7 @@ void ControllerRosWrapper::publish(const ros::Time& time, const ros::Duration& p
 
   if(controller_state_pub_.get() && controller_state_pub_->trylock())
   {
-    controller_state_pub_->msg_.current_state = controller_->getRobotModel()->getStateAsString();
+    controller_state_pub_->msg_.current_state = controller_->getStateMachine()->getStateAsString();
     controller_state_pub_->msg_.current_mode  = controller_->getModeAsString();
     controller_state_pub_->msg_.header.stamp  = time;
     controller_state_pub_->unlockAndPublish();

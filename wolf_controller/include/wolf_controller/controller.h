@@ -363,6 +363,11 @@ public:
          */
   QuadrupedRobot* getRobotModel() const;
 
+  /**
+         * @brief Get State Machine
+         */
+  StateMachine* getStateMachine() const;
+
 private:
 
   /** @brief Joint names */
@@ -498,10 +503,10 @@ private:
   posture_t posture_;
   double stand_down_starting_height_;
   double desired_height_;
-  double current_height_;
-  double previous_height_;
   Eigen::Vector3d current_rpy_;
   double desired_yaw_;
+
+  std::shared_ptr<StateMachine> state_machine_;
 
 
   /**

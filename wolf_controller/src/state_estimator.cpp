@@ -74,8 +74,11 @@ StateEstimator::estimation_t stringToEnum(const std::string& estimation)
   return ret;
 }
 
-StateEstimator::StateEstimator(QuadrupedRobot::Ptr robot_model)
+StateEstimator::StateEstimator(StateMachine::Ptr state_machine, QuadrupedRobot::Ptr robot_model)
 {
+
+  assert(state_machine);
+  state_machine_ = state_machine;
 
   assert(robot_model);
   robot_model_ = robot_model;
@@ -545,7 +548,7 @@ void StateEstimator::updateFloatingBase(const double& period)
 
     if(!odom_estimator_->update(period))
     {
-      robot_model_->setState(QuadrupedRobot::ANOMALY);
+      state_machine_->setCurrentState(StateMachine::ANOMALY);
       return;
     }
   }

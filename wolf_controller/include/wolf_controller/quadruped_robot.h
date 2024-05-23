@@ -40,8 +40,6 @@ public:
   typedef std::map<std::string,std::vector<unsigned int>>         limb_joint_idxs_map_t;
   typedef std::map<std::string,unsigned int>                      joint_idxs_map_t;
 
-  enum robot_states_t {IDLE,INIT,ANOMALY,STANDING_UP,STANDING_DOWN,ACTIVE,N_STATES=7};
-
   QuadrupedRobot(ros::NodeHandle& nh);
 
   bool update( bool update_position = true,
@@ -70,11 +68,7 @@ public:
   const double& getBaseLength() const;
   const double& getBaseWidth() const;
 
-  std::string getStateAsString();
-  std::vector<std::string> getStatesAsString();
-  robot_states_t getState();
-  robot_states_t getPreviousState();
-  bool setState(robot_states_t robot_state);
+  bool isRobotFalling() const;
 
   void getFloatingBasePositionInertia(Eigen::Matrix3d& M);
   void getFloatingBaseOrientationInertia(Eigen::Matrix3d& M);
@@ -316,10 +310,10 @@ private:
   double stand_up_height_;
   /** @brief Base's height when standing down */
   double stand_down_height_;
-
-  std::atomic<robot_states_t> robot_state_;
-  std::atomic<robot_states_t> robot_state_prev_;
-  std::string robot_state_string_;
+  /** @brief Base's current height  */
+  double current_height_;
+  /** @brief Base's previous height  */
+  double previous_height_;
 
   mutable RigidBodyDynamics::Model virtual_model_;
 

@@ -52,9 +52,9 @@ protected:
         if(base_velocity_yaw_scale_>1.0) base_velocity_yaw_scale_ = 1.0; if(base_velocity_yaw_scale_<-1.0) base_velocity_yaw_scale_ = -1.0;
 
         unsigned int current_control_mode = controller_ptr_->getControlMode();
-        unsigned int current_robot_state = controller_ptr_->getRobotModel()->getState();
+        unsigned int current_robot_state = controller_ptr_->getStateMachine()->getCurrentState();
 
-        if(current_robot_state == wolf_controller::QuadrupedRobot::ACTIVE)
+        if(current_robot_state == wolf_controller::StateMachine::ACTIVE)
           if(start_swing_ && current_control_mode == wolf_controller::Controller::WPG)
           {
               controller_ptr_->getFootholdsPlanner()->setCmd(wolf_controller::FootholdsPlanner::LINEAR_AND_ANGULAR); // Start the swing

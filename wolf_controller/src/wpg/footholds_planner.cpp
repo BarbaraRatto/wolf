@@ -15,9 +15,11 @@ using namespace wolf_controller_utils;
 
 namespace wolf_controller {
 
-FootholdsPlanner::FootholdsPlanner(GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, double step_length_max, double step_height_max)
+FootholdsPlanner::FootholdsPlanner(StateMachine::Ptr state_machine, GaitGenerator::Ptr gait_generator, QuadrupedRobot::Ptr robot_model, double step_length_max, double step_height_max)
 {
 
+  assert(state_machine);
+  state_machine_ = state_machine;
   assert(gait_generator);
   gait_generator_ = gait_generator;
   assert(robot_model);
@@ -188,7 +190,7 @@ void FootholdsPlanner::update(const double& period, const Eigen::Vector3d& base_
   }
   gait_generator_->setTerrainRotation(world_T_terrain_.linear());
 
-  if(robot_model_->getState() == QuadrupedRobot::ACTIVE)
+  if(state_machine_->getCurrentState() == StateMachine::ACTIVE)
   {
     if(cmd == cmd_t::LINEAR_AND_ANGULAR || push_detected_)
     {
