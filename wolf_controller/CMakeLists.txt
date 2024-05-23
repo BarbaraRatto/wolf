@@ -70,7 +70,7 @@ add_library(wpg src/wpg/com_planner.cpp src/wpg/foot_state_machine.cpp src/wpg/f
 target_link_libraries(wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${rt_gui_LIBRARIES})
 
-add_library(wolf_controller src/controller.cpp src/id_problem.cpp src/state_estimator.cpp
+add_library(wolf_controller src/controller.cpp src/state_machine.cpp src/id_problem.cpp src/state_estimator.cpp
     src/impedance.cpp src/quadruped_robot.cpp src/terrain_estimator.cpp src/force_estimator.cpp src/cartesian_trajectory.cpp)
 target_link_libraries(wolf_controller ros_wrappers wpg ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES}
     ${XBotInterface_LIBRARIES} ${ModelInterfaceRBDL_LIBRARIES} ${rt_gui_LIBRARIES})
