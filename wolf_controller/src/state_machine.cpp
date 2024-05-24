@@ -304,15 +304,26 @@ void QuadrupedRobotStandingDownState::onExit(StateMachine *state_machine)
   controller->state_estimator_->stopContactComputation();
 }
 
+/////////////////////////////////// ANOMALY ///////////////////////////////////////////
 void QuadrupedRobotAnomalyState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   controller->des_joint_positions_ = controller->robot_model_->getStandDownJointPostion();
-  controller->des_joint_velocities_.fill(0.0);
   controller->updateImpedance(controller->des_joint_positions_, controller->des_joint_velocities_);
   if (!controller->getRobotModel()->isRobotFalling()) {
-    controller->posture_ = Controller::posture_t::DOWN;
-    controller->terrain_estimator_->reset();
     state_machine->setCurrentState(StateMachine::IDLE);
-    controller->state_estimator_->stopContactComputation();
   }
+}
+
+void QuadrupedRobotAnomalyState::onEntry(StateMachine *state_machine)
+{
+  Controller* controller = state_machine->getController();
+  controller->des_joint_velocities_.fill(0.0);
+}
+
+void QuadrupedRobotAnomalyState::onExit(StateMachine *state_machine)
+{
+  Controller* controller = state_machine->getController();
+  controller->posture_ = Controller::posture_t::DOWN;
+  controller->terrain_estimator_->reset();
+  controller->state_estimator_->stopContactComputation();
 }

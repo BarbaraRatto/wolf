@@ -76,6 +76,8 @@ public:
 class QuadrupedRobotAnomalyState : public QuadrupedRobotState {
 public:
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
 };
 
 class StateMachine
