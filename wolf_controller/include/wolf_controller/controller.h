@@ -491,10 +491,6 @@ private:
   bool publish_odom_msg_;
   /** @brief Odom publisher rate */
   double odom_pub_rate_;
-  /** @brief Ramps */
-  wolf_controller_utils::Ramp::Ptr ramp_stand_up_;
-  wolf_controller_utils::Ramp::Ptr ramp_stand_down_;
-  wolf_controller_utils::Ramp::Ptr ramp_init_;
   /** @brief State machine support variables */
   std::string mode_string_;
   mode_t current_mode_;
