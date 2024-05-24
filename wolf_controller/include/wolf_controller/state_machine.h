@@ -15,6 +15,8 @@ work. If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
 #include <map>
 #include <atomic>
 
+#include <wolf_controller_utils/tools.h>
+
 namespace wolf_controller {
 
 class Controller;
@@ -26,31 +28,49 @@ public:
 
   virtual ~QuadrupedRobotState() = default;
   virtual void updateStateMachine(StateMachine* state_machine, const double& dt) = 0;
+  virtual void onEntry(StateMachine* state_machine) {};
+  virtual void onExit(StateMachine* state_machine) {};
 };
 
 class QuadrupedRobotIdleState : public QuadrupedRobotState {
 public:
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
 };
 
 class QuadrupedRobotInitState : public QuadrupedRobotState {
 public:
+  QuadrupedRobotInitState();
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
+  wolf_controller_utils::Ramp::Ptr ramp_;
 };
 
 class QuadrupedRobotStandingUpState : public QuadrupedRobotState {
 public:
+  QuadrupedRobotStandingUpState();
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
+  wolf_controller_utils::Ramp::Ptr ramp_;
 };
 
 class QuadrupedRobotActiveState : public QuadrupedRobotState {
 public:
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
 };
 
 class QuadrupedRobotStandingDownState : public QuadrupedRobotState {
 public:
+  QuadrupedRobotStandingDownState();
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
+  wolf_controller_utils::Ramp::Ptr ramp_;
 };
 
 class QuadrupedRobotAnomalyState : public QuadrupedRobotState {
@@ -87,11 +107,14 @@ public:
   Controller* getController();
 
 private:
+
+  std::atomic<bool> state_changed_;
   Controller* controller_;
   std::atomic<robot_states_t> current_state_;
   std::atomic<robot_states_t> previous_state_;
   std::string current_state_str_;
   std::map<robot_states_t,QuadrupedRobotState::Ptr> states_;
+
 };
 
 }
