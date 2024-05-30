@@ -18,14 +18,14 @@ using namespace rt_gui;
 using namespace wolf_controller;
 using namespace wolf_controller_utils;
 
-std::string enumToString(StateMachine::robot_states_t state) {
+std::string enumToString(StateMachine::states_t state) {
   switch (state) {
-  case StateMachine::robot_states_t::IDLE:          return "IDLE";
-  case StateMachine::robot_states_t::INIT:          return "INIT";
-  case StateMachine::robot_states_t::STANDING_UP:   return "STANDING_UP";
-  case StateMachine::robot_states_t::ACTIVE:        return "ACTIVE";
-  case StateMachine::robot_states_t::STANDING_DOWN: return "STANDING_DOWN";
-  case StateMachine::robot_states_t::ANOMALY:       return "ANOMALY";
+  case StateMachine::IDLE:          return "IDLE";
+  case StateMachine::INIT:          return "INIT";
+  case StateMachine::STANDING_UP:   return "STANDING_UP";
+  case StateMachine::ACTIVE:        return "ACTIVE";
+  case StateMachine::STANDING_DOWN: return "STANDING_DOWN";
+  case StateMachine::ANOMALY:       return "ANOMALY";
   default:                                          return "UNKNOWN";
   }
 }
@@ -34,12 +34,12 @@ std::string enumToString(StateMachine::robot_states_t state) {
 // State Machine Implementation
 StateMachine::StateMachine(Controller* controller)
   : state_changed_(true), controller_(controller), current_state_(IDLE), previous_state_(N_STATES), current_state_str_("IDLE") {
-  states_[IDLE] = std::make_shared<QuadrupedRobotIdleState>();
-  states_[INIT] = std::make_shared<QuadrupedRobotInitState>();
-  states_[STANDING_UP] = std::make_shared<QuadrupedRobotStandingUpState>();
-  states_[ACTIVE] = std::make_shared<QuadrupedRobotActiveState>();
-  states_[STANDING_DOWN] = std::make_shared<QuadrupedRobotStandingDownState>();
-  states_[ANOMALY] = std::make_shared<QuadrupedRobotAnomalyState>();
+  states_[IDLE] = std::make_shared<ControllerIdleState>();
+  states_[INIT] = std::make_shared<ControllerInitState>();
+  states_[STANDING_UP] = std::make_shared<ControllerStandingUpState>();
+  states_[ACTIVE] = std::make_shared<ControllerActiveState>();
+  states_[STANDING_DOWN] = std::make_shared<ControllerStandingDownState>();
+  states_[ANOMALY] = std::make_shared<ControllerAnomalyState>();
 
 #ifdef RT_GUI
   // create interface
@@ -68,7 +68,7 @@ void StateMachine::updateStateMachine(const double& dt)
   current_state_str_ = enumToString(current_state_);
 }
 
-void StateMachine::setCurrentState(StateMachine::robot_states_t new_state)
+void StateMachine::setCurrentState(StateMachine::states_t new_state)
 {
   if(new_state != current_state_)
   {
@@ -88,17 +88,17 @@ std::vector<std::string> StateMachine::getStatesAsString()
 {
   std::vector<std::string> states;
   for(unsigned int i=0; i< N_STATES; i++)
-    states.push_back(enumToString(static_cast<robot_states_t>(i)));
+    states.push_back(enumToString(static_cast<states_t>(i)));
 
   return states;
 }
 
-StateMachine::robot_states_t StateMachine::getCurrentState()
+StateMachine::states_t StateMachine::getCurrentState()
 {
   return current_state_;
 }
 
-StateMachine::robot_states_t StateMachine::getPreviousState()
+StateMachine::states_t StateMachine::getPreviousState()
 {
   return previous_state_;
 }
@@ -109,30 +109,30 @@ Controller *StateMachine::getController()
 }
 
 /////////////////////////////////// IDLE ///////////////////////////////////////////
-void QuadrupedRobotIdleState::updateStateMachine(StateMachine* state_machine, const double& dt) {
+void ControllerIdleState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   if (controller->posture_ == Controller::posture_t::UP)
     state_machine->setCurrentState(StateMachine::INIT);
 }
 
-void QuadrupedRobotIdleState::onEntry(StateMachine* state_machine) {
+void ControllerIdleState::onEntry(StateMachine* state_machine) {
   Controller* controller = state_machine->getController();
   controller->desired_height_ = 0.0;
   controller->current_rpy_ = controller->robot_model_->getBaseRotationInWorldRPY();
 }
 
-void QuadrupedRobotIdleState::onExit(StateMachine* state_machine) {
+void ControllerIdleState::onExit(StateMachine* state_machine) {
   Controller* controller = state_machine->getController();
   controller->init();
 }
 
 /////////////////////////////////// INIT ///////////////////////////////////////////
-QuadrupedRobotInitState::QuadrupedRobotInitState()
+ControllerInitState::ControllerInitState()
 {
   ramp_ = std::make_shared<Ramp>(3.0,Ramp::UP);
 }
 
-void QuadrupedRobotInitState::updateStateMachine(StateMachine* state_machine, const double& dt) {
+void ControllerInitState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   double ramp = ramp_->update(dt);
   controller->des_joint_positions_ = ramp * controller->robot_model_->getStandDownJointPostion() +
@@ -142,14 +142,14 @@ void QuadrupedRobotInitState::updateStateMachine(StateMachine* state_machine, co
     state_machine->setCurrentState(StateMachine::STANDING_UP);
 }
 
-void QuadrupedRobotInitState::onEntry(StateMachine *state_machine)
+void ControllerInitState::onEntry(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   controller->des_joint_positions_ = controller->robot_model_->getStandDownJointPostion();
   controller->des_joint_velocities_.fill(0.0);
 }
 
-void QuadrupedRobotInitState::onExit(StateMachine *state_machine)
+void ControllerInitState::onExit(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   controller->desired_yaw_ = controller->robot_model_->getBaseRotationInWorldRPY().z();
@@ -158,12 +158,12 @@ void QuadrupedRobotInitState::onExit(StateMachine *state_machine)
 }
 
 /////////////////////////////////// STANDING UP ///////////////////////////////////////////
-QuadrupedRobotStandingUpState::QuadrupedRobotStandingUpState()
+ControllerStandingUpState::ControllerStandingUpState()
 {
   ramp_ = std::make_shared<Ramp>(5.0,Ramp::UP);
 }
 
-void QuadrupedRobotStandingUpState::updateStateMachine(StateMachine* state_machine, const double& dt) {
+void ControllerStandingUpState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   controller->updateWpg(dt);
   double ramp = ramp_->update(dt);
@@ -185,20 +185,20 @@ void QuadrupedRobotStandingUpState::updateStateMachine(StateMachine* state_machi
   }
 }
 
-void QuadrupedRobotStandingUpState::onEntry(StateMachine *state_machine)
+void ControllerStandingUpState::onEntry(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   controller->tmp_vector3d_.setZero();
   controller->tmp_vector3d_1_.setZero();
 }
 
-void QuadrupedRobotStandingUpState::onExit(StateMachine *state_machine)
+void ControllerStandingUpState::onExit(StateMachine *state_machine)
 {
   ramp_->reset();
 }
 
 /////////////////////////////////// ACTIVE ///////////////////////////////////////////
-void QuadrupedRobotActiveState::updateStateMachine(StateMachine* state_machine, const double& dt) {
+void ControllerActiveState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   if (controller->requested_mode_ != controller->current_mode_ &&
       controller->state_estimator_->areAllFeetInContact()) {
@@ -250,7 +250,7 @@ void QuadrupedRobotActiveState::updateStateMachine(StateMachine* state_machine, 
   }
 }
 
-void QuadrupedRobotActiveState::onEntry(StateMachine *state_machine)
+void ControllerActiveState::onEntry(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   controller->foot_holds_planner_->reset();
@@ -258,18 +258,18 @@ void QuadrupedRobotActiveState::onEntry(StateMachine *state_machine)
   controller->state_estimator_->startContactComputation();
 }
 
-void QuadrupedRobotActiveState::onExit(StateMachine *state_machine)
+void ControllerActiveState::onExit(StateMachine *state_machine)
 {
 
 }
 
 /////////////////////////////////// STANDING DOWN ///////////////////////////////////////////
-QuadrupedRobotStandingDownState::QuadrupedRobotStandingDownState()
+ControllerStandingDownState::ControllerStandingDownState()
 {
   ramp_ = std::make_shared<Ramp>(5.0,Ramp::DOWN);
 }
 
-void QuadrupedRobotStandingDownState::updateStateMachine(StateMachine* state_machine, const double& dt) {
+void ControllerStandingDownState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   controller->updateWpg(dt);
   double ramp = ramp_->update(dt);
@@ -290,14 +290,14 @@ void QuadrupedRobotStandingDownState::updateStateMachine(StateMachine* state_mac
   }
 }
 
-void QuadrupedRobotStandingDownState::onEntry(StateMachine *state_machine)
+void ControllerStandingDownState::onEntry(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   controller->tmp_vector3d_1_.setZero();
   controller->tmp_vector3d_.setZero();
 }
 
-void QuadrupedRobotStandingDownState::onExit(StateMachine *state_machine)
+void ControllerStandingDownState::onExit(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   ramp_->reset();
@@ -305,7 +305,7 @@ void QuadrupedRobotStandingDownState::onExit(StateMachine *state_machine)
 }
 
 /////////////////////////////////// ANOMALY ///////////////////////////////////////////
-void QuadrupedRobotAnomalyState::updateStateMachine(StateMachine* state_machine, const double& dt) {
+void ControllerAnomalyState::updateStateMachine(StateMachine* state_machine, const double& dt) {
   Controller* controller = state_machine->getController();
   controller->des_joint_positions_ = controller->robot_model_->getStandDownJointPostion();
   controller->updateImpedance(controller->des_joint_positions_, controller->des_joint_velocities_);
@@ -314,13 +314,13 @@ void QuadrupedRobotAnomalyState::updateStateMachine(StateMachine* state_machine,
   }
 }
 
-void QuadrupedRobotAnomalyState::onEntry(StateMachine *state_machine)
+void ControllerAnomalyState::onEntry(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   controller->des_joint_velocities_.fill(0.0);
 }
 
-void QuadrupedRobotAnomalyState::onExit(StateMachine *state_machine)
+void ControllerAnomalyState::onExit(StateMachine *state_machine)
 {
   Controller* controller = state_machine->getController();
   controller->posture_ = Controller::posture_t::DOWN;

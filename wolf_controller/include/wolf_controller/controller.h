@@ -52,13 +52,13 @@ namespace wolf_controller
 
 // Forward state machine declarations
 class StateMachine;
-class QuadrupedRobotState;
-class QuadrupedRobotInitState;
-class QuadrupedRobotIdleState;
-class QuadrupedRobotStandingUpState;
-class QuadrupedRobotActiveState;
-class QuadrupedRobotStandingDownState;
-class QuadrupedRobotAnomalyState;
+class State;
+class ControllerInitState;
+class ControllerIdleState;
+class ControllerStandingUpState;
+class ControllerActiveState;
+class ControllerStandingDownState;
+class ControllerAnomalyState;
 
 class Controller : public
     controller_interface::MultiInterfaceController<hardware_interface::EffortJointInterface, // Mandatory interface
@@ -70,13 +70,13 @@ public:
 
   // State machine friend classes
   friend class StateMachine;
-  friend class QuadrupedRobotState;
-  friend class QuadrupedRobotInitState;
-  friend class QuadrupedRobotIdleState;
-  friend class QuadrupedRobotStandingUpState;
-  friend class QuadrupedRobotActiveState;
-  friend class QuadrupedRobotStandingDownState;
-  friend class QuadrupedRobotAnomalyState;
+  friend class State;
+  friend class ControllerInitState;
+  friend class ControllerIdleState;
+  friend class ControllerStandingUpState;
+  friend class ControllerActiveState;
+  friend class ControllerStandingDownState;
+  friend class ControllerAnomalyState;
 
   enum posture_t {UP=0,DOWN};
   enum mode_t {WPG=0,EXT,MPC,RESET,N_MODES=4};

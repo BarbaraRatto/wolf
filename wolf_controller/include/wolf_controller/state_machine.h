@@ -22,58 +22,58 @@ namespace wolf_controller {
 class Controller;
 class StateMachine;
 
-class QuadrupedRobotState {
+class State {
 public:
-  typedef std::shared_ptr<QuadrupedRobotState> Ptr;
+  typedef std::shared_ptr<State> Ptr;
 
-  virtual ~QuadrupedRobotState() = default;
+  virtual ~State() = default;
   virtual void updateStateMachine(StateMachine* state_machine, const double& dt) = 0;
   virtual void onEntry(StateMachine* state_machine) {};
   virtual void onExit(StateMachine* state_machine) {};
 };
 
-class QuadrupedRobotIdleState : public QuadrupedRobotState {
+class ControllerIdleState : public State {
 public:
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
   virtual void onEntry(StateMachine* state_machine) override;
   virtual void onExit(StateMachine* state_machine) override;
 };
 
-class QuadrupedRobotInitState : public QuadrupedRobotState {
+class ControllerInitState : public State {
 public:
-  QuadrupedRobotInitState();
-  void updateStateMachine(StateMachine* state_machine, const double& dt) override;
-  virtual void onEntry(StateMachine* state_machine) override;
-  virtual void onExit(StateMachine* state_machine) override;
-  wolf_controller_utils::Ramp::Ptr ramp_;
-};
-
-class QuadrupedRobotStandingUpState : public QuadrupedRobotState {
-public:
-  QuadrupedRobotStandingUpState();
+  ControllerInitState();
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
   virtual void onEntry(StateMachine* state_machine) override;
   virtual void onExit(StateMachine* state_machine) override;
   wolf_controller_utils::Ramp::Ptr ramp_;
 };
 
-class QuadrupedRobotActiveState : public QuadrupedRobotState {
+class ControllerStandingUpState : public State {
 public:
-  void updateStateMachine(StateMachine* state_machine, const double& dt) override;
-  virtual void onEntry(StateMachine* state_machine) override;
-  virtual void onExit(StateMachine* state_machine) override;
-};
-
-class QuadrupedRobotStandingDownState : public QuadrupedRobotState {
-public:
-  QuadrupedRobotStandingDownState();
+  ControllerStandingUpState();
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
   virtual void onEntry(StateMachine* state_machine) override;
   virtual void onExit(StateMachine* state_machine) override;
   wolf_controller_utils::Ramp::Ptr ramp_;
 };
 
-class QuadrupedRobotAnomalyState : public QuadrupedRobotState {
+class ControllerActiveState : public State {
+public:
+  void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
+};
+
+class ControllerStandingDownState : public State {
+public:
+  ControllerStandingDownState();
+  void updateStateMachine(StateMachine* state_machine, const double& dt) override;
+  virtual void onEntry(StateMachine* state_machine) override;
+  virtual void onExit(StateMachine* state_machine) override;
+  wolf_controller_utils::Ramp::Ptr ramp_;
+};
+
+class ControllerAnomalyState : public State {
 public:
   void updateStateMachine(StateMachine* state_machine, const double& dt) override;
   virtual void onEntry(StateMachine* state_machine) override;
@@ -90,17 +90,17 @@ public:
 
   typedef std::shared_ptr<const StateMachine> ConstPtr;
 
-  enum robot_states_t {IDLE,INIT,ANOMALY,STANDING_UP,STANDING_DOWN,ACTIVE,N_STATES=7};
+  enum states_t {IDLE,INIT,ANOMALY,STANDING_UP,STANDING_DOWN,ACTIVE,N_STATES=7};
 
   StateMachine(Controller* controller);
 
   void updateStateMachine(const double& dt);
 
-  void setCurrentState(robot_states_t state);
+  void setCurrentState(states_t state);
 
-  robot_states_t getCurrentState();
+  states_t getCurrentState();
 
-  robot_states_t getPreviousState();
+  states_t getPreviousState();
 
   std::string getStateAsString();
 
@@ -112,10 +112,10 @@ private:
 
   std::atomic<bool> state_changed_;
   Controller* controller_;
-  std::atomic<robot_states_t> current_state_;
-  std::atomic<robot_states_t> previous_state_;
+  std::atomic<states_t> current_state_;
+  std::atomic<states_t> previous_state_;
   std::string current_state_str_;
-  std::map<robot_states_t,QuadrupedRobotState::Ptr> states_;
+  std::map<states_t,State::Ptr> states_;
 
 };
 
