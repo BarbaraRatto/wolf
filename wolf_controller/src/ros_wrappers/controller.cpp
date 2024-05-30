@@ -509,7 +509,7 @@ bool ControllerRosWrapper::resetBaseCB(std_srvs::Trigger::Request& req, std_srvs
   unsigned int current_state = controller_->getStateMachine()->getCurrentState();
   while(current_mode == wolf_controller::Controller::RESET)
   {
-    if(current_state == wolf_controller::StateMachine::robot_states_t::ANOMALY)
+    if(current_state == wolf_controller::StateMachine::ANOMALY)
     {
       res.success = false;
       break;
@@ -526,9 +526,9 @@ bool ControllerRosWrapper::standUpCB(std_srvs::Trigger::Request& req, std_srvs::
   res.success = true;
   controller_->selectPosture("UP");
   unsigned int current_state = controller_->getStateMachine()->getCurrentState();
-  while(current_state != wolf_controller::StateMachine::robot_states_t::ACTIVE)
+  while(current_state != wolf_controller::StateMachine::ACTIVE)
   {
-    if(current_state == wolf_controller::StateMachine::robot_states_t::ANOMALY)
+    if(current_state == wolf_controller::StateMachine::ANOMALY)
     {
       res.success = false;
       break;
@@ -544,9 +544,9 @@ bool ControllerRosWrapper::standDownCB(std_srvs::Trigger::Request& req, std_srvs
   res.success = true;
   controller_->selectPosture("DOWN");
   unsigned int current_state = controller_->getStateMachine()->getCurrentState();
-  while(current_state != wolf_controller::StateMachine::robot_states_t::IDLE)
+  while(current_state != wolf_controller::StateMachine::IDLE)
   {
-    if(current_state == wolf_controller::StateMachine::robot_states_t::ANOMALY)
+    if(current_state == wolf_controller::StateMachine::ANOMALY)
     {
       res.success = false;
       break;
