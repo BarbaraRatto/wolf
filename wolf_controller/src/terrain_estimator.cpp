@@ -37,9 +37,9 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
   posture_adjustment_dot_world_.setZero();
 
   // 0 - Update the terrain estimation everytime there is a new contact (touchdown)
-  auto foot_names = robot_model_->getFootNames();
-  for(unsigned int i=0; i<foot_names.size(); i++)
-    update_ = update_ || touchdown_[foot_names[i]].update(state_estimator_->getContact(foot_names[i]));
+  //auto foot_names = robot_model_->getFootNames();
+  //for(unsigned int i=0; i<foot_names.size(); i++)
+  //  update_ = update_ || touchdown_[foot_names[i]].update(state_estimator_->getContact(foot_names[i]));
 
   // 1 - Check if the feet are all in stance
   if(state_estimator_->areAllFeetInContact())
@@ -47,8 +47,8 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
 
     // NOTE: I commented out this line because it was causing huge steps in the terrain height estimation.
     // This can be a real problem when going up stairs.
-    if(update_ == true)
-    {
+    //if(update_ == true)
+    //{
 
       // 2 - Update A and b with the feet position
       update();
@@ -75,8 +75,8 @@ bool TerrainEstimator::computeTerrainEstimation(const double& dt)
       estimated_roll_ = std::atan(-terrain_normal_(1)*std::sin(estimated_pitch_)/terrain_normal_(0));
 
       // Perform only one update per touch down
-      update_ = false;
-    }
+      //update_ = false;
+    //}
   }
 
   // 5 - Filter
