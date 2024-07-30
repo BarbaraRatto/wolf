@@ -469,18 +469,6 @@ private:
   std::atomic<double> vel_roll_;
   std::atomic<double> vel_pitch_;
   std::atomic<double> vel_yaw_;
-  /** @brief Support temporary Affine3d */
-  Eigen::Affine3d tmp_affine3d_;
-  /** @brief Support temporary Vector3d */
-  Eigen::Vector3d tmp_vector3d_;
-  /** @brief Support temporary Vector3d */
-  Eigen::Vector3d tmp_vector3d_1_;
-  /** @brief Support temporary Vector3d */
-  Eigen::Vector3d tmp_vector3d_2_;
-  /** @brief Support temporary Matrix3d */
-  Eigen::Matrix3d tmp_matrix3d_;
-  /** @brief Support temporary double */
-  double tmp_double_;
   /** @brief Counters used for checks */
   wolf_controller_utils::Counter::Ptr solver_failures_cnt_;
   wolf_controller_utils::Counter::Ptr contact_failures_cnt_;
@@ -497,10 +485,6 @@ private:
   mode_t requested_mode_;
   mode_t previous_mode_;
   posture_t posture_;
-  double stand_down_starting_height_;
-  double desired_height_;
-  Eigen::Vector3d current_rpy_;
-  double desired_yaw_;
 
   std::shared_ptr<StateMachine> state_machine_;
 

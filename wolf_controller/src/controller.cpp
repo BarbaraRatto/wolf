@@ -612,10 +612,7 @@ void Controller::updateStateEstimator(const double &dt)
   if(use_contact_sensors_)
     for(const auto& tmp : contact_sensors_)
     {
-      tmp_vector3d_[0] = tmp.second.getForce()[0];
-      tmp_vector3d_[1] = tmp.second.getForce()[1];
-      tmp_vector3d_[2] = tmp.second.getForce()[2];
-      state_estimator_->setContactForce(tmp.first,tmp_vector3d_);
+      state_estimator_->setContactForce(tmp.first,Eigen::Map<const Eigen::Vector3d>(tmp.second.getForce()));
       //state_estimator_->setContactState(tmp.first,tmp.second.getContactState());
     }
 
