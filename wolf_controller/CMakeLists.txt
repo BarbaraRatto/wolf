@@ -20,7 +20,7 @@ endif()
 
 # ROS
 find_package(catkin REQUIRED tf tf_conversions controller_interface control_toolbox wolf_hardware_interface
-    realtime_tools ddynamic_reconfigure rviz_visual_tools rt_logger wolf_msgs wolf_estimation wolf_controller_utils)
+    realtime_tools ddynamic_reconfigure rviz_visual_tools rt_logger wolf_msgs wolf_estimation wolf_controller_utils eigen_conversions)
 # ADVR Packages
 find_package(OpenSoT REQUIRED)
 find_package(XBotInterface REQUIRED)

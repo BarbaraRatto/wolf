@@ -8,6 +8,7 @@
 // WoLF
 #include <wolf_controller/ros_wrappers/cartesian.h>
 #include <wolf_controller_utils/converters.h>
+#include <eigen_conversions/eigen_msg.h>
 
 using namespace wolf_controller_utils;
 
