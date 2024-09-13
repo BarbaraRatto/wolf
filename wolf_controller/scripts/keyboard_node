@@ -2,6 +2,9 @@
 
 # WOLF Keyboard controller
 
+import os
+os.environ["SDL_AUDIODRIVER"] = "dummy"  # Disable audio initialization
+
 import pygame
 
 import rospy
