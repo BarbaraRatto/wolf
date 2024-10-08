@@ -43,3 +43,6 @@
 [submodule "wolf_controller"]
 	path = wolf_controller
 	url = git@github.com:graiola/wolf_controller.git
+[submodule "wolf_wbid"]
+	path = wolf_wbid
+	url = git@github.com:graiola/wolf_wbid.git
