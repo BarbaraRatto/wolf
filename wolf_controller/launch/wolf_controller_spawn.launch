@@ -1,9 +1,0 @@
-<?xml version="1.0" ?>
-<launch>
-  <arg name="extra_controllers" default=""/>
-
-  <!-- Spawn controllers -->
-  <node name="controller_spawner"
-        pkg="controller_manager" type="spawner" output="screen"
-        args="wolf_controller $(arg extra_controllers)" />
-</launch>
