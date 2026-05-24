@@ -1,42 +1,39 @@
 [submodule "rt_logger"]
 	path = rt_logger
-	url = git@github.com:graiola/rt_logger.git
+	url = https://github.com/graiola/rt_logger.git
 [submodule "setup"]
 	path = setup
-	url = git@github.com:graiola/wbc-setup.git
+	url = https://github.com/graiola/wbc-setup.git
 [submodule "wolf_descriptions"]
 	path = wolf_descriptions
-	url = git@github.com:graiola/wolf_descriptions.git
+	url = https://github.com/graiola/wolf_descriptions.git
 [submodule "wolf_gazebo_resources"]
 	path = wolf_gazebo_resources
-	url = git@github.com:graiola/wolf_gazebo_resources.git
+	url = https://github.com/graiola/wolf_gazebo_resources.git
 [submodule "wolf_hardware_interface"]
 	path = wolf_hardware_interface
-	url = git@github.com:graiola/wolf_hardware_interface.git
+	url = https://github.com/graiola/wolf_hardware_interface.git
 [submodule "rt_gui"]
 	path = rt_gui
-	url = git@github.com:graiola/rt_gui.git
+	url = https://github.com/graiola/rt_gui.git
 [submodule "wolf_rviz_plugin"]
 	path = wolf_rviz_plugin
-	url = git@github.com:graiola/wolf_rviz_plugin.git
+	url = https://github.com/graiola/wolf_rviz_plugin.git
 [submodule "wolf_msgs"]
 	path = wolf_msgs
-	url = git@github.com:graiola/wolf_msgs.git
+	url = https://github.com/graiola/wolf_msgs.git
 [submodule "wolf_estimation"]
 	path = wolf_estimation
-	url = git@github.com:graiola/wolf_estimation.git
+	url = https://github.com/graiola/wolf_estimation.git
 [submodule "wolf_controller_utils"]
 	path = wolf_controller_utils
-	url = git@github.com:graiola/wolf_controller_utils.git
-[submodule "wolf_3d_navigation"]
-	path = wolf_3d_navigation
-	url = git@github.com:graiola/wolf_3d_navigation.git
+	url = https://github.com/graiola/wolf_controller_utils.git
 [submodule "wolf_controller"]
 	path = wolf_controller
-	url = git@github.com:graiola/wolf_controller.git
+	url = https://github.com/graiola/wolf_controller.git
 [submodule "wolf_wbid"]
 	path = wolf_wbid
-	url = git@github.com:graiola/wolf_wbid.git
+	url = https://github.com/graiola/wolf_wbid.git
 [submodule "wolf_controller_core"]
 	path = wolf_controller_core
-	url = git@github.com:graiola/wolf_controller_core.git
+	url = https://github.com/graiola/wolf_controller_core.git
