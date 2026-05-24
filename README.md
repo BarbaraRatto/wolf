@@ -13,7 +13,7 @@ see documentation [here](https://github.com/graiola/wolf-setup/blob/master/READM
 ```bash
 git clone https://github.com/BarbaraRatto/wolf.git
 
-cd wold
+cd wolf
 
 git submodule update --init --recursive
 ```
